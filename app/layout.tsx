@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Heebo } from 'next/font/google'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
@@ -19,6 +19,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'AutoFlow',
   },
+}
+
+export const viewport: Viewport = {
   themeColor: '#1a9e5c',
 }
 
