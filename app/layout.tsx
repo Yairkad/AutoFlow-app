@@ -13,6 +13,13 @@ const heebo = Heebo({
 export const metadata: Metadata = {
   title: 'AutoFlow – מערכת עזר לניהול',
   description: 'מערכת ניהול לפנצריה ומוסך',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'AutoFlow',
+  },
+  themeColor: '#1a9e5c',
 }
 
 export default function RootLayout({
