@@ -851,6 +851,17 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
   function openAdd() { setForm({ name: '', description: '', icon: '', image_url: null, sort_order: String(items.length * 10), is_active: true }); setEditItem(null); setShowForm(true) }
   function openEdit(i: LandingService) { setForm({ name: i.name, description: i.description ?? '', icon: i.icon ?? '', image_url: i.image_url ?? null, sort_order: String(i.sort_order), is_active: i.is_active }); setEditItem(i); setShowForm(true) }
 
+  function toDriveDirectUrl(url: string): string {
+    const m = url.match(/\/file\/d\/([^/]+)/)
+    if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`
+    return url
+  }
+
+  function onImageUrlInput(raw: string) {
+    const url = toDriveDirectUrl(raw.trim())
+    setForm(f => ({ ...f, image_url: url || null }))
+  }
+
   function onImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -886,14 +897,22 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
           </div>
           <div style={{ marginBottom: '10px' }}>
             <label style={labelSt}>תמונה לשירות (עדיפה על אייקון)</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               {form.image_url && (
-                <div style={{ position: 'relative' }}>
+                <div style={{ position: 'relative', flexShrink: 0 }}>
                   <img src={form.image_url} alt="" style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }} />
                   <button onClick={() => setForm(f => ({ ...f, image_url: null }))} style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: '#dc2626', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                 </div>
               )}
-              <input type="file" accept="image/*" onChange={onImageChange} style={{ fontSize: '13px' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
+                <input type="file" accept="image/*" onChange={onImageChange} style={{ fontSize: '13px' }} />
+                <input
+                  style={{ ...inputSt, fontSize: '12px' }}
+                  placeholder="או הדבק קישור תמונה / Google Drive..."
+                  defaultValue={form.image_url && !form.image_url.startsWith('data:') ? form.image_url : ''}
+                  onBlur={e => { if (!form.image_url?.startsWith('data:')) onImageUrlInput(e.target.value) }}
+                />
+              </div>
             </div>
           </div>
           <div style={{ marginBottom: '10px' }}><label style={labelSt}>תיאור</label><input style={inputSt} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="תיאור קצר של השירות..." /></div>
