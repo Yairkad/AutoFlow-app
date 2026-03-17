@@ -41,7 +41,7 @@ export default function LoginPage() {
         // Clear hash from URL
         window.history.replaceState(null, '', window.location.pathname)
         if (type === 'recovery') router.replace('/reset-password')
-        else if (type === 'invite') router.replace('/set-password')
+        else if (type === 'invite' || type === 'signup') router.replace('/set-password')
         else router.replace('/dashboard')
       })
   }, [router])

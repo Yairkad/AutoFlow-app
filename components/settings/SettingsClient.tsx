@@ -345,7 +345,8 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
     })
   }
 
-  const roleLabel = (r: string) => r === 'admin' ? '👑 מנהל' : '👤 עובד'
+  const roleLabel = (r: string) =>
+    r === 'super_admin' ? '⭐ סופר מנהל' : r === 'admin' ? '👑 מנהל' : '👤 עובד'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -369,6 +370,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
 
               {field('תפקיד', (
                 <select style={inputSt} value={editData.role} onChange={e => setEditData(d => ({ ...d, role: e.target.value }))}>
+                  <option value="super_admin">⭐ סופר מנהל</option>
                   <option value="admin">👑 מנהל</option>
                   <option value="employee">👤 עובד</option>
                 </select>
@@ -1239,8 +1241,8 @@ export default function SettingsClient() {
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isAdmin = myRole === 'admin'
-  const canVault = isAdmin || myModules.includes('vault')
+  const isAdmin  = myRole === 'admin' || myRole === 'super_admin'
+  const canVault = myRole === 'super_admin'
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: 'business', label: 'פרטי עסק',    icon: '🏢' },

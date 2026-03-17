@@ -47,36 +47,40 @@ function RegisterForm() {
     setError('')
 
     const supabase = createClient()
-    const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { full_name: fullName } },
-    })
-
-    if (signUpErr || !signUpData.user) {
-      setError(signUpErr?.message ?? 'שגיאה ברישום')
-      setLoading(false)
-      return
-    }
 
     if (isEmployee) {
-      // Link employee to tenant and burn token
-      const res = await fetch('/api/employees/complete-registration', {
+      // Employee flow: create user via admin API (no email confirmation, no rate limit)
+      const res = await fetch('/api/auth/register-employee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: signUpData.user.id, token }),
+        body: JSON.stringify({ token, email, password, fullName }),
       })
+      const json = await res.json()
       if (!res.ok) {
-        setError('שגיאה בקישור לעסק')
+        setError(json.error ?? 'שגיאה ברישום')
+        setLoading(false)
+        return
+      }
+      // Sign in with the new credentials
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInErr) {
+        setError(signInErr.message)
         setLoading(false)
         return
       }
       router.push('/dashboard')
     } else {
-      // Owner flow – burn token then onboarding
-      await supabase
-        .from('registration_tokens')
-        .update({ used: true })
-        .eq('token', token)
+      // Owner flow: signUp + onboarding
+      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+        email, password,
+        options: { data: { full_name: fullName } },
+      })
+      if (signUpErr || !signUpData.user) {
+        setError(signUpErr?.message ?? 'שגיאה ברישום')
+        setLoading(false)
+        return
+      }
+      await supabase.from('registration_tokens').update({ used: true }).eq('token', token)
       router.push('/onboarding')
     }
   }

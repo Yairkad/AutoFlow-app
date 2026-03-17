@@ -29,7 +29,7 @@ export default function AuthCallbackPage() {
       } else if (event === 'SIGNED_IN') {
         // Distinguish invite (no prior session) vs regular email confirm
         const amr = (session as { amr?: { method: string }[] } | null)?.amr
-        const isInvite = amr?.some(a => a.method === 'invite')
+        const isInvite = amr?.some(a => a.method === 'invite' || a.method === 'otp')
         router.replace(isInvite ? '/set-password' : '/dashboard')
       }
     })
