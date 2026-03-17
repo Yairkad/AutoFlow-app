@@ -56,7 +56,7 @@ const SALARY_CHIP: React.CSSProperties = {
   background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe',
 }
 
-export default function AlertsPanel() {
+export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
   const [payments,  setPayments]  = useState<AlertPayment[]>([])
   const [salaries,  setSalaries]  = useState<UnpaidSalary[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
@@ -105,6 +105,27 @@ export default function AlertsPanel() {
   const visiblePayments = payments.filter(p => !dismissed.has(p.id))
   const visibleSalaries = salaries.filter(s => !dismissed.has(s.id) && (s.total || 0) > 0)
   const totalCount = visiblePayments.length + visibleSalaries.length
+
+  if (compact) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '8px',
+        padding: '8px 14px', flex: 1,
+        background: '#fff', borderRadius: 'var(--radius)',
+        boxShadow: 'var(--shadow)', borderTop: '3px solid var(--danger)',
+        fontSize: '14px', fontWeight: 600, color: 'var(--text)',
+      }}>
+        <span>⚡</span>
+        <span>התראות</span>
+        {!loading && totalCount > 0 && (
+          <span style={{ background: 'var(--danger)', color: '#fff', borderRadius: '999px', fontSize: '12px', fontWeight: 700, padding: '2px 9px', lineHeight: 1.4 }}>{totalCount}</span>
+        )}
+        {!loading && totalCount === 0 && (
+          <span style={{ fontSize: '12px', color: 'var(--success)', fontWeight: 400 }}>✓ הכל מטופל</span>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div style={{

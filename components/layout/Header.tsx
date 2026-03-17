@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 // ── Hebrew numeral conversion ──────────────────────────────────────────────
@@ -405,15 +406,13 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
       >☰</button>
 
       {/* Logo / business branding */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-        {tenantLogo
-          ? <img src={tenantLogo} alt="לוגו" style={{ width: 36, height: 36, borderRadius: '10px', objectFit: 'contain', flexShrink: 0 }} />
-          : <img src="/icon-512.png" alt="AutoFlow" style={{ width: 36, height: 36, borderRadius: '10px', objectFit: 'contain', flexShrink: 0 }} />
-        }
-        <div className="header-brand-text">
-          <div style={{ fontWeight: 700, fontSize: '15px', lineHeight: 1.2 }}>{tenantName || 'AutoFlow'}</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>מערכת ניהול</div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+        <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          {tenantLogo
+            ? <img src={tenantLogo} alt="לוגו" style={{ width: 42, height: 42, borderRadius: '10px', objectFit: 'contain', flexShrink: 0 }} />
+            : <img src="/icon-512.png" alt="AutoFlow" style={{ width: 42, height: 42, borderRadius: '10px', objectFit: 'contain', flexShrink: 0 }} />
+          }
+        </Link>
       </div>
 
       {/* Clock */}

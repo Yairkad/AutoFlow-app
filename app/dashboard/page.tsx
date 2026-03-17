@@ -38,29 +38,42 @@ export default function DashboardPage() {
         </div>
 
         {tab === 'stats' ? (
-          /* Stats + reminders row */
-          <div
-            className="dash-layout"
-            style={{
-              display: 'flex', gap: '20px', alignItems: 'stretch',
-              height: 'calc(100vh - var(--header-h) - 96px)',
-              overflow: 'hidden',
-            }}
-          >
-            {/* Left column: stats on top, alerts bar at bottom */}
+          <>
+            {/* Stats + reminders row */}
             <div
-              className="dash-stats-col"
-              style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden' }}
+              className="dash-layout"
+              style={{
+                display: 'flex', gap: '20px', alignItems: 'stretch',
+                height: 'calc(100vh - var(--header-h) - 96px)',
+                overflow: 'hidden',
+              }}
             >
-              <div style={{ flex: 1, overflowY: 'auto' }}>
-                <DashboardStats />
+              {/* Left column: stats on top, alerts bar at bottom */}
+              <div
+                className="dash-stats-col"
+                style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden' }}
+              >
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                  <DashboardStats />
+                </div>
+                <div className="dash-alerts-desktop">
+                  <AlertsPanel />
+                </div>
               </div>
-              <AlertsPanel />
+
+              {/* Right column: reminders panel */}
+              <div className="dash-reminders-desktop" style={{ height: '100%' }}>
+                <RemindersPanel />
+              </div>
             </div>
 
-            {/* Right column: reminders panel (compact on mobile) */}
-            <RemindersPanel />
-          </div>
+            {/* Mobile-only sticky bottom bar */}
+            <div className="dash-mobile-bottom">
+              <AlertsPanel compact />
+              <RemindersPanel compact />
+            </div>
+          </>
+
         ) : (
           /* Charts tab */
           <div style={{ height: 'calc(100vh - var(--header-h) - 96px)', overflowY: 'auto' }}>

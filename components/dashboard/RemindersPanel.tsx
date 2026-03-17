@@ -31,7 +31,7 @@ const PRIORITY_COLOR: Record<string, string> = {
   low:    'var(--primary)',
 }
 
-export default function RemindersPanel() {
+export default function RemindersPanel({ compact }: { compact?: boolean } = {}) {
   const isMobile = useIsMobile()
   const [reminders, setReminders] = useState<Item[]>([])
   const [tasks, setTasks]         = useState<Item[]>([])
@@ -85,19 +85,19 @@ export default function RemindersPanel() {
   const today = new Date().toISOString().split('T')[0]
   const total = reminders.length + tasks.length
 
-  // Mobile: compact bell badge linking to /reminders
-  if (isMobile) {
+  // Mobile / compact: compact bell badge linking to /reminders
+  if (isMobile || compact) {
     return (
       <a
         href="/reminders"
         style={{
-          display: 'inline-flex', alignItems: 'center', gap: '8px',
-          padding: '8px 16px',
+          display: 'flex', alignItems: 'center', gap: '8px',
+          padding: '8px 14px', flex: compact ? 1 : undefined,
           background: '#fff', borderRadius: 'var(--radius)',
           boxShadow: 'var(--shadow)', borderTop: '3px solid var(--warning)',
           textDecoration: 'none', color: 'var(--text)',
           fontSize: '14px', fontWeight: 600,
-          alignSelf: 'flex-start',
+          alignSelf: compact ? undefined : 'flex-start',
         }}
       >
         🔔 תזכורות ומשימות

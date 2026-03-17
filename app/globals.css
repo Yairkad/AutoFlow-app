@@ -190,7 +190,8 @@ a { color: inherit; text-decoration: none; }
   footer {
     margin-right: 0 !important;
     flex-direction: column !important;
-    align-items: flex-start !important;
+    align-items: center !important;
+    text-align: center !important;
     gap: 6px !important;
   }
 
@@ -319,6 +320,8 @@ a { color: inherit; text-decoration: none; }
    Dashboard mobile layout
    ══════════════════════════════════════════════════════════════════════════ */
 
+.dash-mobile-bottom { display: none; }
+
 @media (max-width: 640px) {
   /* Stack columns vertically, remove fixed height */
   .dash-layout {
@@ -332,10 +335,32 @@ a { color: inherit; text-decoration: none; }
     flex: none !important;
   }
 
-  /* Stats grid: 2 columns on mobile (not 1) for compact view */
+  /* Stats grid: keep 3 columns on mobile */
   .dash-stats-col [style*="grid-template-columns: repeat(3, 1fr)"] {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(3, 1fr) !important;
   }
+
+  /* Hide desktop alerts/reminders panels */
+  .dash-alerts-desktop  { display: none !important; }
+  .dash-reminders-desktop { display: none !important; }
+
+  /* Sticky bottom bar */
+  .dash-mobile-bottom {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 80;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 8px rgba(0,0,0,.08);
+  }
+
+  /* Extra padding so content isn't hidden behind sticky bar */
+  main { padding-bottom: 72px !important; }
 }
 
 /* ── Stat cards compact on mobile ───────────────────────────────────────── */
