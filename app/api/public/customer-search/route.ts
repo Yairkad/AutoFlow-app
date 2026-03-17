@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   // Fetch jobs matching the plate (public_track_read policy requires track_token to be set)
   const { data: jobs, error } = await supabase
     .from('alignment_jobs')
-    .select('track_token, customer_phone, status')
+    .select('customer_phone, plate, make, model, year, color, job_type, status, updated_at')
     .eq('plate', plate)
     .not('track_token', 'is', null)
     .not('status', 'eq', 'delivered')   // any active job (not closed)
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ found: false })
   }
 
-  // Verify last-4 phone digits (client-side verification done here server-side for security)
+  // Verify last-4 phone digits server-side for security
   const match = jobs.find(
     (j) => j.customer_phone && j.customer_phone.replace(/\D/g, '').endsWith(phone4),
   )
@@ -47,5 +47,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ found: false })
   }
 
-  return NextResponse.json({ found: true, token: match.track_token })
+  const { customer_phone: _ph, ...jobData } = match
+  return NextResponse.json({ found: true, job: jobData })
 }
