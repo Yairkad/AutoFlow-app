@@ -1,12 +1,26 @@
+'use client'
+
+import { useState } from 'react'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import Footer from './Footer'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
   return (
     <>
-      <Header />
-      <Sidebar />
+      <Header onMenuToggle={() => setMobileNavOpen(v => !v)} />
+      <Sidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+
+      {/* Backdrop for mobile nav drawer */}
+      {mobileNavOpen && (
+        <div
+          onClick={() => setMobileNavOpen(false)}
+          className="mobile-nav-backdrop"
+        />
+      )}
+
       <main style={{
         marginTop: 'var(--header-h)',
         marginRight: 'var(--sidebar-w)',

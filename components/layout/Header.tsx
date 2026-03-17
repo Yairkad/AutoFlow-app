@@ -166,7 +166,7 @@ function UserDropdown({ name, email, onClose }: { name: string; email: string; o
 
 // ── Header ─────────────────────────────────────────────────────────────────
 
-export default function Header() {
+export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const now      = useClock()
   const router   = useRouter()
   const supabase = useRef(createClient()).current
@@ -174,6 +174,10 @@ export default function Header() {
   const [userName,     setUserName]     = useState('')
   const [userEmail,    setUserEmail]    = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
+
+  // Mobile search overlay
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const mobileInputRef = useRef<HTMLInputElement>(null)
 
   // Search state
   const [q,        setQ]        = useState('')
@@ -250,6 +254,7 @@ export default function Header() {
     setQ('')
     setResults([])
     setFocused(false)
+    setMobileSearchOpen(false)
   }
 
   function highlight(text: string) {
@@ -267,7 +272,7 @@ export default function Header() {
   }
 
   function onKey(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Escape')    { setQ(''); setResults([]); setFocused(false); e.currentTarget.blur() }
+    if (e.key === 'Escape')    { setQ(''); setResults([]); setFocused(false); setMobileSearchOpen(false); e.currentTarget.blur() }
     if (e.key === 'ArrowDown') { e.preventDefault(); setSelected(s => Math.min(s + 1, results.length - 1)) }
     if (e.key === 'ArrowUp')   { e.preventDefault(); setSelected(s => Math.max(s - 1, 0)) }
     if (e.key === 'Enter' && results[selected]) go(results[selected])
@@ -310,6 +315,82 @@ export default function Header() {
       display: 'flex', alignItems: 'center',
       padding: '0 20px', gap: '12px', zIndex: 100,
     }}>
+
+      {/* ── Mobile search overlay (covers full header) ── */}
+      {mobileSearchOpen && (
+        <div style={{
+          position: 'absolute', inset: 0, background: 'var(--bg-card)',
+          display: 'flex', alignItems: 'center', gap: '8px',
+          padding: '0 12px', zIndex: 1,
+        }}>
+          <button
+            onClick={() => { setMobileSearchOpen(false); setQ(''); setResults([]) }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--text)', flexShrink: 0, padding: '4px 8px', lineHeight: 1 }}
+            aria-label="סגור חיפוש"
+          >←</button>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <input
+              ref={mobileInputRef}
+              type="search"
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setTimeout(() => setFocused(false), 150)}
+              onKeyDown={onKey}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="חיפוש לקוח, רכב, עובד..."
+              style={{
+                width: '100%', height: '38px',
+                paddingRight: '12px', paddingLeft: '10px',
+                border: `1px solid ${focused ? 'var(--primary)' : 'var(--border)'}`,
+                borderRadius: showDropdownResults ? '8px 8px 0 0' : '8px',
+                background: 'var(--bg)', fontSize: '14px',
+                outline: 'none', direction: 'rtl', color: 'var(--text)',
+              }}
+            />
+            {showDropdownResults && (
+              <div style={{
+                position: 'fixed', top: 'var(--header-h)', right: 0, left: 0,
+                background: 'var(--bg-card)', border: '1px solid var(--primary)',
+                borderTop: 'none', maxHeight: '60vh', overflowY: 'auto', zIndex: 500,
+              }}>
+                {results.length === 0 && !loading && (
+                  <div style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>לא נמצאו תוצאות</div>
+                )}
+                {results.map((r, i) => (
+                  <div
+                    key={`mob-${r.category}-${r.id}`}
+                    onMouseDown={() => go(r)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '11px 16px', cursor: 'pointer', direction: 'rtl',
+                      background: i === selected ? 'var(--bg)' : 'transparent',
+                      borderBottom: i < results.length - 1 ? '1px solid var(--border)' : 'none',
+                    }}
+                    onMouseEnter={() => setSelected(i)}
+                  >
+                    <span style={{ fontSize: '20px', flexShrink: 0 }}>{r.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{highlight(r.primary)}</div>
+                      {r.secondary && <div style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{highlight(r.secondary)}</div>}
+                    </div>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '4px', padding: '1px 6px', flexShrink: 0 }}>{r.category}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Hamburger – mobile only */}
+      <button
+        className="header-hamburger"
+        onClick={onMenuToggle}
+        aria-label="תפריט ניווט"
+      >☰</button>
+
       {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
         <img src="/icon-512.png" alt="AutoFlow" style={{ width: 36, height: 36, borderRadius: '10px', objectFit: 'contain' }} />
@@ -320,16 +401,23 @@ export default function Header() {
       </div>
 
       {/* Clock */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-        <div style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '0.06em', color: 'var(--text)', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{timeStr}</div>
-        <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dateStr}</div>
+      <div className="header-clock" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+        <div className="header-clock-time" style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '0.06em', color: 'var(--text)', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{timeStr}</div>
+        <div className="header-clock-date" style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dateStr}</div>
       </div>
 
       {/* Search + Avatar */}
       <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: '12px', alignItems: 'center' }}>
 
-        {/* Inline search */}
-        <div ref={searchRef} style={{ position: 'relative' }}>
+        {/* Mobile search button – icon only */}
+        <button
+          className="header-search-mobile-btn"
+          onClick={() => { setMobileSearchOpen(true); setTimeout(() => mobileInputRef.current?.focus(), 50) }}
+          aria-label="חיפוש"
+        >🔍</button>
+
+        {/* Desktop / tablet: full inline search */}
+        <div ref={searchRef} className="header-search-desktop" style={{ position: 'relative' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <span style={{ position: 'absolute', right: '10px', fontSize: '15px', pointerEvents: 'none', zIndex: 1 }}>
               {loading ? (

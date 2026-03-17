@@ -511,12 +511,14 @@ export default function ProductsClient() {
                             ? <input style={cellInp} value={String(e.sku ?? '')} onChange={ev => setCell(p.id, 'sku', ev.target.value)} />
                             : p.sku || '—'}
                         </td>
-                        <td style={{ padding: '8px 12px', fontWeight: 700, minWidth: editMode ? '150px' : undefined }}>
+                        <td style={{ padding: '8px 12px', fontWeight: 700, minWidth: editMode ? '150px' : undefined, maxWidth: editMode ? undefined : '180px', overflow: editMode ? undefined : 'hidden', textOverflow: editMode ? undefined : 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap' }}
+                            title={editMode ? undefined : p.name}>
                           {editMode
                             ? <input style={cellInp} value={String(e.name ?? '')} onChange={ev => setCell(p.id, 'name', ev.target.value)} />
                             : p.name}
                         </td>
-                        <td style={{ padding: '8px 12px', minWidth: editMode ? '110px' : undefined }}>
+                        <td style={{ padding: '8px 12px', minWidth: editMode ? '110px' : undefined, maxWidth: editMode ? undefined : '120px', overflow: editMode ? undefined : 'hidden', textOverflow: editMode ? undefined : 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap' }}
+                            title={editMode ? undefined : (p.category || undefined)}>
                           {editMode
                             ? <input style={cellInp} value={String(e.category ?? '')} onChange={ev => setCell(p.id, 'category', ev.target.value)} list="cat-list-inline" />
                             : <span style={{ color: 'var(--text-muted)' }}>{p.category || '—'}</span>}
@@ -547,7 +549,8 @@ export default function ProductsClient() {
                             {isOut ? 'אזל' : `${p.qty} ${Number(p.unit_qty) > 1 ? 'יח׳' : p.unit}`}
                           </span>
                         </td>
-                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)', minWidth: editMode ? '130px' : undefined }}>
+                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)', minWidth: editMode ? '130px' : undefined, maxWidth: editMode ? undefined : '120px', overflow: editMode ? undefined : 'hidden', textOverflow: editMode ? undefined : 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap' }}
+                            title={editMode ? undefined : (suppName !== '—' ? suppName : undefined)}>
                           {editMode
                             ? <select style={cellInp} value={String(e.supplier_id ?? '')} onChange={ev => setCell(p.id, 'supplier_id', ev.target.value)}>
                                 <option value=''>—</option>
@@ -883,6 +886,15 @@ function PriceListOverlay({ products, onClose }: { products: Product[]; onClose:
             overflow: visible !important; background: #fff !important;
           }
           #pricelist-overlay .no-print { display: none !important; }
+          /* Keep each category block together on the same page */
+          #pricelist-overlay .price-cat-block {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          /* Keep table header with its first row */
+          #pricelist-overlay table { break-inside: auto; }
+          #pricelist-overlay thead { display: table-header-group; }
+          #pricelist-overlay tr { break-inside: avoid; page-break-inside: avoid; }
           @page { margin: 15mm; size: A4 portrait; }
         }
       `}</style>
@@ -928,7 +940,7 @@ function PriceListOverlay({ products, onClose }: { products: Product[]; onClose:
 
           {/* Categories */}
           {cats.map(cat => (
-            <div key={cat} style={{ marginBottom: '24px' }}>
+            <div key={cat} className="price-cat-block" style={{ marginBottom: '24px' }}>
               <div style={{ background: '#1a2a6c', color: '#fff', padding: '6px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '13px', marginBottom: '8px' }}>
                 {cat}
               </div>

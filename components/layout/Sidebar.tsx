@@ -24,7 +24,13 @@ const NAV_ITEMS = [
   { href: '/my-profile',  label: 'הפרופיל שלי',    icon: '👤', module: 'my_profile' },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({
+  mobileOpen = false,
+  onClose,
+}: {
+  mobileOpen?: boolean
+  onClose?: () => void
+}) {
   const pathname = usePathname()
   const sb = useRef(createClient()).current
   const [pressed, setPressed]     = useState<string | null>(null)
@@ -51,10 +57,12 @@ export default function Sidebar() {
     })
   }, [sb])
 
+  // Close mobile nav on route change
   useEffect(() => {
     setPendingHref(null)
     setPressed(null)
-  }, [pathname])
+    onClose?.()
+  }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function isVisible(item: typeof NAV_ITEMS[0]) {
     if (!loaded) return false
@@ -65,18 +73,23 @@ export default function Sidebar() {
   }
 
   return (
-    <aside style={{
-      position: 'fixed',
-      top: 'var(--header-h)',
-      right: 0,
-      bottom: 0,
-      width: 'var(--sidebar-w)',
-      background: 'var(--bg-card)',
-      borderLeft: '1px solid var(--border)',
-      overflowY: 'auto',
-      zIndex: 90,
-      padding: '8px 0',
-    }}>
+    <aside
+      data-mobile-open={String(mobileOpen)}
+      style={{
+        position: 'fixed',
+        top: 'var(--header-h)',
+        right: 0,
+        bottom: 0,
+        width: 'var(--sidebar-w)',
+        background: 'var(--bg-card)',
+        borderLeft: '1px solid var(--border)',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        zIndex: 90,
+        padding: '8px 0',
+        transition: 'transform .25s ease',
+      }}
+    >
       {NAV_ITEMS.filter(isVisible).map((item) => {
         const isActive = pathname === item.href
         const isPending = pendingHref === item.href && !isActive
@@ -85,6 +98,7 @@ export default function Sidebar() {
           <Link
             key={item.href}
             href={item.href}
+            title={item.label}
             onMouseDown={() => { setPressed(item.href); setPendingHref(item.href) }}
             onMouseUp={() => setPressed(null)}
             onMouseLeave={() => setPressed(null)}

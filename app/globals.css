@@ -84,15 +84,10 @@ a { color: inherit; text-decoration: none; }
 }
 .search-input-global:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,158,92,.1); }
 
-/* Button spinner */
-@keyframes btn-spin {
-  to { transform: rotate(360deg); }
-}
-
-/* Sidebar nav pending spinner */
-@keyframes sidebar-spin {
-  to { transform: rotate(360deg); }
-}
+/* Spinners */
+@keyframes spin         { to { transform: rotate(360deg); } }
+@keyframes btn-spin     { to { transform: rotate(360deg); } }
+@keyframes sidebar-spin { to { transform: rotate(360deg); } }
 
 /* ── Landing page hero ────────────────────────────────────────────────────────── */
 
@@ -151,10 +146,25 @@ a { color: inherit; text-decoration: none; }
 
 /* ── Responsive ─────────────────────────────────────────────────────────────── */
 
-/* Tablet (≤ 900px): narrow sidebar */
+/* Tablet (≤ 900px): narrow sidebar + responsive grids */
 @media (max-width: 900px) {
   :root {
     --sidebar-w: 60px;
+  }
+
+  /* Main content – reduce padding */
+  main {
+    padding: 16px;
+  }
+
+  /* Dashboard stats grid: 3-col → 2-col */
+  [style*="grid-template-columns: repeat(3, 1fr)"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Shrink search input on tablet so clock + search + avatar fit */
+  .header-search-desktop input[type="search"] {
+    width: 160px !important;
   }
 }
 
@@ -187,27 +197,27 @@ a { color: inherit; text-decoration: none; }
   }
 
   /* Dashboard stats grid – 1 column */
-  [style*="gridTemplateColumns: 'repeat(3, 1fr)'"] {
+  [style*="grid-template-columns: repeat(3, 1fr)"] {
     grid-template-columns: 1fr !important;
   }
 
   /* Cards grid – 1 column */
-  [style*="minmax(280px,1fr)"] {
+  [style*="minmax(280px, 1fr)"] {
     grid-template-columns: 1fr !important;
   }
 
   /* Summary cards – 1 column */
-  [style*="repeat(3, 1fr)"] {
+  [style*="repeat(3,"] {
     grid-template-columns: 1fr !important;
   }
 
-  /* Inspections: stack form sections */
-  [style*="gridTemplateColumns: '1fr 1fr'"] {
+  /* Inspections / 2-col form sections – stack */
+  [style*="grid-template-columns: 1fr 1fr"] {
     grid-template-columns: 1fr !important;
   }
 
-  /* Dashboard charts row-3 */
-  [style*="gridTemplateColumns: '1fr 1fr 1fr'"] {
+  /* Dashboard charts row */
+  [style*="grid-template-columns: 1fr 1fr 1fr"] {
     grid-template-columns: 1fr !important;
   }
 
@@ -219,5 +229,81 @@ a { color: inherit; text-decoration: none; }
   /* Buttons – full width on mobile */
   .btn-mobile-full {
     width: 100% !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Header responsive
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* These are hidden by default and shown only at mobile breakpoints */
+.header-hamburger        { display: none; }
+.header-search-mobile-btn { display: none; }
+
+/* Tablet (≤ 900px): shrink clock, hide date string */
+@media (max-width: 900px) {
+  .header-clock-date { display: none !important; }
+  .header-clock-time { font-size: 16px !important; letter-spacing: 0 !important; }
+}
+
+/* Mobile (≤ 640px): hide clock + desktop search, show hamburger + search icon */
+@media (max-width: 640px) {
+  .header-clock          { display: none !important; }
+  .header-search-desktop { display: none !important; }
+
+  .header-hamburger {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    color: var(--text);
+    flex-shrink: 0;
+    padding: 0;
+  }
+
+  .header-search-mobile-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--text);
+    flex-shrink: 0;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Mobile navigation drawer (sidebar as slide-in overlay)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.mobile-nav-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  z-index: 89;
+}
+
+@media (max-width: 640px) {
+  /* Sidebar: always 240px wide but initially hidden off-screen (RTL = slide right) */
+  aside {
+    width: 240px !important;
+    transform: translateX(240px);
+    transition: transform .25s ease;
+    box-shadow: none;
+  }
+
+  aside[data-mobile-open="true"] {
+    transform: translateX(0) !important;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, .18);
   }
 }
