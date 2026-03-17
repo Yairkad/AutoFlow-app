@@ -146,21 +146,6 @@ export default async function LandingPage() {
               </InfoRow>
             )}
 
-            {/* Map links */}
-            {(BUSINESS.wazeUrl || BUSINESS.mapsUrl) && (
-              <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
-                {BUSINESS.wazeUrl && (
-                  <a href={BUSINESS.wazeUrl} target="_blank" rel="noopener noreferrer" style={mapBtnSt('#00c4ff', '#fff')}>
-                    Waze
-                  </a>
-                )}
-                {BUSINESS.mapsUrl && (
-                  <a href={BUSINESS.mapsUrl} target="_blank" rel="noopener noreferrer" style={mapBtnSt('#34a853', '#fff')}>
-                    Google Maps
-                  </a>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
@@ -345,17 +330,3 @@ function heroBtnSt(bg: string, color: string, border?: string): React.CSSPropert
   }
 }
 
-function mapBtnSt(bg: string, color: string): React.CSSProperties {
-  return {
-    display: 'inline-block',
-    background: bg,
-    color,
-    border: 'none',
-    borderRadius: '8px',
-    padding: '8px 16px',
-    fontWeight: 700,
-    fontSize: '13px',
-    textDecoration: 'none',
-    cursor: 'pointer',
-  }
-}
