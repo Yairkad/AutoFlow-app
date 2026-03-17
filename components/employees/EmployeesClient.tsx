@@ -397,10 +397,8 @@ export default function EmployeesClient() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
     })
-    if (!res.ok) { showToast('שגיאה ביצירת קישור הזמנה', 'error'); return }
-    const { link } = await res.json()
-    await navigator.clipboard.writeText(link)
-    showToast(`קישור הזמנה הועתק ל-${email} ✓`, 'success')
+    if (!res.ok) { showToast('שגיאה בשליחת ההזמנה', 'error'); return }
+    showToast(`מייל הזמנה נשלח ל-${email} ✓`, 'success')
   }
 
   // ── Adjustments modal ────────────────────────────────────────────────────────

@@ -301,7 +301,7 @@ export default function Header() {
     }}>
       {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-        <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🔧</div>
+        <img src="/icon-512.png" alt="AutoFlow" style={{ width: 36, height: 36, borderRadius: '10px', objectFit: 'contain' }} />
         <div>
           <div style={{ fontWeight: 700, fontSize: '15px', lineHeight: 1.2 }}>AutoFlow</div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>מערכת ניהול</div>

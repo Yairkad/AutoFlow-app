@@ -3,7 +3,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
-  const { email, employeeId } = await request.json()
+  const { email } = await request.json()
   if (!email) return NextResponse.json({ error: 'Missing email' }, { status: 400 })
 
   const supabase = await createServerClient()
@@ -25,17 +25,22 @@ export async function POST(request: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Create employee invite token
-  const { data: token, error } = await admin
-    .from('registration_tokens')
-    .insert({ email, type: 'employee', tenant_id: profile.tenant_id })
-    .select('token')
-    .single()
-
-  if (error || !token) return NextResponse.json({ error: error?.message }, { status: 500 })
-
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const link = `${baseUrl}/register?token=${token.token}&type=employee`
 
-  return NextResponse.json({ link })
+  // Send invite email via Supabase (uses the "Invite User" email template)
+  const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(email, {
+    data: { tenant_id: profile.tenant_id },
+    redirectTo: `${baseUrl}/set-password`,
+  })
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Link user to tenant immediately (profile created by trigger)
+  if (invited?.user) {
+    await admin
+      .from('profiles')
+      .upsert({ id: invited.user.id, tenant_id: profile.tenant_id })
+  }
+
+  return NextResponse.json({ ok: true })
 }
