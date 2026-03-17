@@ -798,7 +798,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
 
 type LandingSub = 'services' | 'promotions' | 'prices'
 
-interface LandingService { id: string; name: string; description: string | null; icon: string | null; sort_order: number; is_active: boolean }
+interface LandingService { id: string; name: string; description: string | null; icon: string | null; image_url: string | null; sort_order: number; is_active: boolean }
 interface LandingPromotion { id: string; title: string; description: string | null; start_date: string | null; end_date: string | null; sort_order: number; is_active: boolean }
 interface LandingPrice { id: string; category: string; service_name: string; price: number | null; price_note: string | null; sort_order: number; is_active: boolean }
 
@@ -838,7 +838,7 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
   const [items, setItems] = useState<LandingService[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState<LandingService | null>(null)
-  const [form, setForm] = useState({ name: '', description: '', icon: '', sort_order: '0', is_active: true })
+  const [form, setForm] = useState({ name: '', description: '', icon: '', image_url: null as string | null, sort_order: '0', is_active: true })
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -848,13 +848,22 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
 
   useEffect(() => { load() }, [load])
 
-  function openAdd() { setForm({ name: '', description: '', icon: '🔧', sort_order: String(items.length * 10), is_active: true }); setEditItem(null); setShowForm(true) }
-  function openEdit(i: LandingService) { setForm({ name: i.name, description: i.description ?? '', icon: i.icon ?? '', sort_order: String(i.sort_order), is_active: i.is_active }); setEditItem(i); setShowForm(true) }
+  function openAdd() { setForm({ name: '', description: '', icon: '', image_url: null, sort_order: String(items.length * 10), is_active: true }); setEditItem(null); setShowForm(true) }
+  function openEdit(i: LandingService) { setForm({ name: i.name, description: i.description ?? '', icon: i.icon ?? '', image_url: i.image_url ?? null, sort_order: String(i.sort_order), is_active: i.is_active }); setEditItem(i); setShowForm(true) }
+
+  function onImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 500_000) { showToast('התמונה גדולה מדי (מקסימום 500KB)', 'error'); return }
+    const reader = new FileReader()
+    reader.onload = ev => { setForm(f => ({ ...f, image_url: ev.target?.result as string })) }
+    reader.readAsDataURL(file)
+  }
 
   async function save() {
     if (!form.name.trim()) { showToast('חובה שם', 'error'); return }
     setSaving(true)
-    const payload = { tenant_id: tenantId, name: form.name.trim(), description: form.description.trim() || null, icon: form.icon.trim() || null, sort_order: parseInt(form.sort_order) || 0, is_active: form.is_active }
+    const payload = { tenant_id: tenantId, name: form.name.trim(), description: form.description.trim() || null, icon: form.icon.trim() || null, image_url: form.image_url ?? null, sort_order: parseInt(form.sort_order) || 0, is_active: form.is_active }
     if (editItem) await supabase.from('services').update(payload).eq('id', editItem.id)
     else await supabase.from('services').insert(payload)
     setSaving(false); setShowForm(false); load(); showToast(editItem ? 'עודכן' : 'נוסף', 'success')
@@ -873,7 +882,19 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
             <div><label style={labelSt}>שם *</label><input style={inputSt} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="לדוגמה: כיוון פרונט" /></div>
-            <div><label style={labelSt}>אייקון (אימוג׳י)</label><input style={{ ...inputSt, fontSize: '20px' }} value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} placeholder="🔧" /></div>
+            <div><label style={labelSt}>אייקון (אימוג׳י) — אם אין תמונה</label><input style={{ ...inputSt, fontSize: '20px' }} value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} placeholder="🔧" /></div>
+          </div>
+          <div style={{ marginBottom: '10px' }}>
+            <label style={labelSt}>תמונה לשירות (עדיפה על אייקון)</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {form.image_url && (
+                <div style={{ position: 'relative' }}>
+                  <img src={form.image_url} alt="" style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }} />
+                  <button onClick={() => setForm(f => ({ ...f, image_url: null }))} style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: '#dc2626', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                </div>
+              )}
+              <input type="file" accept="image/*" onChange={onImageChange} style={{ fontSize: '13px' }} />
+            </div>
           </div>
           <div style={{ marginBottom: '10px' }}><label style={labelSt}>תיאור</label><input style={inputSt} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="תיאור קצר של השירות..." /></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
@@ -892,7 +913,10 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {items.map(i => (
           <div key={i.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', opacity: i.is_active ? 1 : .55 }}>
-            <span style={{ fontSize: '22px' }}>{i.icon ?? '🔧'}</span>
+            {i.image_url
+              ? <img src={i.image_url} alt="" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }} />
+              : <span style={{ fontSize: '22px' }}>{i.icon ?? '🔧'}</span>
+            }
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600, fontSize: '13px' }}>{i.name}</div>
               {i.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{i.description}</div>}

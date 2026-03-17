@@ -22,10 +22,10 @@ type PublicInfo = {
 }
 
 const DEFAULT_SERVICES = [
-  { id: '1', icon: '🔧', name: 'תיקון ומכירת צמיגים', description: 'כל מותגי הצמיגים המובילים במחירים תחרותיים' },
-  { id: '2', icon: '🚗', name: 'כיוון פרונט', description: 'כיוון מדויק ממוחשב לכל סוגי הרכבים' },
-  { id: '3', icon: '🔍', name: 'בדיקת רכב לפני קניה', description: 'בדיקה מקיפה לפני רכישת רכב יד 2' },
-  { id: '4', icon: '🏷️', name: 'סוכנות רכב יד 2', description: 'קניה ומכירה של רכבים משומשים באמינות מלאה' },
+  { id: '1', icon: '🔧', name: 'תיקון ומכירת צמיגים', description: 'כל מותגי הצמיגים המובילים במחירים תחרותיים', image_url: null },
+  { id: '2', icon: '🚗', name: 'כיוון פרונט', description: 'כיוון מדויק ממוחשב לכל סוגי הרכבים', image_url: null },
+  { id: '3', icon: '🔍', name: 'בדיקת רכב לפני קניה', description: 'בדיקה מקיפה לפני רכישת רכב יד 2', image_url: null },
+  { id: '4', icon: '🏷️', name: 'סוכנות רכב יד 2', description: 'קניה ומכירה של רכבים משומשים באמינות מלאה', image_url: null },
 ]
 
 export default async function LandingPage() {
@@ -36,7 +36,7 @@ export default async function LandingPage() {
   // Fetch tenant info + landing data in parallel
   const [{ data: tenant }, { data: services }, { data: promotions }, { data: priceItems }] = await Promise.all([
     service.from('tenants').select('name,sub_title,phone,address,logo_base64,public_info').eq('id', TENANT_ID).single(),
-    supabase.from('services').select('id,name,description,icon,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('sort_order'),
+    supabase.from('services').select('id,name,description,icon,image_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('sort_order'),
     supabase.from('promotions').select('id,title,description,image_url,link_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).lte('start_date', today).or('end_date.is.null,end_date.gte.' + today).order('sort_order'),
     supabase.from('price_list').select('id,category,service_name,price,price_note,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('category').order('sort_order'),
   ])
@@ -202,7 +202,15 @@ export default async function LandingPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginTop: '40px' }}>
             {displayServices.map((s) => (
               <div key={s.id} style={cardSt}>
-                <div style={{ fontSize: '40px', marginBottom: '12px' }}>{s.icon ?? '🔧'}</div>
+                {s.image_url ? (
+                  <img
+                    src={s.image_url}
+                    alt={s.name}
+                    style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '10px', marginBottom: '16px' }}
+                  />
+                ) : (
+                  <div style={{ fontSize: '40px', marginBottom: '12px' }}>{s.icon ?? '🔧'}</div>
+                )}
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1a2a6c', margin: '0 0 8px' }}>{s.name}</h3>
                 {s.description && <p style={{ fontSize: '14px', color: '#64748b', margin: 0, lineHeight: 1.6 }}>{s.description}</p>}
               </div>
