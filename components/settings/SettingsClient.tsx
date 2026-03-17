@@ -56,7 +56,7 @@ interface InviteToken {
   expires_at: string | null
 }
 
-type Tab = 'business' | 'users' | 'invite' | 'vault' | 'landing'
+type Tab = 'business' | 'users' | 'vault' | 'landing'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -277,6 +277,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <InviteSection supabase={supabase} tenantId={tenantId} showToast={showToast} />
       {profiles.map(p => (
         <div key={p.id} style={{
           background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px',
@@ -371,12 +372,16 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
   )
 }
 
-// ── InviteTab ──────────────────────────────────────────────────────────────
+// ── InviteSection ──────────────────────────────────────────────────────────
 
-function InviteTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
-  const [tokens,    setTokens]    = useState<InviteToken[]>([])
-  const [creating,  setCreating]  = useState(false)
-  const [expiryDays, setExpiryDays] = useState('7')
+const DEFAULT_INVITE_MODULES = ['products_view', 'tires_view', 'my_profile']
+
+function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
+  const [tokens,      setTokens]      = useState<InviteToken[]>([])
+  const [creating,    setCreating]    = useState(false)
+  const [expiryDays,  setExpiryDays]  = useState('7')
+  const [selMods,     setSelMods]     = useState<string[]>(DEFAULT_INVITE_MODULES)
+  const [open,        setOpen]        = useState(false)
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -390,21 +395,26 @@ function InviteTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typ
 
   useEffect(() => { load() }, [load])
 
+  function toggleMod(key: string) {
+    setSelMods(m => m.includes(key) ? m.filter(k => k !== key) : [...m, key])
+  }
+
   async function createToken() {
     setCreating(true)
     const token = crypto.randomUUID().replace(/-/g, '').slice(0, 24)
     const days  = parseInt(expiryDays) || 7
     const expiresAt = new Date(Date.now() + days * 86400_000).toISOString()
     const { error } = await supabase.from('registration_tokens').insert({
-      tenant_id: tenantId, token, used: false, expires_at: expiresAt,
+      tenant_id: tenantId, token, type: 'employee',
+      used: false, expires_at: expiresAt, default_modules: selMods,
     })
     setCreating(false)
     if (error) showToast('שגיאה ביצירת קישור', 'error')
-    else { showToast('קישור נוצר', 'success'); load() }
+    else { showToast('קישור נוצר', 'success'); setOpen(false); load() }
   }
 
   function copyLink(token: string) {
-    const url = `${window.location.origin}/register?token=${token}`
+    const url = `${window.location.origin}/register?token=${token}&type=employee`
     navigator.clipboard.writeText(url).then(() => showToast('קישור הועתק', 'success'))
   }
 
@@ -417,64 +427,84 @@ function InviteTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typ
   const isExpired  = (t: InviteToken) => t.expires_at ? new Date(t.expires_at) < new Date() : false
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '640px' }}>
-      {/* Create */}
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
-        <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '4px' }}>הזמן עובד חדש</div>
-        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-          צור קישור רישום חד-פעמי ושלח לעובד. הוא יירשם ויחובר לחשבון העסק שלך.
-        </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-          <div style={{ flex: 1 }}>
-            <label style={labelSt}>תוקף הקישור</label>
-            <select style={inputSt} value={expiryDays} onChange={e => setExpiryDays(e.target.value)}>
-              <option value="1">יום אחד</option>
-              <option value="3">3 ימים</option>
-              <option value="7">שבוע</option>
-              <option value="30">חודש</option>
-            </select>
-          </div>
-          <button onClick={createToken} disabled={creating} style={{ ...btnPrim, opacity: creating ? .7 : 1, whiteSpace: 'nowrap' }}>
-            {creating ? 'יוצר...' : '🔗 צור קישור'}
-          </button>
-        </div>
+    <div style={{ marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <div style={{ fontWeight: 600, fontSize: '14px' }}>🔗 הזמנת עובד חדש</div>
+        <button onClick={() => setOpen(v => !v)} style={{ ...btnPrim, padding: '7px 16px', fontSize: '12px' }}>
+          {open ? '✕ ביטול' : '+ צור קישור'}
+        </button>
       </div>
 
-      {/* List */}
-      {tokens.length > 0 && (
-        <div>
-          <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-muted)', marginBottom: '10px' }}>קישורים קיימים</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {tokens.map(t => {
-              const expired = isExpired(t)
-              const status  = t.used ? 'נוצל' : expired ? 'פג תוקף' : 'פעיל'
-              const statusColor = t.used ? '#94a3b8' : expired ? '#dc2626' : '#1a9e5c'
-              return (
-                <div key={t.id} style={{
-                  background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px',
-                  padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px',
-                  opacity: t.used || expired ? .65 : 1,
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <code style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                      {t.token}
-                    </code>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
-                      נוצר: {formatDate(t.created_at)}
-                      {t.expires_at && ` · פג: ${formatDate(t.expires_at)}`}
-                    </div>
-                  </div>
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: statusColor }}>{status}</span>
-                  {!t.used && !expired && (
-                    <button onClick={() => copyLink(t.token)} style={{ ...btnSec, padding: '5px 12px', fontSize: '12px' }}>העתק</button>
-                  )}
-                  <button onClick={() => revokeToken(t.id)} style={{ padding: '5px 10px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '12px' }}>×</button>
-                </div>
-              )
-            })}
+      {open && (
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '14px' }}>
+          {/* Modules */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelSt}>הרשאות לעובד החדש</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginTop: '6px' }}>
+              {ALL_MODULES.map(m => {
+                const active = selMods.includes(m.key)
+                return (
+                  <button key={m.key} onClick={() => toggleMod(m.key)} style={{
+                    padding: '4px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
+                    border: active ? '1px solid var(--primary)' : '1px solid var(--border)',
+                    background: active ? '#f0fdf4' : 'transparent',
+                    color: active ? 'var(--primary)' : 'var(--text-muted)',
+                    fontWeight: active ? 600 : 400,
+                  }}>{m.label}</button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Expiry + create */}
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+            <div>
+              <label style={labelSt}>תוקף</label>
+              <select style={{ ...inputSt, width: '130px' }} value={expiryDays} onChange={e => setExpiryDays(e.target.value)}>
+                <option value="1">יום אחד</option>
+                <option value="3">3 ימים</option>
+                <option value="7">שבוע</option>
+                <option value="30">חודש</option>
+              </select>
+            </div>
+            <button onClick={createToken} disabled={creating} style={{ ...btnPrim, opacity: creating ? .7 : 1 }}>
+              {creating ? 'יוצר...' : '🔗 צור קישור'}
+            </button>
           </div>
         </div>
       )}
+
+      {/* Token list */}
+      {tokens.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+          {tokens.map(t => {
+            const expired = isExpired(t)
+            const status  = t.used ? 'נוצל' : expired ? 'פג תוקף' : 'פעיל'
+            const statusColor = t.used ? '#94a3b8' : expired ? '#dc2626' : '#1a9e5c'
+            return (
+              <div key={t.id} style={{
+                background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px',
+                padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px',
+                opacity: t.used || expired ? .6 : 1,
+              }}>
+                <div style={{ flex: 1 }}>
+                  <code style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{t.token}</code>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    נוצר: {formatDate(t.created_at)}{t.expires_at && ` · פג: ${formatDate(t.expires_at)}`}
+                  </div>
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: statusColor }}>{status}</span>
+                {!t.used && !expired && (
+                  <button onClick={() => copyLink(t.token)} style={{ ...btnSec, padding: '5px 12px', fontSize: '12px' }}>העתק</button>
+                )}
+                <button onClick={() => revokeToken(t.id)} style={{ padding: '5px 10px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '12px' }}>×</button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <div style={{ borderBottom: '1px solid var(--border)', marginTop: '20px', marginBottom: '20px' }} />
     </div>
   )
 }
@@ -1143,7 +1173,6 @@ export default function SettingsClient() {
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: 'business', label: 'פרטי עסק',    icon: '🏢' },
     { key: 'users',    label: 'משתמשים',      icon: '👥' },
-    { key: 'invite',   label: 'הזמנת עובד',   icon: '🔗' },
     { key: 'landing',  label: 'דף נחיתה',     icon: '🌐' },
     ...(canVault ? [{ key: 'vault' as Tab, label: 'כספת סיסמאות', icon: '🔒' }] : []),
   ]
@@ -1181,7 +1210,6 @@ export default function SettingsClient() {
       {/* Content */}
       {tab === 'business' && <BusinessTab supabase={supabase} tenantId={tenantId} showToast={showToast} />}
       {tab === 'users'    && <UsersTab    supabase={supabase} tenantId={tenantId} myId={myId} showToast={showToast} />}
-      {tab === 'invite'   && <InviteTab   supabase={supabase} tenantId={tenantId} showToast={showToast} />}
       {tab === 'landing'  && <LandingTab  supabase={supabase} tenantId={tenantId} showToast={showToast} />}
       {/* VaultTab is always mounted so unlocked/hasPinSet state survives tab switches */}
       {canVault && (

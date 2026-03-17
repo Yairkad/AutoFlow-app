@@ -13,25 +13,27 @@ export async function POST(request: Request) {
   // Get token data
   const { data: tokenData } = await admin
     .from('registration_tokens')
-    .select('tenant_id, type, used')
+    .select('tenant_id, used, default_modules')
     .eq('token', token)
     .single()
 
-  if (!tokenData || tokenData.used || tokenData.type !== 'employee') {
+  if (!tokenData || tokenData.used) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 400 })
   }
 
-  // Link user to tenant
-  await admin
-    .from('profiles')
-    .update({ tenant_id: tokenData.tenant_id })
-    .eq('id', userId)
+  const defaultMods: string[] = tokenData.default_modules?.length
+    ? tokenData.default_modules
+    : ['products_view', 'tires_view', 'my_profile']
+
+  // Link user to tenant with modules
+  await admin.from('profiles').update({
+    tenant_id:       tokenData.tenant_id,
+    role:            'employee',
+    allowed_modules: defaultMods,
+  }).eq('id', userId)
 
   // Burn token
-  await admin
-    .from('registration_tokens')
-    .update({ used: true })
-    .eq('token', token)
+  await admin.from('registration_tokens').update({ used: true }).eq('token', token)
 
   return NextResponse.json({ ok: true })
 }
