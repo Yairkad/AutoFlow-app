@@ -13,9 +13,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         padding: '24px',
         minHeight: 'calc(100vh - var(--header-h))',
       }}>
-        <div style={{ maxWidth: '1440px', width: '100%' }}>
-          {children}
-        </div>
+        {children}
       </main>
       <Footer />
     </>

@@ -14,7 +14,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <div style={{ maxWidth: '1200px', width: '100%' }}>
+      <div style={{ width: '100%' }}>
 
         {/* Tab bar */}
         <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--border)', marginBottom: '20px' }}>
