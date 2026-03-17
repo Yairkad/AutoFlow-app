@@ -204,7 +204,7 @@ export default function DashboardStats() {
   }, [])
 
   if (loading) return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: 'minmax(90px, 130px)', gap: '16px', alignContent: 'start' }}>
+    <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: 'minmax(90px, 130px)', gap: '16px', alignContent: 'start' }}>
       {Array(6).fill(0).map((_, i) => (
         <div key={i} style={{ background: '#f1f5f9', borderRadius: 'var(--radius)' }} />
       ))}
@@ -214,7 +214,7 @@ export default function DashboardStats() {
   const profit = stats.incomeMonth - stats.expensesMonth
 
   return (
-    <div style={{
+    <div className="stats-grid" style={{
       display: 'grid',
       gridTemplateColumns: 'repeat(3, 1fr)',
       gridAutoRows: 'minmax(90px, 130px)',

@@ -336,7 +336,7 @@ a { color: inherit; text-decoration: none; }
   }
 
   /* Stats grid: keep 3 columns on mobile */
-  .dash-stats-col [style*="grid-template-columns: repeat(3, 1fr)"] {
+  .stats-grid {
     grid-template-columns: repeat(3, 1fr) !important;
   }
 

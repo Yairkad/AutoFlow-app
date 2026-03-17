@@ -5,7 +5,7 @@ import Header from './Header'
 import Sidebar from './Sidebar'
 import Footer from './Footer'
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export default function AppShell({ children, noFooter }: { children: React.ReactNode; noFooter?: boolean }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   return (
@@ -29,7 +29,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }}>
         {children}
       </main>
-      <Footer />
+      {!noFooter && <Footer />}
     </>
   )
 }

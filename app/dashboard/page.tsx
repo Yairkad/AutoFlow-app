@@ -13,7 +13,7 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<DashTab>('stats')
 
   return (
-    <AppShell>
+    <AppShell noFooter>
       <div style={{ width: '100%' }}>
 
         {/* Tab bar */}
