@@ -195,11 +195,9 @@ a { color: inherit; text-decoration: none; }
     gap: 6px !important;
   }
 
-  /* Tables – allow horizontal scroll */
+  /* Tables – no horizontal scroll, fit in width */
   table {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    width: 100% !important;
   }
 
   /* Dashboard stats grid – 1 column */
@@ -394,6 +392,7 @@ a { color: inherit; text-decoration: none; }
   .products-table-wrap {
     max-height: calc(100vh - 260px);
     overflow-y: auto;
+    overflow-x: hidden;
   }
 
   /* Sticky table header inside the scroll container */
@@ -402,6 +401,11 @@ a { color: inherit; text-decoration: none; }
     top: 0;
     z-index: 2;
     background: var(--bg) !important;
+  }
+
+  /* Inner scroll wrapper: no horizontal scroll */
+  .products-table-wrap > div {
+    overflow-x: hidden !important;
   }
 }
 

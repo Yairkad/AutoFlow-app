@@ -479,19 +479,19 @@ export default function ProductsClient() {
           {/* Products table */}
           <div className="products-table-wrap" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>מק&quot;ט</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>שם מוצר</th>
-                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>קטגוריה</th>
-                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>יחידה</th>
-                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>מחיר קנייה</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>מחיר מכירה</th>
-                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>% רווח</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>כמות</th>
-                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>ספק</th>
-                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>הערות</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>מק&quot;ט</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>שם מוצר</th>
+                    <th className="hide-mobile" style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>קטגוריה</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>יחידה</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>מחיר קנייה</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>מחיר מכירה</th>
+                    <th className="hide-mobile" style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>% רווח</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>כמות</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>ספק</th>
+                    <th className="hide-mobile" style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>הערות</th>
                     {editMode && <th style={{ padding: '10px 12px' }}></th>}
                   </tr>
                 </thead>
@@ -514,7 +514,7 @@ export default function ProductsClient() {
 
                     return (
                       <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', background: editMode ? '#fafeff' : undefined }}>
-                        <td className="hide-mobile" style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: editMode ? '80px' : undefined }}>
+                        <td style={{ padding: '8px 8px', color: 'var(--text-muted)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {editMode
                             ? <input style={cellInp} value={String(e.sku ?? '')} onChange={ev => setCell(p.id, 'sku', ev.target.value)} />
                             : p.sku || '—'}
@@ -531,14 +531,14 @@ export default function ProductsClient() {
                             ? <input style={cellInp} value={String(e.category ?? '')} onChange={ev => setCell(p.id, 'category', ev.target.value)} list="cat-list-inline" />
                             : <span style={{ color: 'var(--text-muted)' }}>{p.category || '—'}</span>}
                         </td>
-                        <td className="hide-mobile" style={{ padding: '8px 12px', minWidth: editMode ? '90px' : undefined }}>
+                        <td style={{ padding: '8px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {editMode
                             ? <select style={cellInp} value={String(e.unit ?? 'יח׳')} onChange={ev => setCell(p.id, 'unit', ev.target.value)}>
                                 {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                               </select>
                             : unitLabel}
                         </td>
-                        <td className="hide-mobile" style={{ padding: '8px 12px', minWidth: editMode ? '90px' : undefined }}>
+                        <td style={{ padding: '8px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {editMode
                             ? <input style={cellInp} type="number" value={String(e.buy_price ?? '')} onChange={ev => setCell(p.id, 'buy_price', parseFloat(ev.target.value) || 0)} />
                             : p.buy_price ? (
@@ -557,7 +557,7 @@ export default function ProductsClient() {
                             {isOut ? 'אזל' : `${p.qty} ${Number(p.unit_qty) > 1 ? 'יח׳' : p.unit}`}
                           </span>
                         </td>
-                        <td className="hide-mobile" style={{ padding: '8px 12px', color: 'var(--text-muted)', minWidth: editMode ? '130px' : undefined, maxWidth: editMode ? undefined : '120px', overflow: editMode ? undefined : 'hidden', textOverflow: editMode ? undefined : 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap' }}
+                        <td style={{ padding: '8px 8px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                             title={editMode ? undefined : (suppName !== '—' ? suppName : undefined)}>
                           {editMode
                             ? <select style={cellInp} value={String(e.supplier_id ?? '')} onChange={ev => setCell(p.id, 'supplier_id', ev.target.value)}>
