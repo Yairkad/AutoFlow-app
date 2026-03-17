@@ -107,13 +107,11 @@ export default function LoginPage() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{
-            width: 52, height: 52,
-            background: 'var(--primary)',
-            borderRadius: '14px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '26px', margin: '0 auto 12px',
-          }}>🔧</div>
+          <img
+            src="/icon-512.png"
+            alt="AutoFlow"
+            style={{ width: 64, height: 64, borderRadius: '16px', margin: '0 auto 12px', display: 'block', objectFit: 'contain' }}
+          />
           <h1 style={{ fontSize: '22px', fontWeight: 800 }}>AutoFlow</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
             {forgotMode ? 'איפוס סיסמה' : 'ברוך הבא, נא להתחבר'}

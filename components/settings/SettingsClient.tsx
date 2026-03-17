@@ -510,7 +510,8 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
     const hash = await hashPin(pinInput)
     const { data: t } = await supabase.from('tenants').select('settings').eq('id', tenantId).single()
     const current = (t?.settings as Record<string, unknown>) ?? {}
-    await supabase.from('tenants').update({ settings: { ...current, vault_pin_hash: hash } }).eq('id', tenantId)
+    const { error } = await supabase.from('tenants').update({ settings: { ...current, vault_pin_hash: hash } }).eq('id', tenantId)
+    if (error) { setPinError('שגיאה בשמירה, נסה שוב'); return }
     setHasPinSet(true); setSettingPin(false); setPinInput(''); setPinConfirm(''); setPinError('')
     showToast('קוד הוגדר', 'success')
   }
@@ -526,7 +527,8 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
     if (current.vault_pin_hash !== oldHash) { setPinError('הקוד הנוכחי שגוי'); return }
     // Save new PIN
     const newHash = await hashPin(newPin)
-    await supabase.from('tenants').update({ settings: { ...current, vault_pin_hash: newHash } }).eq('id', tenantId)
+    const { error } = await supabase.from('tenants').update({ settings: { ...current, vault_pin_hash: newHash } }).eq('id', tenantId)
+    if (error) { setPinError('שגיאה בשמירה, נסה שוב'); return }
     setChangingPin(false); setOldPinInput(''); setNewPin(''); setNewPinConfirm(''); setPinError('')
     showToast('קוד הכספת עודכן', 'success')
   }
@@ -830,7 +832,10 @@ export default function SettingsClient() {
       {tab === 'business' && <BusinessTab supabase={supabase} tenantId={tenantId} showToast={showToast} />}
       {tab === 'users'    && <UsersTab    supabase={supabase} tenantId={tenantId} myId={myId} showToast={showToast} />}
       {tab === 'invite'   && <InviteTab   supabase={supabase} tenantId={tenantId} showToast={showToast} />}
-      {tab === 'vault'    && <VaultTab    supabase={supabase} tenantId={tenantId} showToast={showToast} />}
+      {/* VaultTab is always mounted so unlocked/hasPinSet state survives tab switches */}
+      <div style={{ display: tab === 'vault' ? 'block' : 'none' }}>
+        <VaultTab supabase={supabase} tenantId={tenantId} showToast={showToast} />
+      </div>
     </div>
   )
 }

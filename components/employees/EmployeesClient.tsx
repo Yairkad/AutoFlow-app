@@ -391,13 +391,16 @@ export default function EmployeesClient() {
     loadEmployees()
   }
 
-  async function sendMagicLink(email: string) {
-    const { error } = await sb.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
+  async function sendInviteLink(email: string) {
+    const res = await fetch('/api/employees/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
     })
-    if (error) showToast('שגיאה בשליחת הקישור', 'error')
-    else showToast(`קישור כניסה נשלח ל-${email} ✓`, 'success')
+    if (!res.ok) { showToast('שגיאה ביצירת קישור הזמנה', 'error'); return }
+    const { link } = await res.json()
+    await navigator.clipboard.writeText(link)
+    showToast(`קישור הזמנה הועתק ל-${email} ✓`, 'success')
   }
 
   // ── Adjustments modal ────────────────────────────────────────────────────────
@@ -587,7 +590,7 @@ export default function EmployeesClient() {
             <div style={{ display: 'flex', gap: '6px', marginTop: '12px', flexWrap: 'wrap' }}>
               <Button size="sm" variant="secondary" onClick={() => openEdit(e)} style={{ flex: 1 }}>✏️ עריכה</Button>
               {e.email && (
-                <Button size="sm" variant="outline" onClick={() => sendMagicLink(e.email!)} title="שלח קישור כניסה">🔗</Button>
+                <Button size="sm" variant="outline" onClick={() => sendInviteLink(e.email!)} title="שלח הזמנה לעובד">🔗</Button>
               )}
               <Button size="sm" variant="secondary" onClick={() => openHistory(e)} title="היסטוריה">📋</Button>
               <Button size="sm" variant="danger" onClick={() => deleteEmp(e)} title="מחק">🗑️</Button>
