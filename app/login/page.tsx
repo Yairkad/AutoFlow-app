@@ -231,14 +231,6 @@ export default function LoginPage() {
           </form>
         )}
 
-        {!forgotMode && (
-          <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: 'var(--text-muted)' }}>
-            עסק חדש?{' '}
-            <a href="/register" style={{ color: 'var(--primary)', fontWeight: 600 }}>
-              הרשמה
-            </a>
-          </p>
-        )}
       </div>
     </div>
   )

@@ -1,5 +1,320 @@
-import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import CustomerSearch from '@/components/landing/CustomerSearch'
+import PromotionsCarousel from '@/components/landing/PromotionsCarousel'
+import PriceList from '@/components/landing/PriceList'
 
-export default function Home() {
-  redirect('/dashboard')
+export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'אוטוליין – פנצריה ושירותי רכב',
+  description: 'תיקון ומכירת צמיגים, כיוון פרונט, בדיקות רכב לפני קניה, סוכנות רכב יד 2. שירות מקצועי ומהיר.',
+}
+
+// ── Brand constants (will come from tenant settings later) ────────────────
+const TENANT_ID = 'c618f567-139b-4ce9-ac77-67affe93c27d'
+
+const BUSINESS = {
+  name: 'אוטוליין',
+  tagline: 'פנצריה ושירותי רכב',
+  phone: '', // TODO: fill after tomorrow
+  address: '', // TODO: fill after tomorrow
+  hours: '', // TODO: fill after tomorrow
+  wazeUrl: '', // TODO: fill after tomorrow
+  mapsUrl: '', // TODO: fill after tomorrow
+}
+
+const DEFAULT_SERVICES = [
+  { id: '1', icon: '🔧', name: 'תיקון ומכירת צמיגים', description: 'כל מותגי הצמיגים המובילים במחירים תחרותיים' },
+  { id: '2', icon: '🚗', name: 'כיוון פרונט', description: 'כיוון מדויק ממוחשב לכל סוגי הרכבים' },
+  { id: '3', icon: '🔍', name: 'בדיקת רכב לפני קניה', description: 'בדיקה מקיפה לפני רכישת רכב יד 2' },
+  { id: '4', icon: '🏷️', name: 'סוכנות רכב יד 2', description: 'קניה ומכירה של רכבים משומשים באמינות מלאה' },
+]
+
+export default async function LandingPage() {
+  const supabase = await createClient()
+
+  // Fetch data in parallel – no auth, RLS public policies allow this
+  const [{ data: services }, { data: promotions }, { data: priceItems }] = await Promise.all([
+    supabase.from('services').select('id,name,description,icon,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('sort_order'),
+    supabase.from('promotions').select('id,title,description,image_url,link_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).lte('start_date', new Date().toISOString().slice(0, 10)).or('end_date.is.null,end_date.gte.' + new Date().toISOString().slice(0, 10)).order('sort_order'),
+    supabase.from('price_list').select('id,category,service_name,price,price_note,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('category').order('sort_order'),
+  ])
+
+  const displayServices = services && services.length > 0 ? services : DEFAULT_SERVICES
+  const displayPromotions = promotions ?? []
+  const displayPrices = priceItems ?? []
+
+  return (
+    <div dir="rtl" style={{ fontFamily: 'var(--font-heebo, Heebo), sans-serif', color: '#1e293b' }}>
+
+      {/* ══════════════════════════════════════════════════════
+          HERO – Split: yellow right / navy left
+      ══════════════════════════════════════════════════════ */}
+      <section style={{ display: 'flex', minHeight: '100vh', flexDirection: 'row' }} aria-label="ראשי">
+
+        {/* Right – Yellow panel */}
+        <div style={{
+          flex: '0 0 42%',
+          background: '#F5C800',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '60px 40px',
+          gap: '20px',
+        }}>
+          {/* Logo placeholder */}
+          <div style={{
+            width: '140px', height: '140px',
+            background: '#1a2a6c',
+            borderRadius: '24px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#F5C800', fontSize: '48px', fontWeight: 800,
+            letterSpacing: '-2px',
+          }} aria-label="לוגו אוטוליין">
+            {/* Logo will replace this div when uploaded */}
+            אוטו
+          </div>
+
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{ fontSize: '36px', fontWeight: 900, color: '#1a2a6c', margin: 0, letterSpacing: '-1px' }}>
+              {BUSINESS.name}
+            </h1>
+            <p style={{ fontSize: '16px', color: '#1a2a6c', opacity: 0.75, margin: '6px 0 0' }}>
+              {BUSINESS.tagline}
+            </p>
+          </div>
+
+          {/* Business info */}
+          <div style={{ background: 'rgba(26,42,108,.08)', borderRadius: '14px', padding: '20px 24px', width: '100%', maxWidth: '320px' }}>
+            {BUSINESS.phone && (
+              <InfoRow icon="📞">
+                <a href={`tel:${BUSINESS.phone}`} style={{ color: '#1a2a6c', fontWeight: 700, fontSize: '18px' }}>{BUSINESS.phone}</a>
+              </InfoRow>
+            )}
+            {BUSINESS.address && (
+              <InfoRow icon="📍">
+                <span style={{ color: '#1a2a6c', fontWeight: 600 }}>{BUSINESS.address}</span>
+              </InfoRow>
+            )}
+            {BUSINESS.hours && (
+              <InfoRow icon="🕐">
+                <span style={{ color: '#1a2a6c' }}>{BUSINESS.hours}</span>
+              </InfoRow>
+            )}
+
+            {/* Map links */}
+            {(BUSINESS.wazeUrl || BUSINESS.mapsUrl) && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+                {BUSINESS.wazeUrl && (
+                  <a href={BUSINESS.wazeUrl} target="_blank" rel="noopener noreferrer" style={mapBtnSt('#00c4ff', '#fff')}>
+                    Waze
+                  </a>
+                )}
+                {BUSINESS.mapsUrl && (
+                  <a href={BUSINESS.mapsUrl} target="_blank" rel="noopener noreferrer" style={mapBtnSt('#34a853', '#fff')}>
+                    Google Maps
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Left – Navy panel */}
+        <div style={{
+          flex: 1,
+          background: '#1a2a6c',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          padding: '60px 64px',
+          gap: '32px',
+        }}>
+          <div>
+            <p style={{ color: '#F5C800', fontWeight: 700, fontSize: '14px', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '12px' }}>
+              שירות מקצועי · מהיר · אמין
+            </p>
+            <h2 style={{ color: '#fff', fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 900, lineHeight: 1.2, margin: 0, letterSpacing: '-1.5px' }}>
+              הרכב שלך<br />
+              <span style={{ color: '#F5C800' }}>בידיים הטובות</span><br />
+              ביותר
+            </h2>
+          </div>
+
+          <p style={{ color: 'rgba(255,255,255,.75)', fontSize: '17px', lineHeight: 1.7, maxWidth: '480px', margin: 0 }}>
+            מתמחים בטיפול מקצועי לרכב – מצמיגים ועד בדיקות מקיפות לפני קניה.
+            שירות אדיב, מחירים הוגנים ועבודה מדויקת.
+          </p>
+
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <a href="#services" style={heroBtnSt('#F5C800', '#1a2a6c')}>
+              השירותים שלנו
+            </a>
+            <a href="#customer-area" style={heroBtnSt('transparent', '#fff', '2px solid rgba(255,255,255,.4)')}>
+              מצא את הרכב שלי
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════
+          SERVICES
+      ══════════════════════════════════════════════════════ */}
+      <section id="services" style={{ background: '#f8fafc', padding: '80px 40px' }} aria-labelledby="services-title">
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <SectionHeader id="services-title" title="השירותים שלנו" sub="כל מה שהרכב שלך צריך – במקום אחד" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginTop: '40px' }}>
+            {displayServices.map((s) => (
+              <div key={s.id} style={cardSt}>
+                <div style={{ fontSize: '40px', marginBottom: '12px' }}>{s.icon ?? '🔧'}</div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1a2a6c', margin: '0 0 8px' }}>{s.name}</h3>
+                {s.description && <p style={{ fontSize: '14px', color: '#64748b', margin: 0, lineHeight: 1.6 }}>{s.description}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════
+          PROMOTIONS
+      ══════════════════════════════════════════════════════ */}
+      {displayPromotions.length > 0 && (
+        <section style={{ background: '#fff', padding: '80px 40px' }} aria-labelledby="promos-title">
+          <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+            <SectionHeader id="promos-title" title="מבצעים חמים" sub="הצעות מיוחדות לתקופה מוגבלת" />
+            <div style={{ marginTop: '40px' }}>
+              <PromotionsCarousel promotions={displayPromotions} />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          PRICE LIST
+      ══════════════════════════════════════════════════════ */}
+      {displayPrices.length > 0 && (
+        <section style={{ background: '#f8fafc', padding: '80px 40px' }} aria-labelledby="prices-title">
+          <div style={{ maxWidth: '780px', margin: '0 auto' }}>
+            <SectionHeader id="prices-title" title="מחירון שירותים" sub="מחירים שקופים ללא הפתעות" />
+            <div style={{ marginTop: '40px' }}>
+              <PriceList items={displayPrices} />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          CUSTOMER AREA
+      ══════════════════════════════════════════════════════ */}
+      <section id="customer-area" style={{ background: '#1a2a6c', padding: '80px 40px' }} aria-labelledby="customer-title">
+        <div style={{ maxWidth: '520px', margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ color: '#F5C800', fontWeight: 700, fontSize: '13px', letterSpacing: '2px', marginBottom: '12px' }}>
+            איזור לקוחות
+          </p>
+          <h2 id="customer-title" style={{ color: '#fff', fontSize: '28px', fontWeight: 800, margin: '0 0 10px' }}>
+            מצא את הרכב שלך
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,.7)', fontSize: '15px', marginBottom: '32px' }}>
+            הזן את מספר הלוחית ו-4 הספרות האחרונות של הטלפון שמסרת – ותוכל לעקוב אחרי סטטוס הרכב שלך בזמן אמת.
+          </p>
+          <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', textAlign: 'right' }}>
+            <CustomerSearch />
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════
+          FOOTER
+      ══════════════════════════════════════════════════════ */}
+      <footer style={{ background: '#0f1e55', color: 'rgba(255,255,255,.7)', padding: '40px', textAlign: 'center' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <p style={{ fontWeight: 800, fontSize: '20px', color: '#F5C800', marginBottom: '4px' }}>{BUSINESS.name}</p>
+          {BUSINESS.address && <p style={{ fontSize: '14px', margin: '4px 0' }}>{BUSINESS.address}</p>}
+          {BUSINESS.phone && (
+            <p style={{ fontSize: '14px', margin: '4px 0' }}>
+              טלפון: <a href={`tel:${BUSINESS.phone}`} style={{ color: '#fff' }}>{BUSINESS.phone}</a>
+            </p>
+          )}
+          {BUSINESS.hours && <p style={{ fontSize: '14px', margin: '4px 0' }}>שעות פעילות: {BUSINESS.hours}</p>}
+
+          <div style={{ borderTop: '1px solid rgba(255,255,255,.15)', marginTop: '24px', paddingTop: '20px', display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', fontSize: '13px' }}>
+            <Link href="/privacy" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>מדיניות פרטיות</Link>
+            <Link href="/accessibility" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>הצהרת נגישות</Link>
+            {BUSINESS.wazeUrl && <a href={BUSINESS.wazeUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>Waze</a>}
+            {BUSINESS.mapsUrl && <a href={BUSINESS.mapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>Google Maps</a>}
+          </div>
+
+          <p style={{ fontSize: '12px', marginTop: '16px', opacity: 0.4 }}>
+            © {new Date().getFullYear()} {BUSINESS.name}. כל הזכויות שמורות.
+          </p>
+        </div>
+      </footer>
+    </div>
+  )
+}
+
+// ── Sub-components ──────────────────────────────────────────────────────────
+
+function SectionHeader({ id, title, sub }: { id?: string; title: string; sub?: string }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <h2 id={id} style={{ fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 800, color: '#1a2a6c', margin: '0 0 8px' }}>
+        {title}
+      </h2>
+      {sub && <p style={{ color: '#64748b', fontSize: '16px', margin: 0 }}>{sub}</p>}
+      <div style={{ width: '48px', height: '4px', background: '#F5C800', borderRadius: '2px', margin: '16px auto 0' }} />
+    </div>
+  )
+}
+
+function InfoRow({ icon, children }: { icon: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+      <span style={{ fontSize: '18px' }}>{icon}</span>
+      <div>{children}</div>
+    </div>
+  )
+}
+
+const cardSt: React.CSSProperties = {
+  background: '#fff',
+  borderRadius: '16px',
+  padding: '28px 24px',
+  boxShadow: '0 2px 12px rgba(0,0,0,.06)',
+  border: '1px solid #e2e8f0',
+  transition: 'transform 0.2s, box-shadow 0.2s',
+}
+
+function heroBtnSt(bg: string, color: string, border?: string): React.CSSProperties {
+  return {
+    display: 'inline-block',
+    background: bg,
+    color,
+    border: border ?? 'none',
+    borderRadius: '10px',
+    padding: '14px 28px',
+    fontWeight: 700,
+    fontSize: '15px',
+    textDecoration: 'none',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+  }
+}
+
+function mapBtnSt(bg: string, color: string): React.CSSProperties {
+  return {
+    display: 'inline-block',
+    background: bg,
+    color,
+    border: 'none',
+    borderRadius: '8px',
+    padding: '8px 16px',
+    fontWeight: 700,
+    fontSize: '13px',
+    textDecoration: 'none',
+    cursor: 'pointer',
+  }
 }
