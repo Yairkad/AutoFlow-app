@@ -71,7 +71,8 @@ export default function ProductsClient() {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
-  const [viewOnly, setViewOnly] = useState(false)
+  const [viewOnly, setViewOnly]       = useState(false)
+  const [showPricelist, setShowPricelist] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [movements, setMovements] = useState<Movement[]>([])
@@ -407,7 +408,10 @@ export default function ProductsClient() {
           <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>📦 מוצרים</h1>
           {viewOnly && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>מצב צפיה בלבד</div>}
         </div>
-        {!viewOnly && <Button onClick={openAdd}>➕ מוצר חדש</Button>}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button variant="outline" onClick={() => setShowPricelist(true)}>🖨️ מחירון</Button>
+          {!viewOnly && <Button onClick={openAdd}>➕ מוצר חדש</Button>}
+        </div>
       </div>
 
       {/* Stats */}
@@ -837,8 +841,132 @@ export default function ProductsClient() {
           </div>
         </div>
       </Modal>
+
+      {/* ── Price List Overlay ─────────────────────────────────────────────── */}
+      {showPricelist && (
+        <PriceListOverlay products={products} onClose={() => setShowPricelist(false)} />
+      )}
     </div>
   )
+}
+
+// ── Price List ──────────────────────────────────────────────────────────────────
+
+function PriceListOverlay({ products, onClose }: { products: Product[]; onClose: () => void }) {
+  const today = new Date().toLocaleDateString('he-IL', { year: 'numeric', month: 'long', day: 'numeric' })
+
+  // Group by category, sorted; no-category last
+  const grouped = products
+    .filter(p => (p.sell_price ?? 0) > 0)
+    .reduce<Record<string, Product[]>>((acc, p) => {
+      const cat = p.category || 'כללי'
+      if (!acc[cat]) acc[cat] = []
+      acc[cat].push(p)
+      return acc
+    }, {})
+
+  const cats = Object.keys(grouped).sort((a, b) =>
+    a === 'כללי' ? 1 : b === 'כללי' ? -1 : a.localeCompare(b, 'he')
+  )
+
+  return (
+    <>
+      <style>{`
+        @media print {
+          body > * { display: none !important; }
+          #pricelist-overlay { display: block !important; position: static !important; background: white !important; }
+          #pricelist-overlay .no-print { display: none !important; }
+          @page { margin: 15mm; size: A4 portrait; }
+        }
+      `}</style>
+
+      {/* Backdrop */}
+      <div
+        className="no-print"
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 400 }}
+      />
+
+      {/* Panel */}
+      <div
+        id="pricelist-overlay"
+        style={{
+          position: 'fixed', top: '40px', left: '50%', transform: 'translateX(-50%)',
+          width: 'min(800px, 95vw)', maxHeight: 'calc(100vh - 80px)',
+          background: '#fff', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.25)',
+          zIndex: 401, overflowY: 'auto', direction: 'rtl',
+        }}
+      >
+        {/* Toolbar */}
+        <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
+          <span style={{ fontWeight: 700, fontSize: '16px' }}>🖨️ מחירון מוצרים</span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => window.print()}
+              style={{ padding: '8px 20px', background: '#1a9e5c', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              הדפס / שמור PDF
+            </button>
+            <button onClick={onClose} style={{ padding: '8px 14px', border: '1px solid #e2e8f0', borderRadius: '8px', background: 'transparent', cursor: 'pointer', fontSize: '13px' }}>✕</button>
+          </div>
+        </div>
+
+        {/* Print content */}
+        <div style={{ padding: '24px 28px' }}>
+          {/* Header */}
+          <div style={{ textAlign: 'center', marginBottom: '24px', borderBottom: '2px solid #1a2a6c', paddingBottom: '14px' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#1a2a6c', margin: '0 0 4px' }}>מחירון מוצרים</h1>
+            <div style={{ fontSize: '12px', color: '#64748b' }}>תאריך הפקה: {today}</div>
+          </div>
+
+          {/* Categories */}
+          {cats.map(cat => (
+            <div key={cat} style={{ marginBottom: '24px' }}>
+              <div style={{ background: '#1a2a6c', color: '#fff', padding: '6px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '13px', marginBottom: '8px' }}>
+                {cat}
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc' }}>
+                    <th style={thSt}>שם המוצר</th>
+                    <th style={{ ...thSt, width: '130px' }}>מקט</th>
+                    <th style={{ ...thSt, width: '110px', textAlign: 'left' }}>מחיר מכירה</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {grouped[cat].map((p, i) => (
+                    <tr key={p.id} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                      <td style={tdSt}>{p.name}</td>
+                      <td style={{ ...tdSt, color: '#64748b', fontFamily: 'monospace' }}>{p.sku || '—'}</td>
+                      <td style={{ ...tdSt, fontWeight: 700, color: '#1a9e5c', textAlign: 'left' }}>
+                        ₪{Number(p.sell_price).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+
+          {cats.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>אין מוצרים עם מחיר מכירה</div>
+          )}
+
+          <div style={{ marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '12px', textAlign: 'center', fontSize: '11px', color: '#94a3b8' }}>
+            {products.filter(p => (p.sell_price ?? 0) > 0).length} מוצרים · המחירים כוללים מע&quot;מ
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+const thSt: React.CSSProperties = {
+  padding: '7px 10px', textAlign: 'right', fontWeight: 700,
+  borderBottom: '2px solid #e2e8f0', fontSize: '12px', color: '#475569',
+}
+const tdSt: React.CSSProperties = {
+  padding: '7px 10px', borderBottom: '1px solid #f1f5f9',
 }
 
 // ── Stat Card ──────────────────────────────────────────────────────────────────
