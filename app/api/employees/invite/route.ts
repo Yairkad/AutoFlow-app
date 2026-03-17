@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   // Send invite email via Supabase (uses the "Invite User" email template)
   const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { tenant_id: profile.tenant_id },
-    redirectTo: `${baseUrl}/set-password`,
+    redirectTo: `${baseUrl}/auth/callback?next=/set-password`,
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

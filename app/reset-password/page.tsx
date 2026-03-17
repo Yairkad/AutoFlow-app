@@ -18,34 +18,15 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const supabase = createClient()
 
-    // PKCE flow: ?code= in URL must be exchanged for a session explicitly.
-    // createBrowserClient may not auto-exchange in all environments.
-    const code = new URLSearchParams(window.location.search).get('code')
-    if (code) {
-      // Remove code from URL so it can't be reused on refresh
-      const clean = new URL(window.location.href)
-      clean.searchParams.delete('code')
-      window.history.replaceState({}, '', clean.toString())
+    // The /auth/callback route already exchanged the code for a session.
+    // We just need to verify a PASSWORD_RECOVERY session is active.
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) setReady(true)
+      else setError('הקישור פג תוקף. יש לבקש קישור חדש לאיפוס סיסמה.')
+    })
 
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-        if (error) {
-          setError('הקישור פג תוקף. יש לבקש קישור חדש לאיפוס סיסמה.')
-          setReady(true) // show error inside the form area
-        }
-        // On success: PASSWORD_RECOVERY fires via onAuthStateChange below
-      })
-    } else {
-      // Implicit/hash flow or page-refresh after exchange: check stored session
-      supabase.auth.getSession().then(({ data }) => {
-        if (data.session) setReady(true)
-      })
-    }
-
-    // Only PASSWORD_RECOVERY (not SIGNED_IN / INITIAL_SESSION) should unlock
-    // the form — other events mean the user is logged-in normally and calling
-    // updateUser would fail with an "expired token" error.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
         setReady(true)
       }
     })
