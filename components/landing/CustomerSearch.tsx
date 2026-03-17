@@ -36,23 +36,10 @@ export default function CustomerSearch() {
   const [notFound, setNotFound] = useState(false)
   const [error, setError]       = useState('')
   const [job, setJob]           = useState<JobResult | null>(null)
-
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
+  async function doSearch(cleanPlate: string, cleanPhone: string) {
+    setLoading(true)
     setNotFound(false)
     setError('')
-    setJob(null)
-
-    const cleanPlate = plate.trim().toUpperCase()
-    const cleanPhone = phone4.trim()
-
-    if (!cleanPlate) { setError('יש להזין מספר לוחית רישוי'); return }
-    if (cleanPhone.length !== 4 || !/^\d{4}$/.test(cleanPhone)) {
-      setError('יש להזין 4 ספרות אחרונות של מספר הטלפון')
-      return
-    }
-
-    setLoading(true)
     try {
       const res  = await fetch('/api/public/customer-search', {
         method: 'POST',
@@ -63,6 +50,7 @@ export default function CustomerSearch() {
       if (data.found && data.job) {
         setJob(data.job)
       } else {
+        setJob(null)
         setNotFound(true)
       }
     } catch {
@@ -70,6 +58,17 @@ export default function CustomerSearch() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    const cleanPlate = plate.trim().toUpperCase()
+    const cleanPhone = phone4.trim()
+    if (!cleanPlate) { setError('יש להזין מספר לוחית רישוי'); return }
+    if (cleanPhone.length !== 4 || !/^\d{4}$/.test(cleanPhone)) {
+      setError('יש להזין 4 ספרות אחרונות של מספר הטלפון'); return
+    }
+    await doSearch(cleanPlate, cleanPhone)
   }
 
   // ── Result view ──────────────────────────────────────────────────────────
@@ -140,17 +139,31 @@ export default function CustomerSearch() {
           })}
         </div>
 
-        {/* Search again */}
-        <button
-          onClick={() => { setJob(null); setPlate(''); setPhone4('') }}
-          style={{
-            width: '100%', background: 'transparent', border: '1.5px solid #e2e8f0',
-            borderRadius: '10px', padding: '10px', fontSize: '13px',
-            color: '#64748b', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
-          }}
-        >
-          חיפוש חדש
-        </button>
+        {/* Refresh + Search again */}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => doSearch(plate.trim().toUpperCase(), phone4.trim())}
+            disabled={loading}
+            style={{
+              flex: 1, background: '#1a2a6c', color: '#fff', border: 'none',
+              borderRadius: '10px', padding: '10px', fontSize: '13px',
+              cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', fontWeight: 600,
+              opacity: loading ? .7 : 1,
+            }}
+          >
+            {loading ? 'מרענן...' : '🔄 בדוק סטטוס שוב'}
+          </button>
+          <button
+            onClick={() => { setJob(null); setPlate(''); setPhone4('') }}
+            style={{
+              flex: 1, background: 'transparent', border: '1.5px solid #e2e8f0',
+              borderRadius: '10px', padding: '10px', fontSize: '13px',
+              color: '#64748b', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+            }}
+          >
+            חיפוש חדש
+          </button>
+        </div>
       </div>
     )
   }

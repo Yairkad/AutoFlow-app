@@ -2,36 +2,63 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 const NAV_ITEMS = [
-  { href: '/dashboard',  label: 'ראשי',          icon: '🏠' },
-  { href: '/expenses',   label: 'הוצאות',         icon: '💰' },
-  { href: '/billing',    label: 'חשבונות',        icon: '🧾' },
-  { href: '/debts',      label: 'חובות',          icon: '💳' },
-  { href: '/employees',  label: 'עובדים',         icon: '👷' },
-  { href: '/products',   label: 'מוצרים',         icon: '📦' },
-  { href: '/tires',      label: 'צמיגים',         icon: '🔘' },
-  { href: '/cars',       label: 'רכבים',          icon: '🚗' },
-  { href: '/quotes',     label: 'הצעות מחיר',     icon: '💬' },
-  { href: '/suppliers',  label: 'ספקים',          icon: '🏭' },
-  { href: '/alignment',  label: 'פרונט',          icon: '🔩' },
-  { href: '/inspections',label: 'בדיקות קניה',   icon: '📝' },
-  { href: '/reminders',  label: 'תזכורות',        icon: '🔔' },
-  { href: '/documents',  label: 'מסמכים',         icon: '📄' },
-  { href: '/settings',   label: 'הגדרות',         icon: '⚙️' },
+  { href: '/dashboard',   label: 'ראשי',          icon: '🏠', module: null },
+  { href: '/expenses',    label: 'הוצאות',         icon: '💰', module: 'expenses' },
+  { href: '/billing',     label: 'חשבונות',        icon: '🧾', module: 'billing' },
+  { href: '/debts',       label: 'חובות',          icon: '💳', module: 'debts' },
+  { href: '/employees',   label: 'עובדים',         icon: '👷', module: 'employees' },
+  { href: '/products',    label: 'מוצרים',         icon: '📦', module: ['products', 'products_view'] },
+  { href: '/tires',       label: 'צמיגים',         icon: '🔘', module: ['tires', 'tires_view'] },
+  { href: '/cars',        label: 'רכבים',          icon: '🚗', module: 'cars' },
+  { href: '/quotes',      label: 'הצעות מחיר',     icon: '💬', module: 'quotes' },
+  { href: '/suppliers',   label: 'ספקים',          icon: '🏭', module: 'suppliers' },
+  { href: '/alignment',   label: 'פרונט',          icon: '🔩', module: 'alignment' },
+  { href: '/inspections', label: 'בדיקות קניה',   icon: '📝', module: 'inspections' },
+  { href: '/reminders',   label: 'תזכורות',        icon: '🔔', module: 'reminders' },
+  { href: '/documents',   label: 'מסמכים',         icon: '📄', module: 'documents' },
+  { href: '/settings',    label: 'הגדרות',         icon: '⚙️', module: 'settings' },
+  { href: '/my-profile',  label: 'הפרופיל שלי',    icon: '👤', module: 'my_profile' },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const [pressed, setPressed] = useState<string | null>(null)
+  const sb = useRef(createClient()).current
+  const [pressed, setPressed]     = useState<string | null>(null)
   const [pendingHref, setPendingHref] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin]     = useState(false)
+  const [modules, setModules]     = useState<string[]>([])
+  const [loaded, setLoaded]       = useState(false)
 
-  // Clear pending state when navigation completes
+  useEffect(() => {
+    sb.auth.getUser().then(({ data }) => {
+      if (!data.user) { setLoaded(true); return }
+      sb.from('profiles').select('role, allowed_modules').eq('id', data.user.id).single()
+        .then(({ data: p }) => {
+          if (p) {
+            setIsAdmin(p.role === 'admin')
+            setModules(p.allowed_modules ?? [])
+          }
+          setLoaded(true)
+        })
+    })
+  }, [sb])
+
   useEffect(() => {
     setPendingHref(null)
     setPressed(null)
   }, [pathname])
+
+  function isVisible(item: typeof NAV_ITEMS[0]) {
+    if (!loaded) return false
+    if (isAdmin && item.href !== '/my-profile') return true
+    if (item.module === null) return true           // dashboard always visible
+    const required = Array.isArray(item.module) ? item.module : [item.module]
+    return required.some(m => modules.includes(m))
+  }
 
   return (
     <aside style={{
@@ -46,7 +73,7 @@ export default function Sidebar() {
       zIndex: 90,
       padding: '8px 0',
     }}>
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.filter(isVisible).map((item) => {
         const isActive = pathname === item.href
         const isPending = pendingHref === item.href && !isActive
         const isHighlighted = isActive || isPending

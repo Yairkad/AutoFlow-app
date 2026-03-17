@@ -75,7 +75,10 @@ const ALL_MODULES = [
   { key: 'documents',  label: '📄 מסמכים' },
   { key: 'billing',    label: '🧾 חשבונות' },
   { key: 'settings',   label: '⚙️ הגדרות (כללי)' },
-  { key: 'vault',      label: '🔒 כספת סיסמאות' },
+  { key: 'vault',          label: '🔒 כספת סיסמאות' },
+  { key: 'products_view', label: '📦 מוצרים (צפיה בלבד)' },
+  { key: 'tires_view',    label: '🔘 צמיגים (צפיה בלבד)' },
+  { key: 'my_profile',    label: '👤 פרופיל אישי' },
 ]
 
 const inputSt: React.CSSProperties = {

@@ -75,6 +75,7 @@ export default function TiresClient() {
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
 
+  const [viewOnly, setViewOnly]   = useState(false)
   const [tires, setTires]         = useState<Tire[]>([])
   const [movements, setMovements] = useState<TireMovement[]>([])
 
@@ -122,8 +123,14 @@ export default function TiresClient() {
     ;(async () => {
       const { data: { user } } = await sb.auth.getUser()
       if (!user) return
-      const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.id).single()
-      if (profile) tenantId.current = profile.tenant_id
+      const { data: profile } = await sb.from('profiles').select('tenant_id, role, allowed_modules').eq('id', user.id).single()
+      if (profile) {
+        tenantId.current = profile.tenant_id
+        const admin   = profile.role === 'admin'
+        const hasFull = (profile.allowed_modules ?? []).includes('tires')
+        const hasView = (profile.allowed_modules ?? []).includes('tires_view')
+        setViewOnly(!admin && !hasFull && hasView)
+      }
       await load()
     })()
   }, [sb, load])
@@ -448,8 +455,11 @@ export default function TiresClient() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🔘 צמיגים</h1>
-        <Button onClick={openAdd}>➕ צמיג חדש</Button>
+        <div>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🔘 צמיגים</h1>
+          {viewOnly && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>מצב צפיה בלבד</div>}
+        </div>
+        {!viewOnly && <Button onClick={openAdd}>➕ צמיג חדש</Button>}
       </div>
 
       {/* Stats */}
@@ -509,14 +519,14 @@ export default function TiresClient() {
                 📥 ייבא Excel
                 <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={importExcel} />
               </label>
-              {editMode ? (
+              {!viewOnly && (editMode ? (
                 <>
                   <Button onClick={saveInlineEdit}>💾 שמור הכל</Button>
                   <Button variant="secondary" onClick={() => setEditMode(false)}>ביטול</Button>
                 </>
               ) : (
                 <Button variant="outline" onClick={enterEditMode}>✏️ עריכה</Button>
-              )}
+              ))}
             </div>
           </div>
 
@@ -633,7 +643,7 @@ export default function TiresClient() {
                         </td>
 
                         {/* פעולות (עריכה בלבד) */}
-                        {editMode && (
+                        {editMode && !viewOnly && (
                           <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <button title="שכפל" onClick={() => openDuplicate(t)}

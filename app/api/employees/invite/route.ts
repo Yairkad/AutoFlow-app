@@ -35,11 +35,16 @@ export async function POST(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Link user to tenant immediately (profile created by trigger)
+  // Link user to tenant with default employee modules
   if (invited?.user) {
     await admin
       .from('profiles')
-      .upsert({ id: invited.user.id, tenant_id: profile.tenant_id })
+      .upsert({
+        id: invited.user.id,
+        tenant_id: profile.tenant_id,
+        role: 'employee',
+        allowed_modules: ['products_view', 'tires_view', 'my_profile'],
+      })
   }
 
   return NextResponse.json({ ok: true })
