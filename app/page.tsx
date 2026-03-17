@@ -96,28 +96,45 @@ export default async function LandingPage() {
             <img
               src={BUSINESS.logo}
               alt={`לוגו ${BUSINESS.name}`}
-              style={{ width: '140px', height: '140px', objectFit: 'contain', borderRadius: '16px' }}
+              style={{ width: '420px', height: '420px', objectFit: 'contain', borderRadius: '16px' }}
             />
           ) : (
             <div style={{
-              width: '140px', height: '140px',
+              width: '420px', height: '420px',
               background: '#1a2a6c',
-              borderRadius: '24px',
+              borderRadius: '32px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#F5C800', fontSize: '48px', fontWeight: 800,
-              letterSpacing: '-2px',
+              color: '#F5C800', fontSize: '120px', fontWeight: 800,
+              letterSpacing: '-4px',
             }} aria-label={`לוגו ${BUSINESS.name}`}>
               {BUSINESS.name.slice(0, 2)}
             </div>
           )}
 
-          <div style={{ textAlign: 'center' }}>
-            <h1 style={{ fontSize: '36px', fontWeight: 900, color: '#1a2a6c', margin: 0, letterSpacing: '-1px' }}>
-              {BUSINESS.name}
-            </h1>
-            <p style={{ fontSize: '16px', color: '#1a2a6c', opacity: 0.75, margin: '6px 0 0' }}>
-              {BUSINESS.tagline}
-            </p>
+          {/* Navigation buttons */}
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {BUSINESS.wazeUrl && (
+              <a href={BUSINESS.wazeUrl} target="_blank" rel="noopener noreferrer" style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                background: '#00c4ff', color: '#fff', border: 'none',
+                borderRadius: '12px', padding: '12px 24px',
+                fontWeight: 700, fontSize: '16px', textDecoration: 'none',
+                boxShadow: '0 2px 10px rgba(0,196,255,.35)',
+              }}>
+                🧭 Waze
+              </a>
+            )}
+            {BUSINESS.mapsUrl && (
+              <a href={BUSINESS.mapsUrl} target="_blank" rel="noopener noreferrer" style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                background: '#34a853', color: '#fff', border: 'none',
+                borderRadius: '12px', padding: '12px 24px',
+                fontWeight: 700, fontSize: '16px', textDecoration: 'none',
+                boxShadow: '0 2px 10px rgba(52,168,83,.35)',
+              }}>
+                🗺️ Google Maps
+              </a>
+            )}
           </div>
 
           {/* Business info */}

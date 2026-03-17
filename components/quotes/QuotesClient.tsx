@@ -15,6 +15,7 @@ interface SupplierOffer {
   supplier: string
   type: string
   price: number | null
+  sell_price: number | null
   notes: string
   selected: boolean
 }
@@ -105,7 +106,7 @@ function whatsappPhone(phone: string | null) {
 }
 
 function newOffer(): SupplierOffer {
-  return { id: crypto.randomUUID(), supplier: '', type: 'חדש', price: null, notes: '', selected: false }
+  return { id: crypto.randomUUID(), supplier: '', type: 'חדש', price: null, sell_price: null, notes: '', selected: false }
 }
 
 // ── Offer pure helpers (module-level so OffersSection doesn't remount) ─────────
@@ -124,12 +125,16 @@ function selectOffer(
 function updateOfferField(
   offers: SupplierOffer[], id: string,
   field: keyof SupplierOffer, rawVal: string,
-  setOffers: React.Dispatch<React.SetStateAction<SupplierOffer[]>>
+  setOffers: React.Dispatch<React.SetStateAction<SupplierOffer[]>>,
+  numTransform?: (v: string) => number | null
 ) {
+  const isNumField = field === 'price' || field === 'sell_price'
   setOffers(offers.map(o =>
     o.id !== id ? o : {
       ...o,
-      [field]: field === 'price' ? (parseFloat(rawVal) || null) : rawVal,
+      [field]: isNumField
+        ? (numTransform ? numTransform(rawVal) : (parseFloat(rawVal) || null))
+        : rawVal,
     }
   ))
 }
@@ -155,29 +160,70 @@ const gridStyle: React.CSSProperties = {
 
 // ── OffersSection (module-level → stable identity → no focus loss) ────────────
 
+const VAT_RATE = 1.17
+
 function OffersSection({
-  offers, setOffers,
+  offers, setOffers, onSellPriceChange,
 }: {
   offers: SupplierOffer[]
   setOffers: React.Dispatch<React.SetStateAction<SupplierOffer[]>>
+  onSellPriceChange?: (v: string) => void
 }) {
+  const [vatInclusive, setVatInclusive] = useState(false)
+
+  function toDisplay(p: number | null): string {
+    if (p == null) return ''
+    return vatInclusive ? (p * VAT_RATE).toFixed(2) : p.toString()
+  }
+  function fromInput(v: string): number | null {
+    const n = parseFloat(v)
+    if (!n) return null
+    return vatInclusive ? +(n / VAT_RATE).toFixed(4) : n
+  }
+
+  function handleSelect(id: string) {
+    const updated = offers.map(o => ({ ...o, selected: o.id === id }))
+    setOffers(updated)
+    const sel = updated.find(o => o.id === id)
+    if (sel?.sell_price != null && onSellPriceChange) {
+      onSellPriceChange(toDisplay(sel.sell_price))
+    }
+  }
+
   const sel = selectedOffer(offers)
+  const COLS = '2fr 80px 95px 95px 1.2fr 36px 36px'
+
   return (
     <div style={{ gridColumn: '1 / -1', marginTop: 4 }}>
-      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: 'var(--text)' }}>
-        הצעות ספקים
-        <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--text-muted)', marginRight: 8 }}>
-          (הוסף הצעה מכל ספק, לחץ ✓ לבחירת המועדף)
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>
+          הצעות ספקים
         </span>
+        <span style={{ fontWeight: 400, fontSize: 11, color: 'var(--text-muted)' }}>
+          (לחץ ✓ לבחירת הצעה מועדפת)
+        </span>
+        {/* VAT toggle */}
+        <button
+          type="button"
+          onClick={() => setVatInclusive(v => !v)}
+          style={{
+            marginRight: 'auto',
+            padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+            border: '1.5px solid',
+            borderColor: vatInclusive ? '#059669' : 'var(--border)',
+            background: vatInclusive ? '#d1fae5' : 'white',
+            color: vatInclusive ? '#065f46' : 'var(--text-muted)',
+            cursor: 'pointer',
+          }}
+        >
+          {vatInclusive ? '✓ כולל מע"מ (17%)' : 'לפני מע"מ'}
+        </button>
       </div>
 
       {offers.length > 0 && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '2fr 90px 110px 1.5fr 36px 36px',
-          gap: 6, padding: '0 2px', marginBottom: 4,
-        }}>
-          {['שם ספק', 'סוג', 'מחיר (₪)', 'הערה', '', ''].map((h, i) => (
+        <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 6, padding: '0 2px', marginBottom: 4 }}>
+          {['שם ספק', 'סוג', 'ספק (₪)', 'ללקוח (₪)', 'הערה', '', ''].map((h, i) => (
             <span key={i} style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>{h}</span>
           ))}
         </div>
@@ -186,7 +232,7 @@ function OffersSection({
       {offers.map(o => (
         <div key={o.id} style={{
           display: 'grid',
-          gridTemplateColumns: '2fr 90px 110px 1.5fr 36px 36px',
+          gridTemplateColumns: COLS,
           gap: 6, alignItems: 'center',
           background: o.selected ? '#f0fdf6' : 'var(--bg)',
           border: `2px solid ${o.selected ? 'var(--primary)' : 'var(--border)'}`,
@@ -217,11 +263,22 @@ function OffersSection({
               {OFFER_TYPES.map(t => <option key={t}>{t}</option>)}
             </select>
           )}
+          {/* Supplier price */}
           <input
             type="number" placeholder="0.00"
-            value={o.price ?? ''}
-            onChange={e => updateOfferField(offers, o.id, 'price', e.target.value, setOffers)}
-            style={inpStyle}
+            value={toDisplay(o.price)}
+            onChange={e => updateOfferField(offers, o.id, 'price', e.target.value, setOffers, fromInput)}
+            style={{ ...inpStyle, background: '#fff8e1' }}
+          />
+          {/* Customer price */}
+          <input
+            type="number" placeholder="0.00"
+            value={toDisplay(o.sell_price)}
+            onChange={e => {
+              updateOfferField(offers, o.id, 'sell_price', e.target.value, setOffers, fromInput)
+              if (o.selected && onSellPriceChange) onSellPriceChange(e.target.value)
+            }}
+            style={{ ...inpStyle, background: '#f0fdf4' }}
           />
           <input
             placeholder="הערה"
@@ -231,7 +288,7 @@ function OffersSection({
           />
           <button
             title="בחר הצעה זו"
-            onClick={() => selectOffer(offers, o.id, setOffers)}
+            onClick={() => handleSelect(o.id)}
             style={{
               width: 34, height: 34, border: 'none', borderRadius: 6, cursor: 'pointer',
               background: o.selected ? 'var(--primary)' : '#e2e8f0',
@@ -263,7 +320,7 @@ function OffersSection({
 
       {sel && (
         <div style={{ marginTop: 8, fontSize: 12, color: 'var(--primary)', fontWeight: 700 }}>
-          ✓ נבחר: {sel.supplier} — {fmt(sel.price)}
+          ✓ נבחר: {sel.supplier} — ספק: {fmt(sel.price)}{sel.sell_price != null ? ` · ללקוח: ${fmt(sel.sell_price)}` : ''}
         </div>
       )}
     </div>
@@ -440,7 +497,7 @@ export default function QuotesClient() {
 
     const sel    = selectedOffer(offers)
     const qty    = parseInt('qty' in f ? f.qty : '1') || 1
-    const sell   = parseFloat(f.sell_price) || null
+    const sell   = sel?.sell_price ?? parseFloat(f.sell_price) || null
     const cost   = sel?.price ?? null
     const profit = sell && cost ? (sell - cost) * qty : null
 
@@ -559,7 +616,7 @@ export default function QuotesClient() {
     offers: SupplierOffer[]; sellStr: string; qtyStr: string
   }) {
     const sel  = selectedOffer(offers)
-    const sell = parseFloat(sellStr)
+    const sell = sel?.sell_price ?? parseFloat(sellStr) || null
     const cost = sel?.price ?? null
     const qty  = parseInt(qtyStr) || 1
     if (!sell || !cost) return null
@@ -589,16 +646,23 @@ export default function QuotesClient() {
   function OffersPreview({ offers }: { offers: SupplierOffer[] }) {
     if (!offers.length) return <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {offers.map(o => (
           <div key={o.id} style={{
             fontSize: 11, display: 'flex', alignItems: 'center', gap: 4,
+            padding: '2px 6px', borderRadius: 5,
+            background: o.selected ? '#f0fdf6' : 'transparent',
+            border: o.selected ? '1px solid #86efac' : '1px solid transparent',
           }}>
             {o.selected && <span style={{ color: 'var(--primary)', fontWeight: 700 }}>✓</span>}
-            <span style={{ fontWeight: o.selected ? 700 : 400 }}>
-              {o.supplier || '?'} — {fmt(o.price)}
-              {o.type !== 'חדש' && <span style={{ color: 'var(--text-muted)' }}> ({o.type})</span>}
+            <span style={{ fontWeight: o.selected ? 700 : 400, color: 'var(--text)' }}>
+              {o.supplier || '?'}
             </span>
+            <span style={{ color: '#64748b' }}>ספק: {fmt(o.price)}</span>
+            {o.sell_price != null && (
+              <span style={{ color: 'var(--primary)', fontWeight: 700 }}>ללקוח: {fmt(o.sell_price)}</span>
+            )}
+            {o.type !== 'חדש' && <span style={{ color: 'var(--text-muted)' }}>({o.type})</span>}
           </div>
         ))}
       </div>
@@ -995,7 +1059,11 @@ export default function QuotesClient() {
           )}
 
           {/* ── Supplier offers */}
-          <OffersSection offers={offers} setOffers={setOffers} />
+          <OffersSection
+            offers={offers}
+            setOffers={setOffers}
+            onSellPriceChange={v => setF('sell_price', v)}
+          />
 
           {/* ── Pricing */}
           <div style={fieldStyle}>
