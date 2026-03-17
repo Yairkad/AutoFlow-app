@@ -873,8 +873,15 @@ function PriceListOverlay({ products, onClose }: { products: Product[]; onClose:
     <>
       <style>{`
         @media print {
-          body > * { display: none !important; }
-          #pricelist-overlay { display: block !important; position: static !important; background: white !important; }
+          body, body * { visibility: hidden; }
+          #pricelist-overlay, #pricelist-overlay * { visibility: visible; }
+          #pricelist-overlay {
+            position: fixed !important;
+            top: 0 !important; left: 0 !important;
+            width: 100% !important; max-height: none !important;
+            border-radius: 0 !important; box-shadow: none !important;
+            overflow: visible !important; background: #fff !important;
+          }
           #pricelist-overlay .no-print { display: none !important; }
           @page { margin: 15mm; size: A4 portrait; }
         }
