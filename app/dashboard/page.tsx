@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import DashboardStats from '@/components/dashboard/DashboardStats'
 import DashboardCharts from '@/components/dashboard/DashboardCharts'
 import RemindersPanel from '@/components/dashboard/RemindersPanel'
 import AlertsPanel from '@/components/dashboard/AlertsPanel'
+import { useState } from 'react'
 
 type DashTab = 'stats' | 'charts'
 
@@ -39,20 +39,26 @@ export default function DashboardPage() {
 
         {tab === 'stats' ? (
           /* Stats + reminders row */
-          <div style={{
-            display: 'flex', gap: '20px', alignItems: 'stretch',
-            height: 'calc(100vh - var(--header-h) - 96px)',
-            overflow: 'hidden',
-          }}>
+          <div
+            className="dash-layout"
+            style={{
+              display: 'flex', gap: '20px', alignItems: 'stretch',
+              height: 'calc(100vh - var(--header-h) - 96px)',
+              overflow: 'hidden',
+            }}
+          >
             {/* Left column: stats on top, alerts bar at bottom */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden' }}>
+            <div
+              className="dash-stats-col"
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden' }}
+            >
               <div style={{ flex: 1, overflowY: 'auto' }}>
                 <DashboardStats />
               </div>
               <AlertsPanel />
             </div>
 
-            {/* Right column: reminders panel */}
+            {/* Right column: reminders panel (compact on mobile) */}
             <RemindersPanel />
           </div>
         ) : (

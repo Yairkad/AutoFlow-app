@@ -3,6 +3,17 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
+function useIsMobile() {
+  const [mobile, setMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setMobile(window.innerWidth <= 640)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+  return mobile
+}
+
 interface Item {
   id:       string
   type:     string | null
@@ -21,6 +32,7 @@ const PRIORITY_COLOR: Record<string, string> = {
 }
 
 export default function RemindersPanel() {
+  const isMobile = useIsMobile()
   const [reminders, setReminders] = useState<Item[]>([])
   const [tasks, setTasks]         = useState<Item[]>([])
   const [loading, setLoading]     = useState(true)
@@ -72,6 +84,36 @@ export default function RemindersPanel() {
 
   const today = new Date().toISOString().split('T')[0]
   const total = reminders.length + tasks.length
+
+  // Mobile: compact bell badge linking to /reminders
+  if (isMobile) {
+    return (
+      <a
+        href="/reminders"
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '8px',
+          padding: '8px 16px',
+          background: '#fff', borderRadius: 'var(--radius)',
+          boxShadow: 'var(--shadow)', borderTop: '3px solid var(--warning)',
+          textDecoration: 'none', color: 'var(--text)',
+          fontSize: '14px', fontWeight: 600,
+          alignSelf: 'flex-start',
+        }}
+      >
+        🔔 תזכורות ומשימות
+        {!loading && total > 0 && (
+          <span style={{
+            background: 'var(--danger)', color: '#fff',
+            borderRadius: '999px', fontSize: '12px', fontWeight: 700,
+            padding: '2px 9px', lineHeight: 1.4,
+          }}>{total}</span>
+        )}
+        {!loading && total === 0 && (
+          <span style={{ fontSize: '12px', color: 'var(--success)', fontWeight: 400 }}>✓ הכל מטופל</span>
+        )}
+      </a>
+    )
+  }
 
   return (
     <div style={{

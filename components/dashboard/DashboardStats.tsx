@@ -40,6 +40,7 @@ function StatCard({ label, value, icon, color, isCurrency = false, href, sub }: 
   return (
     <div
       onClick={() => href && router.push(href)}
+      className="stat-card"
       style={{
         background: '#fff',
         borderRadius: 'var(--radius)',
@@ -55,7 +56,7 @@ function StatCard({ label, value, icon, color, isCurrency = false, href, sub }: 
       onMouseEnter={e => { if (href) { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,0,0,.1)' }}}
       onMouseLeave={e => { if (href) { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow)' }}}
     >
-      <div style={{
+      <div className="stat-card-icon" style={{
         width: 44, height: 44,
         borderRadius: '10px',
         background: color + '18',
@@ -63,10 +64,10 @@ function StatCard({ label, value, icon, color, isCurrency = false, href, sub }: 
         fontSize: '22px', flexShrink: 0,
       }}>{icon}</div>
       <div>
-        <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)', lineHeight: 1.2 }}>
+        <div className="stat-card-value" style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)', lineHeight: 1.2 }}>
           {isCurrency ? fmt(value) : value.toLocaleString('he-IL')}
         </div>
-        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{label}</div>
+        <div className="stat-card-label" style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{label}</div>
         {sub && <div style={{ fontSize: '11px', color, fontWeight: 600, marginTop: '2px' }}>{sub}</div>}
       </div>
     </div>
@@ -80,6 +81,7 @@ function DebtCard({ customerDebts, supplierDebts, custCount, suppCount, href }: 
   return (
     <div
       onClick={() => router.push(href)}
+      className="stat-card"
       style={{
         background: '#fff',
         borderRadius: 'var(--radius)',
@@ -115,6 +117,7 @@ function CarsCard({ inInventory, openRequests, href }: { inInventory: number; op
   return (
     <div
       onClick={() => router.push(href)}
+      className="stat-card"
       style={{
         background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)',
         padding: '14px 16px', borderTop: '3px solid #0369a1', cursor: 'pointer',

@@ -477,14 +477,22 @@ export default function ProductsClient() {
           </div>
 
           {/* Products table */}
-          <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+          <div className="products-table-wrap" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                    {['מק"ט', 'שם מוצר', 'קטגוריה', 'יחידה', 'מחיר קנייה', 'מחיר מכירה', '% רווח', 'כמות', 'ספק', 'הערות', ...(editMode ? [''] : [])].map((h, i) => (
-                      <th key={i} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>{h}</th>
-                    ))}
+                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>מק&quot;ט</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>שם מוצר</th>
+                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>קטגוריה</th>
+                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>יחידה</th>
+                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>מחיר קנייה</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>מחיר מכירה</th>
+                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>% רווח</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>כמות</th>
+                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>ספק</th>
+                    <th className="hide-mobile" style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>הערות</th>
+                    {editMode && <th style={{ padding: '10px 12px' }}></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -506,7 +514,7 @@ export default function ProductsClient() {
 
                     return (
                       <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', background: editMode ? '#fafeff' : undefined }}>
-                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: editMode ? '80px' : undefined }}>
+                        <td className="hide-mobile" style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: editMode ? '80px' : undefined }}>
                           {editMode
                             ? <input style={cellInp} value={String(e.sku ?? '')} onChange={ev => setCell(p.id, 'sku', ev.target.value)} />
                             : p.sku || '—'}
@@ -517,20 +525,20 @@ export default function ProductsClient() {
                             ? <input style={cellInp} value={String(e.name ?? '')} onChange={ev => setCell(p.id, 'name', ev.target.value)} />
                             : p.name}
                         </td>
-                        <td style={{ padding: '8px 12px', minWidth: editMode ? '110px' : undefined, maxWidth: editMode ? undefined : '120px', overflow: editMode ? undefined : 'hidden', textOverflow: editMode ? undefined : 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap' }}
+                        <td className="hide-mobile" style={{ padding: '8px 12px', minWidth: editMode ? '110px' : undefined, maxWidth: editMode ? undefined : '120px', overflow: editMode ? undefined : 'hidden', textOverflow: editMode ? undefined : 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap' }}
                             title={editMode ? undefined : (p.category || undefined)}>
                           {editMode
                             ? <input style={cellInp} value={String(e.category ?? '')} onChange={ev => setCell(p.id, 'category', ev.target.value)} list="cat-list-inline" />
                             : <span style={{ color: 'var(--text-muted)' }}>{p.category || '—'}</span>}
                         </td>
-                        <td style={{ padding: '8px 12px', minWidth: editMode ? '90px' : undefined }}>
+                        <td className="hide-mobile" style={{ padding: '8px 12px', minWidth: editMode ? '90px' : undefined }}>
                           {editMode
                             ? <select style={cellInp} value={String(e.unit ?? 'יח׳')} onChange={ev => setCell(p.id, 'unit', ev.target.value)}>
                                 {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                               </select>
                             : unitLabel}
                         </td>
-                        <td style={{ padding: '8px 12px', minWidth: editMode ? '90px' : undefined }}>
+                        <td className="hide-mobile" style={{ padding: '8px 12px', minWidth: editMode ? '90px' : undefined }}>
                           {editMode
                             ? <input style={cellInp} type="number" value={String(e.buy_price ?? '')} onChange={ev => setCell(p.id, 'buy_price', parseFloat(ev.target.value) || 0)} />
                             : p.buy_price ? (
@@ -543,13 +551,13 @@ export default function ProductsClient() {
                             ? <input style={cellInp} type="number" value={String(e.sell_price ?? '')} onChange={ev => setCell(p.id, 'sell_price', parseFloat(ev.target.value) || 0)} />
                             : fmtPrice(p.sell_price)}
                         </td>
-                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{marginPct}</td>
+                        <td className="hide-mobile" style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{marginPct}</td>
                         <td style={{ padding: '8px 12px' }}>
                           <span style={{ background: qtyBg, color: qtyColor, borderRadius: '6px', padding: '3px 8px', fontWeight: 600, fontSize: '12px', whiteSpace: 'nowrap' }}>
                             {isOut ? 'אזל' : `${p.qty} ${Number(p.unit_qty) > 1 ? 'יח׳' : p.unit}`}
                           </span>
                         </td>
-                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)', minWidth: editMode ? '130px' : undefined, maxWidth: editMode ? undefined : '120px', overflow: editMode ? undefined : 'hidden', textOverflow: editMode ? undefined : 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap' }}
+                        <td className="hide-mobile" style={{ padding: '8px 12px', color: 'var(--text-muted)', minWidth: editMode ? '130px' : undefined, maxWidth: editMode ? undefined : '120px', overflow: editMode ? undefined : 'hidden', textOverflow: editMode ? undefined : 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap' }}
                             title={editMode ? undefined : (suppName !== '—' ? suppName : undefined)}>
                           {editMode
                             ? <select style={cellInp} value={String(e.supplier_id ?? '')} onChange={ev => setCell(p.id, 'supplier_id', ev.target.value)}>
@@ -558,7 +566,7 @@ export default function ProductsClient() {
                               </select>
                             : suppName}
                         </td>
-                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)', maxWidth: editMode ? undefined : '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap', minWidth: editMode ? '120px' : undefined }}>
+                        <td className="hide-mobile" style={{ padding: '8px 12px', color: 'var(--text-muted)', maxWidth: editMode ? undefined : '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap', minWidth: editMode ? '120px' : undefined }}>
                           {editMode
                             ? <input style={cellInp} value={String(e.notes ?? '')} onChange={ev => setCell(p.id, 'notes', ev.target.value)} />
                             : p.notes || '—'}
