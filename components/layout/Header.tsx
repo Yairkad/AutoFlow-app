@@ -126,7 +126,9 @@ function UserDropdown({ name, email, onClose }: { name: string; email: string; o
   const [showChangePw, setShowChangePw] = useState(false)
 
   async function logout() {
-    await supabase.auth.signOut()
+    try { await supabase.auth.signOut({ scope: 'local' }) } catch { /* ignore */ }
+    localStorage.clear()
+    sessionStorage.clear()
     router.push('/login')
   }
 
@@ -182,12 +184,12 @@ export default function Header() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchRef   = useRef<HTMLDivElement>(null)
 
-  // Load user profile
+  // Load user profile — use getSession (localStorage) so it works even when CORS blocks getUser
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) return
-      setUserEmail(data.user.email ?? '')
-      supabase.from('profiles').select('full_name').eq('id', data.user.id).single()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) return
+      setUserEmail(session.user.email ?? '')
+      supabase.from('profiles').select('full_name').eq('id', session.user.id).single()
         .then(({ data: p }) => { if (p?.full_name) setUserName(p.full_name) })
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps

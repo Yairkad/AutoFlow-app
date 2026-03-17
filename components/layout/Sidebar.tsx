@@ -34,15 +34,16 @@ export default function Sidebar() {
   const [loaded, setLoaded]       = useState(false)
 
   useEffect(() => {
-    sb.auth.getUser().then(({ data }) => {
-      if (!data.user) { setLoaded(true); return }
-      sb.from('profiles').select('role, allowed_modules').eq('id', data.user.id).maybeSingle()
+    // getSession reads localStorage — works even when network/CORS is blocked
+    sb.auth.getSession().then(({ data: { session } }) => {
+      const uid = session?.user?.id
+      if (!uid) { setLoaded(true); return }
+      sb.from('profiles').select('role, allowed_modules').eq('id', uid).maybeSingle()
         .then(({ data: p }) => {
           if (p) {
             setIsAdmin(p.role === 'admin')
             setModules(p.allowed_modules ?? [])
           } else {
-            // Profile not found or RLS blocked — fall back to full access
             setIsAdmin(true)
           }
           setLoaded(true)
