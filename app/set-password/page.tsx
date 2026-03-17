@@ -15,11 +15,21 @@ export default function SetPasswordPage() {
   const [error, setError]       = useState('')
 
   useEffect(() => {
-    // Supabase sets the session from the URL hash automatically
     const supabase = createClient()
-    supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'USER_UPDATED') setReady(true)
+
+    // Check for an existing session immediately (covers page refresh / slow navigation)
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) setReady(true)
     })
+
+    // Also listen for the auth event fired when Supabase exchanges the invite token
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
+        setReady(true)
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
