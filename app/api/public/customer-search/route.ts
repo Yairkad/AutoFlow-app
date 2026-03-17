@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     .select('track_token, customer_phone, status')
     .eq('plate', plate)
     .not('track_token', 'is', null)
-    .in('status', ['ממתין', 'בעבודה'])   // only open jobs
+    .not('status', 'eq', 'delivered')   // any active job (not closed)
     .order('created_at', { ascending: false })
     .limit(5)
 
