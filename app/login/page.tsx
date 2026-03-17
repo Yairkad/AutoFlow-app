@@ -22,11 +22,28 @@ export default function LoginPage() {
   const [resetMsg, setResetMsg]         = useState('')
   const [resetErr, setResetErr]         = useState('')
 
-  // If Supabase redirected here with hash tokens (site URL = /login), forward to callback
+  // Supabase site URL = /login, so implicit flow tokens land here.
+  // Set session from hash tokens and redirect to the right page.
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (!window.location.hash.includes('access_token')) return
-    router.replace('/auth/callback' + window.location.hash)
+    const hash = window.location.hash
+    if (!hash.includes('access_token')) return
+
+    const params = new URLSearchParams(hash.slice(1))
+    const accessToken  = params.get('access_token')
+    const refreshToken = params.get('refresh_token')
+    const type         = params.get('type')
+
+    if (!accessToken || !refreshToken) return
+
+    const supabase = createClient()
+    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+      .then(() => {
+        // Clear hash from URL
+        window.history.replaceState(null, '', window.location.pathname)
+        if (type === 'recovery') router.replace('/reset-password')
+        else if (type === 'invite') router.replace('/set-password')
+        else router.replace('/dashboard')
+      })
   }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
