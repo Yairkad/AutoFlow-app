@@ -36,11 +36,14 @@ export default function Sidebar() {
   useEffect(() => {
     sb.auth.getUser().then(({ data }) => {
       if (!data.user) { setLoaded(true); return }
-      sb.from('profiles').select('role, allowed_modules').eq('id', data.user.id).single()
+      sb.from('profiles').select('role, allowed_modules').eq('id', data.user.id).maybeSingle()
         .then(({ data: p }) => {
           if (p) {
             setIsAdmin(p.role === 'admin')
             setModules(p.allowed_modules ?? [])
+          } else {
+            // Profile not found or RLS blocked — fall back to full access
+            setIsAdmin(true)
           }
           setLoaded(true)
         })

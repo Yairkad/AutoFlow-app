@@ -25,7 +25,7 @@ export async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname
   const isApi        = path.startsWith('/api')
-  const isPublic     = path === '/' || path.startsWith('/track') || path.startsWith('/privacy') || path.startsWith('/accessibility') || path.startsWith('/reset-password') || path.startsWith('/set-password')
+  const isPublic     = path === '/' || path === '/manifest.webmanifest' || path.startsWith('/track') || path.startsWith('/privacy') || path.startsWith('/accessibility') || path.startsWith('/reset-password') || path.startsWith('/set-password')
   const isAuthPage   = path.startsWith('/login') || path.startsWith('/register')
   const isOnboarding = path.startsWith('/onboarding')
 
