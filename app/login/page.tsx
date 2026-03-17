@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Input from '@/components/ui/Input'
@@ -21,6 +21,13 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false)
   const [resetMsg, setResetMsg]         = useState('')
   const [resetErr, setResetErr]         = useState('')
+
+  // If Supabase redirected here with hash tokens (site URL = /login), forward to callback
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!window.location.hash.includes('access_token')) return
+    router.replace('/auth/callback' + window.location.hash)
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
