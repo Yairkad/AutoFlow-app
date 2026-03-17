@@ -60,6 +60,21 @@ export default async function LandingPage() {
   return (
     <div dir="rtl" style={{ fontFamily: 'var(--font-heebo, Heebo), sans-serif', color: '#1e293b' }}>
 
+      {/* Employee login – fixed top-left */}
+      <Link
+        href="/login"
+        style={{
+          position: 'fixed', top: '16px', left: '16px', zIndex: 100,
+          background: 'rgba(26,42,108,.85)', backdropFilter: 'blur(6px)',
+          color: '#F5C800', textDecoration: 'none',
+          padding: '8px 16px', borderRadius: '8px',
+          fontSize: '13px', fontWeight: 700,
+          border: '1px solid rgba(245,200,0,.3)',
+        }}
+      >
+        🔑 כניסת עובדים
+      </Link>
+
       {/* ══════════════════════════════════════════════════════
           HERO – Split: yellow right / navy left
       ══════════════════════════════════════════════════════ */}
@@ -263,7 +278,6 @@ export default async function LandingPage() {
             <Link href="/accessibility" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>הצהרת נגישות</Link>
             {BUSINESS.wazeUrl && <a href={BUSINESS.wazeUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>Waze</a>}
             {BUSINESS.mapsUrl && <a href={BUSINESS.mapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>Google Maps</a>}
-            <Link href="/login" style={{ color: 'rgba(255,255,255,.45)', textDecoration: 'none', borderRight: '1px solid rgba(255,255,255,.2)', paddingRight: '24px' }}>כניסת עובדים</Link>
           </div>
 
           <p style={{ fontSize: '12px', marginTop: '16px', opacity: 0.4 }}>
