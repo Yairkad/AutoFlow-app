@@ -455,7 +455,8 @@ export default function ProductsClient() {
               <option value='out'>אזל</option>
             </select>
             <div style={{ marginRight: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <Button variant="outline" onClick={exportExcel} style={{ fontSize: '13px' }}>📊 ייצא Excel</Button>
+              {!viewOnly && <Button variant="outline" onClick={exportExcel} style={{ fontSize: '13px' }}>📊 ייצא Excel</Button>}
+              {!viewOnly && (
               <label style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                 padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--border)',
@@ -464,7 +465,7 @@ export default function ProductsClient() {
               }}>
                 📥 ייבא Excel
                 <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={importExcel} />
-              </label>
+              </label>)}
               {!viewOnly && (editMode ? (
                 <>
                   <Button onClick={saveInlineEdit}>💾 שמור הכל</Button>

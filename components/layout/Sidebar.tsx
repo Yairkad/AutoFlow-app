@@ -49,7 +49,7 @@ export default function Sidebar({
       sb.from('profiles').select('role, allowed_modules, tenant_id').eq('id', uid).maybeSingle()
         .then(({ data: p }) => {
           if (p) {
-            setIsAdmin(p.role === 'admin')
+            setIsAdmin(p.role === 'admin' || p.role === 'super_admin')
             setModules(p.allowed_modules ?? [])
             if (p.tenant_id) {
               sb.from('tenants').select('name, logo_base64').eq('id', p.tenant_id).single()

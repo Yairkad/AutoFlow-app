@@ -79,25 +79,39 @@ export default function DashboardCharts() {
   const [incCatData,   setIncCatData]   = useState<CategoryData[]>([])
   const [debtData,     setDebtData]     = useState<CategoryData[]>([])
   const [loading,      setLoading]      = useState(true)
+  const [canFinance,   setCanFinance]   = useState(false) // expenses / income
+  const [canDebts,     setCanDebts]     = useState(false)
 
   useEffect(() => {
-    load()
-  }, [])
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { setLoading(false); return }
+      supabase.from('profiles').select('role, allowed_modules').eq('id', user.id).single()
+        .then(({ data: p }) => {
+          const admin = p?.role === 'admin' || p?.role === 'super_admin'
+          const mods: string[] = p?.allowed_modules ?? []
+          const finance = admin || mods.includes('expenses') || mods.includes('income')
+          const debts   = admin || mods.includes('debts')
+          setCanFinance(finance)
+          setCanDebts(debts)
+          load(finance, debts)
+        })
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function load() {
+  async function load(finance: boolean, debts: boolean) {
     const supabase = createClient()
 
-    // Last 6 months range
-    const now  = new Date()
-    const from = new Date(now.getFullYear(), now.getMonth() - 5, 1)
+    const now     = new Date()
+    const from    = new Date(now.getFullYear(), now.getMonth() - 5, 1)
     const fromStr = from.toISOString().slice(0, 10)
     const toStr   = now.toISOString().slice(0, 10)
 
     const [expRes, incRes, custDebts, suppDebts] = await Promise.all([
-      supabase.from('expenses').select('date, amount, category').gte('date', fromStr).lte('date', toStr),
-      supabase.from('income').select('date, amount, category').gte('date', fromStr).lte('date', toStr),
-      supabase.from('customer_debts').select('amount, paid').eq('is_closed', false),
-      supabase.from('supplier_debts').select('amount, paid').eq('is_closed', false),
+      finance ? supabase.from('expenses').select('date, amount, category').gte('date', fromStr).lte('date', toStr) : Promise.resolve({ data: [] }),
+      finance ? supabase.from('income').select('date, amount, category').gte('date', fromStr).lte('date', toStr)   : Promise.resolve({ data: [] }),
+      debts   ? supabase.from('customer_debts').select('amount, paid').eq('is_closed', false)                      : Promise.resolve({ data: [] }),
+      debts   ? supabase.from('supplier_debts').select('amount, paid').eq('is_closed', false)                      : Promise.resolve({ data: [] }),
     ])
 
     // Build month map
@@ -178,11 +192,17 @@ export default function DashboardCharts() {
     </div>
   )
 
+  if (!canFinance && !canDebts) return (
+    <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)', fontSize: '14px' }}>
+      אין נתונים זמינים
+    </div>
+  )
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
 
       {/* Row 1: Income vs Expenses bar chart */}
-      <ChartCard title="הכנסות מול הוצאות – 6 חודשים אחרונים">
+      {canFinance && <ChartCard title="הכנסות מול הוצאות – 6 חודשים אחרונים">
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={monthData} barGap={4}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -197,9 +217,8 @@ export default function DashboardCharts() {
       </ChartCard>
 
       {/* Row 2: Profit line + category pies */}
+      {canFinance && (
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-
-        {/* Profit line */}
         <ChartCard title="רווח חודשי">
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={monthData}>
@@ -207,17 +226,11 @@ export default function DashboardCharts() {
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748b' }} />
               <YAxis tickFormatter={v => '₪' + (v/1000).toFixed(0) + 'k'} tick={{ fontSize: 10, fill: '#64748b' }} width={48} />
               <Tooltip content={<CurrencyTooltip />} />
-              <Line
-                dataKey="profit" name="רווח"
-                stroke="var(--primary)" strokeWidth={2}
-                dot={{ r: 4, fill: 'var(--primary)' }}
-                activeDot={{ r: 6 }}
-              />
+              <Line dataKey="profit" name="רווח" stroke="var(--primary)" strokeWidth={2} dot={{ r: 4, fill: 'var(--primary)' }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
 
-        {/* Expense categories pie */}
         <ChartCard title="הוצאות לפי קטגוריה (חודש נוכחי)">
           {expCatData.length === 0
             ? <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>אין נתונים</div>
@@ -232,7 +245,6 @@ export default function DashboardCharts() {
           }
         </ChartCard>
 
-        {/* Income categories pie */}
         <ChartCard title="הכנסות לפי קטגוריה (חודש נוכחי)">
           {incCatData.length === 0
             ? <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>אין נתונים</div>
@@ -247,9 +259,10 @@ export default function DashboardCharts() {
           }
         </ChartCard>
       </div>
+      )}
 
       {/* Row 3: Debt breakdown */}
-      {(debtData[0]?.value > 0 || debtData[1]?.value > 0) && (
+      {canDebts && (debtData[0]?.value > 0 || debtData[1]?.value > 0) && (
         <ChartCard title="יתרת חובות פתוחים">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             {debtData.map((d, i) => (

@@ -144,49 +144,60 @@ function CarsCard({ inInventory, openRequests, href }: { inInventory: number; op
 export default function DashboardStats() {
   const [stats, setStats]     = useState<Stats>(EMPTY)
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [modules, setModules] = useState<string[]>([])
 
-  const fetchStats = async () => {
+  // helper: admin bypasses all module checks
+  function can(...mods: string[]) {
+    if (isAdmin) return true
+    return mods.some(m => modules.includes(m))
+  }
+
+  const fetchStats = async (admin: boolean, mods: string[]) => {
     const supabase = createClient()
-    const now      = new Date()
-    const y        = now.getFullYear()
-    const m        = String(now.getMonth() + 1).padStart(2, '0')
-    const from     = `${y}-${m}-01`
-    const to       = `${y}-${m}-31`
+    const canMod   = (...m: string[]) => admin || m.some(x => mods.includes(x))
 
+    const now  = new Date()
+    const y    = now.getFullYear()
+    const m    = String(now.getMonth() + 1).padStart(2, '0')
+    const from = `${y}-${m}-01`
+    const to   = `${y}-${m}-31`
+
+    // Only fetch data the user is allowed to see
     const [expenses, incomeRes, custDebts, suppDebts, emps, products, tires, quotes, cars, carReqs, alignJobs, inspections] = await Promise.all([
-      supabase.from('expenses').select('amount').gte('date', from).lte('date', to),
-      supabase.from('income').select('amount').gte('date', from).lte('date', to),
-      supabase.from('customer_debts').select('amount,paid').eq('is_closed', false),
-      supabase.from('supplier_debts').select('amount,paid').eq('is_closed', false),
-      supabase.from('employees').select('id').eq('is_active', true),
-      supabase.from('products').select('qty'),
-      supabase.from('tires').select('qty'),
-      supabase.from('quotes').select('id').eq('status', 'open'),
-      supabase.from('cars').select('status').neq('status', 'sold'),
-      supabase.from('car_requests').select('id').eq('status', 'open'),
-      supabase.from('alignment_jobs').select('id').in('status', ['waiting', 'in_progress', 'done']),
-      supabase.from('car_inspections').select('id'),
+      canMod('expenses')                   ? supabase.from('expenses').select('amount').gte('date', from).lte('date', to)           : Promise.resolve({ data: [] }),
+      canMod('income', 'expenses')         ? supabase.from('income').select('amount').gte('date', from).lte('date', to)             : Promise.resolve({ data: [] }),
+      canMod('debts')                      ? supabase.from('customer_debts').select('amount,paid').eq('is_closed', false)           : Promise.resolve({ data: [] }),
+      canMod('debts')                      ? supabase.from('supplier_debts').select('amount,paid').eq('is_closed', false)           : Promise.resolve({ data: [] }),
+      canMod('employees')                  ? supabase.from('employees').select('id').eq('is_active', true)                         : Promise.resolve({ data: [] }),
+      canMod('products', 'products_view')  ? supabase.from('products').select('qty')                                               : Promise.resolve({ data: [] }),
+      canMod('tires', 'tires_view')        ? supabase.from('tires').select('qty')                                                  : Promise.resolve({ data: [] }),
+      canMod('quotes')                     ? supabase.from('quotes').select('id').eq('status', 'open')                             : Promise.resolve({ data: [] }),
+      canMod('cars')                       ? supabase.from('cars').select('status').neq('status', 'sold')                          : Promise.resolve({ data: [] }),
+      canMod('cars')                       ? supabase.from('car_requests').select('id').eq('status', 'open')                       : Promise.resolve({ data: [] }),
+      canMod('alignment')                  ? supabase.from('alignment_jobs').select('id').in('status', ['waiting', 'in_progress', 'done']) : Promise.resolve({ data: [] }),
+      canMod('inspections')               ? supabase.from('car_inspections').select('id')                                         : Promise.resolve({ data: [] }),
     ])
 
-    const sum        = (arr: { amount: number }[]) => arr?.reduce((s, r) => s + Number(r.amount), 0) ?? 0
-    const debtBal    = (arr: { amount: number; paid: number }[]) =>
+    const sum     = (arr: { amount: number }[]) => (arr ?? []).reduce((s, r) => s + Number(r.amount), 0)
+    const debtBal = (arr: { amount: number; paid: number }[]) =>
       (arr ?? []).reduce((s, r) => s + Math.max(0, Number(r.amount) - Number(r.paid)), 0)
-    const invCount   = (products.data ?? []).reduce((s, r) => s + r.qty, 0)
-                     + (tires.data ?? []).reduce((s, r) => s + r.qty, 0)
+    const invCount = (products.data ?? []).reduce((s, r) => s + r.qty, 0)
+                   + (tires.data ?? []).reduce((s, r) => s + r.qty, 0)
 
     setStats({
-      expensesMonth:   sum(expenses.data ?? []),
-      incomeMonth:     sum(incomeRes.data ?? []),
-      customerDebts:   debtBal(custDebts.data ?? []),
-      supplierDebts:   debtBal(suppDebts.data ?? []),
-      custDebtCount:   (custDebts.data ?? []).length,
-      suppDebtCount:   (suppDebts.data ?? []).length,
-      activeEmployees: (emps.data ?? []).length,
-      inventoryItems:  invCount,
-      openQuotes:      (quotes.data ?? []).length,
-      carsInInventory: (cars.data ?? []).filter(c => c.status === 'available').length,
+      expensesMonth:    sum(expenses.data ?? []),
+      incomeMonth:      sum(incomeRes.data ?? []),
+      customerDebts:    debtBal(custDebts.data ?? []),
+      supplierDebts:    debtBal(suppDebts.data ?? []),
+      custDebtCount:    (custDebts.data ?? []).length,
+      suppDebtCount:    (suppDebts.data ?? []).length,
+      activeEmployees:  (emps.data ?? []).length,
+      inventoryItems:   invCount,
+      openQuotes:       (quotes.data ?? []).length,
+      carsInInventory:  (cars.data ?? []).filter((c: { status: string }) => c.status === 'available').length,
       openCarRequests:  (carReqs.data ?? []).length,
-      tiresInStock:     (tires.data ?? []).filter(r => r.qty > 0).length,
+      tiresInStock:     (tires.data ?? []).filter((r: { qty: number }) => r.qty > 0).length,
       activeJobs:       (alignJobs.data ?? []).length,
       totalInspections: (inspections.data ?? []).length,
     })
@@ -194,14 +205,29 @@ export default function DashboardStats() {
   }
 
   useEffect(() => {
-    fetchStats()
     const supabase = createClient()
-    const channel  = supabase
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { setLoading(false); return }
+      supabase.from('profiles').select('role, allowed_modules').eq('id', user.id).single()
+        .then(({ data: p }) => {
+          const admin = p?.role === 'admin' || p?.role === 'super_admin'
+          const mods: string[] = p?.allowed_modules ?? []
+          setIsAdmin(admin)
+          setModules(mods)
+          fetchStats(admin, mods)
+        })
+    })
+
+    const channel = supabase
       .channel('dashboard-stats')
-      .on('postgres_changes', { event: '*', schema: 'public' }, fetchStats)
+      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+        // re-fetch with current permissions (captured in closure via state)
+        fetchStats(isAdmin, modules)
+      })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return (
     <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: 'minmax(90px, 130px)', gap: '16px', alignContent: 'start' }}>
@@ -221,22 +247,24 @@ export default function DashboardStats() {
       gap: '16px',
       alignContent: 'start',
     }}>
-      <StatCard label="הכנסות החודש"    value={stats.incomeMonth}    icon="💰" color="var(--primary)"  isCurrency href="/income" />
-      <StatCard label="הוצאות החודש"    value={stats.expensesMonth}  icon="📤" color="var(--danger)"   isCurrency href="/expenses" />
-      <StatCard label="רווח החודש"      value={profit}               icon="📈" color={profit >= 0 ? 'var(--primary)' : 'var(--danger)'} isCurrency />
-      <DebtCard
-        customerDebts={stats.customerDebts}
-        supplierDebts={stats.supplierDebts}
-        custCount={stats.custDebtCount}
-        suppCount={stats.suppDebtCount}
-        href="/debts"
-      />
-      <StatCard label="פריטים במלאי"   value={stats.inventoryItems}  icon="📦" color="#8b5cf6"         href="/products" />
-      <StatCard label="עובדים פעילים"  value={stats.activeEmployees} icon="👷" color="#7c3aed"         href="/employees" />
-      <CarsCard inInventory={stats.carsInInventory} openRequests={stats.openCarRequests} href="/cars" />
-      <StatCard label="סוגי צמיג במלאי"   value={stats.tiresInStock}    icon="🔘" color="#0891b2" href="/tires" />
-      <StatCard label="עבודות פרונט פעילות" value={stats.activeJobs}     icon="🔩" color="#d97706" href="/alignment" />
-      <StatCard label="בדיקות קניה"         value={stats.totalInspections} icon="📝" color="#7c3aed" href="/inspections" />
+      {can('income', 'expenses') && <StatCard label="הכנסות החודש"    value={stats.incomeMonth}    icon="💰" color="var(--primary)"  isCurrency href="/income" />}
+      {can('expenses')           && <StatCard label="הוצאות החודש"    value={stats.expensesMonth}  icon="📤" color="var(--danger)"   isCurrency href="/expenses" />}
+      {can('income', 'expenses') && <StatCard label="רווח החודש"      value={profit}               icon="📈" color={profit >= 0 ? 'var(--primary)' : 'var(--danger)'} isCurrency />}
+      {can('debts') && (
+        <DebtCard
+          customerDebts={stats.customerDebts}
+          supplierDebts={stats.supplierDebts}
+          custCount={stats.custDebtCount}
+          suppCount={stats.suppDebtCount}
+          href="/debts"
+        />
+      )}
+      {can('products', 'products_view') && <StatCard label="פריטים במלאי"        value={stats.inventoryItems}   icon="📦" color="#8b5cf6" href="/products" />}
+      {can('employees')                 && <StatCard label="עובדים פעילים"        value={stats.activeEmployees}  icon="👷" color="#7c3aed" href="/employees" />}
+      {can('cars')                      && <CarsCard inInventory={stats.carsInInventory} openRequests={stats.openCarRequests} href="/cars" />}
+      {can('tires', 'tires_view')       && <StatCard label="סוגי צמיג במלאי"      value={stats.tiresInStock}     icon="🔘" color="#0891b2" href="/tires" />}
+      {can('alignment')                 && <StatCard label="עבודות פרונט פעילות"  value={stats.activeJobs}       icon="🔩" color="#d97706" href="/alignment" />}
+      {can('inspections')               && <StatCard label="בדיקות קניה"           value={stats.totalInspections} icon="📝" color="#7c3aed" href="/inspections" />}
     </div>
   )
 }

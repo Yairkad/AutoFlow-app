@@ -433,7 +433,9 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
                   {!p.is_active && <span style={{ color: '#dc2626' }}>מושבת</span>}
                 </div>
               </div>
-              <button onClick={() => startEdit(p)} style={{ ...btnSec, padding: '6px 14px', fontSize: '12px' }}>ערוך</button>
+              {p.role !== 'super_admin' && (
+                <button onClick={() => startEdit(p)} style={{ ...btnSec, padding: '6px 14px', fontSize: '12px' }}>ערוך</button>
+              )}
             </div>
           )}
         </div>

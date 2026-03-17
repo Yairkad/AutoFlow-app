@@ -21,6 +21,16 @@ interface MyEmployee {
   bank_holder: string | null
 }
 
+interface SalaryRecord {
+  id: string
+  month: string
+  base: number
+  total: number
+  is_paid: boolean
+  paid_date: string | null
+  payment_method: string | null
+}
+
 const labelSt: React.CSSProperties = {
   fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px',
 }
@@ -38,6 +48,7 @@ export default function MyProfilePage() {
   const { showToast } = useToast()
   const [emp, setEmp] = useState<MyEmployee | null>(null)
   const [form, setForm] = useState<Partial<MyEmployee>>({})
+  const [salaries, setSalaries] = useState<SalaryRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [notFound, setNotFound] = useState(false)
@@ -57,6 +68,15 @@ export default function MyProfilePage() {
       if (data) {
         setEmp(data)
         setForm(data)
+
+        // Load salary history for this employee
+        const { data: sals } = await sb
+          .from('salaries')
+          .select('id, month, base, total, is_paid, paid_date, payment_method')
+          .eq('employee_id', data.id)
+          .order('month', { ascending: false })
+          .limit(24)
+        setSalaries(sals ?? [])
       } else {
         setNotFound(true)
       }
@@ -171,6 +191,43 @@ export default function MyProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Salary history */}
+        {salaries.length > 0 && (
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
+            <div style={sectionTitleSt}>היסטוריית משכורות</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {salaries.map(s => {
+                const [y, m] = s.month.split('-')
+                const label = new Date(Number(y), Number(m) - 1).toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })
+                return (
+                  <div key={s.id} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '10px 12px', borderRadius: '8px',
+                    background: s.is_paid ? '#f0fdf4' : 'var(--bg)',
+                    border: `1px solid ${s.is_paid ? '#bbf7d0' : 'var(--border)'}`,
+                    fontSize: '13px',
+                  }}>
+                    <span style={{ fontWeight: 600 }}>{label}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      בסיס: ₪{s.base.toLocaleString('he-IL')}
+                      {s.total !== s.base && <> | סה״כ: <strong>₪{s.total.toLocaleString('he-IL')}</strong></>}
+                    </span>
+                    <span style={{
+                      fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '20px',
+                      background: s.is_paid ? '#16a34a' : '#f59e0b',
+                      color: '#fff',
+                    }}>
+                      {s.is_paid
+                        ? `שולם ${s.paid_date ? new Date(s.paid_date).toLocaleDateString('he-IL') : ''}${s.payment_method ? ' · ' + s.payment_method : ''}`
+                        : 'טרם שולם'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <button
           onClick={save}
