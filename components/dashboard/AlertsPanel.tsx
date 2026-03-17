@@ -103,7 +103,7 @@ export default function AlertsPanel() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const visiblePayments = payments.filter(p => !dismissed.has(p.id))
-  const visibleSalaries = salaries.filter(s => !dismissed.has(s.id))
+  const visibleSalaries = salaries.filter(s => !dismissed.has(s.id) && (s.total || 0) > 0)
   const totalCount = visiblePayments.length + visibleSalaries.length
 
   return (

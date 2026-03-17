@@ -160,7 +160,7 @@ const gridStyle: React.CSSProperties = {
 
 // ── OffersSection (module-level → stable identity → no focus loss) ────────────
 
-const VAT_RATE = 1.17
+const VAT_RATE = 1.18
 
 function OffersSection({
   offers, setOffers, onSellPriceChange,
@@ -497,7 +497,7 @@ export default function QuotesClient() {
 
     const sel    = selectedOffer(offers)
     const qty    = parseInt('qty' in f ? f.qty : '1') || 1
-    const sell   = sel?.sell_price ?? parseFloat(f.sell_price) || null
+    const sell   = (sel?.sell_price ?? null) ?? (parseFloat(f.sell_price) || null)
     const cost   = sel?.price ?? null
     const profit = sell && cost ? (sell - cost) * qty : null
 
@@ -616,7 +616,7 @@ export default function QuotesClient() {
     offers: SupplierOffer[]; sellStr: string; qtyStr: string
   }) {
     const sel  = selectedOffer(offers)
-    const sell = sel?.sell_price ?? parseFloat(sellStr) || null
+    const sell = (sel?.sell_price ?? null) ?? (parseFloat(sellStr) || null)
     const cost = sel?.price ?? null
     const qty  = parseInt(qtyStr) || 1
     if (!sell || !cost) return null

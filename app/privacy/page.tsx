@@ -1,21 +1,37 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { createServiceClient } from '@/lib/supabase/service'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'מדיניות פרטיות – אוטוליין',
   description: 'מדיניות הפרטיות של אוטוליין פנצריה ושירותי רכב',
 }
 
-const UPDATED = '17 במרץ 2026'
+const TENANT_ID = 'c618f567-139b-4ce9-ac77-67affe93c27d'
+const UPDATED   = '17 במרץ 2026'
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const service = createServiceClient()
+  const { data: tenant } = await service
+    .from('tenants')
+    .select('name,phone,address,email')
+    .eq('id', TENANT_ID)
+    .single()
+
+  const name    = tenant?.name    ?? 'אוטוליין'
+  const phone   = tenant?.phone   ?? ''
+  const address = tenant?.address ?? ''
+  const email   = (tenant as { email?: string })?.email ?? ''
+
   return (
     <div dir="rtl" style={{ background: '#f8fafc', minHeight: '100vh', fontFamily: 'var(--font-heebo, Heebo), sans-serif' }}>
 
       {/* ── Nav ── */}
       <header style={{ background: '#1a2a6c', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ color: '#F5C800', fontWeight: 800, fontSize: '20px', textDecoration: 'none', letterSpacing: '-0.5px' }}>
-          אוטוליין
+          {name}
         </Link>
         <Link href="/" style={{ color: '#fff', fontSize: '14px', opacity: 0.8, textDecoration: 'none' }}>
           ← חזרה לדף הבית
@@ -32,7 +48,7 @@ export default function PrivacyPage() {
         </p>
 
         <Section title="1. מבוא">
-          אוטוליין פנצריה ושירותי רכב (&quot;אנחנו&quot;, &quot;העסק&quot;) מחויבים להגנה על פרטיות
+          {name} (&quot;אנחנו&quot;, &quot;העסק&quot;) מחויבים להגנה על פרטיות
           לקוחותינו. מדיניות זו מסבירה כיצד אנו אוספים, משתמשים ומגנים על מידע אישי שנמסר לנו,
           בהתאם לחוק הגנת הפרטיות, התשמ&quot;א-1981 ותקנותיו.
         </Section>
@@ -67,7 +83,7 @@ export default function PrivacyPage() {
           <ul>
             <li>
               <strong>ספקי תשתית:</strong> חברות ענן המסייעות בהפעלת האתר (Supabase, Vercel),
-              הכפxxxxxלחוזי עיבוד נתונים מחייבים ותקני אבטחה גבוהים.
+              הכפופות להסכמי עיבוד נתונים מחייבים ותקני אבטחה גבוהים.
             </li>
             <li>
               <strong>חובה חוקית:</strong> כאשר נדרשים על פי חוק, צו שיפוטי, או בקשת רשות מוסמכת.
@@ -105,8 +121,9 @@ export default function PrivacyPage() {
         <Section title="9. יצירת קשר">
           <p style={{ marginBottom: '10px' }}>לשאלות, עיון, תיקון או מחיקת מידע – ניתן לפנות:</p>
           <ul>
-            <li><strong>טלפון:</strong> [מספר טלפון]</li>
-            <li><strong>כתובת:</strong> [כתובת העסק]</li>
+            {phone   && <li><strong>טלפון:</strong> <a href={`tel:${phone}`}   style={{ color: '#1a2a6c' }}>{phone}</a></li>}
+            {email   && <li><strong>דואר אלקטרוני:</strong> <a href={`mailto:${email}`} style={{ color: '#1a2a6c' }}>{email}</a></li>}
+            {address && <li><strong>כתובת:</strong> {address}</li>}
           </ul>
           <p style={{ marginTop: '10px' }}>נשיב לפניות תוך 30 ימי עסקים.</p>
         </Section>

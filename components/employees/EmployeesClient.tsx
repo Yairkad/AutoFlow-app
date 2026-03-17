@@ -89,6 +89,12 @@ function currentPeriod(): string {
   return String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear()
 }
 
+/** Convert "MM/YYYY" → "YYYY-MM" for date comparisons */
+function periodYM(p: string): string {
+  const [mm, yyyy] = p.split('/')
+  return `${yyyy}-${mm}`
+}
+
 function buildPeriodList(): string[] {
   const list: string[] = []
   const d = new Date()
@@ -313,7 +319,7 @@ export default function EmployeesClient() {
     const tid = tenantId.current
     if (!tid) return
     setInitingPeriod(true)
-    const missing = activeEmps.filter(e => !salaries.some(s => s.employee_id === e.id && s.month === period))
+    const missing = periodEmps.filter(e => !salaries.some(s => s.employee_id === e.id && s.month === period))
     if (missing.length === 0) { setInitingPeriod(false); return }
     const records = missing.map(e => ({
       id: crypto.randomUUID(),
@@ -485,7 +491,10 @@ export default function EmployeesClient() {
     setPayEmpId(empId)
     setPayMethod('העברה')
     setPayRef('')
-    setPayDate(new Date().toISOString().split('T')[0])
+    // Default date = last day of the salary period month
+    const [mm, yyyy] = period.split('/')
+    const lastDay = new Date(parseInt(yyyy), parseInt(mm), 0)
+    setPayDate(lastDay.toISOString().split('T')[0])
     setPayModal(true)
   }
 
@@ -561,13 +570,17 @@ export default function EmployeesClient() {
   // ── Derived stats ────────────────────────────────────────────────────────────
 
   const activeEmps = employees.filter(e => e.is_active)
+  // Only show employees who have started by the selected period
+  const periodEmps = activeEmps.filter(e =>
+    !e.start_date || e.start_date.substring(0, 7) <= periodYM(period)
+  )
   const curSals = salaries.filter(s => s.month === period)
-  const totalPayroll = activeEmps.reduce((sum, e) => {
+  const totalPayroll = periodEmps.reduce((sum, e) => {
     const sal = curSals.find(s => s.employee_id === e.id)
     const base = e.salary_type === 'monthly' ? (e.base_salary || 0) : 0
     return sum + (sal ? (sal.total || 0) : base)
   }, 0)
-  const unpaidCount = activeEmps.filter(e => {
+  const unpaidCount = periodEmps.filter(e => {
     const sal = curSals.find(s => s.employee_id === e.id)
     return !sal?.is_paid
   }).length
@@ -681,8 +694,8 @@ export default function EmployeesClient() {
   // ── Render: salary table ─────────────────────────────────────────────────────
 
   function renderSalaryTable() {
-    if (!activeEmps.length) {
-      return <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>לא הוגדרו עובדים פעילים</div>
+    if (!periodEmps.length) {
+      return <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>אין עובדים פעילים לתקופה זו</div>
     }
 
     return (
@@ -702,7 +715,7 @@ export default function EmployeesClient() {
             </tr>
           </thead>
           <tbody>
-            {activeEmps.map(e => {
+            {periodEmps.map(e => {
               const sal = salaryFor(e.id)
               // Monthly: always use current employee salary (not snapshot in sal.base)
               // Hourly: use sal.base (rate at time of record creation) or current rate
@@ -725,6 +738,7 @@ export default function EmployeesClient() {
                   <td style={tdSt}>
                     <strong>{e.full_name}</strong>
                     {e.role && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{e.role}</div>}
+                    {sal?.notes && <div style={{ fontSize: '11px', color: '#7c3aed', marginTop: 2 }}>📝 {sal.notes}</div>}
                   </td>
 
                   <td style={tdSt}>{displayBase}</td>
@@ -833,7 +847,7 @@ export default function EmployeesClient() {
   // ── Render: summary bar (salary tab) ─────────────────────────────────────────
 
   function renderSalarySummary() {
-    const paid = curSals.filter(s => activeEmps.some(e => e.id === s.employee_id) && s.is_paid)
+    const paid = curSals.filter(s => periodEmps.some(e => e.id === s.employee_id) && s.is_paid)
       .reduce((sum, s) => sum + (s.total || 0), 0)
     const unpaid = totalPayroll - paid
     return (
@@ -1237,6 +1251,10 @@ export default function EmployeesClient() {
             <label style={lbl}>אסמכתא (אופציונלי)</label>
             <input style={inp} value={payRef} onChange={e => setPayRef(e.target.value)} placeholder="מספר צ'ק / אסמכתא העברה..." />
           </div>
+          <div style={field}>
+            <label style={lbl}>תאריך תשלום (יירשם כהוצאה)</label>
+            <input style={inp} type="date" value={payDate} onChange={e => setPayDate(e.target.value)} />
+          </div>
           <div style={{ background: '#f0fdf4', padding: '12px', borderRadius: '8px', fontSize: '14px', fontWeight: 700, color: 'var(--primary)' }}>
             סה״כ לתשלום: {fmt(salaryFor(payEmpId)?.total ?? employees.find(e => e.id === payEmpId)?.base_salary ?? 0)}
           </div>
@@ -1268,7 +1286,7 @@ export default function EmployeesClient() {
                 </tr>
               </thead>
               <tbody>
-                {histRows.map(s => (
+                {histRows.filter(s => (s.total || 0) > 0 || s.is_paid).map(s => (
                   <tr key={s.id} style={{ background: s.is_paid ? '#f0fdf4' : undefined }}>
                     <td style={tdSt}><strong>{periodLabel(s.month)}</strong></td>
                     <td style={tdSt}>{fmt(s.total || 0)}</td>

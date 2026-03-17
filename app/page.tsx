@@ -78,25 +78,16 @@ export default async function LandingPage() {
       {/* ══════════════════════════════════════════════════════
           HERO – Split: yellow right / navy left
       ══════════════════════════════════════════════════════ */}
-      <section style={{ display: 'flex', minHeight: '100vh', flexDirection: 'row' }} aria-label="ראשי">
+      <section className="landing-hero" aria-label="ראשי">
 
         {/* Right – Yellow panel */}
-        <div style={{
-          flex: '0 0 42%',
-          background: '#F5C800',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '60px 40px',
-          gap: '20px',
-        }}>
+        <div className="landing-panel-yellow">
           {/* Logo */}
           {BUSINESS.logo ? (
             <img
               src={BUSINESS.logo}
               alt={`לוגו ${BUSINESS.name}`}
-              style={{ width: '420px', height: '420px', objectFit: 'contain', borderRadius: '16px' }}
+              style={{ width: 'min(420px, 100%)', height: 'auto', aspectRatio: '1/1', objectFit: 'contain', borderRadius: '16px' }}
             />
           ) : (
             <div style={{
@@ -174,15 +165,7 @@ export default async function LandingPage() {
         </div>
 
         {/* Left – Navy panel */}
-        <div style={{
-          flex: 1,
-          background: '#1a2a6c',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          padding: '60px 64px',
-          gap: '32px',
-        }}>
+        <div className="landing-panel-navy">
           <div>
             <p style={{ color: '#F5C800', fontWeight: 700, fontSize: '14px', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '12px' }}>
               שירות מקצועי · מהיר · אמין
