@@ -213,9 +213,19 @@ export default function EmployeesClient() {
   // Salary table edit mode
   const [salaryEditMode, setSalaryEditMode] = useState(false)
 
+  // Employee card 3-dots open
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+
   // Bank name dropdown
   const [showBankDrop, setShowBankDrop] = useState(false)
   const bankDropRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!openMenuId) return
+    const handler = () => setOpenMenuId(null)
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [openMenuId])
 
   useEffect(() => {
     if (!showBankDrop) return
@@ -295,12 +305,45 @@ export default function EmployeesClient() {
     return created
   }
 
+  // ── Auto-init salary records for all active employees ────────────────────────
+
+  const [initingPeriod, setInitingPeriod] = useState(false)
+
+  async function initPeriodRecords() {
+    const tid = tenantId.current
+    if (!tid) return
+    setInitingPeriod(true)
+    const missing = activeEmps.filter(e => !salaries.some(s => s.employee_id === e.id && s.month === period))
+    if (missing.length === 0) { setInitingPeriod(false); return }
+    const records = missing.map(e => ({
+      id: crypto.randomUUID(),
+      tenant_id: tid,
+      employee_id: e.id,
+      month: period,
+      base: e.salary_type === 'monthly' ? (e.base_salary || 0) : (e.hourly_rate || 0),
+      hours: 0,
+      additions: [],
+      deductions: [],
+      total: e.salary_type === 'monthly' ? (e.base_salary || 0) : 0,
+      is_paid: false,
+      paid_date: null,
+      payment_method: null,
+      payment_ref: null,
+      expense_id: null,
+      notes: null,
+    }))
+    await sb.from('salaries').upsert(records, { onConflict: 'employee_id,month' })
+    await loadSalaries()
+    setInitingPeriod(false)
+  }
+
   // ── Hours (hourly employees) ─────────────────────────────────────────────────
 
   async function saveHours(emp: Employee) {
     const hours = parseFloat(hoursMap[emp.id] || '0') || 0
     const sal = await ensureSalaryRec(emp)
-    const total = calcTotal(sal.base, hours, emp.salary_type, sal.additions || [], sal.deductions || [])
+    const effectiveBase = emp.salary_type === 'monthly' ? (emp.base_salary || 0) : (sal.base || emp.hourly_rate || 0)
+    const total = calcTotal(effectiveBase, hours, emp.salary_type, sal.additions || [], sal.deductions || [])
     await sb.from('salaries').update({ hours, total }).eq('id', sal.id)
     await loadSalaries()
   }
@@ -417,7 +460,8 @@ export default function EmployeesClient() {
     if (!emp) return
     const sal = salaryFor(emp.id)
     if (!sal) return
-    const total = calcTotal(sal.base, sal.hours || 0, emp.salary_type, adjAdditions, adjDeductions)
+    const effectiveBase = emp.salary_type === 'monthly' ? (emp.base_salary || 0) : (sal.base || emp.hourly_rate || 0)
+    const total = calcTotal(effectiveBase, sal.hours || 0, emp.salary_type, adjAdditions, adjDeductions)
     await sb.from('salaries').update({
       additions: adjAdditions,
       deductions: adjDeductions,
@@ -451,6 +495,10 @@ export default function EmployeesClient() {
     setPaying(true)
     const sal = await ensureSalaryRec(emp)
 
+    // Recalculate total using current employee base (in case salary was updated after record creation)
+    const effectiveBase = emp.salary_type === 'monthly' ? (emp.base_salary || 0) : (sal.base || emp.hourly_rate || 0)
+    const freshTotal = sal.is_paid ? sal.total : calcTotal(effectiveBase, sal.hours || 0, emp.salary_type, sal.additions || [], sal.deductions || [])
+
     // Ensure "שכר" category exists
     const { data: cat } = await sb.from('expense_categories')
       .select('id').eq('tenant_id', tenantId.current).eq('name', 'שכר').maybeSingle()
@@ -464,14 +512,15 @@ export default function EmployeesClient() {
       date: payDate,
       category: 'שכר',
       description: `משכורת – ${emp.full_name} – ${periodLabel(period)}`,
-      amount: sal.total,
+      amount: freshTotal,
       payment_method: payMethod,
       payment_ref: payRef.trim() || null,
     }).select('id').single()
 
-    // Mark salary as paid
+    // Mark salary as paid (also update total to freshTotal to keep record consistent)
     await sb.from('salaries').update({
       is_paid: true,
+      total: freshTotal,
       paid_date: payDate,
       payment_method: payMethod,
       payment_ref: payRef.trim() || null,
@@ -584,14 +633,44 @@ export default function EmployeesClient() {
                 : `₪${(e.base_salary || 0).toLocaleString('he-IL', { maximumFractionDigits: 0 })} לחודש`}
             </div>
 
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: '6px', marginTop: '12px', flexWrap: 'wrap' }}>
-              <Button size="sm" variant="secondary" onClick={() => openEdit(e)} style={{ flex: 1 }}>✏️ עריכה</Button>
-              {e.email && (
-                <Button size="sm" variant="outline" onClick={() => sendInviteLink(e.email!)} title="שלח הזמנה לעובד">🔗</Button>
+            {/* Actions – 3-dots menu */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px', position: 'relative' }}>
+              <button
+                onClick={ev => { ev.stopPropagation(); setOpenMenuId(openMenuId === e.id ? null : e.id) }}
+                style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', padding: '4px 10px', fontSize: '18px', color: 'var(--text-muted)', lineHeight: 1 }}
+                title="אפשרויות"
+              >⋮</button>
+              {openMenuId === e.id && (
+                <div
+                  onClick={ev => ev.stopPropagation()}
+                  style={{
+                    position: 'absolute', bottom: '100%', left: 0, zIndex: 100,
+                    background: '#fff', border: '1px solid var(--border)', borderRadius: '10px',
+                    boxShadow: '0 4px 20px rgba(0,0,0,.12)', minWidth: '160px', overflow: 'hidden',
+                    marginBottom: '4px',
+                  }}
+                >
+                  {[
+                    { label: '✏️ עריכה', action: () => { openEdit(e); setOpenMenuId(null) } },
+                    ...(e.email ? [{ label: '🔗 שלח הזמנה', action: () => { sendInviteLink(e.email!); setOpenMenuId(null) } }] : []),
+                    { label: '📋 היסטוריה', action: () => { openHistory(e); setOpenMenuId(null) } },
+                    { label: '🗑️ מחק', action: () => { deleteEmp(e); setOpenMenuId(null) }, danger: true },
+                  ].map(item => (
+                    <button
+                      key={item.label}
+                      onClick={item.action}
+                      style={{
+                        display: 'block', width: '100%', textAlign: 'right', padding: '10px 14px',
+                        border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px',
+                        color: (item as { danger?: boolean }).danger ? 'var(--danger)' : 'var(--text)',
+                        fontFamily: 'inherit',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                    >{item.label}</button>
+                  ))}
+                </div>
               )}
-              <Button size="sm" variant="secondary" onClick={() => openHistory(e)} title="היסטוריה">📋</Button>
-              <Button size="sm" variant="danger" onClick={() => deleteEmp(e)} title="מחק">🗑️</Button>
             </div>
           </div>
         ))}
@@ -830,6 +909,19 @@ export default function EmployeesClient() {
               </select>
             </div>
             {renderSalarySummary()}
+            <button
+              onClick={initPeriodRecords}
+              disabled={initingPeriod}
+              title="צור רשומות שכר לכל העובדים הפעילים לחודש זה"
+              style={{
+                padding: '7px 14px', borderRadius: '8px', border: '1.5px solid #bbf7d0',
+                cursor: initingPeriod ? 'default' : 'pointer', fontSize: '13px', fontWeight: 600,
+                fontFamily: 'inherit', background: '#f0fdf4', color: '#16a34a',
+                opacity: initingPeriod ? 0.6 : 1,
+              }}
+            >
+              {initingPeriod ? '⏳ יוצר...' : '🔄 אתחל חודש'}
+            </button>
             <button
               onClick={() => setSalaryEditMode(m => !m)}
               style={{

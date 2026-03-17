@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { createServiceClient } from '@/lib/supabase/service'
 import { createClient } from '@/lib/supabase/server'
 import CustomerSearch from '@/components/landing/CustomerSearch'
 import PromotionsCarousel from '@/components/landing/PromotionsCarousel'
@@ -12,17 +13,12 @@ export const metadata: Metadata = {
   description: 'תיקון ומכירת צמיגים, כיוון פרונט, בדיקות רכב לפני קניה, סוכנות רכב יד 2. שירות מקצועי ומהיר.',
 }
 
-// ── Brand constants (will come from tenant settings later) ────────────────
 const TENANT_ID = 'c618f567-139b-4ce9-ac77-67affe93c27d'
 
-const BUSINESS = {
-  name: 'אוטוליין',
-  tagline: 'פנצריה ושירותי רכב',
-  phone: '', // TODO: fill after tomorrow
-  address: '', // TODO: fill after tomorrow
-  hours: '', // TODO: fill after tomorrow
-  wazeUrl: '', // TODO: fill after tomorrow
-  mapsUrl: '', // TODO: fill after tomorrow
+type PublicInfo = {
+  hours?: string
+  waze_url?: string
+  maps_url?: string
 }
 
 const DEFAULT_SERVICES = [
@@ -33,14 +29,29 @@ const DEFAULT_SERVICES = [
 ]
 
 export default async function LandingPage() {
+  const service = createServiceClient()
   const supabase = await createClient()
+  const today = new Date().toISOString().slice(0, 10)
 
-  // Fetch data in parallel – no auth, RLS public policies allow this
-  const [{ data: services }, { data: promotions }, { data: priceItems }] = await Promise.all([
+  // Fetch tenant info + landing data in parallel
+  const [{ data: tenant }, { data: services }, { data: promotions }, { data: priceItems }] = await Promise.all([
+    service.from('tenants').select('name,sub_title,phone,address,logo_base64,public_info').eq('id', TENANT_ID).single(),
     supabase.from('services').select('id,name,description,icon,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('sort_order'),
-    supabase.from('promotions').select('id,title,description,image_url,link_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).lte('start_date', new Date().toISOString().slice(0, 10)).or('end_date.is.null,end_date.gte.' + new Date().toISOString().slice(0, 10)).order('sort_order'),
+    supabase.from('promotions').select('id,title,description,image_url,link_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).lte('start_date', today).or('end_date.is.null,end_date.gte.' + today).order('sort_order'),
     supabase.from('price_list').select('id,category,service_name,price,price_note,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('category').order('sort_order'),
   ])
+
+  const pi = (tenant?.public_info ?? {}) as PublicInfo
+  const BUSINESS = {
+    name:     tenant?.name     ?? 'אוטוליין',
+    tagline:  tenant?.sub_title ?? 'פנצריה ושירותי רכב',
+    phone:    tenant?.phone    ?? '',
+    address:  tenant?.address  ?? '',
+    logo:     tenant?.logo_base64 ?? null,
+    hours:    pi.hours    ?? '',
+    wazeUrl:  pi.waze_url ?? '',
+    mapsUrl:  pi.maps_url ?? '',
+  }
 
   const displayServices = services && services.length > 0 ? services : DEFAULT_SERVICES
   const displayPromotions = promotions ?? []
@@ -65,18 +76,25 @@ export default async function LandingPage() {
           padding: '60px 40px',
           gap: '20px',
         }}>
-          {/* Logo placeholder */}
-          <div style={{
-            width: '140px', height: '140px',
-            background: '#1a2a6c',
-            borderRadius: '24px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#F5C800', fontSize: '48px', fontWeight: 800,
-            letterSpacing: '-2px',
-          }} aria-label="לוגו אוטוליין">
-            {/* Logo will replace this div when uploaded */}
-            אוטו
-          </div>
+          {/* Logo */}
+          {BUSINESS.logo ? (
+            <img
+              src={BUSINESS.logo}
+              alt={`לוגו ${BUSINESS.name}`}
+              style={{ width: '140px', height: '140px', objectFit: 'contain', borderRadius: '16px' }}
+            />
+          ) : (
+            <div style={{
+              width: '140px', height: '140px',
+              background: '#1a2a6c',
+              borderRadius: '24px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#F5C800', fontSize: '48px', fontWeight: 800,
+              letterSpacing: '-2px',
+            }} aria-label={`לוגו ${BUSINESS.name}`}>
+              {BUSINESS.name.slice(0, 2)}
+            </div>
+          )}
 
           <div style={{ textAlign: 'center' }}>
             <h1 style={{ fontSize: '36px', fontWeight: 900, color: '#1a2a6c', margin: 0, letterSpacing: '-1px' }}>
@@ -245,6 +263,7 @@ export default async function LandingPage() {
             <Link href="/accessibility" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>הצהרת נגישות</Link>
             {BUSINESS.wazeUrl && <a href={BUSINESS.wazeUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>Waze</a>}
             {BUSINESS.mapsUrl && <a href={BUSINESS.mapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>Google Maps</a>}
+            <Link href="/login" style={{ color: 'rgba(255,255,255,.45)', textDecoration: 'none', borderRight: '1px solid rgba(255,255,255,.2)', paddingRight: '24px' }}>כניסת עובדים</Link>
           </div>
 
           <p style={{ fontSize: '12px', marginTop: '16px', opacity: 0.4 }}>

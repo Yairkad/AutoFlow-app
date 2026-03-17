@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "bump-version": "node scripts/bump-version.js",
+    "prepush": "node scripts/bump-version.js",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:report": "playwright show-report"
@@ -20,6 +22,7 @@
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "recharts": "^3.8.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

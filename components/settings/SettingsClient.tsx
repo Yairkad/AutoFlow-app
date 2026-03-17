@@ -8,6 +8,12 @@ type ToastFn = (msg: string, type?: 'success' | 'error' | 'info') => void
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+interface PublicInfo {
+  hours?: string
+  waze_url?: string
+  maps_url?: string
+}
+
 interface Tenant {
   id: string
   name: string
@@ -17,6 +23,7 @@ interface Tenant {
   tax_id: string | null
   license_number: string | null
   logo_base64: string | null
+  public_info: PublicInfo
 }
 
 interface Profile {
@@ -49,7 +56,7 @@ interface InviteToken {
   expires_at: string | null
 }
 
-type Tab = 'business' | 'users' | 'invite' | 'vault'
+type Tab = 'business' | 'users' | 'invite' | 'vault' | 'landing'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -67,7 +74,8 @@ const ALL_MODULES = [
   { key: 'reminders',  label: '🔔 תזכורות' },
   { key: 'documents',  label: '📄 מסמכים' },
   { key: 'billing',    label: '🧾 חשבונות' },
-  { key: 'settings',   label: '⚙️ הגדרות' },
+  { key: 'settings',   label: '⚙️ הגדרות (כללי)' },
+  { key: 'vault',      label: '🔒 כספת סיסמאות' },
 ]
 
 const inputSt: React.CSSProperties = {
@@ -103,7 +111,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('tenants').select('*').eq('id', tenantId).single()
-    if (data) { setTenant(data); setLogoPreview(data.logo_base64) }
+    if (data) { setTenant({ ...data, public_info: data.public_info ?? {} }); setLogoPreview(data.logo_base64) }
   }, [supabase, tenantId])
 
   useEffect(() => { load() }, [load])
@@ -132,6 +140,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
       tax_id:         tenant.tax_id,
       license_number: tenant.license_number,
       logo_base64:    tenant.logo_base64,
+      public_info:    tenant.public_info,
     }).eq('id', tenantId)
     setSaving(false)
     if (error) showToast('שגיאה בשמירה', 'error')
@@ -190,6 +199,21 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
       {field('מספר רישיון / פרט נוסף', (
         <input style={inputSt} value={tenant.license_number ?? ''} onChange={e => setTenant(t => t ? { ...t, license_number: e.target.value } : t)} placeholder="לדוגמה: מס׳ רישיון מוסך 41346" />
       ))}
+
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: '4px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px', letterSpacing: '0.5px' }}>
+          🌐 פרטים לדף ציבורי
+        </div>
+        {field('שעות פעילות', (
+          <input style={inputSt} value={tenant.public_info?.hours ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, hours: e.target.value } } : t)} placeholder="א׳-ה׳ 08:00–18:00 | ו׳ 08:00–13:00" />
+        ))}
+        {field('קישור Waze', (
+          <input style={inputSt} dir="ltr" value={tenant.public_info?.waze_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, waze_url: e.target.value } } : t)} placeholder="https://waze.com/ul/..." />
+        ))}
+        {field('קישור Google Maps', (
+          <input style={inputSt} dir="ltr" value={tenant.public_info?.maps_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, maps_url: e.target.value } } : t)} placeholder="https://maps.app.goo.gl/..." />
+        ))}
+      </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-start', paddingTop: '4px' }}>
         <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>
@@ -770,32 +794,312 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
   )
 }
 
+// ── LandingTab ──────────────────────────────────────────────────────────────
+
+type LandingSub = 'services' | 'promotions' | 'prices'
+
+interface LandingService { id: string; name: string; description: string | null; icon: string | null; sort_order: number; is_active: boolean }
+interface LandingPromotion { id: string; title: string; description: string | null; start_date: string | null; end_date: string | null; sort_order: number; is_active: boolean }
+interface LandingPrice { id: string; category: string; service_name: string; price: number | null; price_note: string | null; sort_order: number; is_active: boolean }
+
+function LandingTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
+  const [sub, setSub] = useState<LandingSub>('services')
+
+  const subTabs: { key: LandingSub; label: string }[] = [
+    { key: 'services',   label: '🔧 שירותים' },
+    { key: 'promotions', label: '🏷️ מבצעים' },
+    { key: 'prices',     label: '💲 מחירון' },
+  ]
+
+  return (
+    <div style={{ maxWidth: '720px' }}>
+      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+        ניהול תוכן דף הנחיתה הציבורי. פרטי העסק (שם, טלפון, כתובת) מנוהלים בטאב &quot;פרטי עסק&quot;.
+      </p>
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid var(--border)' }}>
+        {subTabs.map(t => (
+          <button key={t.key} onClick={() => setSub(t.key)} style={{
+            padding: '8px 16px', border: 'none', background: 'transparent', cursor: 'pointer',
+            fontSize: '13px', fontWeight: sub === t.key ? 700 : 400,
+            color: sub === t.key ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: sub === t.key ? '2px solid var(--primary)' : '2px solid transparent',
+            marginBottom: '-1px',
+          }}>{t.label}</button>
+        ))}
+      </div>
+      {sub === 'services'   && <ServicesSection   supabase={supabase} tenantId={tenantId} showToast={showToast} />}
+      {sub === 'promotions' && <PromotionsSection supabase={supabase} tenantId={tenantId} showToast={showToast} />}
+      {sub === 'prices'     && <PricesSection     supabase={supabase} tenantId={tenantId} showToast={showToast} />}
+    </div>
+  )
+}
+
+function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
+  const [items, setItems] = useState<LandingService[]>([])
+  const [showForm, setShowForm] = useState(false)
+  const [editItem, setEditItem] = useState<LandingService | null>(null)
+  const [form, setForm] = useState({ name: '', description: '', icon: '', sort_order: '0', is_active: true })
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('services').select('*').eq('tenant_id', tenantId).order('sort_order')
+    setItems(data ?? [])
+  }, [supabase, tenantId])
+
+  useEffect(() => { load() }, [load])
+
+  function openAdd() { setForm({ name: '', description: '', icon: '🔧', sort_order: String(items.length * 10), is_active: true }); setEditItem(null); setShowForm(true) }
+  function openEdit(i: LandingService) { setForm({ name: i.name, description: i.description ?? '', icon: i.icon ?? '', sort_order: String(i.sort_order), is_active: i.is_active }); setEditItem(i); setShowForm(true) }
+
+  async function save() {
+    if (!form.name.trim()) { showToast('חובה שם', 'error'); return }
+    setSaving(true)
+    const payload = { tenant_id: tenantId, name: form.name.trim(), description: form.description.trim() || null, icon: form.icon.trim() || null, sort_order: parseInt(form.sort_order) || 0, is_active: form.is_active }
+    if (editItem) await supabase.from('services').update(payload).eq('id', editItem.id)
+    else await supabase.from('services').insert(payload)
+    setSaving(false); setShowForm(false); load(); showToast(editItem ? 'עודכן' : 'נוסף', 'success')
+  }
+
+  async function del(id: string) { await supabase.from('services').delete().eq('id', id); load(); showToast('נמחק', 'success') }
+  async function toggleActive(i: LandingService) { await supabase.from('services').update({ is_active: !i.is_active }).eq('id', i.id); load() }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <span style={{ fontSize: '14px', fontWeight: 600 }}>שירותים ({items.length})</span>
+        <button onClick={openAdd} style={btnPrim}>+ הוסף שירות</button>
+      </div>
+      {showForm && (
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+            <div><label style={labelSt}>שם *</label><input style={inputSt} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="לדוגמה: כיוון פרונט" /></div>
+            <div><label style={labelSt}>אייקון (אימוג׳י)</label><input style={{ ...inputSt, fontSize: '20px' }} value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} placeholder="🔧" /></div>
+          </div>
+          <div style={{ marginBottom: '10px' }}><label style={labelSt}>תיאור</label><input style={inputSt} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="תיאור קצר של השירות..." /></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+            <div style={{ flex: 1 }}><label style={labelSt}>סדר הצגה</label><input type="number" style={inputSt} value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', marginTop: '16px' }}>
+              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} /> פעיל
+            </label>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
+            <button onClick={() => setShowForm(false)} style={btnSec}>ביטול</button>
+          </div>
+        </div>
+      )}
+      {items.length === 0 && !showForm && <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '13px', border: '2px dashed var(--border)', borderRadius: '10px' }}>אין שירותים — לחץ &quot;+ הוסף שירות&quot;</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {items.map(i => (
+          <div key={i.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', opacity: i.is_active ? 1 : .55 }}>
+            <span style={{ fontSize: '22px' }}>{i.icon ?? '🔧'}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: '13px' }}>{i.name}</div>
+              {i.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{i.description}</div>}
+            </div>
+            <button onClick={() => toggleActive(i)} style={{ ...btnSec, padding: '4px 10px', fontSize: '11px', color: i.is_active ? 'var(--primary)' : 'var(--text-muted)' }}>{i.is_active ? '✓ פעיל' : 'מושבת'}</button>
+            <button onClick={() => openEdit(i)} style={{ ...btnSec, padding: '4px 10px', fontSize: '11px' }}>✏️</button>
+            <button onClick={() => del(i.id)} style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function PromotionsSection({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
+  const [items, setItems] = useState<LandingPromotion[]>([])
+  const [showForm, setShowForm] = useState(false)
+  const [editItem, setEditItem] = useState<LandingPromotion | null>(null)
+  const [form, setForm] = useState({ title: '', description: '', start_date: '', end_date: '', sort_order: '0', is_active: true })
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('promotions').select('*').eq('tenant_id', tenantId).order('sort_order')
+    setItems(data ?? [])
+  }, [supabase, tenantId])
+
+  useEffect(() => { load() }, [load])
+
+  function openAdd() { setForm({ title: '', description: '', start_date: new Date().toISOString().slice(0,10), end_date: '', sort_order: '0', is_active: true }); setEditItem(null); setShowForm(true) }
+  function openEdit(i: LandingPromotion) { setForm({ title: i.title, description: i.description ?? '', start_date: i.start_date ?? '', end_date: i.end_date ?? '', sort_order: String(i.sort_order), is_active: i.is_active }); setEditItem(i); setShowForm(true) }
+
+  async function save() {
+    if (!form.title.trim()) { showToast('חובה כותרת', 'error'); return }
+    setSaving(true)
+    const payload = { tenant_id: tenantId, title: form.title.trim(), description: form.description.trim() || null, start_date: form.start_date || null, end_date: form.end_date || null, sort_order: parseInt(form.sort_order) || 0, is_active: form.is_active }
+    if (editItem) await supabase.from('promotions').update(payload).eq('id', editItem.id)
+    else await supabase.from('promotions').insert(payload)
+    setSaving(false); setShowForm(false); load(); showToast(editItem ? 'עודכן' : 'נוסף', 'success')
+  }
+
+  async function del(id: string) { await supabase.from('promotions').delete().eq('id', id); load(); showToast('נמחק', 'success') }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <span style={{ fontSize: '14px', fontWeight: 600 }}>מבצעים ({items.length})</span>
+        <button onClick={openAdd} style={btnPrim}>+ הוסף מבצע</button>
+      </div>
+      {showForm && (
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
+          <div style={{ marginBottom: '10px' }}><label style={labelSt}>כותרת *</label><input style={inputSt} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="לדוגמה: 20% הנחה על צמיגים" /></div>
+          <div style={{ marginBottom: '10px' }}><label style={labelSt}>תיאור</label><textarea style={{ ...inputSt, height: '60px', resize: 'vertical' } as React.CSSProperties} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="פרטי המבצע..." /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+            <div><label style={labelSt}>מתאריך</label><input type="date" style={inputSt} value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} /></div>
+            <div><label style={labelSt}>עד תאריך</label><input type="date" style={inputSt} value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} /></div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+            <div style={{ flex: 1 }}><label style={labelSt}>סדר הצגה</label><input type="number" style={inputSt} value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', marginTop: '16px' }}>
+              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} /> פעיל
+            </label>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
+            <button onClick={() => setShowForm(false)} style={btnSec}>ביטול</button>
+          </div>
+        </div>
+      )}
+      {items.length === 0 && !showForm && <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '13px', border: '2px dashed var(--border)', borderRadius: '10px' }}>אין מבצעים — לחץ &quot;+ הוסף מבצע&quot;</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {items.map(i => (
+          <div key={i.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', opacity: i.is_active ? 1 : .55 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: '13px' }}>{i.title}</div>
+              {i.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{i.description}</div>}
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                {i.start_date && `מ-${i.start_date}`}{i.end_date && ` עד ${i.end_date}`}
+              </div>
+            </div>
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? '#dcfce7' : '#f1f5f9', color: i.is_active ? '#16a34a' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
+            <button onClick={() => openEdit(i)} style={{ ...btnSec, padding: '4px 10px', fontSize: '11px' }}>✏️</button>
+            <button onClick={() => del(i.id)} style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function PricesSection({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
+  const [items, setItems] = useState<LandingPrice[]>([])
+  const [showForm, setShowForm] = useState(false)
+  const [editItem, setEditItem] = useState<LandingPrice | null>(null)
+  const [form, setForm] = useState({ category: '', service_name: '', price: '', price_note: '', sort_order: '0', is_active: true })
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('price_list').select('*').eq('tenant_id', tenantId).order('category').order('sort_order')
+    setItems(data ?? [])
+  }, [supabase, tenantId])
+
+  useEffect(() => { load() }, [load])
+
+  function openAdd() { setForm({ category: '', service_name: '', price: '', price_note: '', sort_order: '0', is_active: true }); setEditItem(null); setShowForm(true) }
+  function openEdit(i: LandingPrice) { setForm({ category: i.category, service_name: i.service_name, price: i.price != null ? String(i.price) : '', price_note: i.price_note ?? '', sort_order: String(i.sort_order), is_active: i.is_active }); setEditItem(i); setShowForm(true) }
+
+  async function save() {
+    if (!form.service_name.trim() || !form.category.trim()) { showToast('חובה קטגוריה ושם שירות', 'error'); return }
+    setSaving(true)
+    const payload = { tenant_id: tenantId, category: form.category.trim(), service_name: form.service_name.trim(), price: form.price ? parseFloat(form.price) : null, price_note: form.price_note.trim() || null, sort_order: parseInt(form.sort_order) || 0, is_active: form.is_active }
+    if (editItem) await supabase.from('price_list').update(payload).eq('id', editItem.id)
+    else await supabase.from('price_list').insert(payload)
+    setSaving(false); setShowForm(false); load(); showToast(editItem ? 'עודכן' : 'נוסף', 'success')
+  }
+
+  async function del(id: string) { await supabase.from('price_list').delete().eq('id', id); load(); showToast('נמחק', 'success') }
+
+  // Group by category
+  const categories = [...new Set(items.map(i => i.category))]
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <span style={{ fontSize: '14px', fontWeight: 600 }}>מחירון ({items.length} פריטים)</span>
+        <button onClick={openAdd} style={btnPrim}>+ הוסף פריט</button>
+      </div>
+      {showForm && (
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+            <div><label style={labelSt}>קטגוריה *</label><input style={inputSt} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="לדוגמה: כיוון פרונט" list="cat-list" /><datalist id="cat-list">{categories.map(c => <option key={c} value={c} />)}</datalist></div>
+            <div><label style={labelSt}>שם שירות *</label><input style={inputSt} value={form.service_name} onChange={e => setForm(f => ({ ...f, service_name: e.target.value }))} placeholder="לדוגמה: רכב פרטי" /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+            <div><label style={labelSt}>מחיר (₪)</label><input type="number" style={inputSt} value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0" dir="ltr" /></div>
+            <div><label style={labelSt}>הערת מחיר</label><input style={inputSt} value={form.price_note} onChange={e => setForm(f => ({ ...f, price_note: e.target.value }))} placeholder='לדוגמה: "החל מ-"' /></div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+            <div style={{ flex: 1 }}><label style={labelSt}>סדר</label><input type="number" style={inputSt} value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', marginTop: '16px' }}>
+              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} /> פעיל
+            </label>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
+            <button onClick={() => setShowForm(false)} style={btnSec}>ביטול</button>
+          </div>
+        </div>
+      )}
+      {items.length === 0 && !showForm && <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '13px', border: '2px dashed var(--border)', borderRadius: '10px' }}>אין פריטים במחירון — לחץ &quot;+ הוסף פריט&quot;</div>}
+      {categories.map(cat => (
+        <div key={cat} style={{ marginBottom: '16px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid var(--border)' }}>{cat}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {items.filter(i => i.category === cat).map(i => (
+              <div key={i.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px', opacity: i.is_active ? 1 : .55 }}>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600 }}>{i.service_name}</span>
+                  {i.price_note && <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginRight: '6px' }}>{i.price_note}</span>}
+                </div>
+                <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '13px' }}>{i.price != null ? `₪${Number(i.price).toLocaleString('he-IL')}` : '—'}</span>
+                <button onClick={() => openEdit(i)} style={{ ...btnSec, padding: '3px 8px', fontSize: '11px' }}>✏️</button>
+                <button onClick={() => del(i.id)} style={{ padding: '3px 7px', border: '1px solid #fecaca', borderRadius: '5px', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────
 
 export default function SettingsClient() {
   const supabase      = useRef(createClient()).current
   const { showToast } = useToast()
-  const [tab,      setTab]      = useState<Tab>('business')
-  const [tenantId, setTenantId] = useState<string | null>(null)
-  const [myId,     setMyId]     = useState<string | null>(null)
-  const [loading,  setLoading]  = useState(true)
+  const [tab,            setTab]            = useState<Tab>('business')
+  const [tenantId,       setTenantId]       = useState<string | null>(null)
+  const [myId,           setMyId]           = useState<string | null>(null)
+  const [myRole,         setMyRole]         = useState<string>('employee')
+  const [myModules,      setMyModules]      = useState<string[]>([])
+  const [loading,        setLoading]        = useState(true)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) return
       setMyId(data.user.id)
-      supabase.from('profiles').select('tenant_id').eq('id', data.user.id).single().then(({ data: p }) => {
-        if (p) setTenantId(p.tenant_id)
+      supabase.from('profiles').select('tenant_id, role, allowed_modules').eq('id', data.user.id).single().then(({ data: p }) => {
+        if (p) {
+          setTenantId(p.tenant_id)
+          setMyRole(p.role ?? 'employee')
+          setMyModules(p.allowed_modules ?? [])
+        }
         setLoading(false)
       })
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const isAdmin = myRole === 'admin'
+  const canVault = isAdmin || myModules.includes('vault')
+
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: 'business', label: 'פרטי עסק',    icon: '🏢' },
     { key: 'users',    label: 'משתמשים',      icon: '👥' },
     { key: 'invite',   label: 'הזמנת עובד',   icon: '🔗' },
-    { key: 'vault',    label: 'כספת סיסמאות', icon: '🔒' },
+    { key: 'landing',  label: 'דף נחיתה',     icon: '🌐' },
+    ...(canVault ? [{ key: 'vault' as Tab, label: 'כספת סיסמאות', icon: '🔒' }] : []),
   ]
 
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
@@ -832,10 +1136,13 @@ export default function SettingsClient() {
       {tab === 'business' && <BusinessTab supabase={supabase} tenantId={tenantId} showToast={showToast} />}
       {tab === 'users'    && <UsersTab    supabase={supabase} tenantId={tenantId} myId={myId} showToast={showToast} />}
       {tab === 'invite'   && <InviteTab   supabase={supabase} tenantId={tenantId} showToast={showToast} />}
+      {tab === 'landing'  && <LandingTab  supabase={supabase} tenantId={tenantId} showToast={showToast} />}
       {/* VaultTab is always mounted so unlocked/hasPinSet state survives tab switches */}
-      <div style={{ display: tab === 'vault' ? 'block' : 'none' }}>
-        <VaultTab supabase={supabase} tenantId={tenantId} showToast={showToast} />
-      </div>
+      {canVault && (
+        <div style={{ display: tab === 'vault' ? 'block' : 'none' }}>
+          <VaultTab supabase={supabase} tenantId={tenantId} showToast={showToast} />
+        </div>
+      )}
     </div>
   )
 }

@@ -338,6 +338,7 @@ export default function InspectionsClient() {
   const [printData, setPrintData]     = useState<PrintData | null>(null)
   const [search, setSearch]           = useState('')
   const [showActions, setShowActions] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set())
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -408,6 +409,7 @@ export default function InspectionsClient() {
   const clearForm = () => {
     setEditingId(null)
     setForm({ ...emptyForm })
+    setFieldErrors(new Set())
   }
 
   const openEdit = (ins: Inspection) => {
@@ -431,10 +433,16 @@ export default function InspectionsClient() {
   // ── Save + Print ─────────────────────────────────────────────────────────────
 
   const handlePrintAndSave = async () => {
-    if (!form.plate.trim() || !form.owner_name.trim()) {
-      showToast('נדרשים לוחית ושם לקוח', 'error')
+    const errors = new Set<string>()
+    if (!form.plate.trim()) errors.add('plate')
+    if (!form.owner_name.trim()) errors.add('owner_name')
+    if (errors.size > 0) {
+      setFieldErrors(errors)
+      const labels = [...errors].map(f => f === 'plate' ? 'מספר רכב' : 'שם לקוח').join(', ')
+      showToast(`שדות חובה חסרים: ${labels}`, 'error')
       return
     }
+    setFieldErrors(new Set())
     setSaving(true)
 
     const payload = {
@@ -481,10 +489,16 @@ export default function InspectionsClient() {
   // ── Save only (no print) ─────────────────────────────────────────────────────
 
   const handleSaveOnly = async () => {
-    if (!form.plate.trim() || !form.owner_name.trim()) {
-      showToast('נדרשים לוחית ושם לקוח', 'error')
+    const errors = new Set<string>()
+    if (!form.plate.trim()) errors.add('plate')
+    if (!form.owner_name.trim()) errors.add('owner_name')
+    if (errors.size > 0) {
+      setFieldErrors(errors)
+      const labels = [...errors].map(f => f === 'plate' ? 'מספר רכב' : 'שם לקוח').join(', ')
+      showToast(`שדות חובה חסרים: ${labels}`, 'error')
       return
     }
+    setFieldErrors(new Set())
     setSaving(true)
 
     const payload = {
@@ -552,7 +566,10 @@ export default function InspectionsClient() {
     )
   })
 
-  const onChange = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
+  const onChange = (k: string, v: string) => {
+    setForm(f => ({ ...f, [k]: v }))
+    if (fieldErrors.has(k)) setFieldErrors(s => { const n = new Set(s); n.delete(k); return n })
+  }
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -596,93 +613,94 @@ export default function InspectionsClient() {
 
       {/* ── TAB: הזנת נתונים ── */}
       {tab === 'entry' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 900 }}>
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 12,
+          height: 'calc(100vh - var(--header-h) - 180px)',
+        }}>
+          {/* Two-column layout: customer | vehicle */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1, minHeight: 0 }}>
 
-          {/* Customer section */}
-          <Section icon="👤" title="פרטי לקוח">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
-              {[
-                { key: 'owner_name',    label: 'שם לקוח *',  placeholder: 'ישראל ישראלי' },
-                { key: 'owner_id',      label: 'תעודת זהות', placeholder: '123456789' },
-                { key: 'owner_phone',   label: 'טלפון',       placeholder: '050-0000000' },
-                { key: 'owner_address', label: 'כתובת',       placeholder: 'רחוב, עיר' },
-              ].map(({ key, label, placeholder }) => (
-                <div key={key}>
-                  <FL>{label}</FL>
+            {/* Customer section */}
+            <Section icon="👤" title="פרטי לקוח">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {[
+                  { key: 'owner_name',    label: 'שם לקוח *',  placeholder: 'ישראל ישראלי' },
+                  { key: 'owner_id',      label: 'תעודת זהות', placeholder: '123456789' },
+                  { key: 'owner_phone',   label: 'טלפון',       placeholder: '050-0000000' },
+                  { key: 'owner_address', label: 'כתובת',       placeholder: 'רחוב, עיר' },
+                ].map(({ key, label, placeholder }) => (
+                  <div key={key}>
+                    <FL>{label}</FL>
+                    <input
+                      value={form[key as keyof typeof emptyForm]}
+                      onChange={e => onChange(key, e.target.value)}
+                      className="form-input"
+                      placeholder={placeholder}
+                      style={fieldErrors.has(key) ? { borderColor: '#dc2626', boxShadow: '0 0 0 2px rgba(220,38,38,.15)' } : undefined}
+                    />
+                  </div>
+                ))}
+              </div>
+            </Section>
+
+            {/* Vehicle section */}
+            <Section icon="🚗" title="פרטי רכב">
+              {/* Plate + auto-fill */}
+              <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                <div style={{ flex: '0 0 160px' }}>
+                  <FL>מספר רכב *</FL>
                   <input
-                    value={form[key as keyof typeof emptyForm]}
-                    onChange={e => onChange(key, e.target.value)}
-                    className="form-input"
-                    placeholder={placeholder}
+                    value={form.plate}
+                    onChange={e => onChange('plate', e.target.value)}
+                    className="form-input font-mono font-bold"
+                    style={{ fontSize: 15, letterSpacing: 1, ...(fieldErrors.has('plate') ? { borderColor: '#dc2626', boxShadow: '0 0 0 2px rgba(220,38,38,.15)' } : {}) }}
+                    placeholder="12-345-67"
+                    dir="ltr"
                   />
                 </div>
-              ))}
-            </div>
-          </Section>
-
-          {/* Vehicle section */}
-          <Section icon="🚗" title="פרטי רכב">
-            {/* Plate + auto-fill */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-              <div style={{ flex: '0 0 200px' }}>
-                <FL>מספר רכב *</FL>
-                <input
-                  value={form.plate}
-                  onChange={e => onChange('plate', e.target.value)}
-                  className="form-input font-mono font-bold"
-                  style={{ fontSize: 15, letterSpacing: 1 }}
-                  placeholder="12-345-67"
-                  dir="ltr"
-                />
-              </div>
-              <div style={{ paddingTop: 22 }}>
-                <Button size="sm" onClick={handlePlateSearch} disabled={plateLoading}>
-                  {plateLoading ? '...' : '🔍 מלא אוטומטית'}
-                </Button>
-              </div>
-            </div>
-
-            {/* Other vehicle fields */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12 }}>
-              {[
-                { key: 'km',        label: 'קילומטרז׳',       placeholder: '100000' },
-                { key: 'make',      label: 'תוצר',             placeholder: 'טויוטה' },
-                { key: 'model',     label: 'דגם',              placeholder: 'קורולה' },
-                { key: 'year',      label: 'שנת ייצור',        placeholder: '2020' },
-                { key: 'engine_cc', label: 'מספר מנוע',        placeholder: '' },
-              ].map(({ key, label, placeholder }) => (
-                <div key={key}>
-                  <FL>{label}</FL>
-                  <input
-                    value={form[key as keyof typeof emptyForm]}
-                    onChange={e => onChange(key, e.target.value)}
-                    className="form-input"
-                    placeholder={placeholder}
-                  />
+                <div style={{ paddingTop: 20 }}>
+                  <Button size="sm" onClick={handlePlateSearch} disabled={plateLoading}>
+                    {plateLoading ? '...' : '🔍 מלא אוטומטית'}
+                  </Button>
                 </div>
-              ))}
-            </div>
-            <div style={{ marginTop: 12, maxWidth: 260 }}>
-              <FL>מספר שלדה (VIN)</FL>
-              <input
-                value={form.chassis}
-                onChange={e => onChange('chassis', e.target.value)}
-                className="form-input"
-              />
-            </div>
-          </Section>
+              </div>
 
-          {/* Action bar */}
+              {/* Vehicle fields grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+                {[
+                  { key: 'make',      label: 'תוצר',      placeholder: 'טויוטה' },
+                  { key: 'model',     label: 'דגם',        placeholder: 'קורולה' },
+                  { key: 'year',      label: 'שנת ייצור',  placeholder: '2020' },
+                  { key: 'km',        label: "ק\"מ",       placeholder: '100000' },
+                  { key: 'engine_cc', label: 'מספר מנוע',  placeholder: '' },
+                  { key: 'chassis',   label: 'מספר שלדה',  placeholder: '' },
+                ].map(({ key, label, placeholder }) => (
+                  <div key={key}>
+                    <FL>{label}</FL>
+                    <input
+                      value={form[key as keyof typeof emptyForm]}
+                      onChange={e => onChange(key, e.target.value)}
+                      className="form-input"
+                      placeholder={placeholder}
+                    />
+                  </div>
+                ))}
+              </div>
+            </Section>
+          </div>
+
+          {/* Action bar – always visible at bottom */}
           <div style={{
             display: 'flex', gap: 10, alignItems: 'center',
             background: 'var(--bg-card)', border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)', padding: '14px 18px',
+            borderRadius: 'var(--radius)', padding: '12px 18px',
+            flexShrink: 0,
           }}>
             <Button
               fullWidth
               onClick={handlePrintAndSave}
               disabled={saving}
-              style={{ fontSize: 15, fontWeight: 800, padding: '11px 0' }}
+              style={{ fontSize: 15, fontWeight: 800, padding: '10px 0' }}
             >
               {saving ? 'שומר...' : '🖨️ הדפס מסמך ושמור'}
             </Button>
@@ -691,7 +709,7 @@ export default function InspectionsClient() {
                 variant="secondary"
                 onClick={handleSaveOnly}
                 disabled={saving}
-                style={{ flexShrink: 0, padding: '11px 20px', whiteSpace: 'nowrap', fontWeight: 700 }}
+                style={{ flexShrink: 0, padding: '10px 20px', whiteSpace: 'nowrap', fontWeight: 700 }}
               >
                 💾 שמור ללא הדפסה
               </Button>
@@ -699,7 +717,7 @@ export default function InspectionsClient() {
             <button
               onClick={clearForm}
               style={{
-                flexShrink: 0, padding: '11px 20px',
+                flexShrink: 0, padding: '10px 20px',
                 border: '1px solid var(--border)', borderRadius: 8,
                 background: 'white', cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: 14, fontWeight: 700,

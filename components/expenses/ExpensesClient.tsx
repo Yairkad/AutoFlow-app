@@ -264,6 +264,9 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   const [rfFreq,       setRfFreq]       = useState<'monthly' | 'bimonthly'>('monthly')
   const [rfSupplier,   setRfSupplier]   = useState('')
 
+  // Edit mode (show row action buttons)
+  const [editMode, setEditMode] = useState(false)
+
   // Scheduled payments modal
   const [schedModal, setSchedModal] = useState(false)
 
@@ -727,6 +730,21 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
 
         {/* Action buttons – far left (RTL) */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+          {/* Edit mode toggle */}
+          <button
+            onClick={() => setEditMode(v => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              border: `1px solid ${editMode ? 'var(--primary)' : 'var(--border)'}`,
+              borderRadius: '8px', padding: '6px 12px',
+              background: editMode ? '#f0fdf4' : '#fff',
+              cursor: 'pointer', fontSize: '13px',
+              color: editMode ? 'var(--primary)' : 'var(--text-muted)',
+              fontWeight: editMode ? 600 : 400,
+            }}
+          >
+            ✏️ {editMode ? 'יציאה מעריכה' : 'עריכה'}
+          </button>
           {/* Scheduled payments button */}
           <button
             onClick={() => setSchedModal(true)}
@@ -968,8 +986,10 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                     })()}
                     <td style={{ ...TD, textAlign: 'left', fontWeight: 700, color: tab === 'expenses' ? 'var(--danger)' : 'var(--primary)' }}>{fmt(row.amount)}</td>
                     <td style={{ ...TD, whiteSpace: 'nowrap' }}>
-                      <button onClick={() => openEdit(row)} style={ICON_BTN}>✏️</button>
-                      <button onClick={() => del(row.id)}   style={ICON_BTN}>🗑️</button>
+                      {editMode && <>
+                        <button onClick={() => openEdit(row)} style={ICON_BTN}>✏️</button>
+                        <button onClick={() => del(row.id)}   style={ICON_BTN}>🗑️</button>
+                      </>}
                     </td>
                   </tr>
                 ))}

@@ -705,15 +705,15 @@ export default function TiresClient() {
                     setMvTireId(exact?.id ?? '')
                   }}
                 />
-                {/* Top-3 dropdown */}
-                {mvDropOpen && mvTireSearch.trim() !== '' && (() => {
-                  const q = mvTireSearch.toLowerCase()
-                  const matches = tires
-                    .filter(t =>
-                      tireSize(t).includes(q) ||
-                      (t.brand ?? '').toLowerCase().includes(q)
-                    )
-                    .slice(0, 3)
+                {/* Dropdown – shows on focus (all) or when searching (filtered) */}
+                {mvDropOpen && (() => {
+                  const q = mvTireSearch.trim().toLowerCase()
+                  const matches = q
+                    ? tires.filter(t =>
+                        tireSize(t).includes(q) ||
+                        (t.brand ?? '').toLowerCase().includes(q)
+                      ).slice(0, 8)
+                    : [...tires].sort((a, b) => (b.qty - a.qty)).slice(0, 10)
                   if (matches.length === 0) return null
                   return (
                     <div style={{
@@ -861,24 +861,27 @@ export default function TiresClient() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '10px' }}>
               <div>
                 <label style={lbl}>רוחב (מ&quot;מ) <span style={{ color: 'var(--danger)' }}>*</span></label>
-                <input style={inpErr(formErrs.width)} type="number" value={form.width} list="w-list"
-                  placeholder="205" min={100} max={400}
-                  onChange={e => { setF('width', e.target.value); setFormErrs(p => ({ ...p, width: false })) }} />
-                <datalist id="w-list">{WIDTHS.map(w => <option key={w} value={w} />)}</datalist>
+                <select style={inpErr(formErrs.width)} value={form.width}
+                  onChange={e => { setF('width', e.target.value); setFormErrs(p => ({ ...p, width: false })) }}>
+                  <option value="">— בחר —</option>
+                  {WIDTHS.map(w => <option key={w} value={w}>{w}</option>)}
+                </select>
               </div>
               <div>
                 <label style={lbl}>פרופיל (%) <span style={{ color: 'var(--danger)' }}>*</span></label>
-                <input style={inpErr(formErrs.profile)} type="number" value={form.profile} list="p-list"
-                  placeholder="55" min={20} max={90}
-                  onChange={e => { setF('profile', e.target.value); setFormErrs(p => ({ ...p, profile: false })) }} />
-                <datalist id="p-list">{PROFILES.map(p => <option key={p} value={p} />)}</datalist>
+                <select style={inpErr(formErrs.profile)} value={form.profile}
+                  onChange={e => { setF('profile', e.target.value); setFormErrs(p => ({ ...p, profile: false })) }}>
+                  <option value="">— בחר —</option>
+                  {PROFILES.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
               </div>
               <div>
                 <label style={lbl}>קוטר (אינץ') <span style={{ color: 'var(--danger)' }}>*</span></label>
-                <input style={inpErr(formErrs.rim)} type="number" value={form.rim} list="r-list"
-                  placeholder="16" min={10} max={24}
-                  onChange={e => { setF('rim', e.target.value); setFormErrs(p => ({ ...p, rim: false })) }} />
-                <datalist id="r-list">{RIMS.map(r => <option key={r} value={r} />)}</datalist>
+                <select style={inpErr(formErrs.rim)} value={form.rim}
+                  onChange={e => { setF('rim', e.target.value); setFormErrs(p => ({ ...p, rim: false })) }}>
+                  <option value="">— בחר —</option>
+                  {RIMS.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>

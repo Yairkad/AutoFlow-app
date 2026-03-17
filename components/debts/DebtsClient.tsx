@@ -214,7 +214,7 @@ export default function DebtsClient() {
           : [EMPTY_INV()]
       setSInvoices(existing)
     } else {
-      setEditSupp(null); setSSupplier(suppliers[0]?.id ?? ''); setSDate(todayISO()); setSNotes(''); setSInvoices([EMPTY_INV()])
+      setEditSupp(null); setSSupplier(''); setSDate(todayISO()); setSNotes(''); setSInvoices([EMPTY_INV()])
     }
     setShowSuppModal(true)
   }
@@ -672,7 +672,7 @@ export default function DebtsClient() {
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>לוחית רישוי<input value={cPlate} onChange={e => setCPlate(e.target.value)} placeholder="12-345-67" style={inputSt} /></label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>סכום (₪) *<input type="number" min="0" step="0.01" value={cAmount} onChange={e => setCAmount(e.target.value)} placeholder="0.00" style={inputSt} /></label>
               </div>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>תיאור<input value={cDesc} onChange={e => setCDesc(e.target.value)} placeholder="פירוט החוב..." style={inputSt} /></label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>הערות<textarea value={cDesc} onChange={e => setCDesc(e.target.value)} placeholder="הערות על החוב..." style={{ ...inputSt, resize: 'vertical', minHeight: '68px' }} /></label>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>תאריך *<input type="date" value={cDate} onChange={e => setCDate(e.target.value)} style={inputSt} /></label>
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '22px', justifyContent: 'flex-end' }}>
@@ -691,7 +691,10 @@ export default function DebtsClient() {
             <div style={{ display: 'grid', gap: '14px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                  ספק
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>ספק</span>
+                    <a href="/suppliers" style={{ fontSize: '11px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}>+ הוסף ספק חדש</a>
+                  </div>
                   <select value={sSupplier} onChange={e => setSSupplier(e.target.value)} style={inputSt}>
                     <option value="">— ללא ספק ספציפי —</option>
                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}

@@ -1,5 +1,6 @@
 import Header from './Header'
 import Sidebar from './Sidebar'
+import Footer from './Footer'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -14,6 +15,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }}>
         {children}
       </main>
+      <Footer />
     </>
   )
 }

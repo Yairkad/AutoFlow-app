@@ -15,6 +15,10 @@ interface Supplier {
   email: string | null
   address: string | null
   notes: string | null
+  bank_name: string | null
+  bank_branch: string | null
+  bank_account: string | null
+  bank_account_holder: string | null
   created_at: string
 }
 
@@ -114,6 +118,10 @@ export default function SuppliersClient() {
   const [fEmail, setFEmail]       = useState('')
   const [fAddress, setFAddress]   = useState('')
   const [fNotes, setFNotes]       = useState('')
+  const [fBankName, setFBankName]             = useState('')
+  const [fBankBranch, setFBankBranch]         = useState('')
+  const [fBankAccount, setFBankAccount]       = useState('')
+  const [fBankHolder, setFBankHolder]         = useState('')
   const [saving, setSaving]       = useState(false)
 
   // ── Tenant ─────────────────────────────────────────────────────────────────
@@ -165,10 +173,13 @@ export default function SuppliersClient() {
       setEditItem(s)
       setFName(s.name); setFContact(s.contact_name ?? ''); setFPhone(s.phone ?? '')
       setFEmail(s.email ?? ''); setFAddress(s.address ?? ''); setFNotes(s.notes ?? '')
+      setFBankName(s.bank_name ?? ''); setFBankBranch(s.bank_branch ?? '')
+      setFBankAccount(s.bank_account ?? ''); setFBankHolder(s.bank_account_holder ?? '')
     } else {
       setEditItem(null)
       setFName(''); setFContact(''); setFPhone('')
       setFEmail(''); setFAddress(''); setFNotes('')
+      setFBankName(''); setFBankBranch(''); setFBankAccount(''); setFBankHolder('')
     }
     setShowModal(true)
   }
@@ -185,6 +196,10 @@ export default function SuppliersClient() {
       email: fEmail.trim() || null,
       address: fAddress.trim() || null,
       notes: fNotes.trim() || null,
+      bank_name: fBankName.trim() || null,
+      bank_branch: fBankBranch.trim() || null,
+      bank_account: fBankAccount.trim() || null,
+      bank_account_holder: fBankHolder.trim() || null,
     }
     if (editItem) {
       const { error } = await supabase.from('suppliers').update(row).eq('id', editItem.id)
@@ -440,6 +455,17 @@ export default function SuppliersClient() {
                   <div style={{ fontSize: '13px' }}>{selected.notes}</div>
                 </div>
               )}
+              {(selected.bank_name || selected.bank_account) && (
+                <div style={{ background: '#f0f9ff', borderRadius: '8px', padding: '10px 14px', gridColumn: '1 / -1', border: '1px solid #bae6fd' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '5px' }}>🏦 פרטי בנק לתשלום</div>
+                  <div style={{ fontSize: '13px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                    {selected.bank_name && <span><strong>בנק:</strong> {selected.bank_name}</span>}
+                    {selected.bank_branch && <span><strong>סניף:</strong> {selected.bank_branch}</span>}
+                    {selected.bank_account && <span><strong>חשבון:</strong> {selected.bank_account}</span>}
+                    {selected.bank_account_holder && <span><strong>שם:</strong> {selected.bank_account_holder}</span>}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Debts section */}
@@ -562,8 +588,32 @@ export default function SuppliersClient() {
               </div>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                 הערות
-                <textarea value={fNotes} onChange={e => setFNotes(e.target.value)} placeholder="פרטים נוספים..." rows={3} style={{ ...inputSt, resize: 'vertical' }} />
+                <textarea value={fNotes} onChange={e => setFNotes(e.target.value)} placeholder="פרטים נוספים..." rows={2} style={{ ...inputSt, resize: 'vertical' }} />
               </label>
+              {/* Bank / payment details */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  פרטי חשבון לתשלום
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                    בנק
+                    <input value={fBankName} onChange={e => setFBankName(e.target.value)} placeholder="בנק לאומי, הפועלים..." style={inputSt} />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                    סניף
+                    <input value={fBankBranch} onChange={e => setFBankBranch(e.target.value)} placeholder="מספר סניף" style={inputSt} />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                    מספר חשבון
+                    <input value={fBankAccount} onChange={e => setFBankAccount(e.target.value)} placeholder="12345678" style={inputSt} />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                    שם בעל החשבון
+                    <input value={fBankHolder} onChange={e => setFBankHolder(e.target.value)} placeholder="שם מלא" style={inputSt} />
+                  </label>
+                </div>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '22px', justifyContent: 'flex-end' }}>
               <button onClick={() => setShowModal(false)} style={btnSec}>ביטול</button>

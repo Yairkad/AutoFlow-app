@@ -49,8 +49,9 @@ interface SearchResult {
 
 // ── UserDropdown ───────────────────────────────────────────────────────────
 
-function ChangePasswordModal({ onClose }: { onClose: () => void }) {
+function ChangePasswordModal({ onClose, userEmail }: { onClose: () => void; userEmail: string }) {
   const supabase = useRef(createClient()).current
+  const [oldPass,  setOldPass]  = useState('')
   const [newPass,  setNewPass]  = useState('')
   const [confirm,  setConfirm]  = useState('')
   const [saving,   setSaving]   = useState(false)
@@ -58,9 +59,13 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
   const [success,  setSuccess]  = useState(false)
 
   async function save() {
-    if (newPass.length < 6) { setError('מינימום 6 תווים'); return }
+    if (!oldPass)            { setError('נא להזין סיסמא נוכחית'); return }
+    if (newPass.length < 6)  { setError('מינימום 6 תווים'); return }
     if (newPass !== confirm)  { setError('הסיסמאות אינן תואמות'); return }
     setSaving(true); setError('')
+    // Verify current password
+    const { error: verifyErr } = await supabase.auth.signInWithPassword({ email: userEmail, password: oldPass })
+    if (verifyErr) { setError('הסיסמא הנוכחית שגויה'); setSaving(false); return }
     const { error: err } = await supabase.auth.updateUser({ password: newPass })
     setSaving(false)
     if (err) setError(err.message)
@@ -89,6 +94,10 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div>
+              <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>סיסמא נוכחית</label>
+              <input type="password" style={inSt} value={oldPass} onChange={e => setOldPass(e.target.value)} placeholder="••••••••" autoComplete="current-password" readOnly onFocus={e => e.currentTarget.removeAttribute('readonly')} data-lpignore="true" data-1p-ignore="true" />
+            </div>
             <div>
               <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>סיסמא חדשה</label>
               <input type="password" style={inSt} value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="מינימום 6 תווים" autoComplete="new-password" readOnly onFocus={e => e.currentTarget.removeAttribute('readonly')} data-lpignore="true" data-1p-ignore="true" />
@@ -148,7 +157,7 @@ function UserDropdown({ name, email, onClose }: { name: string; email: string; o
         </button>
       </div>
 
-      {showChangePw && <ChangePasswordModal onClose={() => { setShowChangePw(false); onClose() }} />}
+      {showChangePw && <ChangePasswordModal onClose={() => { setShowChangePw(false); onClose() }} userEmail={email} />}
     </>
   )
 }

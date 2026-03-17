@@ -93,3 +93,76 @@ a { color: inherit; text-decoration: none; }
 @keyframes sidebar-spin {
   to { transform: rotate(360deg); }
 }
+
+/* ── Responsive ─────────────────────────────────────────────────────────────── */
+
+/* Tablet (≤ 900px): narrow sidebar */
+@media (max-width: 900px) {
+  :root {
+    --sidebar-w: 60px;
+  }
+}
+
+/* Mobile (≤ 640px): no sidebar, full width */
+@media (max-width: 640px) {
+  :root {
+    --sidebar-w: 0px;
+    --header-h: 56px;
+  }
+
+  /* Main content – full width + smaller padding */
+  main {
+    margin-right: 0 !important;
+    padding: 16px !important;
+  }
+
+  /* Footer */
+  footer {
+    margin-right: 0 !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+  }
+
+  /* Tables – allow horizontal scroll */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Dashboard stats grid – 1 column */
+  [style*="gridTemplateColumns: 'repeat(3, 1fr)'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Cards grid – 1 column */
+  [style*="minmax(280px,1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Summary cards – 1 column */
+  [style*="repeat(3, 1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Inspections: stack form sections */
+  [style*="gridTemplateColumns: '1fr 1fr'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Dashboard charts row-3 */
+  [style*="gridTemplateColumns: '1fr 1fr 1fr'"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Hide non-essential table columns on mobile */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* Buttons – full width on mobile */
+  .btn-mobile-full {
+    width: 100% !important;
+  }
+}

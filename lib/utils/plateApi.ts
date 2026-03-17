@@ -47,7 +47,7 @@ export async function fetchVehicleByPlate(plate: string): Promise<VehicleData | 
   if (!clean || clean.length < 5) return null
 
   try {
-    const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=053cea08-09bc-40ec-8f7a-156f0677aff3&q=${clean}&limit=1`
+    const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=053cea08-09bc-40ec-8f7a-156f0677aff3&filters={"mispar_rechev":"${clean}"}&limit=1`
     const res = await fetch(url)
     const json = await res.json()
     const records = json?.result?.records
