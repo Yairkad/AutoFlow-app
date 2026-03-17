@@ -174,6 +174,8 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const [userName,     setUserName]     = useState('')
   const [userEmail,    setUserEmail]    = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
+  const [tenantName,   setTenantName]   = useState<string | null>(null)
+  const [tenantLogo,   setTenantLogo]   = useState<string | null>(null)
 
   // Mobile search overlay
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
@@ -188,13 +190,24 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchRef   = useRef<HTMLDivElement>(null)
 
-  // Load user profile — use getSession (localStorage) so it works even when CORS blocks getUser
+  // Load user profile + tenant branding
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) return
       setUserEmail(session.user.email ?? '')
-      supabase.from('profiles').select('full_name').eq('id', session.user.id).single()
-        .then(({ data: p }) => { if (p?.full_name) setUserName(p.full_name) })
+      supabase.from('profiles').select('full_name, tenant_id').eq('id', session.user.id).single()
+        .then(({ data: p }) => {
+          if (p?.full_name) setUserName(p.full_name)
+          if (p?.tenant_id) {
+            supabase.from('tenants').select('name, logo_base64').eq('id', p.tenant_id).single()
+              .then(({ data: t }) => {
+                if (t) {
+                  setTenantName(t.name || null)
+                  setTenantLogo(t.logo_base64 || null)
+                }
+              })
+          }
+        })
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -391,11 +404,14 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
         aria-label="תפריט ניווט"
       >☰</button>
 
-      {/* Logo */}
+      {/* Logo / business branding */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-        <img src="/icon-512.png" alt="AutoFlow" style={{ width: 36, height: 36, borderRadius: '10px', objectFit: 'contain' }} />
-        <div>
-          <div style={{ fontWeight: 700, fontSize: '15px', lineHeight: 1.2 }}>AutoFlow</div>
+        {tenantLogo
+          ? <img src={tenantLogo} alt="לוגו" style={{ width: 36, height: 36, borderRadius: '10px', objectFit: 'contain', flexShrink: 0 }} />
+          : <img src="/icon-512.png" alt="AutoFlow" style={{ width: 36, height: 36, borderRadius: '10px', objectFit: 'contain', flexShrink: 0 }} />
+        }
+        <div className="header-brand-text">
+          <div style={{ fontWeight: 700, fontSize: '15px', lineHeight: 1.2 }}>{tenantName || 'AutoFlow'}</div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>מערכת ניהול</div>
         </div>
       </div>

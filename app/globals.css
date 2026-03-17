@@ -146,6 +146,11 @@ a { color: inherit; text-decoration: none; }
 
 /* ── Responsive ─────────────────────────────────────────────────────────────── */
 
+/* Sidebar brand text – hide at tablet (icon-only mode) */
+@media (max-width: 900px) {
+  .sidebar-brand-text { display: none !important; }
+}
+
 /* Tablet (≤ 900px): narrow sidebar + responsive grids */
 @media (max-width: 900px) {
   :root {
@@ -250,6 +255,8 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 640px) {
   .header-clock          { display: none !important; }
   .header-search-desktop { display: none !important; }
+  /* Hide brand subtitle on very small screens */
+  .header-brand-text div:last-child { display: none !important; }
 
   .header-hamburger {
     display: flex !important;

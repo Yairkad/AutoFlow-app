@@ -38,17 +38,28 @@ export default function Sidebar({
   const [isAdmin, setIsAdmin]     = useState(false)
   const [modules, setModules]     = useState<string[]>([])
   const [loaded, setLoaded]       = useState(false)
+  const [tenantName, setTenantName] = useState<string | null>(null)
+  const [tenantLogo, setTenantLogo] = useState<string | null>(null)
 
   useEffect(() => {
     // getSession reads localStorage — works even when network/CORS is blocked
     sb.auth.getSession().then(({ data: { session } }) => {
       const uid = session?.user?.id
       if (!uid) { setLoaded(true); return }
-      sb.from('profiles').select('role, allowed_modules').eq('id', uid).maybeSingle()
+      sb.from('profiles').select('role, allowed_modules, tenant_id').eq('id', uid).maybeSingle()
         .then(({ data: p }) => {
           if (p) {
             setIsAdmin(p.role === 'admin')
             setModules(p.allowed_modules ?? [])
+            if (p.tenant_id) {
+              sb.from('tenants').select('name, logo_base64').eq('id', p.tenant_id).single()
+                .then(({ data: t }) => {
+                  if (t) {
+                    setTenantName(t.name || null)
+                    setTenantLogo(t.logo_base64 || null)
+                  }
+                })
+            }
           } else {
             setIsAdmin(true)
           }
@@ -86,10 +97,36 @@ export default function Sidebar({
         overflowY: 'auto',
         overflowX: 'hidden',
         zIndex: 90,
-        padding: '8px 0',
+        padding: '0',
         transition: 'transform .25s ease',
       }}
     >
+      {/* Business branding — links to dashboard */}
+      <Link
+        href="/dashboard"
+        style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          padding: '12px 14px',
+          borderBottom: '1px solid var(--border)',
+          marginBottom: '4px',
+          textDecoration: 'none', color: 'var(--text)',
+        }}
+        title={tenantName || 'AutoFlow — דף ראשי'}
+      >
+        {tenantLogo
+          ? <img src={tenantLogo} alt="לוגו" style={{ width: 32, height: 32, borderRadius: '8px', objectFit: 'contain', flexShrink: 0 }} />
+          : <img src="/icon-512.png" alt="AutoFlow" style={{ width: 32, height: 32, borderRadius: '8px', objectFit: 'contain', flexShrink: 0 }} />
+        }
+        <div className="sidebar-brand-text" style={{ overflow: 'hidden', flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
+            {tenantName || 'AutoFlow'}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.2 }}>מערכת ניהול</div>
+        </div>
+      </Link>
+
+      {/* Nav items */}
+      <div style={{ padding: '4px 0' }}>
       {NAV_ITEMS.filter(isVisible).map((item) => {
         const isActive = pathname === item.href
         const isPending = pendingHref === item.href && !isActive
@@ -133,6 +170,7 @@ export default function Sidebar({
           </Link>
         )
       })}
+      </div>
     </aside>
   )
 }

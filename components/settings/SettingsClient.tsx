@@ -12,6 +12,8 @@ interface PublicInfo {
   hours?: string
   waze_url?: string
   maps_url?: string
+  meta_title?: string
+  meta_description?: string
 }
 
 interface Tenant {
@@ -215,6 +217,28 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
         ))}
         {field('קישור Google Maps', (
           <input style={inputSt} dir="ltr" value={tenant.public_info?.maps_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, maps_url: e.target.value } } : t)} placeholder="https://maps.app.goo.gl/..." />
+        ))}
+      </div>
+
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: '4px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px', letterSpacing: '0.5px' }}>
+          🔍 מטא-דאטה (SEO / כרטיסיית הדפדפן)
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+          הגדר כותרת ותיאור שיופיעו בכרטיסיית הדפדפן, בקישורים משותפים ובתוצאות חיפוש.
+        </div>
+        {field('כותרת (title)', (
+          <input style={inputSt} value={tenant.public_info?.meta_title ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_title: e.target.value } } : t)} placeholder={`${tenant.name} – מערכת ניהול`} />
+        ))}
+        {field('תיאור (description)', (
+          <textarea
+            style={{ ...inputSt, resize: 'vertical', minHeight: '64px' }}
+            value={tenant.public_info?.meta_description ?? ''}
+            onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_description: e.target.value } } : t)}
+            placeholder="תיאור קצר של העסק – עד 160 תווים"
+            maxLength={160}
+            rows={2}
+          />
         ))}
       </div>
 
