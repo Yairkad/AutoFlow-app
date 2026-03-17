@@ -109,19 +109,25 @@ function field(label: string, el: React.ReactNode) {
 // ── BusinessTab ────────────────────────────────────────────────────────────
 
 function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
-  const [tenant,  setTenant]  = useState<Tenant | null>(null)
-  const [saving,  setSaving]  = useState(false)
+  const [tenant,     setTenant]     = useState<Tenant | null>(null)
+  const [origTenant, setOrigTenant] = useState<Tenant | null>(null)
+  const [saving,     setSaving]     = useState(false)
+  const [editing,    setEditing]    = useState(false)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('tenants').select('*').eq('id', tenantId).single()
-    if (data) { setTenant({ ...data, public_info: data.public_info ?? {} }); setLogoPreview(data.logo_base64) }
+    if (data) {
+      const t = { ...data, public_info: data.public_info ?? {} }
+      setTenant(t); setOrigTenant(t); setLogoPreview(data.logo_base64)
+    }
   }, [supabase, tenantId])
 
   useEffect(() => { load() }, [load])
 
   function onLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!editing) return
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 500_000) { showToast('הלוגו גדול מדי (מקסימום 500KB)', 'error'); return }
@@ -132,6 +138,12 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
       setTenant(t => t ? { ...t, logo_base64: b64 } : t)
     }
     reader.readAsDataURL(file)
+  }
+
+  function cancel() {
+    setTenant(origTenant)
+    setLogoPreview(origTenant?.logo_base64 ?? null)
+    setEditing(false)
   }
 
   async function save() {
@@ -148,105 +160,141 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
       public_info:    tenant.public_info,
     }).eq('id', tenantId)
     setSaving(false)
-    if (error) showToast('שגיאה בשמירה', 'error')
-    else showToast('נשמר בהצלחה', 'success')
+    if (error) { showToast('שגיאה בשמירה', 'error') }
+    else { setOrigTenant(tenant); setEditing(false); showToast('נשמר בהצלחה', 'success') }
   }
 
   if (!tenant) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
 
+  const roSt: React.CSSProperties = editing ? inputSt : {
+    ...inputSt, background: 'var(--bg)', color: 'var(--text-muted)',
+    cursor: 'default', pointerEvents: 'none', opacity: 0.8,
+  }
+  const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px' }
+  const sectionHead = (icon: string, label: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+        {icon} {label}
+      </div>
+    </div>
+  )
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '600px' }}>
-      {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '640px' }}>
+
+      {/* ── Logo + edit toggle ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div
-          onClick={() => fileRef.current?.click()}
+          onClick={() => editing && fileRef.current?.click()}
           style={{
-            width: 80, height: 80, borderRadius: '14px', border: '2px dashed var(--border)',
+            width: 72, height: 72, borderRadius: '12px',
+            border: editing ? '2px dashed var(--primary)' : '2px dashed var(--border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', overflow: 'hidden', background: 'var(--bg)', flexShrink: 0,
+            cursor: editing ? 'pointer' : 'default', overflow: 'hidden',
+            background: 'var(--bg)', flexShrink: 0,
           }}
-          title="לחץ לשינוי לוגו"
+          title={editing ? 'לחץ לשינוי לוגו' : undefined}
         >
           {logoPreview
             ? <img src={logoPreview} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-            : <span style={{ fontSize: '28px' }}>🏢</span>
+            : <span style={{ fontSize: '26px' }}>🏢</span>
           }
         </div>
-        <div>
-          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '4px' }}>לוגו העסק</div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>PNG / JPG עד 500KB</div>
-          <button onClick={() => fileRef.current?.click()} style={btnSec}>בחר תמונה</button>
-          {logoPreview && (
-            <button
-              onClick={() => { setLogoPreview(null); setTenant(t => t ? { ...t, logo_base64: null } : t) }}
-              style={{ ...btnSec, marginRight: '8px', color: '#dc2626', borderColor: '#fecaca' }}
-            >הסר</button>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '2px' }}>לוגו העסק</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>PNG / JPG עד 500KB</div>
+          {editing && (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => fileRef.current?.click()} style={btnSec}>בחר תמונה</button>
+              {logoPreview && (
+                <button
+                  onClick={() => { setLogoPreview(null); setTenant(t => t ? { ...t, logo_base64: null } : t) }}
+                  style={{ ...btnSec, color: '#dc2626', borderColor: '#fecaca' }}
+                >הסר</button>
+              )}
+            </div>
+          )}
+        </div>
+        {/* Edit / Save / Cancel */}
+        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+          {editing ? (
+            <>
+              <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1, padding: '7px 16px' }}>
+                {saving ? 'שומר...' : '💾 שמור'}
+              </button>
+              <button onClick={cancel} style={{ ...btnSec, padding: '7px 14px' }}>ביטול</button>
+            </>
+          ) : (
+            <button onClick={() => setEditing(true)} style={{ ...btnSec, padding: '7px 14px' }}>✏️ עריכה</button>
           )}
         </div>
         <input ref={fileRef} type="file" accept="image/*" onChange={onLogoChange} style={{ display: 'none' }} />
       </div>
 
-      {field('שם עסק *', (
-        <input style={inputSt} value={tenant.name} onChange={e => setTenant(t => t ? { ...t, name: e.target.value } : t)} placeholder="שם העסק" />
-      ))}
-      {field('כותרת משנה', (
-        <input style={inputSt} value={tenant.sub_title ?? ''} onChange={e => setTenant(t => t ? { ...t, sub_title: e.target.value } : t)} placeholder="לדוגמה: מוסך ופנצריה" />
-      ))}
-      {field('טלפון', (
-        <input style={inputSt} value={tenant.phone ?? ''} onChange={e => setTenant(t => t ? { ...t, phone: e.target.value } : t)} placeholder="050-0000000" dir="ltr" />
-      ))}
-      {field('כתובת', (
-        <input style={inputSt} value={tenant.address ?? ''} onChange={e => setTenant(t => t ? { ...t, address: e.target.value } : t)} placeholder="רחוב, עיר" />
-      ))}
-      {field('ח.פ / ע.מ', (
-        <input style={inputSt} value={tenant.tax_id ?? ''} onChange={e => setTenant(t => t ? { ...t, tax_id: e.target.value } : t)} placeholder="מספר עוסק" dir="ltr" />
-      ))}
-      {field('מספר רישיון / פרט נוסף', (
-        <input style={inputSt} value={tenant.license_number ?? ''} onChange={e => setTenant(t => t ? { ...t, license_number: e.target.value } : t)} placeholder="לדוגמה: מס׳ רישיון מוסך 41346" />
-      ))}
-
-      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: '4px' }}>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px', letterSpacing: '0.5px' }}>
-          🌐 פרטים לדף ציבורי
+      {/* ── Section: פרטי עסק ── */}
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+        {sectionHead('🏢', 'פרטי העסק')}
+        <div style={grid2}>
+          {field('שם עסק *', (
+            <input style={roSt} readOnly={!editing} value={tenant.name} onChange={e => setTenant(t => t ? { ...t, name: e.target.value } : t)} placeholder="שם העסק" />
+          ))}
+          {field('כותרת משנה', (
+            <input style={roSt} readOnly={!editing} value={tenant.sub_title ?? ''} onChange={e => setTenant(t => t ? { ...t, sub_title: e.target.value } : t)} placeholder="מוסך ופנצריה" />
+          ))}
+          {field('טלפון', (
+            <input style={roSt} readOnly={!editing} value={tenant.phone ?? ''} onChange={e => setTenant(t => t ? { ...t, phone: e.target.value } : t)} placeholder="050-0000000" dir="ltr" />
+          ))}
+          {field('כתובת', (
+            <input style={roSt} readOnly={!editing} value={tenant.address ?? ''} onChange={e => setTenant(t => t ? { ...t, address: e.target.value } : t)} placeholder="רחוב, עיר" />
+          ))}
+          {field('ח.פ / ע.מ', (
+            <input style={roSt} readOnly={!editing} value={tenant.tax_id ?? ''} onChange={e => setTenant(t => t ? { ...t, tax_id: e.target.value } : t)} placeholder="מספר עוסק" dir="ltr" />
+          ))}
+          {field('מספר רישיון', (
+            <input style={roSt} readOnly={!editing} value={tenant.license_number ?? ''} onChange={e => setTenant(t => t ? { ...t, license_number: e.target.value } : t)} placeholder="מס׳ רישיון מוסך" />
+          ))}
         </div>
-        {field('שעות פעילות', (
-          <input style={inputSt} value={tenant.public_info?.hours ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, hours: e.target.value } } : t)} placeholder="א׳-ה׳ 08:00–18:00 | ו׳ 08:00–13:00" />
-        ))}
-        {field('קישור Waze', (
-          <input style={inputSt} dir="ltr" value={tenant.public_info?.waze_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, waze_url: e.target.value } } : t)} placeholder="https://waze.com/ul/..." />
-        ))}
-        {field('קישור Google Maps', (
-          <input style={inputSt} dir="ltr" value={tenant.public_info?.maps_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, maps_url: e.target.value } } : t)} placeholder="https://maps.app.goo.gl/..." />
-        ))}
       </div>
 
-      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', marginTop: '4px' }}>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '12px', letterSpacing: '0.5px' }}>
-          🔍 מטא-דאטה (SEO / כרטיסיית הדפדפן)
+      {/* ── Section: דף ציבורי ── */}
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+        {sectionHead('🌐', 'דף ציבורי')}
+        <div style={{ marginBottom: '10px' }}>
+          {field('שעות פעילות', (
+            <input style={roSt} readOnly={!editing} value={tenant.public_info?.hours ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, hours: e.target.value } } : t)} placeholder="א׳-ה׳ 08:00–18:00 | ו׳ 08:00–13:00" />
+          ))}
         </div>
-        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          הגדר כותרת ותיאור שיופיעו בכרטיסיית הדפדפן, בקישורים משותפים ובתוצאות חיפוש.
+        <div style={grid2}>
+          {field('קישור Waze', (
+            <input style={roSt} readOnly={!editing} dir="ltr" value={tenant.public_info?.waze_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, waze_url: e.target.value } } : t)} placeholder="https://waze.com/ul/..." />
+          ))}
+          {field('קישור Google Maps', (
+            <input style={roSt} readOnly={!editing} dir="ltr" value={tenant.public_info?.maps_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, maps_url: e.target.value } } : t)} placeholder="https://maps.app.goo.gl/..." />
+          ))}
         </div>
-        {field('כותרת (title)', (
-          <input style={inputSt} value={tenant.public_info?.meta_title ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_title: e.target.value } } : t)} placeholder={`${tenant.name} – מערכת ניהול`} />
-        ))}
-        {field('תיאור (description)', (
-          <textarea
-            style={{ ...inputSt, resize: 'vertical', minHeight: '64px' }}
-            value={tenant.public_info?.meta_description ?? ''}
-            onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_description: e.target.value } } : t)}
-            placeholder="תיאור קצר של העסק – עד 160 תווים"
-            maxLength={160}
-            rows={2}
-          />
-        ))}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-start', paddingTop: '4px' }}>
-        <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>
-          {saving ? 'שומר...' : '💾 שמור שינויים'}
-        </button>
+      {/* ── Section: SEO ── */}
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+        {sectionHead('🔍', 'מטא-דאטה (SEO / כרטיסיית הדפדפן)')}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {field('כותרת (title)', (
+            <input style={roSt} readOnly={!editing} value={tenant.public_info?.meta_title ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_title: e.target.value } } : t)} placeholder={`${tenant.name} – מערכת ניהול`} />
+          ))}
+          {field('תיאור (description)', (
+            <textarea
+              style={{ ...roSt, resize: editing ? 'vertical' : 'none', minHeight: '60px' }}
+              readOnly={!editing}
+              value={tenant.public_info?.meta_description ?? ''}
+              onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_description: e.target.value } } : t)}
+              placeholder="תיאור קצר של העסק – עד 160 תווים"
+              maxLength={160}
+              rows={2}
+            />
+          ))}
+        </div>
       </div>
+
     </div>
   )
 }
