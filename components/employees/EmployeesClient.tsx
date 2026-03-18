@@ -183,6 +183,7 @@ export default function EmployeesClient() {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
+  const [myRole, setMyRole] = useState('')
   const [employees, setEmployees] = useState<Employee[]>([])
   const [salaries, setSalaries] = useState<Salary[]>([])
   const [tab, setTab] = useState<'employees' | 'salaries'>('employees')
@@ -262,9 +263,10 @@ export default function EmployeesClient() {
     (async () => {
       const { data: { user } } = await sb.auth.getUser()
       if (!user) return
-      const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.id).single()
+      const { data: profile } = await sb.from('profiles').select('tenant_id, role').eq('id', user.id).single()
       if (!profile) return
       tenantId.current = profile.tenant_id
+      setMyRole(profile.role ?? '')
       await loadEmployees()
       await loadSalaries()
     })()
@@ -855,6 +857,43 @@ export default function EmployeesClient() {
         <span>סה״כ: <strong>{fmt(totalPayroll)}</strong></span>
         <span style={{ color: 'var(--primary)' }}>שולם: <strong>{fmt(paid)}</strong></span>
         <span style={{ color: 'var(--warning)' }}>ממתין: <strong>{fmt(unpaid)}</strong></span>
+      </div>
+    )
+  }
+
+  // ── Directory view (non-admin) ───────────────────────────────────────────────
+
+  if (myRole && myRole !== 'admin' && myRole !== 'super_admin') {
+    const active = employees.filter(e => e.is_active)
+    return (
+      <div>
+        <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>📒 ספר טלפונים – עובדים</h2>
+        {active.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>אין עובדים פעילים</div>
+        )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: '12px' }}>
+          {active.map(e => (
+            <div key={e.id} style={{
+              background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)',
+              padding: '16px', display: 'flex', alignItems: 'center', gap: '12px',
+            }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: '50%', background: 'var(--primary)',
+                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 700, fontSize: '14px', flexShrink: 0,
+              }}>
+                {e.full_name.trim().split(/\s+/).map((w: string) => w[0]).join('').slice(0, 2)}
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '13px' }}>{e.full_name}</div>
+                {e.phone
+                  ? <a href={`tel:${e.phone}`} style={{ fontSize: '12px', color: 'var(--primary)', textDecoration: 'none' }}>{e.phone}</a>
+                  : <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>אין טלפון</span>
+                }
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }

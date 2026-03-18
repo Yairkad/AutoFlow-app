@@ -13,7 +13,7 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<DashTab>('stats')
 
   return (
-    <AppShell noFooter>
+    <AppShell>
       <div style={{ width: '100%' }}>
 
         {/* Tab bar */}
@@ -44,7 +44,7 @@ export default function DashboardPage() {
               className="dash-layout"
               style={{
                 display: 'flex', gap: '20px', alignItems: 'stretch',
-                height: 'calc(100vh - var(--header-h) - 96px)',
+                height: 'calc(100vh - var(--header-h) - 140px)',
                 overflow: 'hidden',
               }}
             >
@@ -76,7 +76,7 @@ export default function DashboardPage() {
 
         ) : (
           /* Charts tab */
-          <div style={{ height: 'calc(100vh - var(--header-h) - 96px)', overflowY: 'auto' }}>
+          <div style={{ height: 'calc(100vh - var(--header-h) - 140px)', overflowY: 'auto' }}>
             <DashboardCharts />
           </div>
         )}

@@ -214,7 +214,7 @@ export default function DashboardCharts() {
             <Bar dataKey="expenses" name="expenses" fill="#ef4444"        radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
-      </ChartCard>
+      </ChartCard>}
 
       {/* Row 2: Profit line + category pies */}
       {canFinance && (

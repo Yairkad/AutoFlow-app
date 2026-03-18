@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { href: '/expenses',    label: 'הוצאות',         icon: '💰', module: 'expenses' },
   { href: '/billing',     label: 'חשבונות',        icon: '🧾', module: 'billing' },
   { href: '/debts',       label: 'חובות',          icon: '💳', module: 'debts' },
-  { href: '/employees',   label: 'עובדים',         icon: '👷', module: 'employees' },
+  { href: '/employees',   label: 'עובדים',         icon: '👷', module: null },
   { href: '/products',    label: 'מוצרים',         icon: '📦', module: ['products', 'products_view'] },
   { href: '/tires',       label: 'צמיגים',         icon: '🔘', module: ['tires', 'tires_view'] },
   { href: '/cars',        label: 'רכבים',          icon: '🚗', module: 'cars' },
