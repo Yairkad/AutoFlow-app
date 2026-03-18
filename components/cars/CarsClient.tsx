@@ -246,8 +246,10 @@ export default function CarsClient() {
   // ── Load ──────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
-    const { data: prof } = await sb.from('profiles').select('tenant_id').single()
-    if (!prof) return
+    const { data: { user } } = await sb.auth.getUser()
+    if (!user) { setLoading(false); return }
+    const { data: prof } = await sb.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle()
+    if (!prof) { setLoading(false); return }
     tenantId.current = prof.tenant_id
 
     const [{ data: c }, { data: r }, { data: sr }] = await Promise.all([

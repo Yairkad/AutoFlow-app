@@ -1331,7 +1331,7 @@ function PricesSection({ supabase, tenantId, showToast }: { supabase: ReturnType
 export default function SettingsClient() {
   const supabase      = useRef(createClient()).current
   const { showToast } = useToast()
-  const [tab,            setTab]            = useState<Tab>('business')
+  const [tab,            setTab]            = useState<Tab | null>(null)
   const [tenantId,       setTenantId]       = useState<string | null>(null)
   const [myId,           setMyId]           = useState<string | null>(null)
   const [myRole,         setMyRole]         = useState<string>('employee')
@@ -1366,6 +1366,17 @@ export default function SettingsClient() {
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
   if (!tenantId || !myId) return null
 
+  function toggleTab(key: Tab) {
+    setTab(prev => prev === key ? null : key)
+  }
+
+  const tabContent: Record<Tab, React.ReactNode> = {
+    business: <BusinessTab supabase={supabase} tenantId={tenantId} showToast={showToast} />,
+    users:    <UsersTab    supabase={supabase} tenantId={tenantId} myId={myId} showToast={showToast} />,
+    landing:  <LandingTab  supabase={supabase} tenantId={tenantId} showToast={showToast} />,
+    vault:    canVault ? <VaultTab supabase={supabase} tenantId={tenantId} showToast={showToast} /> : null,
+  }
+
   return (
     <div style={{ direction: 'rtl' }}>
       {/* Title */}
@@ -1374,12 +1385,12 @@ export default function SettingsClient() {
         <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '13px' }}>ניהול עסק, משתמשים והרשאות</p>
       </div>
 
-      {/* Tabs */}
-      <div className="scrollable-tabs" style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '0' }}>
+      {/* Desktop: horizontal scrollable tabs */}
+      <div className="settings-desktop-tabs scrollable-tabs" style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '0' }}>
         {tabs.map(t => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => toggleTab(t.key)}
             style={{
               padding: '10px 20px', border: 'none', background: 'transparent', cursor: 'pointer',
               fontSize: '13px', fontWeight: tab === t.key ? 700 : 400,
@@ -1394,16 +1405,45 @@ export default function SettingsClient() {
         ))}
       </div>
 
-      {/* Content */}
-      {tab === 'business' && <BusinessTab supabase={supabase} tenantId={tenantId} showToast={showToast} />}
-      {tab === 'users'    && <UsersTab    supabase={supabase} tenantId={tenantId} myId={myId} showToast={showToast} />}
-      {tab === 'landing'  && <LandingTab  supabase={supabase} tenantId={tenantId} showToast={showToast} />}
-      {/* VaultTab is always mounted so unlocked/hasPinSet state survives tab switches */}
-      {canVault && (
-        <div style={{ display: tab === 'vault' ? 'block' : 'none' }}>
-          <VaultTab supabase={supabase} tenantId={tenantId} showToast={showToast} />
-        </div>
-      )}
+      {/* Mobile: accordion sections */}
+      <div className="settings-mobile-accordion">
+        {tabs.map(t => (
+          <div key={t.key} style={{ borderBottom: '1px solid var(--border)', marginBottom: '0' }}>
+            <button
+              onClick={() => toggleTab(t.key)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '14px 4px', border: 'none', background: 'transparent', cursor: 'pointer',
+                fontSize: '14px', fontWeight: tab === t.key ? 700 : 500,
+                color: tab === t.key ? 'var(--primary)' : 'var(--text)',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>{t.icon}</span> {t.label}
+              </span>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tab === t.key ? '▲' : '▼'}</span>
+            </button>
+            {tab === t.key && (
+              <div style={{ paddingBottom: '20px' }}>
+                {tabContent[t.key]}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop content */}
+      <div className="settings-desktop-content">
+        {tab === 'business' && tabContent.business}
+        {tab === 'users'    && tabContent.users}
+        {tab === 'landing'  && tabContent.landing}
+        {/* VaultTab always mounted to preserve unlock state */}
+        {canVault && (
+          <div style={{ display: tab === 'vault' ? 'block' : 'none' }}>
+            {tabContent.vault}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

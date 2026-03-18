@@ -78,7 +78,6 @@ function Section({ icon, title, children }: { icon: string; title: string; child
       background: 'var(--bg-card)',
       border: '1px solid var(--border)',
       borderRadius: 'var(--radius)',
-      overflow: 'hidden',
     }}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -615,10 +614,9 @@ export default function InspectionsClient() {
       {tab === 'entry' && (
         <div style={{
           display: 'flex', flexDirection: 'column', gap: 12,
-          height: 'calc(100vh - var(--header-h) - 180px)',
         }}>
           {/* Two-column layout: customer | vehicle */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1, minHeight: 0 }}>
+          <div className="inspections-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
 
             {/* Customer section */}
             <Section icon="👤" title="פרטי לקוח">
@@ -666,7 +664,7 @@ export default function InspectionsClient() {
               </div>
 
               {/* Vehicle fields grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+              <div className="inspections-vehicle-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
                 {[
                   { key: 'make',      label: 'תוצר',      placeholder: 'טויוטה' },
                   { key: 'model',     label: 'דגם',        placeholder: 'קורולה' },

@@ -105,7 +105,9 @@ export default function RemindersClient() {
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
-    const { data: profile } = await supabase.from('profiles').select('tenant_id').single()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setLoading(false); return }
+    const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle()
     if (!profile) { setLoading(false); return }
     tenantRef.current = profile.tenant_id
     const { data } = await supabase
@@ -255,7 +257,7 @@ export default function RemindersClient() {
         <div style={{ color: 'var(--text-muted)', padding: 40, textAlign: 'center' }}>טוען...</div>
       ) : (
         /* Two-column layout */
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: 0, alignItems: 'start' }}>
+        <div className="reminders-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: 0, alignItems: 'start' }}>
 
           {/* RIGHT – Reminders */}
           <div style={{ paddingLeft: 24 }}>

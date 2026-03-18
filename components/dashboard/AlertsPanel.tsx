@@ -63,6 +63,7 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
   const [employees, setEmployees] = useState<Employee[]>([])
   const dismissed = new Set<string>()
   const [loading,   setLoading]   = useState(true)
+  const [popupOpen, setPopupOpen] = useState(false)
   const supabase = useRef(createClient()).current
 
   const load = async () => {
@@ -108,22 +109,81 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
 
   if (compact) {
     return (
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '8px',
-        padding: '8px 14px', flex: 1,
-        background: '#fff', borderRadius: 'var(--radius)',
-        boxShadow: 'var(--shadow)', borderTop: '3px solid var(--danger)',
-        fontSize: '14px', fontWeight: 600, color: 'var(--text)',
-      }}>
-        <span>⚡</span>
-        <span>התראות</span>
-        {!loading && totalCount > 0 && (
-          <span style={{ background: 'var(--danger)', color: '#fff', borderRadius: '999px', fontSize: '12px', fontWeight: 700, padding: '2px 9px', lineHeight: 1.4 }}>{totalCount}</span>
+      <>
+        <button
+          onClick={() => setPopupOpen(v => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '8px 14px', flex: 1,
+            background: '#fff', borderRadius: 'var(--radius)',
+            boxShadow: 'var(--shadow)', borderTop: '3px solid var(--danger)',
+            fontSize: '14px', fontWeight: 600, color: 'var(--text)',
+            border: 'none', cursor: 'pointer', textAlign: 'right',
+          }}
+        >
+          <span>⚡</span>
+          <span>התראות</span>
+          {!loading && totalCount > 0 && (
+            <span style={{ background: 'var(--danger)', color: '#fff', borderRadius: '999px', fontSize: '12px', fontWeight: 700, padding: '2px 9px', lineHeight: 1.4 }}>{totalCount}</span>
+          )}
+          {!loading && totalCount === 0 && (
+            <span style={{ fontSize: '12px', color: 'var(--success)', fontWeight: 400 }}>✓ הכל מטופל</span>
+          )}
+          <span style={{ marginRight: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>{popupOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {/* Popup with alert details */}
+        {popupOpen && (
+          <>
+            <div onClick={() => setPopupOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 199 }} />
+            <div style={{
+              position: 'fixed', bottom: 'calc(68px + env(safe-area-inset-bottom, 0px))',
+              right: 12, left: 12, zIndex: 200,
+              background: '#fff', borderRadius: '14px',
+              boxShadow: '0 -4px 32px rgba(0,0,0,.18)',
+              border: '1px solid var(--border)',
+              padding: '16px', maxHeight: '60vh', overflowY: 'auto',
+              direction: 'rtl',
+            }}>
+              <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
+                ⚡ התראות פעילות
+                <button onClick={() => setPopupOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--text-muted)' }}>✕</button>
+              </div>
+              {loading ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>טוען...</div>
+              ) : totalCount === 0 ? (
+                <div style={{ color: 'var(--primary)', fontSize: '13px' }}>✓ אין התראות פעילות</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {visiblePayments.map(p => {
+                    const days = daysUntil(p.due_date)
+                    const cs   = chipStyle(days)
+                    const sup  = suppliers.find(s => s.id === p.supplier_id)?.name
+                    return (
+                      <div key={p.id} style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', ...cs }}>
+                        <div style={{ fontWeight: 700 }}>{p.description}{sup && ` · ${sup}`}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                          <span style={{ fontWeight: 800 }}>₪{Number(p.amount).toLocaleString('he-IL')}</span>
+                          <span>{dayLabel(days)} · {p.payment_method === 'check' ? "צ'ק" : 'העברה'}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {visibleSalaries.map(s => {
+                    const emp = employees.find(e => e.id === s.employee_id)?.full_name ?? 'עובד'
+                    return (
+                      <div key={s.id} style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', ...SALARY_CHIP }}>
+                        <div style={{ fontWeight: 700 }}>👷 {emp} · {monthLabel(s.month)}</div>
+                        <div style={{ fontWeight: 800, marginTop: '4px' }}>₪{Number(s.total).toLocaleString('he-IL')} · לא שולם</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </>
         )}
-        {!loading && totalCount === 0 && (
-          <span style={{ fontSize: '12px', color: 'var(--success)', fontWeight: 400 }}>✓ הכל מטופל</span>
-        )}
-      </div>
+      </>
     )
   }
 

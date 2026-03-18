@@ -396,6 +396,16 @@ a { color: inherit; text-decoration: none; }
     font-size: 10px !important;
     line-height: 1.2 !important;
   }
+
+  /* DebtCard / CarsCard inner label-value rows */
+  .stat-card-split-row {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 2px !important;
+  }
+  .stat-card-split-row span:last-child {
+    font-size: 13px !important;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -404,28 +414,98 @@ a { color: inherit; text-decoration: none; }
 
 @media (max-width: 640px) {
   .products-table-wrap {
-    max-height: calc(100vh - 260px);
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  /* Sticky table header inside the scroll container */
-  .products-table-wrap thead th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    background: var(--bg) !important;
+  /* Products table: allow horizontal scroll, auto column widths */
+  .products-table-wrap table {
+    table-layout: auto !important;
+    min-width: 560px;
   }
 
-  /* Inner scroll wrapper: no horizontal scroll */
-  .products-table-wrap > div {
-    overflow-x: hidden !important;
+  /* Name column gets priority width */
+  .products-table-wrap table th:nth-child(2),
+  .products-table-wrap table td:nth-child(2) {
+    min-width: 110px;
+    max-width: 160px;
+    white-space: normal !important;
+    word-break: break-word;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Inspections form – responsive grids on mobile
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .inspections-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .inspections-vehicle-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Suppliers – detail panel as full-screen modal on mobile
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.supplier-detail-backdrop { display: none; }
+
+@media (max-width: 640px) {
+  .supplier-detail-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 149;
+  }
+  .supplier-detail-panel {
+    position: fixed !important;
+    inset: 0 !important;
+    top: var(--header-h) !important;
+    z-index: 150 !important;
+    overflow-y: auto !important;
+    border-radius: 0 !important;
+    flex: none !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Reminders – stack columns vertically on mobile
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .reminders-grid {
+    grid-template-columns: 1fr !important;
+  }
+  /* Hide the vertical divider between columns */
+  .reminders-grid > div:nth-child(2) {
+    display: none !important;
+  }
+  .reminders-grid > div:last-child {
+    padding-right: 0 !important;
+    border-top: 1px solid var(--border);
+    padding-top: 24px;
+    margin-top: 8px;
   }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
    Settings page – responsive form grid + scrollable tabs
    ══════════════════════════════════════════════════════════════════════════ */
+
+/* Desktop: tabs visible, accordion hidden */
+.settings-mobile-accordion { display: none; }
+.settings-desktop-tabs     { display: flex; }
+.settings-desktop-content  { display: block; }
+
+@media (max-width: 640px) {
+  .settings-mobile-accordion { display: block; }
+  .settings-desktop-tabs     { display: none !important; }
+  .settings-desktop-content  { display: none !important; }
+}
 
 /* 3 columns on desktop, 2 on tablet, 1 on mobile */
 .settings-grid-3 {

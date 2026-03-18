@@ -709,9 +709,9 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
       )}
 
       {/* ── Tabs row ──────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid var(--border)', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid var(--border)', marginBottom: '16px', flexWrap: 'wrap', gap: '4px' }}>
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div className="scrollable-tabs" style={{ display: 'flex', gap: '4px' }}>
           {([
             ['expenses', '📤 הוצאות'],
             ['income',   '💰 הכנסות'],
@@ -933,7 +933,8 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                 {filteredRows.length} תוצאות מתוך {baseRows.length}
               </div>
             )}
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '520px' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--border)' }}>
                   <th style={TH}>תאריך</th>
@@ -1008,6 +1009,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                 </tfoot>
               )}
             </table>
+            </div>
           </div>
         )
       )}

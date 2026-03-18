@@ -396,7 +396,10 @@ export default function SuppliersClient() {
 
         {/* ── Detail panel ── */}
         {selected && !editMode && (
-          <div style={{
+          <>
+            {/* Mobile backdrop */}
+            <div className="supplier-detail-backdrop" onClick={() => setSelected(null)} />
+          <div className="supplier-detail-panel" style={{
             flex: 1, minWidth: 0,
             background: 'var(--bg-card)',
             borderRadius: 'var(--radius)',
@@ -545,6 +548,7 @@ export default function SuppliersClient() {
               </div>
             </div>
           </div>
+          </>
         )}
       </div>
 
