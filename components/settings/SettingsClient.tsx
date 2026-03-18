@@ -346,7 +346,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
   }
 
   const roleLabel = (r: string) =>
-    r === 'super_admin' ? '⭐ סופר מנהל' : r === 'admin' ? '👑 מנהל' : '👤 עובד'
+    r === 'super_admin' ? '🔧 מפתח' : r === 'admin' ? '👑 מנהל' : '👤 עובד'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -370,7 +370,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
 
               {field('תפקיד', (
                 <select style={inputSt} value={editData.role} onChange={e => setEditData(d => ({ ...d, role: e.target.value }))}>
-                  <option value="super_admin">⭐ סופר מנהל</option>
+                  <option value="super_admin">🔧 מפתח</option>
                   <option value="admin">👑 מנהל</option>
                   <option value="employee">👤 עובד</option>
                 </select>

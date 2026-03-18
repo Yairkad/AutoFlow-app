@@ -72,6 +72,7 @@ export default function ProductsClient() {
   const { confirm } = useConfirm()
 
   const [viewOnly, setViewOnly]       = useState(false)
+  const [isAdmin,  setIsAdmin]        = useState(false)
   const [showPricelist, setShowPricelist] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
@@ -124,9 +125,10 @@ export default function ProductsClient() {
       const { data: profile } = await sb.from('profiles').select('tenant_id, role, allowed_modules').eq('id', user.id).single()
       if (profile) {
         tenantId.current = profile.tenant_id
-        const admin   = profile.role === 'admin'
+        const admin   = profile.role === 'admin' || profile.role === 'super_admin'
         const hasFull = (profile.allowed_modules ?? []).includes('products')
         const hasView = (profile.allowed_modules ?? []).includes('products_view')
+        setIsAdmin(admin)
         setViewOnly(!admin && !hasFull && hasView)
       }
       await load()
@@ -487,9 +489,9 @@ export default function ProductsClient() {
                     <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>שם מוצר</th>
                     <th className="hide-mobile" style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>קטגוריה</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>יחידה</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>מחיר קנייה</th>
+                    {isAdmin && <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>מחיר קנייה</th>}
                     <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>מחיר מכירה</th>
-                    <th className="hide-mobile" style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>% רווח</th>
+                    {isAdmin && <th className="hide-mobile" style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>% רווח</th>}
                     <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>כמות</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>ספק</th>
                     <th className="hide-mobile" style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>הערות</th>
@@ -539,20 +541,20 @@ export default function ProductsClient() {
                               </select>
                             : unitLabel}
                         </td>
-                        <td style={{ padding: '8px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {isAdmin && <td style={{ padding: '8px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {editMode
                             ? <input style={cellInp} type="number" value={String(e.buy_price ?? '')} onChange={ev => setCell(p.id, 'buy_price', parseFloat(ev.target.value) || 0)} />
                             : p.buy_price ? (
                               <><div>{fmtPrice(p.buy_price)}</div>
                               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{(p.buy_price * 1.18).toFixed(2)} עם מע&quot;מ</div></>
                             ) : '—'}
-                        </td>
+                        </td>}
                         <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--primary)', minWidth: editMode ? '90px' : undefined }}>
                           {editMode
                             ? <input style={cellInp} type="number" value={String(e.sell_price ?? '')} onChange={ev => setCell(p.id, 'sell_price', parseFloat(ev.target.value) || 0)} />
                             : fmtPrice(p.sell_price)}
                         </td>
-                        <td className="hide-mobile" style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{marginPct}</td>
+                        {isAdmin && <td className="hide-mobile" style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{marginPct}</td>}
                         <td style={{ padding: '8px 12px' }}>
                           <span style={{ background: qtyBg, color: qtyColor, borderRadius: '6px', padding: '3px 8px', fontWeight: 600, fontSize: '12px', whiteSpace: 'nowrap' }}>
                             {isOut ? 'אזל' : `${p.qty} ${Number(p.unit_qty) > 1 ? 'יח׳' : p.unit}`}

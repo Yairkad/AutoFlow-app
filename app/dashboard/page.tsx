@@ -5,6 +5,7 @@ import DashboardStats from '@/components/dashboard/DashboardStats'
 import DashboardCharts from '@/components/dashboard/DashboardCharts'
 import RemindersPanel from '@/components/dashboard/RemindersPanel'
 import AlertsPanel from '@/components/dashboard/AlertsPanel'
+import Footer from '@/components/layout/Footer'
 import { useState } from 'react'
 
 type DashTab = 'stats' | 'charts'
@@ -13,7 +14,7 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<DashTab>('stats')
 
   return (
-    <AppShell>
+    <AppShell noFooter>
       <div style={{ width: '100%' }}>
 
         {/* Tab bar */}
@@ -81,6 +82,7 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+      <Footer />
     </AppShell>
   )
 }

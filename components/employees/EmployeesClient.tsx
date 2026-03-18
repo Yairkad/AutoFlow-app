@@ -183,7 +183,8 @@ export default function EmployeesClient() {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
 
-  const [myRole, setMyRole] = useState('')
+  const [myRole,    setMyRole]    = useState('')
+  const [roleReady, setRoleReady] = useState(false)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [salaries, setSalaries] = useState<Salary[]>([])
   const [tab, setTab] = useState<'employees' | 'salaries'>('employees')
@@ -267,6 +268,7 @@ export default function EmployeesClient() {
       if (!profile) return
       tenantId.current = profile.tenant_id
       setMyRole(profile.role ?? '')
+      setRoleReady(true)
       await loadEmployees()
       await loadSalaries()
     })()
@@ -862,6 +864,8 @@ export default function EmployeesClient() {
   }
 
   // ── Directory view (non-admin) ───────────────────────────────────────────────
+
+  if (!roleReady) return <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
 
   if (myRole && myRole !== 'admin' && myRole !== 'super_admin') {
     const active = employees.filter(e => e.is_active)

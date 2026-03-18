@@ -76,6 +76,7 @@ export default function TiresClient() {
   const { confirm }   = useConfirm()
 
   const [viewOnly, setViewOnly]   = useState(false)
+  const [isAdmin,  setIsAdmin]    = useState(false)
   const [tires, setTires]         = useState<Tire[]>([])
   const [movements, setMovements] = useState<TireMovement[]>([])
 
@@ -126,7 +127,8 @@ export default function TiresClient() {
       const { data: profile } = await sb.from('profiles').select('tenant_id, role, allowed_modules').eq('id', user.id).single()
       if (profile) {
         tenantId.current = profile.tenant_id
-        const admin   = profile.role === 'admin'
+        const admin   = profile.role === 'admin' || profile.role === 'super_admin'
+        setIsAdmin(admin)
         const hasFull = (profile.allowed_modules ?? []).includes('tires')
         const hasView = (profile.allowed_modules ?? []).includes('tires_view')
         setViewOnly(!admin && !hasFull && hasView)
@@ -537,7 +539,7 @@ export default function TiresClient() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                    {['מותג', 'מידה', 'מדדים', 'מחיר קנייה', '% רווח', 'מחיר מכירה', 'כמות', 'מיקום', 'הערות', ...(editMode ? [''] : [])].map((h, i) => (
+                    {['מותג', 'מידה', 'מדדים', ...(isAdmin ? ['מחיר קנייה', '% רווח'] : []), 'מחיר מכירה', 'כמות', 'מיקום', 'הערות', ...(editMode ? [''] : [])].map((h, i) => (
                       <th key={i} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>{h}</th>
                     ))}
                   </tr>
@@ -597,7 +599,7 @@ export default function TiresClient() {
                         </td>
 
                         {/* מחיר קנייה */}
-                        <td style={{ padding: '8px 12px', minWidth: editMode ? '90px' : undefined }}>
+                        {isAdmin && <td style={{ padding: '8px 12px', minWidth: editMode ? '90px' : undefined }}>
                           {editMode
                             ? <input style={cellInp} type="number" value={String(e.cost_price ?? '')} onChange={ev => setCell(t.id, 'cost_price', parseFloat(ev.target.value) || 0)} />
                             : t.cost_price ? (
@@ -606,14 +608,14 @@ export default function TiresClient() {
                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{(t.cost_price * 1.18).toFixed(2)} עם מע&quot;מ</div>
                               </>
                             ) : '—'}
-                        </td>
+                        </td>}
 
                         {/* % רווח */}
-                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)', minWidth: editMode ? '70px' : undefined }}>
+                        {isAdmin && <td style={{ padding: '8px 12px', color: 'var(--text-muted)', minWidth: editMode ? '70px' : undefined }}>
                           {editMode
                             ? <input style={cellInp} type="number" value={String(e.margin ?? '')} onChange={ev => setCell(t.id, 'margin', parseFloat(ev.target.value) || 0)} />
                             : marginPct}
-                        </td>
+                        </td>}
 
                         {/* מחיר מכירה */}
                         <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--primary)', minWidth: editMode ? '90px' : undefined }}>
