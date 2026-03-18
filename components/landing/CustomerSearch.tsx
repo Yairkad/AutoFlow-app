@@ -29,9 +29,19 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('he-IL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
 }
 
+/** Format raw digits as Israeli plate: 7→XX-XXX-XX, 8→XXX-XX-XXX */
+function formatPlate(raw: string): string {
+  const d = raw.slice(0, 8)
+  if (d.length <= 2) return d
+  if (d.length <= 5) return `${d.slice(0, 2)}-${d.slice(2)}`
+  if (d.length <= 7) return `${d.slice(0, 2)}-${d.slice(2, 5)}-${d.slice(5)}`
+  return `${d.slice(0, 3)}-${d.slice(3, 5)}-${d.slice(5)}`
+}
+
 export default function CustomerSearch() {
   const [plate, setPlate]       = useState('')
   const [phone4, setPhone4]     = useState('')
+  const [agreed, setAgreed]     = useState(false)
   const [loading, setLoading]   = useState(false)
   const [notFound, setNotFound] = useState(false)
   const [error, setError]       = useState('')
@@ -62,12 +72,16 @@ export default function CustomerSearch() {
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    const cleanPlate = plate.trim().toUpperCase()
+    const cleanPlate = plate.trim().toUpperCase().replace(/[-\s]/g, '')
     const cleanPhone = phone4.trim()
     if (!cleanPlate) { setError('יש להזין מספר לוחית רישוי'); return }
+    if (cleanPlate.length < 7 || cleanPlate.length > 8 || !/^\d+$/.test(cleanPlate)) {
+      setError('מספר לוחית רישוי צריך להכיל 7–8 ספרות'); return
+    }
     if (cleanPhone.length !== 4 || !/^\d{4}$/.test(cleanPhone)) {
       setError('יש להזין 4 ספרות אחרונות של מספר הטלפון'); return
     }
+    if (!agreed) { setError('יש לאשר את תנאי השימוש ומדיניות הפרטיות'); return }
     await doSearch(cleanPlate, cleanPhone)
   }
 
@@ -179,11 +193,17 @@ export default function CustomerSearch() {
           </label>
           <input
             type="text"
-            value={plate}
-            onChange={e => { setPlate(e.target.value); setNotFound(false); setError('') }}
+            inputMode="numeric"
+            value={formatPlate(plate)}
+            onChange={e => {
+              const digits = e.target.value.replace(/\D/g, '').slice(0, 8)
+              setPlate(digits)
+              setNotFound(false)
+              setError('')
+            }}
             placeholder="לדוגמה: 12-345-67"
             maxLength={10}
-            style={inputSt}
+            style={{ ...inputSt, letterSpacing: '2px', fontFamily: 'monospace', fontSize: '17px' }}
             aria-label="לוחית רישוי"
           />
         </div>
@@ -195,13 +215,29 @@ export default function CustomerSearch() {
           <input
             type="tel"
             value={phone4}
-            onChange={e => { setPhone4(e.target.value.replace(/\D/g, '').slice(0, 4)); setNotFound(false); setError('') }}
+            onChange={e => { setPhone4(e.target.value.trim().replace(/\D/g, '').slice(0, 4)); setNotFound(false); setError('') }}
             placeholder="לדוגמה: 5678"
             maxLength={4}
             style={inputSt}
             aria-label="4 ספרות אחרונות של הטלפון"
           />
         </div>
+
+        {/* Consent */}
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '12px', color: '#64748b', lineHeight: 1.6 }}>
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={e => { setAgreed(e.target.checked); setError('') }}
+            style={{ marginTop: '2px', flexShrink: 0, accentColor: '#1a2a6c', width: '16px', height: '16px' }}
+          />
+          <span>
+            בלחיצה על &apos;חפש&apos; אני מסכים/ה ל
+            <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#1a2a6c', fontWeight: 600 }}> תנאי השימוש</a>
+            {' '}ול
+            <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#1a2a6c', fontWeight: 600 }}>מדיניות הפרטיות</a>
+          </span>
+        </label>
 
         {error && (
           <p style={{ color: '#dc2626', fontSize: '13px', margin: 0 }} role="alert">{error}</p>

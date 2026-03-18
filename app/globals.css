@@ -357,8 +357,13 @@ a { color: inherit; text-decoration: none; }
     box-shadow: 0 -2px 8px rgba(0,0,0,.08);
   }
 
-  /* Extra padding so content isn't hidden behind sticky bar */
-  main { padding-bottom: 72px !important; }
+  /* Extra padding so content isn't hidden behind sticky bar (+ notch safe area) */
+  main { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important; }
+
+  /* Sticky bar respects iPhone notch */
+  .dash-mobile-bottom {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* ── Stat cards compact on mobile ───────────────────────────────────────── */
@@ -408,6 +413,40 @@ a { color: inherit; text-decoration: none; }
     overflow-x: hidden !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Settings page – responsive form grid + scrollable tabs
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* 3 columns on desktop, 2 on tablet, 1 on mobile */
+.settings-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 16px;
+}
+
+@media (max-width: 900px) {
+  .settings-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .settings-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Scrollable tabs (settings + any top-level tabs on mobile) */
+.scrollable-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scrollable-tabs::-webkit-scrollbar { display: none; }
+.scrollable-tabs > button { white-space: nowrap; flex-shrink: 0; }
 
 /* ══════════════════════════════════════════════════════════════════════════
    Footer – center text

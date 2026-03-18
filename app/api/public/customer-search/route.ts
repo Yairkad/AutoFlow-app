@@ -8,7 +8,29 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 )
 
+// ── Simple in-memory rate limiter ──────────────────────────────────────────
+// Max 10 requests per IP per minute. Resets per serverless instance.
+const RATE_LIMIT = 10
+const RATE_WINDOW_MS = 60_000
+const ipHits = new Map<string, { count: number; resetAt: number }>()
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now()
+  const entry = ipHits.get(ip)
+  if (!entry || now > entry.resetAt) {
+    ipHits.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS })
+    return false
+  }
+  if (entry.count >= RATE_LIMIT) return true
+  entry.count++
+  return false
+}
+
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  if (isRateLimited(ip)) {
+    return NextResponse.json({ error: 'too_many_requests' }, { status: 429 })
+  }
   const body = await req.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'bad_request' }, { status: 400 })
 

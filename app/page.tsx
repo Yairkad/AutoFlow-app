@@ -268,6 +268,7 @@ export default async function LandingPage() {
 
           <div style={{ borderTop: '1px solid rgba(255,255,255,.15)', marginTop: '24px', paddingTop: '20px', display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', fontSize: '13px' }}>
             <Link href="/privacy" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>מדיניות פרטיות</Link>
+            <Link href="/terms" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>תנאי שימוש</Link>
             <Link href="/accessibility" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>הצהרת נגישות</Link>
             {BUSINESS.wazeUrl && <a href={BUSINESS.wazeUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>Waze</a>}
             {BUSINESS.mapsUrl && <a href={BUSINESS.mapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>Google Maps</a>}

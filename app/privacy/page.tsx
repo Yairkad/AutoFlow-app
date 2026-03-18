@@ -16,14 +16,14 @@ export default async function PrivacyPage() {
   const service = createServiceClient()
   const { data: tenant } = await service
     .from('tenants')
-    .select('name,phone,address,email')
+    .select('name,phone,address,public_info')
     .eq('id', TENANT_ID)
     .single()
 
   const name    = tenant?.name    ?? 'אוטוליין'
   const phone   = tenant?.phone   ?? ''
   const address = tenant?.address ?? ''
-  const email   = (tenant as { email?: string })?.email ?? ''
+  const email   = (tenant?.public_info as { email?: string } | null)?.email ?? ''
 
   return (
     <div dir="rtl" style={{ background: '#f8fafc', minHeight: '100vh', fontFamily: 'var(--font-heebo, Heebo), sans-serif' }}>
@@ -133,9 +133,12 @@ export default async function PrivacyPage() {
           המשך השימוש באתר לאחר פרסום השינויים מהווה הסכמה לתנאים המעודכנים.
         </Section>
 
-        <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
+        <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', gap: '32px', flexWrap: 'wrap' }}>
           <Link href="/" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px' }}>
             ← חזרה לדף הבית
+          </Link>
+          <Link href="/terms" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px' }}>
+            תנאי שימוש
           </Link>
         </div>
       </main>
