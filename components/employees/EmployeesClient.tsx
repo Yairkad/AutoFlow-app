@@ -1033,13 +1033,6 @@ export default function EmployeesClient() {
             </label>
           </div>
           <div style={{ ...field, gridColumn: '1/-1' }}>
-            <label style={lbl}>הרשאה</label>
-            <select style={inp} value={form.role_level} onChange={e => setForm(f => ({ ...f, role_level: e.target.value as 'admin' | 'employee' }))}>
-              <option value="employee">עובד – רואה רק את עצמו</option>
-              <option value="admin">מנהל – גישה מלאה</option>
-            </select>
-          </div>
-          <div style={{ ...field, gridColumn: '1/-1' }}>
             <label style={lbl}>הערות</label>
             <textarea style={{ ...inp, resize: 'vertical' }} rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
           </div>
