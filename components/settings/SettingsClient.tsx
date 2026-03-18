@@ -14,6 +14,7 @@ interface PublicInfo {
   maps_url?: string
   meta_title?: string
   meta_description?: string
+  email?: string
 }
 
 interface Tenant {
@@ -180,7 +181,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
   )
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '640px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
       {/* ── Logo + edit toggle ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -234,7 +235,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
       {/* ── Section: פרטי עסק ── */}
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
         {sectionHead('🏢', 'פרטי העסק')}
-        <div style={grid2}>
+        <div className="settings-grid-3">
           {field('שם עסק *', (
             <input style={roSt} readOnly={!editing} value={tenant.name} onChange={e => setTenant(t => t ? { ...t, name: e.target.value } : t)} placeholder="שם העסק" />
           ))}
@@ -252,6 +253,9 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
           ))}
           {field('מספר רישיון', (
             <input style={roSt} readOnly={!editing} value={tenant.license_number ?? ''} onChange={e => setTenant(t => t ? { ...t, license_number: e.target.value } : t)} placeholder="מס׳ רישיון מוסך" />
+          ))}
+          {field('כתובת אימייל (ליצירת קשר)', (
+            <input style={roSt} readOnly={!editing} dir="ltr" type="email" value={tenant.public_info?.email ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, email: e.target.value } } : t)} placeholder="info@example.com" />
           ))}
         </div>
       </div>
@@ -301,11 +305,17 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
 
 // ── UsersTab ───────────────────────────────────────────────────────────────
 
+const emptyCreateForm = { full_name: '', email: '', password: '', phone: '', role: 'employee', allowed_modules: ['products_view', 'tires_view', 'my_profile'] as string[] }
+
 function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; myId: string; showToast: ToastFn }) {
-  const [profiles, setProfiles] = useState<Profile[]>([])
-  const [editing,  setEditing]  = useState<string | null>(null)
-  const [editData, setEditData] = useState<Partial<Profile>>({})
-  const [saving,   setSaving]   = useState(false)
+  const [profiles,    setProfiles]    = useState<Profile[]>([])
+  const [editing,     setEditing]     = useState<string | null>(null)
+  const [editData,    setEditData]    = useState<Partial<Profile>>({})
+  const [saving,      setSaving]      = useState(false)
+  const [createOpen,  setCreateOpen]  = useState(false)
+  const [createForm,  setCreateForm]  = useState(emptyCreateForm)
+  const [creating,    setCreating]    = useState(false)
+  const [deleting,    setDeleting]    = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -345,12 +355,101 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
     })
   }
 
+  function toggleCreateModule(key: string) {
+    setCreateForm(f => ({
+      ...f,
+      allowed_modules: f.allowed_modules.includes(key)
+        ? f.allowed_modules.filter(k => k !== key)
+        : [...f.allowed_modules, key],
+    }))
+  }
+
+  async function handleCreate() {
+    if (!createForm.email || !createForm.password) return showToast('מייל וסיסמה חובה', 'error')
+    setCreating(true)
+    const res = await fetch('/api/admin/create-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(createForm),
+    })
+    const json = await res.json()
+    setCreating(false)
+    if (!res.ok) showToast(json.error || 'שגיאה ביצירה', 'error')
+    else { showToast('משתמש נוצר', 'success'); setCreateOpen(false); setCreateForm(emptyCreateForm); load() }
+  }
+
+  async function handleDelete(userId: string, name: string) {
+    if (!confirm(`למחוק את "${name}"? פעולה זו אינה הפיכה.`)) return
+    setDeleting(userId)
+    const res = await fetch('/api/admin/delete-user', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    })
+    const json = await res.json()
+    setDeleting(null)
+    if (!res.ok) showToast(json.error || 'שגיאה במחיקה', 'error')
+    else { showToast('משתמש נמחק', 'success'); load() }
+  }
+
   const roleLabel = (r: string) =>
     r === 'super_admin' ? '🔧 מפתח' : r === 'admin' ? '👑 מנהל' : '👤 עובד'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+      {/* Add user button */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontWeight: 600, fontSize: '14px' }}>👥 משתמשים</div>
+        <button onClick={() => setCreateOpen(v => !v)} style={{ ...btnPrim, padding: '7px 16px', fontSize: '12px' }}>
+          {createOpen ? '✕ ביטול' : '+ הוסף משתמש'}
+        </button>
+      </div>
+
+      {/* Create user form */}
+      {createOpen && (
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            {field('שם מלא', <input style={inputSt} value={createForm.full_name} onChange={e => setCreateForm(f => ({ ...f, full_name: e.target.value }))} placeholder="ישראל ישראלי" />)}
+            {field('טלפון', <input style={inputSt} value={createForm.phone} onChange={e => setCreateForm(f => ({ ...f, phone: e.target.value }))} dir="ltr" placeholder="050-0000000" />)}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            {field('אימייל *', <input style={inputSt} type="email" value={createForm.email} onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))} dir="ltr" placeholder="user@example.com" />)}
+            {field('סיסמה זמנית *', <input style={inputSt} type="text" value={createForm.password} onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))} dir="ltr" placeholder="לפחות 6 תווים" />)}
+          </div>
+          {field('תפקיד', (
+            <select style={inputSt} value={createForm.role} onChange={e => setCreateForm(f => ({ ...f, role: e.target.value }))}>
+              <option value="admin">👑 מנהל</option>
+              <option value="employee">👤 עובד</option>
+            </select>
+          ))}
+          {createForm.role === 'employee' && (
+            <div>
+              <label style={labelSt}>הרשאות</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginTop: '6px' }}>
+                {ALL_MODULES.map(m => {
+                  const active = createForm.allowed_modules.includes(m.key)
+                  return (
+                    <button key={m.key} onClick={() => toggleCreateModule(m.key)} style={{
+                      padding: '4px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
+                      border: active ? '1px solid var(--primary)' : '1px solid var(--border)',
+                      background: active ? '#f0fdf4' : 'transparent',
+                      color: active ? 'var(--primary)' : 'var(--text-muted)',
+                      fontWeight: active ? 600 : 400,
+                    }}>{m.label}</button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          <button onClick={handleCreate} disabled={creating} style={{ ...btnPrim, opacity: creating ? .7 : 1, alignSelf: 'flex-start' }}>
+            {creating ? 'יוצר...' : '✓ צור משתמש'}
+          </button>
+        </div>
+      )}
+
       <InviteSection supabase={supabase} tenantId={tenantId} showToast={showToast} />
+
       {profiles.map(p => (
         <div key={p.id} style={{
           background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px',
@@ -433,9 +532,20 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
                   {!p.is_active && <span style={{ color: '#dc2626' }}>מושבת</span>}
                 </div>
               </div>
-              {p.role !== 'super_admin' && (
-                <button onClick={() => startEdit(p)} style={{ ...btnSec, padding: '6px 14px', fontSize: '12px' }}>ערוך</button>
-              )}
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {p.role !== 'super_admin' && (
+                  <button onClick={() => startEdit(p)} style={{ ...btnSec, padding: '6px 14px', fontSize: '12px' }}>ערוך</button>
+                )}
+                {p.id !== myId && p.role !== 'super_admin' && (
+                  <button
+                    onClick={() => handleDelete(p.id, p.full_name ?? p.id)}
+                    disabled={deleting === p.id}
+                    style={{ padding: '6px 10px', background: 'transparent', border: '1px solid #fca5a5', borderRadius: '8px', color: '#dc2626', fontSize: '12px', cursor: 'pointer', opacity: deleting === p.id ? .5 : 1 }}
+                  >
+                    {deleting === p.id ? '...' : '🗑'}
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -772,7 +882,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
       {changingPin && (
         <>
           <div onClick={() => setChangingPin(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 299 }} />
-          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'var(--bg-card)', borderRadius: '14px', padding: '28px', width: '320px', zIndex: 300, direction: 'rtl', boxShadow: '0 20px 60px rgba(0,0,0,.25)' }}>
+          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'var(--bg-card)', borderRadius: '14px', padding: '28px', width: 'min(320px, calc(100vw - 32px))', zIndex: 300, direction: 'rtl', boxShadow: '0 20px 60px rgba(0,0,0,.25)' }}>
             <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '20px' }}>🔑 שינוי קוד כספת</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
@@ -1265,7 +1375,7 @@ export default function SettingsClient() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '0' }}>
+      <div className="scrollable-tabs" style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '0' }}>
         {tabs.map(t => (
           <button
             key={t.key}
@@ -1276,6 +1386,7 @@ export default function SettingsClient() {
               color: tab === t.key ? 'var(--primary)' : 'var(--text-muted)',
               borderBottom: tab === t.key ? '2px solid var(--primary)' : '2px solid transparent',
               marginBottom: '-2px', display: 'flex', alignItems: 'center', gap: '6px',
+              whiteSpace: 'nowrap', flexShrink: 0,
             }}
           >
             <span>{t.icon}</span> {t.label}
