@@ -82,7 +82,7 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-      <Footer />
+      <div className="dash-footer-area"><Footer /></div>
     </AppShell>
   )
 }

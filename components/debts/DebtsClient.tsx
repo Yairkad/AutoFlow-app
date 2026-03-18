@@ -113,6 +113,12 @@ export default function DebtsClient() {
   const [payDate, setPayDate]     = useState(todayISO())
   const [paySaving, setPaySaving] = useState(false)
 
+  // Tenant name (for WA messages)
+  const [tenantName, setTenantName] = useState('AutoFlow')
+
+  // WhatsApp edit modal
+  const [waModal, setWaModal] = useState<{ phone: string; text: string } | null>(null)
+
   // ── Tenant ────────────────────────────────────────────────────────────────
 
   const resolveTenant = useCallback(async () => {
@@ -130,14 +136,16 @@ export default function DebtsClient() {
     const tid = await resolveTenant()
     if (!tid) return
     setLoading(true)
-    const [custRes, suppDebtRes, suppRes] = await Promise.all([
+    const [custRes, suppDebtRes, suppRes, tenantRes] = await Promise.all([
       supabase.from('customer_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
       supabase.from('supplier_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
       supabase.from('suppliers').select('id,name,phone,contact_name').eq('tenant_id', tid).order('name'),
+      supabase.from('tenants').select('name').eq('id', tid).single(),
     ])
     if (custRes.data)     setCustomerDebts(custRes.data)
     if (suppDebtRes.data) setSupplierDebts(suppDebtRes.data)
     if (suppRes.data)     setSuppliers(suppRes.data)
+    if (tenantRes.data?.name) setTenantName(tenantRes.data.name)
     setLoading(false)
   }, [supabase, resolveTenant])
 
@@ -389,8 +397,8 @@ export default function DebtsClient() {
       : suppliers.find(s => s.id === (selectedSupp as SupplierDebt).supplier_id)?.name ?? 'הספק'
 
     const waText = selectedType === 'customer'
-      ? `שלום ${name}, תזכורת לגבי יתרת חוב בסך ${fmt(bal(debt))} 🙏\nמוסך AutoFlow`
-      : `שלום ${name}, ברצוני לבדוק חוב בסך ${fmt(bal(debt))}.\nתודה!`
+      ? `שלום ${name}, תזכורת לגבי יתרת חוב בסך ${fmt(bal(debt))} 🙏\n${tenantName}`
+      : `שלום ${name}, ברצוני לבדוק חוב בסך ${fmt(bal(debt))}.\nתודה!\n${tenantName}`
 
     return (
       <div style={{
@@ -406,16 +414,14 @@ export default function DebtsClient() {
           {' · '}
           <strong>{fmt(bal(debt))}</strong>
         </span>
-        {/* WhatsApp */}
+        {/* WhatsApp – open edit modal */}
         {phone && (
-          <a
-            href={waUrl(phone, waText)}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ padding: '5px 12px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', textDecoration: 'none', fontWeight: 600 }}
+          <button
+            onClick={() => setWaModal({ phone, text: waText })}
+            style={{ padding: '5px 12px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
           >
             💬 ווצאפ תזכורת
-          </a>
+          </button>
         )}
         {/* Pay */}
         {!debt.is_closed && bal(debt) > 0 && (
@@ -800,6 +806,33 @@ export default function DebtsClient() {
               <button onClick={recordPayment} disabled={paySaving} style={{ ...btnPrim, background: '#16a34a' }}>
                 {paySaving ? 'רושם...' : '✓ אשר תשלום'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── WHATSAPP EDIT MODAL ── */}
+      {waModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setWaModal(null)}>
+          <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', width: 'min(420px, calc(100vw - 32px))', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', direction: 'rtl' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>💬 שלח הודעת ווצאפ</h3>
+            <p style={{ margin: '0 0 12px', fontSize: '12px', color: 'var(--text-muted)' }}>ערוך את הטקסט לפני השליחה</p>
+            <textarea
+              value={waModal.text}
+              onChange={e => setWaModal(m => m ? { ...m, text: e.target.value } : m)}
+              rows={5}
+              style={{ ...inputSt, resize: 'vertical', fontSize: '13px', lineHeight: 1.6 }}
+            />
+            <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setWaModal(null)} style={btnSec}>ביטול</button>
+              <a
+                href={waUrl(waModal.phone, waModal.text)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setWaModal(null)}
+                style={{ ...btnPrim, background: '#16a34a', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                📲 פתח ווצאפ
+              </a>
             </div>
           </div>
         </div>

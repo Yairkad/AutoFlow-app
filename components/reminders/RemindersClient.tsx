@@ -106,7 +106,7 @@ export default function RemindersClient() {
 
   const load = useCallback(async () => {
     const { data: profile } = await supabase.from('profiles').select('tenant_id').single()
-    if (!profile) return
+    if (!profile) { setLoading(false); return }
     tenantRef.current = profile.tenant_id
     const { data } = await supabase
       .from('reminders')

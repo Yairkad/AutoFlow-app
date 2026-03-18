@@ -251,8 +251,8 @@ export default function SuppliersClient() {
     <div>
       {/* Page heading */}
       <div style={{ marginBottom: '20px' }}>
-        <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 800 }}>🏭 ספקים</h1>
-        <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>ניהול ספקים, אנשי קשר וחובות</p>
+        <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 800 }}>🏭 ספקים / נותני שירות</h1>
+        <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>ניהול ספקים ונותני שירות, אנשי קשר וחובות</p>
       </div>
 
       {/* Toolbar */}

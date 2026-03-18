@@ -328,7 +328,7 @@ export default function DocumentsClient() {
       const { data: { user } } = await sb.auth.getUser()
       if (!user) return
       const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.id).single()
-      if (!profile) return
+      if (!profile) { setLoading(false); return }
       tenantId.current = profile.tenant_id
       const { data: settings } = await sb.from('settings').select('business_name, logo_base64').eq('tenant_id', profile.tenant_id).single()
       if (settings) {

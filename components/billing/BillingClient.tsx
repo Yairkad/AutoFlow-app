@@ -230,7 +230,7 @@ export default function BillingClient() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
-      if (!profile) return
+      if (!profile) { setLoading(false); return }
       tenantIdRef.current = profile.tenant_id
       await Promise.all([loadContacts(), loadItems(), loadEntries(monthISO())])
       setLoading(false)

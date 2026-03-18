@@ -15,7 +15,7 @@ const NAV_ITEMS = [
   { href: '/tires',       label: 'צמיגים',         icon: '🔘', module: ['tires', 'tires_view'] },
   { href: '/cars',        label: 'רכבים',          icon: '🚗', module: 'cars' },
   { href: '/quotes',      label: 'הצעות מחיר',     icon: '💬', module: 'quotes' },
-  { href: '/suppliers',   label: 'ספקים',          icon: '🏭', module: 'suppliers' },
+  { href: '/suppliers',   label: 'ספקים / נותני שירות', icon: '🏭', module: 'suppliers' },
   { href: '/alignment',   label: 'פרונט',          icon: '🔩', module: 'alignment' },
   { href: '/inspections', label: 'בדיקות קניה',   icon: '📝', module: 'inspections' },
   { href: '/reminders',   label: 'תזכורות',        icon: '🔔', module: 'reminders' },
