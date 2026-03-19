@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
-import { createClient } from '@/lib/supabase/server'
 import CustomerSearch from '@/components/landing/CustomerSearch'
 import PromotionsCarousel from '@/components/landing/PromotionsCarousel'
 import PriceList from '@/components/landing/PriceList'
@@ -30,15 +29,14 @@ const DEFAULT_SERVICES = [
 
 export default async function LandingPage() {
   const service = createServiceClient()
-  const supabase = await createClient()
   const today = new Date().toISOString().slice(0, 10)
 
-  // Fetch tenant info + landing data in parallel
+  // Fetch tenant info + landing data in parallel (all via service client – public page, no auth required)
   const [{ data: tenant }, { data: services }, { data: promotions }, { data: priceItems }] = await Promise.all([
     service.from('tenants').select('name,sub_title,phone,address,logo_base64,public_info').eq('id', TENANT_ID).single(),
-    supabase.from('services').select('id,name,description,icon,image_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('sort_order'),
-    supabase.from('promotions').select('id,title,description,image_url,link_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).lte('start_date', today).or('end_date.is.null,end_date.gte.' + today).order('sort_order'),
-    supabase.from('price_list').select('id,category,service_name,price,price_note,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('category').order('sort_order'),
+    service.from('services').select('id,name,description,icon,image_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('sort_order'),
+    service.from('promotions').select('id,title,description,image_url,link_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).lte('start_date', today).or('end_date.is.null,end_date.gte.' + today).order('sort_order'),
+    service.from('price_list').select('id,category,service_name,price,price_note,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('category').order('sort_order'),
   ])
 
   const pi = (tenant?.public_info ?? {}) as PublicInfo

@@ -171,7 +171,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
     ...inputSt, background: 'var(--bg)', color: 'var(--text-muted)',
     cursor: 'default', pointerEvents: 'none', opacity: 0.8,
   }
-  const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px' }
+  const grid2 = 'settings-grid-2'
   const sectionHead = (icon: string, label: string) => (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
       <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
@@ -268,7 +268,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
             <input style={roSt} readOnly={!editing} value={tenant.public_info?.hours ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, hours: e.target.value } } : t)} placeholder="א׳-ה׳ 08:00–18:00 | ו׳ 08:00–13:00" />
           ))}
         </div>
-        <div style={grid2}>
+        <div className={grid2}>
           {field('קישור Waze', (
             <input style={roSt} readOnly={!editing} dir="ltr" value={tenant.public_info?.waze_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, waze_url: e.target.value } } : t)} placeholder="https://waze.com/ul/..." />
           ))}
@@ -1424,7 +1424,7 @@ export default function SettingsClient() {
               <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{tab === t.key ? '▲' : '▼'}</span>
             </button>
             {tab === t.key && (
-              <div style={{ paddingBottom: '20px' }}>
+              <div className="settings-accordion-content" style={{ paddingBottom: '20px' }}>
                 {tabContent[t.key]}
               </div>
             )}

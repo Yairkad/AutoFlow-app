@@ -559,7 +559,7 @@ export default function SuppliersClient() {
           onClick={() => setShowModal(false)}
         >
           <div
-            style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '520px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}
+            style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '520px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto' }}
             onClick={e => e.stopPropagation()}
           >
             <h3 style={{ margin: '0 0 22px', fontSize: '17px', fontWeight: 700 }}>
