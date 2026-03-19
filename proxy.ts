@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // ── Public paths – no auth needed ──────────────────────────────────────────
 const PUBLIC_PREFIXES = [
+  '/',                 // public landing page
   '/login',
   '/register',
   '/reset-password',
@@ -11,6 +12,7 @@ const PUBLIC_PREFIXES = [
   '/onboarding',
   '/track',
   '/privacy',
+  '/terms',
   '/accessibility',
   '/api/auth',         // send-reset, register-employee
   '/api/public',       // customer-search
