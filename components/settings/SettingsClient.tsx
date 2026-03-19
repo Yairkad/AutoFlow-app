@@ -167,139 +167,125 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
 
   if (!tenant) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
 
-  const roSt: React.CSSProperties = editing ? inputSt : {
-    ...inputSt, background: 'var(--bg)', color: 'var(--text-muted)',
-    cursor: 'default', pointerEvents: 'none', opacity: 0.8,
-  }
-  const grid2 = 'settings-grid-2'
-  const sectionHead = (icon: string, label: string) => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
-        {icon} {label}
+  const infoRow = (icon: string, label: string, value: string | null | undefined) =>
+    value ? (
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '13px', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+        <span style={{ fontSize: '15px', flexShrink: 0 }}>{icon}</span>
+        <div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '1px' }}>{label}</div>
+          <div style={{ fontWeight: 500 }}>{value}</div>
+        </div>
       </div>
-    </div>
-  )
+    ) : null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-      {/* ── Logo + edit toggle ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div
-          onClick={() => editing && fileRef.current?.click()}
-          style={{
-            width: 72, height: 72, borderRadius: '12px',
-            border: editing ? '2px dashed var(--primary)' : '2px dashed var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: editing ? 'pointer' : 'default', overflow: 'hidden',
-            background: 'var(--bg)', flexShrink: 0,
-          }}
-          title={editing ? 'לחץ לשינוי לוגו' : undefined}
-        >
+    <>
+      {/* ── View mode ── */}
+      <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        {/* Logo */}
+        <div style={{
+          width: 80, height: 80, borderRadius: '12px',
+          border: '2px dashed var(--border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden', background: 'var(--bg)', flexShrink: 0,
+        }}>
           {logoPreview
             ? <img src={logoPreview} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-            : <span style={{ fontSize: '26px' }}>🏢</span>
+            : <span style={{ fontSize: '30px' }}>🏢</span>
           }
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '2px' }}>לוגו העסק</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>PNG / JPG עד 500KB</div>
-          {editing && (
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => fileRef.current?.click()} style={btnSec}>בחר תמונה</button>
-              {logoPreview && (
-                <button
-                  onClick={() => { setLogoPreview(null); setTenant(t => t ? { ...t, logo_base64: null } : t) }}
-                  style={{ ...btnSec, color: '#dc2626', borderColor: '#fecaca' }}
-                >הסר</button>
-              )}
-            </div>
-          )}
+
+        {/* Info summary */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: '16px' }}>{tenant.name}</div>
+          {tenant.sub_title && <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{tenant.sub_title}</div>}
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+            {tenant.phone   && <span>📞 {tenant.phone}</span>}
+            {tenant.address && <span>📍 {tenant.address}</span>}
+            {tenant.public_info?.email && <span>✉️ {tenant.public_info.email}</span>}
+          </div>
         </div>
-        {/* Edit / Save / Cancel */}
-        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-          {editing ? (
-            <>
-              <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1, padding: '7px 16px' }}>
+
+        <button onClick={() => setEditing(true)} style={{ ...btnSec, flexShrink: 0 }}>✏️ עריכה</button>
+      </div>
+
+      {/* ── Edit Modal ── */}
+      {editing && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={cancel}
+        >
+          <div
+            style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', maxWidth: '560px', width: '100%', margin: '16px', maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto', direction: 'rtl' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 20px', fontSize: '16px', fontWeight: 700 }}>✏️ עריכת פרטי עסק</h3>
+
+            {/* Logo row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+              <div
+                onClick={() => fileRef.current?.click()}
+                style={{ width: 64, height: 64, borderRadius: '10px', border: '2px dashed var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', background: 'var(--bg)', flexShrink: 0 }}
+                title="לחץ לשינוי לוגו"
+              >
+                {logoPreview
+                  ? <img src={logoPreview} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  : <span style={{ fontSize: '24px' }}>🏢</span>
+                }
+              </div>
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>לוגו העסק</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>PNG / JPG עד 500KB</div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button onClick={() => fileRef.current?.click()} style={{ ...btnSec, fontSize: '12px', padding: '5px 12px' }}>בחר תמונה</button>
+                  {logoPreview && (
+                    <button onClick={() => { setLogoPreview(null); setTenant(t => t ? { ...t, logo_base64: null } : t) }} style={{ ...btnSec, fontSize: '12px', padding: '5px 12px', color: '#dc2626', borderColor: '#fecaca' }}>הסר</button>
+                  )}
+                </div>
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" onChange={onLogoChange} style={{ display: 'none' }} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* פרטי העסק */}
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>🏢 פרטי העסק</div>
+              <div className="settings-grid-3">
+                {field('שם עסק *', <input style={inputSt} value={tenant.name} onChange={e => setTenant(t => t ? { ...t, name: e.target.value } : t)} placeholder="שם העסק" />)}
+                {field('כותרת משנה', <input style={inputSt} value={tenant.sub_title ?? ''} onChange={e => setTenant(t => t ? { ...t, sub_title: e.target.value } : t)} placeholder="מוסך ופנצריה" />)}
+                {field('טלפון', <input style={inputSt} value={tenant.phone ?? ''} onChange={e => setTenant(t => t ? { ...t, phone: e.target.value } : t)} placeholder="050-0000000" dir="ltr" />)}
+                {field('כתובת', <input style={inputSt} value={tenant.address ?? ''} onChange={e => setTenant(t => t ? { ...t, address: e.target.value } : t)} placeholder="רחוב, עיר" />)}
+                {field('ח.פ / ע.מ', <input style={inputSt} value={tenant.tax_id ?? ''} onChange={e => setTenant(t => t ? { ...t, tax_id: e.target.value } : t)} placeholder="מספר עוסק" dir="ltr" />)}
+                {field('מספר רישיון', <input style={inputSt} value={tenant.license_number ?? ''} onChange={e => setTenant(t => t ? { ...t, license_number: e.target.value } : t)} placeholder="מס׳ רישיון מוסך" />)}
+              </div>
+              {field('אימייל (ליצירת קשר)', <input style={inputSt} dir="ltr" type="email" value={tenant.public_info?.email ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, email: e.target.value } } : t)} placeholder="info@example.com" />)}
+
+              {/* דף ציבורי */}
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginTop: '4px' }}>🌐 דף ציבורי</div>
+              {field('שעות פעילות', <input style={inputSt} value={tenant.public_info?.hours ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, hours: e.target.value } } : t)} placeholder="א׳-ה׳ 08:00–18:00 | ו׳ 08:00–13:00" />)}
+              <div className="settings-grid-2">
+                {field('קישור Waze', <input style={inputSt} dir="ltr" value={tenant.public_info?.waze_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, waze_url: e.target.value } } : t)} placeholder="https://waze.com/ul/..." />)}
+                {field('קישור Google Maps', <input style={inputSt} dir="ltr" value={tenant.public_info?.maps_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, maps_url: e.target.value } } : t)} placeholder="https://maps.app.goo.gl/..." />)}
+              </div>
+
+              {/* SEO */}
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginTop: '4px' }}>🔍 SEO / כרטיסיית הדפדפן</div>
+              {field('כותרת (title)', <input style={inputSt} value={tenant.public_info?.meta_title ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_title: e.target.value } } : t)} placeholder={`${tenant.name} – מערכת ניהול`} />)}
+              {field('תיאור (description)', (
+                <textarea style={{ ...inputSt, resize: 'vertical', minHeight: '60px' }} value={tenant.public_info?.meta_description ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_description: e.target.value } } : t)} placeholder="תיאור קצר של העסק – עד 160 תווים" maxLength={160} rows={2} />
+              ))}
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '22px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+              <button onClick={cancel} style={btnSec}>ביטול</button>
+              <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>
                 {saving ? 'שומר...' : '💾 שמור'}
               </button>
-              <button onClick={cancel} style={{ ...btnSec, padding: '7px 14px' }}>ביטול</button>
-            </>
-          ) : (
-            <button onClick={() => setEditing(true)} style={{ ...btnSec, padding: '7px 14px' }}>✏️ עריכה</button>
-          )}
+            </div>
+          </div>
         </div>
-        <input ref={fileRef} type="file" accept="image/*" onChange={onLogoChange} style={{ display: 'none' }} />
-      </div>
-
-      {/* ── Section: פרטי עסק ── */}
-      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-        {sectionHead('🏢', 'פרטי העסק')}
-        <div className="settings-grid-3">
-          {field('שם עסק *', (
-            <input style={roSt} readOnly={!editing} value={tenant.name} onChange={e => setTenant(t => t ? { ...t, name: e.target.value } : t)} placeholder="שם העסק" />
-          ))}
-          {field('כותרת משנה', (
-            <input style={roSt} readOnly={!editing} value={tenant.sub_title ?? ''} onChange={e => setTenant(t => t ? { ...t, sub_title: e.target.value } : t)} placeholder="מוסך ופנצריה" />
-          ))}
-          {field('טלפון', (
-            <input style={roSt} readOnly={!editing} value={tenant.phone ?? ''} onChange={e => setTenant(t => t ? { ...t, phone: e.target.value } : t)} placeholder="050-0000000" dir="ltr" />
-          ))}
-          {field('כתובת', (
-            <input style={roSt} readOnly={!editing} value={tenant.address ?? ''} onChange={e => setTenant(t => t ? { ...t, address: e.target.value } : t)} placeholder="רחוב, עיר" />
-          ))}
-          {field('ח.פ / ע.מ', (
-            <input style={roSt} readOnly={!editing} value={tenant.tax_id ?? ''} onChange={e => setTenant(t => t ? { ...t, tax_id: e.target.value } : t)} placeholder="מספר עוסק" dir="ltr" />
-          ))}
-          {field('מספר רישיון', (
-            <input style={roSt} readOnly={!editing} value={tenant.license_number ?? ''} onChange={e => setTenant(t => t ? { ...t, license_number: e.target.value } : t)} placeholder="מס׳ רישיון מוסך" />
-          ))}
-          {field('כתובת אימייל (ליצירת קשר)', (
-            <input style={roSt} readOnly={!editing} dir="ltr" type="email" value={tenant.public_info?.email ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, email: e.target.value } } : t)} placeholder="info@example.com" />
-          ))}
-        </div>
-      </div>
-
-      {/* ── Section: דף ציבורי ── */}
-      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-        {sectionHead('🌐', 'דף ציבורי')}
-        <div style={{ marginBottom: '10px' }}>
-          {field('שעות פעילות', (
-            <input style={roSt} readOnly={!editing} value={tenant.public_info?.hours ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, hours: e.target.value } } : t)} placeholder="א׳-ה׳ 08:00–18:00 | ו׳ 08:00–13:00" />
-          ))}
-        </div>
-        <div className={grid2}>
-          {field('קישור Waze', (
-            <input style={roSt} readOnly={!editing} dir="ltr" value={tenant.public_info?.waze_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, waze_url: e.target.value } } : t)} placeholder="https://waze.com/ul/..." />
-          ))}
-          {field('קישור Google Maps', (
-            <input style={roSt} readOnly={!editing} dir="ltr" value={tenant.public_info?.maps_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, maps_url: e.target.value } } : t)} placeholder="https://maps.app.goo.gl/..." />
-          ))}
-        </div>
-      </div>
-
-      {/* ── Section: SEO ── */}
-      <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
-        {sectionHead('🔍', 'מטא-דאטה (SEO / כרטיסיית הדפדפן)')}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {field('כותרת (title)', (
-            <input style={roSt} readOnly={!editing} value={tenant.public_info?.meta_title ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_title: e.target.value } } : t)} placeholder={`${tenant.name} – מערכת ניהול`} />
-          ))}
-          {field('תיאור (description)', (
-            <textarea
-              style={{ ...roSt, resize: editing ? 'vertical' : 'none', minHeight: '60px' }}
-              readOnly={!editing}
-              value={tenant.public_info?.meta_description ?? ''}
-              onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_description: e.target.value } } : t)}
-              placeholder="תיאור קצר של העסק – עד 160 תווים"
-              maxLength={160}
-              rows={2}
-            />
-          ))}
-        </div>
-      </div>
-
-    </div>
+      )}
+    </>
   )
 }
 

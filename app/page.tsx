@@ -18,6 +18,7 @@ type PublicInfo = {
   hours?: string
   waze_url?: string
   maps_url?: string
+  email?: string
 }
 
 const DEFAULT_SERVICES = [
@@ -49,7 +50,13 @@ export default async function LandingPage() {
     hours:    pi.hours    ?? '',
     wazeUrl:  pi.waze_url ?? '',
     mapsUrl:  pi.maps_url ?? '',
+    email:    pi.email    ?? '',
   }
+  // WhatsApp URL (compute server-side)
+  const waPhone = BUSINESS.phone
+    ? BUSINESS.phone.replace(/\D/g, '').replace(/^0/, '972')
+    : ''
+  const waHref = waPhone ? `https://wa.me/${waPhone}?text=${encodeURIComponent('שלום, ברצוני לקבל מידע')}` : ''
 
   const displayServices = services && services.length > 0 ? services : DEFAULT_SERVICES
   const displayPromotions = promotions ?? []
@@ -100,32 +107,6 @@ export default async function LandingPage() {
             </div>
           )}
 
-          {/* Navigation buttons */}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            {BUSINESS.wazeUrl && (
-              <a href={BUSINESS.wazeUrl} target="_blank" rel="noopener noreferrer" style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                background: '#00c4ff', color: '#fff', border: 'none',
-                borderRadius: '12px', padding: '12px 24px',
-                fontWeight: 700, fontSize: '16px', textDecoration: 'none',
-                boxShadow: '0 2px 10px rgba(0,196,255,.35)',
-              }}>
-                🧭 Waze
-              </a>
-            )}
-            {BUSINESS.mapsUrl && (
-              <a href={BUSINESS.mapsUrl} target="_blank" rel="noopener noreferrer" style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                background: '#34a853', color: '#fff', border: 'none',
-                borderRadius: '12px', padding: '12px 24px',
-                fontWeight: 700, fontSize: '16px', textDecoration: 'none',
-                boxShadow: '0 2px 10px rgba(52,168,83,.35)',
-              }}>
-                🗺️ Google Maps
-              </a>
-            )}
-          </div>
-
           {/* Business info */}
           <div style={{ background: 'rgba(26,42,108,.08)', borderRadius: '14px', padding: '20px 24px', width: '100%', maxWidth: '320px' }}>
             {BUSINESS.phone && (
@@ -143,7 +124,72 @@ export default async function LandingPage() {
                 <span style={{ color: '#1a2a6c' }}>{BUSINESS.hours}</span>
               </InfoRow>
             )}
+            {BUSINESS.email && (
+              <InfoRow icon="✉️">
+                <a href={`mailto:${BUSINESS.email}`} style={{ color: '#1a2a6c', fontWeight: 600, fontSize: '14px' }}>{BUSINESS.email}</a>
+              </InfoRow>
+            )}
+          </div>
 
+          {/* Contact buttons */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: '320px' }}>
+            {BUSINESS.phone && (
+              <a href={`tel:${BUSINESS.phone}`} style={{
+                flex: 1, minWidth: '80px',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                background: '#1a2a6c', color: '#fff', borderRadius: '10px', padding: '10px 14px',
+                fontWeight: 700, fontSize: '14px', textDecoration: 'none',
+                boxShadow: '0 2px 8px rgba(26,42,108,.3)',
+              }}>
+                📞 שיחה
+              </a>
+            )}
+            {waHref && (
+              <a href={waHref} target="_blank" rel="noopener noreferrer" style={{
+                flex: 1, minWidth: '80px',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                background: '#25d366', color: '#fff', borderRadius: '10px', padding: '10px 14px',
+                fontWeight: 700, fontSize: '14px', textDecoration: 'none',
+                boxShadow: '0 2px 8px rgba(37,211,102,.3)',
+              }}>
+                💬 ווצאפ
+              </a>
+            )}
+            {BUSINESS.email && (
+              <a href={`mailto:${BUSINESS.email}`} style={{
+                flex: 1, minWidth: '80px',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                background: '#ea4335', color: '#fff', borderRadius: '10px', padding: '10px 14px',
+                fontWeight: 700, fontSize: '14px', textDecoration: 'none',
+                boxShadow: '0 2px 8px rgba(234,67,53,.3)',
+              }}>
+                ✉️ מייל
+              </a>
+            )}
+          </div>
+
+          {/* Navigation buttons – smaller, below contact */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {BUSINESS.wazeUrl && (
+              <a href={BUSINESS.wazeUrl} target="_blank" rel="noopener noreferrer" style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                background: 'rgba(26,42,108,.08)', color: '#1a2a6c', border: '1px solid rgba(26,42,108,.2)',
+                borderRadius: '8px', padding: '7px 14px',
+                fontWeight: 600, fontSize: '13px', textDecoration: 'none',
+              }}>
+                🧭 Waze
+              </a>
+            )}
+            {BUSINESS.mapsUrl && (
+              <a href={BUSINESS.mapsUrl} target="_blank" rel="noopener noreferrer" style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                background: 'rgba(26,42,108,.08)', color: '#1a2a6c', border: '1px solid rgba(26,42,108,.2)',
+                borderRadius: '8px', padding: '7px 14px',
+                fontWeight: 600, fontSize: '13px', textDecoration: 'none',
+              }}>
+                🗺️ Google Maps
+              </a>
+            )}
           </div>
         </div>
 
@@ -170,7 +216,7 @@ export default async function LandingPage() {
               השירותים שלנו
             </a>
             <a href="#customer-area" style={heroBtnSt('transparent', '#fff', '2px solid rgba(255,255,255,.4)')}>
-              מצא את הרכב שלי
+              עקוב אחר הרכב שלי
             </a>
           </div>
         </div>
@@ -239,10 +285,10 @@ export default async function LandingPage() {
             איזור לקוחות
           </p>
           <h2 id="customer-title" style={{ color: '#fff', fontSize: '28px', fontWeight: 800, margin: '0 0 10px' }}>
-            מצא את הרכב שלך
+            עקוב אחר סטטוס הטיפול
           </h2>
           <p style={{ color: 'rgba(255,255,255,.7)', fontSize: '15px', marginBottom: '32px' }}>
-            הזן את מספר הלוחית ו-4 הספרות האחרונות של הטלפון שמסרת – ותוכל לעקוב אחרי סטטוס הרכב שלך בזמן אמת.
+            הזן את מספר הלוחית ו-4 הספרות האחרונות של הטלפון שמסרת – ותוכל לעקוב אחרי סטטוס טיפול הרכב שלך בזמן אמת.
           </p>
           <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', textAlign: 'right' }}>
             <CustomerSearch />
