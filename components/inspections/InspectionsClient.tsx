@@ -163,7 +163,7 @@ function PrintReport({ data }: { data: PrintData }) {
             {biz.sub_title && <div style={{ fontSize: 12 }}>{biz.sub_title}</div>}
             {biz.address && <div>{biz.address}</div>}
             {biz.phone && <div>טל׳: {biz.phone}</div>}
-            {biz.license_number && <div>מס׳ מוסך: {biz.license_number}</div>}
+            {biz.license_number && <div>מס׳ רישיון מוסך: {biz.license_number}</div>}
           </div>
           <div className="pp-logo-wrap">
             {biz.logo && <img src={biz.logo} alt="לוגו" />}
@@ -244,7 +244,7 @@ function PrintReport({ data }: { data: PrintData }) {
             {biz.sub_title && <div style={{ fontSize: 12 }}>{biz.sub_title}</div>}
             {biz.address && <div>{biz.address}</div>}
             {biz.phone && <div>טל׳: {biz.phone}</div>}
-            {biz.license_number && <div>מס׳ מוסך: {biz.license_number}</div>}
+            {biz.license_number && <div>מס׳ רישיון מוסך: {biz.license_number}</div>}
           </div>
           <div className="pp-logo-wrap">
             {biz.logo && <img src={biz.logo} alt="לוגו" />}
