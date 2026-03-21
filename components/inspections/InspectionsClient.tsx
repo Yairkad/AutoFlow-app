@@ -34,14 +34,17 @@ interface Inspection {
   findings: string | null
   status: 'draft' | 'completed'
   created_at: string
+  drive_file_id: string | null
 }
 
 interface BusinessInfo {
   name: string
+  sub_title: string | null
   logo: string | null
   phone: string | null
   address: string | null
   license_number: string | null
+  tax_id: string | null
 }
 
 // ── Form state ─────────────────────────────────────────────────────────────────
@@ -157,9 +160,10 @@ function PrintReport({ data }: { data: PrintData }) {
         <div className="pp-hdr">
           <div className="pp-biz">
             <div className="pp-biz-name">{biz.name}</div>
+            {biz.sub_title && <div style={{ fontSize: 12 }}>{biz.sub_title}</div>}
             {biz.address && <div>{biz.address}</div>}
             {biz.phone && <div>טל׳: {biz.phone}</div>}
-            {biz.license_number && <div>{biz.license_number}</div>}
+            {biz.license_number && <div>מס׳ מוסך: {biz.license_number}</div>}
           </div>
           <div className="pp-logo-wrap">
             {biz.logo && <img src={biz.logo} alt="לוגו" />}
@@ -237,9 +241,10 @@ function PrintReport({ data }: { data: PrintData }) {
         <div className="pp-hdr">
           <div className="pp-biz">
             <div className="pp-biz-name">{biz.name}</div>
+            {biz.sub_title && <div style={{ fontSize: 12 }}>{biz.sub_title}</div>}
             {biz.address && <div>{biz.address}</div>}
             {biz.phone && <div>טל׳: {biz.phone}</div>}
-            {biz.license_number && <div>{biz.license_number}</div>}
+            {biz.license_number && <div>מס׳ מוסך: {biz.license_number}</div>}
           </div>
           <div className="pp-logo-wrap">
             {biz.logo && <img src={biz.logo} alt="לוגו" />}
@@ -325,7 +330,7 @@ function ActionBtn({ onClick, title, children }: { onClick: () => void; title: s
 export default function InspectionsClient() {
   const supabase    = useRef(createClient()).current
   const tenantId    = useRef<string | null>(null)
-  const bizInfo     = useRef<BusinessInfo>({ name: 'אוטוליין', logo: null, phone: null, address: null, license_number: null })
+  const bizInfo     = useRef<BusinessInfo>({ name: 'אוטוליין', sub_title: null, logo: null, phone: null, address: null, license_number: null, tax_id: null })
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
 
@@ -340,6 +345,9 @@ export default function InspectionsClient() {
   const [search, setSearch]           = useState('')
   const [showActions, setShowActions] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set())
+  const [driveConnected, setDriveConnected] = useState(false)
+  const [isAdmin, setIsAdmin]         = useState(false)
+  const [uploadingId, setUploadingId] = useState<string | null>(null)
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -358,22 +366,28 @@ export default function InspectionsClient() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       const { data: profile } = await supabase
-        .from('profiles').select('tenant_id').eq('id', user.id).single()
+        .from('profiles').select('tenant_id, role').eq('id', user.id).single()
       if (!profile) { setLoading(false); return }
       tenantId.current = profile.tenant_id
+      setIsAdmin(profile.role === 'admin')
+
+      fetch(`/api/drive/status?tenant_id=${profile.tenant_id}`)
+        .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => {})
 
       const { data: tenant } = await supabase
         .from('tenants')
-        .select('name, logo_base64, phone, address, license_number')
+        .select('name, sub_title, logo_base64, phone, address, license_number, tax_id')
         .eq('id', profile.tenant_id)
         .maybeSingle()
       if (tenant) {
         bizInfo.current = {
           name:           tenant.name ?? 'אוטוליין',
+          sub_title:      tenant.sub_title ?? null,
           logo:           tenant.logo_base64 ?? null,
           phone:          tenant.phone ?? null,
           address:        tenant.address ?? null,
           license_number: tenant.license_number ?? null,
+          tax_id:         tenant.tax_id ?? null,
         }
       }
 
@@ -553,6 +567,30 @@ export default function InspectionsClient() {
   const handlePrint = (ins: Inspection) => {
     setPrintData({ inspection: ins, business: bizInfo.current })
     setTimeout(() => window.print(), 100)
+  }
+
+  // ── Drive upload ─────────────────────────────────────────────────────────────
+
+  const uploadInspectionFile = async (ins: Inspection, file: File) => {
+    if (!tenantId.current) return
+    setUploadingId(ins.id)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('tenant_id', tenantId.current)
+      fd.append('sub_folder', 'בדיקות קניה')
+      fd.append('item_name', `${ins.plate}_${ins.date ?? ins.created_at?.slice(0, 10) ?? 'scan'}`)
+      const res = await fetch('/api/drive/upload', { method: 'POST', body: fd })
+      if (!res.ok) throw new Error(await res.text())
+      const { id: fileId } = await res.json()
+      await supabase.from('car_inspections').update({ drive_file_id: fileId }).eq('id', ins.id)
+      showToast('הקובץ הועלה לדרייב', 'success')
+      loadInspections()
+    } catch {
+      showToast('שגיאה בהעלאה לדרייב', 'error')
+    } finally {
+      setUploadingId(null)
+    }
   }
 
   // ── Filter ───────────────────────────────────────────────────────────────────
@@ -789,6 +827,7 @@ export default function InspectionsClient() {
                       {['תאריך', 'מס׳ רכב', 'שם לקוח', 'ת.ז', 'טלפון', 'כתובת', 'תוצר', 'שנה', 'ק"מ', 'מנוע', 'שלדה'].map(h => (
                         <th key={h} style={{ textAlign: 'right', padding: '10px 10px', fontWeight: 700, fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
+                      <th style={{ width: 60, textAlign: 'center', padding: '10px 6px', fontWeight: 700, fontSize: 11, color: 'var(--text-muted)' }}>📎 דרייב</th>
                       {showActions && <th style={{ width: 90 }} />}
                     </tr>
                   </thead>
@@ -836,6 +875,32 @@ export default function InspectionsClient() {
                         </td>
                         <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>
                           <CopyCell value={ins.chassis} />
+                        </td>
+                        <td style={{ padding: '8px 6px', textAlign: 'center' }}>
+                          {ins.drive_file_id ? (
+                            <a
+                              href={`https://drive.google.com/file/d/${ins.drive_file_id}/view`}
+                              target="_blank" rel="noreferrer"
+                              title="פתח בדרייב"
+                              style={{ fontSize: 16, textDecoration: 'none' }}
+                            >📄</a>
+                          ) : isAdmin && driveConnected ? (
+                            <>
+                              <input
+                                type="file" accept="image/*,application/pdf"
+                                style={{ display: 'none' }}
+                                id={`drive-upload-${ins.id}`}
+                                onChange={e => { const f = e.target.files?.[0]; if (f) uploadInspectionFile(ins, f); e.target.value = '' }}
+                              />
+                              <label
+                                htmlFor={`drive-upload-${ins.id}`}
+                                title="העלה סריקה לדרייב"
+                                style={{ cursor: uploadingId === ins.id ? 'default' : 'pointer', fontSize: 16 }}
+                              >
+                                {uploadingId === ins.id ? '⏳' : '📤'}
+                              </label>
+                            </>
+                          ) : null}
                         </td>
                         {showActions && (
                           <td style={{ padding: '8px 6px', whiteSpace: 'nowrap' }}>

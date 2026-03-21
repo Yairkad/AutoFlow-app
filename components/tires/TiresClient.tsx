@@ -208,7 +208,7 @@ export default function TiresClient() {
   }
 
   function printPriceList() {
-    const rows = filtered.filter(t => t.sell_price)
+    const rows = tires.filter(t => t.sell_price)
     if (rows.length === 0) return showToast('אין צמיגים עם מחיר מכירה לייצוא', 'error')
     const rowsHTML = rows.map(t => `
       <tr>

@@ -422,9 +422,19 @@ export default function DocumentsClient() {
   const [columns,  setColumns]  = useState<FormColumn[]>([{ ...emptyCol }])
   const [saving,   setSaving]   = useState(false)
 
+  // ── Tabs ──────────────────────────────────────────────────────────────────────
+  const [docTab, setDocTab] = useState<'templates' | 'drive'>('templates')
+
   // ── Built-in checklist card state ─────────────────────────────────────────────
   const [clCopies, setClCopies] = useState(1)
   const [wCopies,  setWCopies]  = useState(1)
+
+  // ── Drive state ───────────────────────────────────────────────────────────────
+  const [driveConnected,  setDriveConnected]  = useState(false)
+  const [driveFiles,      setDriveFiles]      = useState<{id:string;name:string;mimeType:string;size?:string;createdTime?:string;thumbnailLink?:string;webViewLink?:string}[]>([])
+  const [driveLoading,    setDriveLoading]    = useState(false)
+  const [driveUploading,  setDriveUploading]  = useState(false)
+  const [driveDeletingId, setDriveDeletingId] = useState<string|null>(null)
 
   // Per-form copies + menu state
   const [copiesMap, setCopiesMap] = useState<Record<string, number>>({})
@@ -462,10 +472,57 @@ export default function DocumentsClient() {
         bizName.current    = tenant.name        || ''
         logoBase64.current = tenant.logo_base64 || ''
       }
+      fetch(`/api/drive/status?tenant_id=${profile.tenant_id}`)
+        .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => {})
       await fetchAll()
     }
     init()
   }, [sb, fetchAll])
+
+  // ── Drive file helpers ────────────────────────────────────────────────────────
+
+  const loadDriveFiles = useCallback(async () => {
+    if (!tenantId.current) return
+    setDriveLoading(true)
+    try {
+      const res = await fetch(`/api/drive/files?tenant_id=${tenantId.current}&sub_folder=מסמכים`)
+      const { files } = await res.json()
+      setDriveFiles(files ?? [])
+    } catch { /* ignore */ }
+    setDriveLoading(false)
+  }, [])
+
+  const uploadDriveFile = async (file: File) => {
+    if (!tenantId.current) return
+    setDriveUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('tenant_id', tenantId.current)
+      fd.append('sub_folder', 'מסמכים')
+      const res = await fetch('/api/drive/upload', { method: 'POST', body: fd })
+      if (!res.ok) throw new Error()
+      showToast('הקובץ הועלה ✓', 'success')
+      loadDriveFiles()
+    } catch { showToast('שגיאה בהעלאה', 'error') }
+    setDriveUploading(false)
+  }
+
+  const deleteDriveFile = async (fileId: string, fileName: string) => {
+    const ok = await confirm({ msg: `למחוק את "${fileName}" מהדרייב?`, variant: 'danger' })
+    if (!ok) return
+    setDriveDeletingId(fileId)
+    try {
+      await fetch('/api/drive/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenantId.current, file_id: fileId }),
+      })
+      showToast('נמחק', 'success')
+      setDriveFiles(p => p.filter(f => f.id !== fileId))
+    } catch { showToast('שגיאה במחיקה', 'error') }
+    setDriveDeletingId(null)
+  }
 
   // ── Template CRUD ─────────────────────────────────────────────────────────────
 
@@ -565,13 +622,108 @@ export default function DocumentsClient() {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>📄 מסמכים</h2>
-        <Button variant="primary" onClick={openAdd}>➕ תבנית חדשה</Button>
+        {docTab === 'templates'
+          ? <Button variant="primary" onClick={openAdd}>➕ תבנית חדשה</Button>
+          : driveConnected && (
+            <>
+              <input type="file" id="doc-drive-upload" style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadDriveFile(f); e.target.value = '' }}
+              />
+              <label htmlFor="doc-drive-upload" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: 'var(--primary)', color: '#fff', borderRadius: 8,
+                padding: '8px 16px', fontSize: 14, fontWeight: 600, cursor: driveUploading ? 'default' : 'pointer',
+                opacity: driveUploading ? 0.7 : 1,
+              }}>
+                {driveUploading ? '⏳ מעלה...' : '📤 העלה קובץ'}
+              </label>
+            </>
+          )
+        }
       </div>
 
-      {/* Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 16 }}>
+      {/* Tab bar */}
+      <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: 20 }}>
+        {([
+          ['templates', '📄 תבניות הדפסה'],
+          ['drive',     '📂 קבצים בדרייב'],
+        ] as const).map(([key, label]) => (
+          <button key={key} onClick={() => { setDocTab(key); if (key === 'drive') loadDriveFiles() }}
+            style={{
+              padding: '9px 22px', border: 'none', background: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
+              color: docTab === key ? 'var(--primary)' : 'var(--text-muted)',
+              borderBottom: docTab === key ? '3px solid var(--primary)' : '3px solid transparent',
+              marginBottom: -2, transition: 'all .15s',
+            }}
+          >{label}</button>
+        ))}
+      </div>
+
+      {/* ── Drive files tab ── */}
+      {docTab === 'drive' && (
+        <div>
+          {!driveConnected ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>☁️</div>
+              <div style={{ fontWeight: 700, marginBottom: 8 }}>Google Drive לא מחובר</div>
+              <a href="/settings" style={{ color: 'var(--primary)', fontSize: 13 }}>חבר מהגדרות ←</a>
+            </div>
+          ) : driveLoading ? (
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>טוען קבצים...</div>
+          ) : driveFiles.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
+              <div style={{ fontWeight: 700 }}>אין קבצים עדיין</div>
+              <div style={{ fontSize: 13, marginTop: 6 }}>העלה קובץ עם הכפתור למעלה</div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14 }}>
+              {driveFiles.map(file => {
+                const isImage = file.mimeType?.startsWith('image/')
+                const isPdf   = file.mimeType === 'application/pdf'
+                return (
+                  <div key={file.id} style={{
+                    background: '#fff', borderRadius: 'var(--radius)',
+                    boxShadow: 'var(--shadow)', border: '1px solid var(--border)',
+                    overflow: 'hidden', display: 'flex', flexDirection: 'column',
+                  }}>
+                    {/* Preview */}
+                    <a href={file.webViewLink} target="_blank" rel="noreferrer" style={{ display: 'block', height: 130, background: 'var(--bg)', position: 'relative' }}>
+                      {isImage && file.thumbnailLink
+                        ? <img src={`https://drive.google.com/thumbnail?id=${file.id}&sz=w400`} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 48 }}>
+                            {isPdf ? '📄' : '📎'}
+                          </div>
+                      }
+                    </a>
+                    {/* Info + actions */}
+                    <div style={{ padding: '10px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, wordBreak: 'break-word', lineHeight: 1.3 }}>{file.name}</div>
+                      {file.size && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{(parseInt(file.size)/1024).toFixed(0)} KB</div>}
+                      <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                        <a href={file.webViewLink} target="_blank" rel="noreferrer"
+                          style={{ flex: 1, textAlign: 'center', fontSize: 12, padding: '5px 0', background: 'var(--bg)', borderRadius: 6, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}
+                        >🔗 פתח</a>
+                        <button
+                          onClick={() => deleteDriveFile(file.id, file.name)}
+                          disabled={driveDeletingId === file.id}
+                          style={{ padding: '5px 10px', background: 'none', border: '1px solid var(--danger)', borderRadius: 6, color: 'var(--danger)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+                        >{driveDeletingId === file.id ? '...' : '🗑️'}</button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Templates tab ── */}
+      {docTab === 'templates' && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 16 }}>
 
         {/* ── Built-in: בדיקת רכב ── */}
         <div style={{
@@ -614,7 +766,7 @@ export default function DocumentsClient() {
         {/* ── Built-in: תעודת אחריות ── */}
         <div style={{
           background: '#fff', borderRadius: 'var(--radius)',
-          boxShadow: 'var(--shadow)', borderRight: '5px solid #d97706',
+          boxShadow: 'var(--shadow)', borderRight: '5px solid var(--primary)',
           padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -623,8 +775,8 @@ export default function DocumentsClient() {
             </div>
             <span style={{
               fontSize: 11, fontWeight: 600, padding: '2px 8px',
-              borderRadius: 99, background: '#fffbeb', color: '#d97706',
-              border: '1px solid #d97706',
+              borderRadius: 99, background: '#f0fdf4', color: 'var(--primary)',
+              border: '1px solid var(--primary)',
             }}>מובנה</span>
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -641,7 +793,7 @@ export default function DocumentsClient() {
             />
             <Button
               variant="primary"
-              style={{ marginRight: 'auto', background: '#d97706', borderColor: '#d97706' }}
+              style={{ marginRight: 'auto' }}
               onClick={() => printWarranty(wCopies, bizName.current, logoBase64.current)}
             >
               🖨️ הדפס
@@ -730,7 +882,7 @@ export default function DocumentsClient() {
             <div style={{ fontSize: 13, fontWeight: 600 }}>צור תבנית חדשה</div>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── Add/Edit Template Modal ── */}
       <Modal

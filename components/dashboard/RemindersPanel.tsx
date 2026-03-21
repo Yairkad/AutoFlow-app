@@ -36,6 +36,7 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
   const [reminders, setReminders] = useState<Item[]>([])
   const [tasks, setTasks]         = useState<Item[]>([])
   const [loading, setLoading]     = useState(true)
+  const [popupOpen, setPopupOpen] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -85,33 +86,78 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
   const today = new Date().toISOString().split('T')[0]
   const total = reminders.length + tasks.length
 
-  // Mobile / compact: compact bell badge linking to /reminders
+  // Mobile / compact: expandable popup (same pattern as AlertsPanel)
   if (isMobile || compact) {
     return (
-      <a
-        href="/reminders"
-        style={{
-          display: 'flex', alignItems: 'center', gap: '8px',
-          padding: '8px 14px', flex: compact ? 1 : undefined,
-          background: '#fff', borderRadius: 'var(--radius)',
-          boxShadow: 'var(--shadow)', borderTop: '3px solid var(--warning)',
-          textDecoration: 'none', color: 'var(--text)',
-          fontSize: '14px', fontWeight: 600,
-          alignSelf: compact ? undefined : 'flex-start',
-        }}
-      >
-        🔔 תזכורות ומשימות
-        {!loading && total > 0 && (
-          <span style={{
-            background: 'var(--danger)', color: '#fff',
-            borderRadius: '999px', fontSize: '12px', fontWeight: 700,
-            padding: '2px 9px', lineHeight: 1.4,
-          }}>{total}</span>
+      <>
+        <button
+          onClick={() => setPopupOpen(v => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '8px 14px', flex: compact ? 1 : undefined,
+            background: '#fff', borderRadius: 'var(--radius)',
+            boxShadow: 'var(--shadow)', borderTop: '3px solid var(--warning)',
+            fontSize: '14px', fontWeight: 600, color: 'var(--text)',
+            border: 'none', cursor: 'pointer', textAlign: 'right',
+          }}
+        >
+          <span>🔔</span>
+          <span>תזכורות</span>
+          {!loading && total > 0 && (
+            <span style={{ background: 'var(--danger)', color: '#fff', borderRadius: '999px', fontSize: '12px', fontWeight: 700, padding: '2px 9px', lineHeight: 1.4 }}>{total}</span>
+          )}
+          {!loading && total === 0 && (
+            <span style={{ fontSize: '12px', color: 'var(--success)', fontWeight: 400 }}>✓ הכל מטופל</span>
+          )}
+          <span style={{ marginRight: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>{popupOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {popupOpen && (
+          <>
+            <div onClick={() => setPopupOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 199 }} />
+            <div style={{
+              position: 'fixed', bottom: 'calc(68px + env(safe-area-inset-bottom, 0px))',
+              right: 12, left: 12, zIndex: 200,
+              background: '#fff', borderRadius: '14px',
+              boxShadow: '0 -4px 32px rgba(0,0,0,.18)',
+              border: '1px solid var(--border)',
+              padding: '16px', maxHeight: '60vh', overflowY: 'auto',
+              direction: 'rtl',
+            }}>
+              <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
+                🔔 תזכורות ומשימות
+                <button onClick={() => setPopupOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--text-muted)' }}>✕</button>
+              </div>
+              {loading ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>טוען...</div>
+              ) : total === 0 ? (
+                <div style={{ color: 'var(--primary)', fontSize: '13px' }}>✓ אין תזכורות פעילות</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {reminders.map(r => {
+                    const isOverdue = r.due_date && r.due_date < today
+                    return (
+                      <div key={r.id} style={{ background: isOverdue ? '#fef2f2' : 'var(--bg)', borderRadius: '8px', padding: '10px 12px', fontSize: '13px' }}>
+                        <div style={{ fontWeight: 600, color: isOverdue ? 'var(--danger)' : 'var(--text)' }}>{r.title}</div>
+                        {r.due_date && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{isOverdue ? '⚠️ ' : '📅 '}{r.due_date}</div>}
+                      </div>
+                    )
+                  })}
+                  {tasks.map(t => (
+                    <div key={t.id} style={{ background: 'var(--bg)', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', borderRight: `3px solid ${PRIORITY_COLOR[t.priority] ?? 'var(--border)'}` }}>
+                      <div style={{ fontWeight: 600 }}>{t.title}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>משימה · {t.priority === 'high' ? '🔴 דחוף' : t.priority === 'medium' ? '🟡 בינוני' : '🟢 נמוך'}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <a href="/reminders" style={{ display: 'block', textAlign: 'center', marginTop: '12px', fontSize: '12px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
+                → כל התזכורות
+              </a>
+            </div>
+          </>
         )}
-        {!loading && total === 0 && (
-          <span style={{ fontSize: '12px', color: 'var(--success)', fontWeight: 400 }}>✓ הכל מטופל</span>
-        )}
-      </a>
+      </>
     )
   }
 
