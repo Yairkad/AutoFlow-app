@@ -1342,6 +1342,17 @@ export default function SettingsClient() {
   const isAdmin  = myRole === 'admin' || myRole === 'super_admin'
   const canVault = myRole === 'super_admin'
 
+  const [driveConnected, setDriveConnected] = useState<boolean | null>(null)
+  useEffect(() => {
+    if (!isAdmin || !tenantId) return
+    fetch(`/api/drive/status?tenant_id=${tenantId}`)
+      .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => setDriveConnected(false))
+    // Handle redirect back from OAuth
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('drive') === 'connected') { setDriveConnected(true); window.history.replaceState({}, '', '/settings') }
+    if (params.get('drive') === 'error') { showToast('שגיאה בחיבור Drive', 'error'); window.history.replaceState({}, '', '/settings') }
+  }, [isAdmin, tenantId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: 'business', label: 'פרטי עסק',    icon: '🏢' },
     { key: 'users',    label: 'משתמשים',      icon: '👥' },
@@ -1370,6 +1381,34 @@ export default function SettingsClient() {
         <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 700 }}>⚙️ הגדרות</h1>
         <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '13px' }}>ניהול עסק, משתמשים והרשאות</p>
       </div>
+
+      {/* Google Drive status — admins only */}
+      {isAdmin && driveConnected !== null && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px',
+          background: driveConnected ? '#f0fdf6' : '#fffbeb',
+          border: `1px solid ${driveConnected ? '#bbf7d0' : '#fcd34d'}`,
+          borderRadius: '10px', padding: '12px 16px',
+        }}>
+          <span style={{ fontSize: '22px' }}>📂</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: '13px' }}>
+              Google Drive — {driveConnected ? '✓ מחובר' : 'לא מחובר'}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              {driveConnected ? 'תמונות ומסמכים מועלים ישירות לדרייב של העסק' : 'חבר כדי להעלות תמונות ומסמכים ישירות מהמערכת'}
+            </div>
+          </div>
+          {!driveConnected && tenantId && (
+            <a
+              href={`/api/drive/auth?tenant_id=${tenantId}`}
+              style={{ padding: '8px 16px', background: '#1a9e5c', color: '#fff', borderRadius: '8px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
+            >
+              חבר Drive →
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Desktop: horizontal scrollable tabs */}
       <div className="settings-desktop-tabs scrollable-tabs" style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '0' }}>

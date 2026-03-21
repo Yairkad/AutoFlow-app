@@ -202,6 +202,11 @@ export default function CarsClient() {
   const [reqFilter,    setReqFilter]    = useState<string>('all')
   const [reqSubTab,    setReqSubTab]    = useState<'buy' | 'sell'>('buy')
 
+  // Drive
+  const [driveConnected, setDriveConnected] = useState(false)
+  const [isAdmin,        setIsAdmin]        = useState(false)
+  const [uploadingIdx,   setUploadingIdx]   = useState<number | null>(null)
+
   // Car form
   const [carModal,   setCarModal]   = useState(false)
   const [editCarId,  setEditCarId]  = useState<string | null>(null)
@@ -248,9 +253,15 @@ export default function CarsClient() {
   const load = useCallback(async () => {
     const { data: { user } } = await sb.auth.getUser()
     if (!user) { setLoading(false); return }
-    const { data: prof } = await sb.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle()
+    const { data: prof } = await sb.from('profiles').select('tenant_id, role').eq('id', user.id).maybeSingle()
     if (!prof) { setLoading(false); return }
     tenantId.current = prof.tenant_id
+    const admin = prof.role === 'admin' || prof.role === 'super_admin'
+    setIsAdmin(admin)
+    if (admin) {
+      fetch(`/api/drive/status?tenant_id=${prof.tenant_id}`)
+        .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => {})
+    }
 
     const [{ data: c }, { data: r }, { data: sr }] = await Promise.all([
       sb.from('cars').select('*').eq('tenant_id', prof.tenant_id).order('created_at', { ascending: false }),
@@ -328,6 +339,29 @@ export default function CarsClient() {
       year:           data.year           ? String(data.year)           : f.year,
       ownership_type: data.ownership      ? String(data.ownership)      : f.ownership_type,
     }))
+  }
+
+  async function uploadPhoto(idx: number, file: File) {
+    setUploadingIdx(idx)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('tenant_id', tenantId.current)
+    fd.append('sub_folder', 'רכבים')
+    if (carForm.plate) fd.append('item_name', carForm.plate)
+    try {
+      const res  = await fetch('/api/drive/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (data.id) {
+        setPhotoUrls(p => p.map((u, i) => i === idx ? data.id : u))
+        toast('התמונה הועלתה ✓', 'success')
+      } else {
+        toast(data.error || 'שגיאה בהעלאה', 'error')
+      }
+    } catch {
+      toast('שגיאת רשת', 'error')
+    } finally {
+      setUploadingIdx(null)
+    }
   }
 
   async function saveCar() {
@@ -1215,10 +1249,13 @@ export default function CarsClient() {
           </Section>
 
           {/* Photos */}
-          <Section title="📷 תמונות (קישורי Google Drive)">
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
-              העלה תמונה ל-Drive ← שתף ← &quot;כל מי שיש לו קישור&quot; ← העתק קישור ← הדבק כאן
-            </div>
+          <Section title="📷 תמונות (Google Drive)">
+            {isAdmin && !driveConnected && (
+              <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span>⚠️ Drive לא מחובר</span>
+                <a href={`/api/drive/auth?tenant_id=${tenantId.current}`} style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'none' }}>חבר עכשיו →</a>
+              </div>
+            )}
             {photoUrls.map((url, i) => (
               <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
                 <input
@@ -1230,11 +1267,28 @@ export default function CarsClient() {
                 {url && driveThumb(url) && (
                   <img src={driveThumb(url)} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }} />
                 )}
+                {/* Upload button — admins + Drive connected */}
+                {isAdmin && driveConnected && (
+                  <label style={{ cursor: 'pointer', flexShrink: 0 }} title="העלה תמונה">
+                    <input
+                      type="file" accept="image/*,application/pdf" style={{ display: 'none' }}
+                      onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(i, f); e.target.value = '' }}
+                    />
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      width: 32, height: 32, borderRadius: 7, border: '1px solid var(--border)',
+                      background: uploadingIdx === i ? '#f0fdf6' : '#f8fafc',
+                      fontSize: 15, cursor: 'pointer',
+                    }}>
+                      {uploadingIdx === i ? '⏳' : '📤'}
+                    </span>
+                  </label>
+                )}
                 <button onClick={() => setPhotoUrls(p => p.filter((_,j) => j!==i))} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 16 }}>✕</button>
               </div>
             ))}
             <button onClick={() => setPhotoUrls(p => [...p, ''])} style={{ fontSize: 12, padding: '5px 14px', border: '1.5px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
-              + הוסף קישור תמונה
+              + הוסף תמונה
             </button>
           </Section>
         </div>
