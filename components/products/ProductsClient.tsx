@@ -522,8 +522,7 @@ export default function ProductsClient() {
                             ? <input style={cellInp} value={String(e.sku ?? '')} onChange={ev => setCell(p.id, 'sku', ev.target.value)} />
                             : p.sku || '—'}
                         </td>
-                        <td style={{ padding: '8px 12px', fontWeight: 700, minWidth: editMode ? '150px' : undefined, maxWidth: editMode ? undefined : '180px', overflow: editMode ? undefined : 'hidden', textOverflow: editMode ? undefined : 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap' }}
-                            title={editMode ? undefined : p.name}>
+                        <td style={{ padding: '8px 12px', fontWeight: 700, minWidth: editMode ? '150px' : '120px', maxWidth: editMode ? undefined : '220px', wordBreak: 'break-word', whiteSpace: editMode ? undefined : 'normal' }}>
                           {editMode
                             ? <input style={cellInp} value={String(e.name ?? '')} onChange={ev => setCell(p.id, 'name', ev.target.value)} />
                             : p.name}

@@ -25,8 +25,11 @@ interface Tire {
   qty: number
   location: string | null
   notes: string | null
+  supplier_id: string | null
   created_at: string
 }
+
+interface Supplier { id: string; name: string }
 
 interface TireMovement {
   id: string
@@ -41,12 +44,14 @@ interface TireMovement {
 const WIDTHS   = [145,155,165,175,185,195,205,215,225,235,245,255,265,275,285,295,305,315]
 const PROFILES = [25,30,35,40,45,50,55,60,65,70,75,80]
 const RIMS     = [13,14,15,16,17,18,19,20,21,22]
+const LOAD_INDICES  = ['60','62','65','67','69','71','73','75','77','80','82','84','85','86','87','88','89','90','91','92','94','95','96','98','99','100','101','102','103','104','105','106','107','108','109','110','112','114','116','118','120','121','122','124','126']
+const SPEED_INDICES = ['B','C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','H','U','V','W','Y','ZR','Z']
 
 const emptyForm = {
   brand: '', width: '', profile: '', rim: '',
   load_idx: '', speed_idx: '',
   cost_price: '', margin: '', sell_price: '',
-  qty: '0', location: '', notes: '',
+  qty: '0', location: '', notes: '', supplier_id: '',
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -79,8 +84,17 @@ export default function TiresClient() {
   const [isAdmin,  setIsAdmin]    = useState(false)
   const [tires, setTires]         = useState<Tire[]>([])
   const [movements, setMovements] = useState<TireMovement[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
 
   const [tab, setTab] = useState<'tires' | 'movements'>('tires')
+
+  // Receiving order modal
+  const [recvOpen,    setRecvOpen]    = useState(false)
+  const [recvSupplier, setRecvSupplier] = useState('')
+  const [recvItems,   setRecvItems]   = useState<{ tireId: string; search: string; qty: string; dropOpen: boolean }[]>([
+    { tireId: '', search: '', qty: '', dropOpen: false }
+  ])
+  const [recvSaving,  setRecvSaving]  = useState(false)
 
   // Filters
   const [search,      setSearch]      = useState('')
@@ -111,13 +125,15 @@ export default function TiresClient() {
   // ── Load ──────────────────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
-    const [{ data: ts }, { data: mvs }] = await Promise.all([
+    const [{ data: ts }, { data: mvs }, { data: sups }] = await Promise.all([
       sb.from('tires').select('*').eq('tenant_id', tenantId.current).order('created_at', { ascending: false }),
       sb.from('tire_sales').select('*').eq('tenant_id', tenantId.current)
         .order('sold_date', { ascending: false }).limit(300),
+      sb.from('suppliers').select('id, name').eq('tenant_id', tenantId.current).order('name'),
     ])
     setTires(ts || [])
     setMovements(mvs || [])
+    setSuppliers(sups || [])
   }, [sb])
 
   useEffect(() => {
@@ -184,6 +200,51 @@ export default function TiresClient() {
       setF('sell_price', (cost * (1 + margin / 100)).toFixed(2))
   }
 
+  function calcMargin(sellStr: string, costStr: string) {
+    const sell = parseFloat(sellStr)
+    const cost = parseFloat(costStr)
+    if (sell > 0 && cost > 0)
+      setF('margin', Math.round((sell / cost - 1) * 100).toFixed(0))
+  }
+
+  function printPriceList() {
+    const rows = filtered.filter(t => t.sell_price)
+    if (rows.length === 0) return showToast('אין צמיגים עם מחיר מכירה לייצוא', 'error')
+    const rowsHTML = rows.map(t => `
+      <tr>
+        <td>${tireSize(t)}</td>
+        <td>${t.brand || '—'}</td>
+        <td style="text-align:center">${t.load_idx || '—'}${t.speed_idx ? ' ' + t.speed_idx : ''}</td>
+        <td style="text-align:center;font-weight:700;color:#1a9e5c">₪${t.sell_price!.toLocaleString('he-IL',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      </tr>`).join('')
+    const html = `<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  @page{size:A4 portrait;margin:12mm}
+  body{font-family:'Heebo',Arial,sans-serif;direction:rtl}
+  h1{font-size:18pt;font-weight:900;margin-bottom:3mm;text-align:center}
+  p{font-size:9pt;color:#666;text-align:center;margin-bottom:5mm}
+  table{width:100%;border-collapse:collapse;font-size:10pt}
+  thead th{background:#1a9e5c;color:#fff;padding:3mm 4mm;text-align:right;font-weight:700}
+  tbody td{padding:2.5mm 4mm;border-bottom:1px solid #e5e7eb}
+  tbody tr:nth-child(even){background:#f9fafb}
+  @media screen{body{background:#f0f0f0;padding:20px}table{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);border-radius:8px;overflow:hidden}}
+</style></head><body>
+<h1>🔘 מחירון צמיגים</h1>
+<p>${new Date().toLocaleDateString('he-IL')} · ${rows.length} פריטים</p>
+<table>
+  <thead><tr><th>מידה</th><th>יצרן</th><th style="text-align:center">מדדים</th><th style="text-align:center">מחיר מכירה</th></tr></thead>
+  <tbody>${rowsHTML}</tbody>
+</table>
+<script>window.onload=function(){window.print()}<\/script>
+</body></html>`
+    const w = window.open('', '_blank')
+    if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
+    w.document.write(html)
+    w.document.close()
+  }
+
   function openAdd() {
     setEditId(null)
     setForm(emptyForm)
@@ -200,6 +261,7 @@ export default function TiresClient() {
       margin: t.margin ? String(t.margin) : '',
       sell_price: t.sell_price != null ? String(t.sell_price) : '',
       qty: String(t.qty), location: t.location || '', notes: t.notes || '',
+      supplier_id: t.supplier_id || '',
     })
     setFormErrs({ width: false, profile: false, rim: false })
     setFormOpen(true)
@@ -213,7 +275,7 @@ export default function TiresClient() {
       cost_price: t.cost_price != null ? String(t.cost_price) : '',
       margin: t.margin ? String(t.margin) : '',
       sell_price: t.sell_price != null ? String(t.sell_price) : '',
-      qty: '0', location: t.location || '', notes: t.notes || '',
+      qty: '0', location: t.location || '', notes: t.notes || '', supplier_id: t.supplier_id || '',
     })
     setFormErrs({ width: false, profile: false, rim: false })
     setFormOpen(true)
@@ -240,9 +302,10 @@ export default function TiresClient() {
       cost_price: form.cost_price !== '' ? parseFloat(form.cost_price) : null,
       margin:     form.margin !== '' ? parseFloat(form.margin) : 0,
       sell_price: form.sell_price !== '' ? parseFloat(form.sell_price) : null,
-      qty:        parseInt(form.qty) || 0,
-      location:   form.location.trim() || null,
-      notes:      form.notes.trim() || null,
+      qty:         parseInt(form.qty) || 0,
+      location:    form.location.trim() || null,
+      notes:       form.notes.trim() || null,
+      supplier_id: form.supplier_id || null,
     }
 
     if (editId) {
@@ -256,6 +319,30 @@ export default function TiresClient() {
     }
     setFormOpen(false)
     setEditId(null)
+    await load()
+  }
+
+  // ── Receiving order ───────────────────────────────────────────────────────────
+
+  async function saveReceiving() {
+    const valid = recvItems.filter(r => r.tireId && parseInt(r.qty) > 0)
+    if (valid.length === 0) return showToast('יש להוסיף לפחות צמיג אחד עם כמות', 'error')
+    setRecvSaving(true)
+    const date = todayISO()
+    await Promise.all(valid.map(async r => {
+      const qty = parseInt(r.qty)
+      await sb.from('tire_sales').insert({
+        tenant_id: tenantId.current, tire_id: r.tireId,
+        qty, sold_date: date, movement_type: 'order',
+      })
+      const tire = tires.find(t => t.id === r.tireId)
+      if (tire) await sb.from('tires').update({ qty: tire.qty + qty }).eq('id', r.tireId)
+    }))
+    setRecvSaving(false)
+    setRecvOpen(false)
+    setRecvItems([{ tireId: '', search: '', qty: '', dropOpen: false }])
+    setRecvSupplier('')
+    showToast(`קולטו ${valid.length} סוגי צמיגים ✓`, 'success')
     await load()
   }
 
@@ -461,7 +548,12 @@ export default function TiresClient() {
           <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🔘 צמיגים</h1>
           {viewOnly && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>מצב צפיה בלבד</div>}
         </div>
-        {!viewOnly && <Button onClick={openAdd}>➕ צמיג חדש</Button>}
+        {!viewOnly && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button variant="outline" onClick={() => setRecvOpen(true)}>📦 הזמנה שהתקבלה</Button>
+            <Button onClick={openAdd}>➕ צמיג חדש</Button>
+          </div>
+        )}
       </div>
 
       {/* Stats */}
@@ -495,22 +587,32 @@ export default function TiresClient() {
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
             <input style={{ ...inp, maxWidth: '220px' }} placeholder="🔍  חיפוש מותג / מידה..."
               value={search} onChange={e => setSearch(e.target.value)} />
-            <input style={{ ...inp, width: '80px' }} type="number" placeholder="רוחב"
-              value={filterWidth} onChange={e => setFilterWidth(e.target.value)} list="fw-list" />
-            <datalist id="fw-list">{WIDTHS.map(w => <option key={w} value={w} />)}</datalist>
-            <input style={{ ...inp, width: '80px' }} type="number" placeholder="פרופיל"
-              value={filterProf} onChange={e => setFilterProf(e.target.value)} list="fp-list" />
-            <datalist id="fp-list">{PROFILES.map(p => <option key={p} value={p} />)}</datalist>
-            <input style={{ ...inp, width: '75px' }} type="number" placeholder="קוטר"
-              value={filterRim} onChange={e => setFilterRim(e.target.value)} list="fr-list" />
-            <datalist id="fr-list">{RIMS.map(r => <option key={r} value={r} />)}</datalist>
+            <select style={{ ...inp, width: '90px' }} value={filterWidth} onChange={e => setFilterWidth(e.target.value)}>
+              <option value=''>רוחב</option>
+              {WIDTHS.map(w => <option key={w} value={w}>{w}</option>)}
+            </select>
+            <select style={{ ...inp, width: '90px' }} value={filterProf} onChange={e => setFilterProf(e.target.value)}>
+              <option value=''>פרופיל</option>
+              {PROFILES.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select style={{ ...inp, width: '85px' }} value={filterRim} onChange={e => setFilterRim(e.target.value)}>
+              <option value=''>קוטר</option>
+              {RIMS.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
             <select style={{ ...inp, width: 'auto' }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
               <option value=''>כל המלאי</option>
               <option value='instock'>במלאי</option>
               <option value='out'>אזל</option>
             </select>
+            {(search || filterWidth || filterProf || filterRim || filterStock) && (
+              <button onClick={() => { setSearch(''); setFilterWidth(''); setFilterProf(''); setFilterRim(''); setFilterStock('') }}
+                style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--danger)', background: '#fef2f2', color: 'var(--danger)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
+                ✕ נקה סינון
+              </button>
+            )}
 
             <div style={{ marginRight: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {!viewOnly && <Button variant="outline" onClick={printPriceList} style={{ fontSize: '13px' }}>🖨️ מחירון</Button>}
               {!viewOnly && <Button variant="outline" onClick={exportExcel} style={{ fontSize: '13px' }}>📊 ייצא Excel</Button>}
               {!viewOnly && (
               <label style={{
@@ -575,11 +677,11 @@ export default function TiresClient() {
                         <td style={{ padding: '8px 12px' }}>
                           {editMode ? (
                             <div style={{ display: 'flex', gap: '4px', minWidth: '180px' }}>
-                              <input style={{ ...cellInp, width: '52px' }} type="number" value={String(e.width ?? '')} onChange={ev => setCell(t.id, 'width', parseInt(ev.target.value) || 0)} list="fw-list-inline" placeholder="רוחב" />
+                              <input style={{ ...cellInp, width: '52px' }} type="number" value={String(e.width ?? '')} onChange={ev => setCell(t.id, 'width', parseInt(ev.target.value) || 0)} placeholder="רוחב" />
                               <span style={{ alignSelf: 'center', color: 'var(--text-muted)' }}>/</span>
-                              <input style={{ ...cellInp, width: '48px' }} type="number" value={String(e.profile ?? '')} onChange={ev => setCell(t.id, 'profile', parseInt(ev.target.value) || 0)} list="fp-list-inline" placeholder="פרופ'" />
+                              <input style={{ ...cellInp, width: '48px' }} type="number" value={String(e.profile ?? '')} onChange={ev => setCell(t.id, 'profile', parseInt(ev.target.value) || 0)} placeholder="פרופ'" />
                               <span style={{ alignSelf: 'center', color: 'var(--text-muted)' }}>R</span>
-                              <input style={{ ...cellInp, width: '44px' }} type="number" value={String(e.rim ?? '')} onChange={ev => setCell(t.id, 'rim', parseInt(ev.target.value) || 0)} list="fr-list-inline" placeholder="קוטר" />
+                              <input style={{ ...cellInp, width: '44px' }} type="number" value={String(e.rim ?? '')} onChange={ev => setCell(t.id, 'rim', parseInt(ev.target.value) || 0)} placeholder="קוטר" />
                             </div>
                           ) : (
                             <span style={{ fontWeight: 900, fontSize: '14px', color: 'var(--accent)', letterSpacing: '0.5px' }}>
@@ -665,9 +767,6 @@ export default function TiresClient() {
               <datalist id="brand-list-inline">
                 {[...new Set(tires.map(t => t.brand).filter(Boolean) as string[])].sort().map(b => <option key={b} value={b} />)}
               </datalist>
-              <datalist id="fw-list-inline">{WIDTHS.map(w => <option key={w} value={w} />)}</datalist>
-              <datalist id="fp-list-inline">{PROFILES.map(p => <option key={p} value={p} />)}</datalist>
-              <datalist id="fr-list-inline">{RIMS.map(r => <option key={r} value={r} />)}</datalist>
             </div>
           </div>
         </>
@@ -874,24 +973,27 @@ export default function TiresClient() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '10px' }}>
               <div>
                 <label style={lbl}>רוחב (מ&quot;מ) <span style={{ color: 'var(--danger)' }}>*</span></label>
-                <select style={inpErr(formErrs.width)} value={form.width}
-                  onChange={e => { setF('width', e.target.value); setFormErrs(p => ({ ...p, width: false })) }}>
+                <select id="f-width" style={inpErr(formErrs.width)} value={form.width}
+                  onChange={e => { setF('width', e.target.value); setFormErrs(p => ({ ...p, width: false })) }}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-profile') as HTMLSelectElement)?.focus() } }}>
                   <option value="">— בחר —</option>
                   {WIDTHS.map(w => <option key={w} value={w}>{w}</option>)}
                 </select>
               </div>
               <div>
                 <label style={lbl}>פרופיל (%) <span style={{ color: 'var(--danger)' }}>*</span></label>
-                <select style={inpErr(formErrs.profile)} value={form.profile}
-                  onChange={e => { setF('profile', e.target.value); setFormErrs(p => ({ ...p, profile: false })) }}>
+                <select id="f-profile" style={inpErr(formErrs.profile)} value={form.profile}
+                  onChange={e => { setF('profile', e.target.value); setFormErrs(p => ({ ...p, profile: false })) }}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-rim') as HTMLSelectElement)?.focus() } }}>
                   <option value="">— בחר —</option>
                   {PROFILES.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
               <div>
                 <label style={lbl}>קוטר (אינץ') <span style={{ color: 'var(--danger)' }}>*</span></label>
-                <select style={inpErr(formErrs.rim)} value={form.rim}
-                  onChange={e => { setF('rim', e.target.value); setFormErrs(p => ({ ...p, rim: false })) }}>
+                <select id="f-rim" style={inpErr(formErrs.rim)} value={form.rim}
+                  onChange={e => { setF('rim', e.target.value); setFormErrs(p => ({ ...p, rim: false })) }}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-brand') as HTMLInputElement)?.focus() } }}>
                   <option value="">— בחר —</option>
                   {RIMS.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
@@ -900,22 +1002,31 @@ export default function TiresClient() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
               <div>
                 <label style={lbl}>מותג</label>
-                <input style={inp} value={form.brand} placeholder="Michelin, Bridgestone..."
+                <input id="f-brand" style={inp} value={form.brand} placeholder="Michelin, Bridgestone..."
                   list="brand-list-modal"
-                  onChange={e => setF('brand', e.target.value)} />
+                  onChange={e => setF('brand', e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-load') as HTMLSelectElement)?.focus() } }} />
                 <datalist id="brand-list-modal">
                   {[...new Set(tires.map(t => t.brand).filter(Boolean) as string[])].sort().map(b => <option key={b} value={b} />)}
                 </datalist>
               </div>
               <div>
                 <label style={lbl}>אינדקס עומס</label>
-                <input style={inp} value={form.load_idx} placeholder="91"
-                  onChange={e => setF('load_idx', e.target.value)} />
+                <select id="f-load" style={inp} value={form.load_idx}
+                  onChange={e => setF('load_idx', e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-speed') as HTMLSelectElement)?.focus() } }}>
+                  <option value="">—</option>
+                  {LOAD_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
               </div>
               <div>
                 <label style={lbl}>אינדקס מהירות</label>
-                <input style={inp} value={form.speed_idx} placeholder="V"
-                  onChange={e => setF('speed_idx', e.target.value)} />
+                <select id="f-speed" style={inp} value={form.speed_idx}
+                  onChange={e => setF('speed_idx', e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-cost') as HTMLInputElement)?.focus() } }}>
+                  <option value="">—</option>
+                  {SPEED_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
               </div>
             </div>
           </div>
@@ -924,11 +1035,9 @@ export default function TiresClient() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
             <div>
               <label style={lbl}>מחיר קנייה (₪ לפני מע&quot;מ)</label>
-              <input style={inp} type="number" value={form.cost_price} min={0} step="0.01" placeholder="0.00"
-                onChange={e => {
-                  setF('cost_price', e.target.value)
-                  calcSellPrice(e.target.value, form.margin)
-                }} />
+              <input id="f-cost" style={inp} type="number" value={form.cost_price} min={0} placeholder="0.00"
+                onChange={e => { setF('cost_price', e.target.value); calcSellPrice(e.target.value, form.margin) }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-margin') as HTMLInputElement)?.focus() } }} />
               {form.cost_price && !isNaN(parseFloat(form.cost_price)) && (
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', display: 'block' }}>
                   כולל מע&quot;מ: ₪{(parseFloat(form.cost_price) * 1.18).toFixed(2)}
@@ -937,16 +1046,15 @@ export default function TiresClient() {
             </div>
             <div>
               <label style={lbl}>% רווח</label>
-              <input style={inp} type="number" value={form.margin} min={0} step="1" placeholder="25"
-                onChange={e => {
-                  setF('margin', e.target.value)
-                  calcSellPrice(form.cost_price, e.target.value)
-                }} />
+              <input id="f-margin" style={inp} type="number" value={form.margin} min={0} placeholder="25"
+                onChange={e => { setF('margin', e.target.value); calcSellPrice(form.cost_price, e.target.value) }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-sell') as HTMLInputElement)?.focus() } }} />
             </div>
             <div>
               <label style={lbl}>מחיר מכירה (₪)</label>
-              <input style={inp} type="number" value={form.sell_price} min={0} step="0.01"
-                onChange={e => setF('sell_price', e.target.value)} />
+              <input id="f-sell" style={inp} type="number" value={form.sell_price} min={0}
+                onChange={e => { setF('sell_price', e.target.value); calcMargin(e.target.value, form.cost_price) }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-qty') as HTMLInputElement)?.focus() } }} />
               {form.sell_price && !isNaN(parseFloat(form.sell_price)) && (
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', display: 'block' }}>
                   לפני מע&quot;מ: ₪{(parseFloat(form.sell_price) / 1.18).toFixed(2)}
@@ -955,20 +1063,105 @@ export default function TiresClient() {
             </div>
             <div>
               <label style={lbl}>כמות במלאי</label>
-              <input style={inp} type="number" value={form.qty} min={0}
-                onChange={e => setF('qty', e.target.value)} />
+              <input id="f-qty" style={inp} type="number" value={form.qty} min={0}
+                onChange={e => setF('qty', e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-location') as HTMLInputElement)?.focus() } }} />
             </div>
             <div>
               <label style={lbl}>מיקום במחסן</label>
-              <input style={inp} value={form.location} placeholder="מדף A3"
-                onChange={e => setF('location', e.target.value)} />
+              <input id="f-location" style={inp} value={form.location} placeholder="מדף A3"
+                onChange={e => setF('location', e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-notes') as HTMLInputElement)?.focus() } }} />
             </div>
             <div>
               <label style={lbl}>הערות</label>
-              <input style={inp} value={form.notes}
+              <input id="f-notes" style={inp} value={form.notes}
                 onChange={e => setF('notes', e.target.value)} />
             </div>
+            {suppliers.length > 0 && (
+              <div>
+                <label style={lbl}>ספק</label>
+                <select style={inp} value={form.supplier_id} onChange={e => setF('supplier_id', e.target.value)}>
+                  <option value="">— ללא ספק —</option>
+                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+            )}
           </div>
+        </div>
+      </Modal>
+
+      {/* ── Receiving Order Modal ── */}
+      <Modal open={recvOpen} onClose={() => setRecvOpen(false)}
+        title="📦 הזמנה שהתקבלה" maxWidth={560}
+        footer={<>
+          <Button variant="secondary" onClick={() => setRecvOpen(false)}>ביטול</Button>
+          <Button onClick={saveReceiving} loading={recvSaving}>💾 קלוט הזמנה</Button>
+        </>}>
+        <div style={{ direction: 'rtl', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {suppliers.length > 0 && (
+            <div>
+              <label style={lbl}>ספק</label>
+              <select style={inp} value={recvSupplier} onChange={e => setRecvSupplier(e.target.value)}>
+                <option value="">— בחר ספק —</option>
+                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: -4 }}>פריטים שהתקבלו:</div>
+
+          {recvItems.map((item, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              {/* Tire selector */}
+              <div style={{ flex: 1, position: 'relative' }}>
+                <input style={{ ...inp, borderColor: item.tireId ? 'var(--primary)' : undefined }}
+                  placeholder="חפש צמיג..."
+                  value={item.search}
+                  autoComplete="off"
+                  onFocus={() => setRecvItems(p => p.map((r, i) => i === idx ? { ...r, dropOpen: true } : r))}
+                  onBlur={() => setTimeout(() => setRecvItems(p => p.map((r, i) => i === idx ? { ...r, dropOpen: false } : r)), 150)}
+                  onChange={e => setRecvItems(p => p.map((r, i) => i === idx ? { ...r, search: e.target.value, tireId: '', dropOpen: true } : r))}
+                />
+                {item.dropOpen && (() => {
+                  const q = item.search.trim().toLowerCase()
+                  const matches = q
+                    ? tires.filter(t => tireSize(t).includes(q) || (t.brand ?? '').toLowerCase().includes(q)).slice(0, 8)
+                    : tires.slice(0, 8)
+                  if (!matches.length) return null
+                  return (
+                    <div style={{ position: 'absolute', top: '100%', right: 0, left: 0, zIndex: 50, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,.12)', marginTop: 2 }}>
+                      {matches.map(t => (
+                        <div key={t.id} onMouseDown={() => setRecvItems(p => p.map((r, i) => i === idx ? { ...r, tireId: t.id, search: (t.brand ? t.brand + ' ' : '') + tireSize(t), dropOpen: false } : r))}
+                          style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 13, display: 'flex', justifyContent: 'space-between' }}
+                          onMouseEnter={ev => (ev.currentTarget.style.background = 'var(--bg)')}
+                          onMouseLeave={ev => (ev.currentTarget.style.background = '')}>
+                          <span>
+                            {t.brand && <span style={{ color: 'var(--text-muted)', fontSize: 11, marginLeft: 6 }}>{t.brand}</span>}
+                            <strong style={{ color: 'var(--accent)' }}>{tireSize(t)}</strong>
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>מלאי: {t.qty}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+              </div>
+              {/* Qty */}
+              <input style={{ ...inp, width: 80 }} type="number" min={1} placeholder="כמות"
+                value={item.qty} onChange={e => setRecvItems(p => p.map((r, i) => i === idx ? { ...r, qty: e.target.value } : r))} />
+              {/* Remove */}
+              {recvItems.length > 1 && (
+                <button onClick={() => setRecvItems(p => p.filter((_, i) => i !== idx))}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 18, paddingTop: 6 }}>✕</button>
+              )}
+            </div>
+          ))}
+
+          <button onClick={() => setRecvItems(p => [...p, { tireId: '', search: '', qty: '', dropOpen: false }])}
+            style={{ alignSelf: 'flex-start', background: 'none', border: '1px dashed var(--border)', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)' }}>
+            + הוסף שורה
+          </button>
         </div>
       </Modal>
     </div>

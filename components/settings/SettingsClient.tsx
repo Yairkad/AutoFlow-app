@@ -729,7 +729,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
     if (stored === hash) {
       setUnlocked(true); setPinInput(''); setPinError(''); load()
     } else {
-      setPinError('קוד שגוי')
+      setPinInput(''); setPinError('קוד שגוי — נסה שנית')
     }
   }
 
@@ -950,20 +950,20 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                   <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '6px' }}>{item.title}</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     {item.username && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-                        <span style={{ color: 'var(--text-muted)', minWidth: '110px' }}>שם משתמש:</span>
-                        <code style={{ flex: 1, direction: 'ltr', fontSize: '12px' }}>{item.username}</code>
-                        <button onClick={() => copyText(item.username!, 'שם משתמש')} style={{ padding: '2px 8px', border: '1px solid var(--border)', borderRadius: '4px', background: 'transparent', cursor: 'pointer', fontSize: '11px' }}>העתק</button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', flexWrap: 'wrap' }}>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '12px', minWidth: '80px' }}>שם משתמש:</span>
+                        <code style={{ flex: 1, minWidth: '80px', direction: 'ltr', fontSize: '12px', wordBreak: 'break-all' }}>{item.username}</code>
+                        <button onClick={() => copyText(item.username!, 'שם משתמש')} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>📋 העתק</button>
                       </div>
                     )}
                     {item.password && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-                        <span style={{ color: 'var(--text-muted)', minWidth: '110px' }}>סיסמא:</span>
-                        <code style={{ flex: 1, direction: 'ltr', fontSize: '12px', letterSpacing: isRevealed ? 'normal' : '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', flexWrap: 'wrap' }}>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '12px', minWidth: '80px' }}>סיסמא:</span>
+                        <code style={{ flex: 1, minWidth: '80px', direction: 'ltr', fontSize: '12px', letterSpacing: isRevealed ? 'normal' : '2px', wordBreak: 'break-all' }}>
                           {isRevealed ? item.password : '•'.repeat(Math.min(item.password.length, 12))}
                         </code>
-                        <button onClick={() => toggleReveal(item.id)} style={{ padding: '2px 8px', border: '1px solid var(--border)', borderRadius: '4px', background: 'transparent', cursor: 'pointer', fontSize: '11px' }}>{isRevealed ? '🙈' : '👁'}</button>
-                        <button onClick={() => copyText(item.password!, 'סיסמא')} style={{ padding: '2px 8px', border: '1px solid var(--border)', borderRadius: '4px', background: 'transparent', cursor: 'pointer', fontSize: '11px' }}>העתק</button>
+                        <button onClick={() => toggleReveal(item.id)} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', flexShrink: 0 }}>{isRevealed ? '🙈 הסתר' : '👁 הצג'}</button>
+                        <button onClick={() => copyText(item.password!, 'סיסמא')} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>📋 העתק</button>
                       </div>
                     )}
                     {item.notes && (

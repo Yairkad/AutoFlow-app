@@ -276,6 +276,132 @@ function printChecklist(copies: number, _car: string, _owner: string, _phone: st
   w.document.close()
 }
 
+// ── printWarranty ─────────────────────────────────────────────────────────────
+// Blank version of inspection Page 1 – identical layout, empty fields for manual fill
+
+function printWarranty(copies: number, bizNameStr: string, logoBase64: string) {
+  const logoHTML = logoBase64
+    ? `<img src="${logoBase64}" class="pp-logo-img" alt="לוגו"/>`
+    : ``
+
+  const pageHTML = `
+  <div class="pp">
+    <div class="pp-bsd">בס"ד</div>
+
+    <div class="pp-hdr">
+      <div class="pp-biz">
+        <div class="pp-biz-name">${bizNameStr}</div>
+      </div>
+      <div class="pp-logo-wrap">
+        ${logoHTML}
+        <div class="pp-logo-svc">מוסך מורשה | פנצ׳רייה | פחחות | מכון בדיקת רכב | כיוון פרונט</div>
+      </div>
+    </div>
+
+    <div class="pp-doc-titles">
+      <h2>הצהרה על-פי הוראת נוהל מחייבת (2/98) של משרד התחבורה למדדים לבדיקת רכב לצרכי קניה ומכירה</h2>
+      <h1>דו"ח קליטה – בדיקת רכב</h1>
+    </div>
+
+    <div class="pp-info-grid">
+      <div class="pp-info-section">
+        <h3>פרטי הלקוח</h3>
+        <div class="pp-info-row"><span>מס׳ רכב:</span><div class="pp-line"></div></div>
+        <div class="pp-info-row"><span>שם הלקוח:</span><div class="pp-line"></div></div>
+        <div class="pp-info-row"><span>כתובת:</span><div class="pp-line"></div></div>
+        <div class="pp-info-row"><span>טלפון:</span><div class="pp-line"></div></div>
+      </div>
+      <div class="pp-info-section">
+        <h3>פרטי הרכב</h3>
+        <div class="pp-info-row"><span>שנת ייצור:</span><div class="pp-line"></div></div>
+        <div class="pp-info-row"><span>תוצר הרכב:</span><div class="pp-line"></div></div>
+        <div class="pp-info-row"><span>ק"מ:</span><div class="pp-line"></div></div>
+        <div class="pp-info-row"><span>מס׳ מנוע:</span><div class="pp-line"></div></div>
+        <div class="pp-info-row"><span>מס׳ שילדה:</span><div class="pp-line"></div></div>
+      </div>
+    </div>
+
+    <div class="pp-legal">
+      אני <span class="pp-blank-wide"></span> ת.ז. <span class="pp-blank-narrow"></span>
+      <br/><br/>
+      מזמין בזאת את בדיקת הרכב אשר פרטיו מפורטים ברישיון הרכב. ידוע לי, כי הבדיקה הינה מכנית בלבד ותפקידה לבדוק את מצבו המכני של הרכב ומערכותיו.
+      <br/><br/>
+      ידוע לי, כי מכון הבדיקה אינו אחראי בכל דרך שהיא לזיופים או שינויים כלשהם בנתונים ו/או במספרים כלשהם ברכב ו/או במסמכיו, לרבות ברישיון הרכב ולתוצאותיהם של הללו, וכי מכון הבדיקה מבצע הבדיקה בכפוף ובהסתמך על הצהרתי זו.
+      <ul class="pp-bullets">
+        <li>יש לבדוק תצרוכת שמן בנסיעה !!</li>
+        <li>אין אחריות על מערכות אלקטרוניות, מחשבי הרכב וכריות אויר !</li>
+        <li>מומלץ לבדוק את רציפות הטיפול לק"מ.</li>
+        <li>מומלץ לבדוק את מקוריות הרכב במשרד הרישוי.</li>
+      </ul>
+      <div class="pp-warn">
+        <h4>⚠️ חשוב ביותר!!!</h4>
+        עם גילוי ליקויים שלא נתגלו בבדיקה – אין אנו אחראים אם התיקון ו/או הבדיקה בוצעו במקום אחר לפני שהרכב נבדק על ידינו שנית.<br/>
+        החברה אינה אחראית על ליקויים או מגרעות אשר לא נתגלו בבדיקה זו כתוצאה מהעלמת ליקויים במתכוון.<br/>
+        דו"ח זה יפה כוחו לגבי מזמין הבדיקה בלבד.
+      </div>
+      <p style="margin-top:8px;font-size:13px;">
+        אני <span style="display:inline-block;width:160px;border-bottom:1px solid #000;vertical-align:bottom"></span>
+        מצהיר/ה בזאת כי הוסברו לי כל הליקויים המתייחסים לדו"ח זה על כל חלקיו.
+      </p>
+    </div>
+
+    <div class="pp-sig">
+      <div class="pp-sig-item"><div class="pp-sig-line"></div><span>תאריך</span></div>
+      <div class="pp-sig-item"><div class="pp-sig-line"></div><span>חתימת מזמין הבדיקה</span></div>
+      <div class="pp-sig-item"><div class="pp-sig-line"></div><span>חתימת הבודק</span></div>
+    </div>
+  </div>`
+
+  const html = `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;900&display=swap');
+    * { box-sizing:border-box; margin:0; padding:0; }
+    @page { size:A4 portrait; margin:0; }
+    body { font-family:'Heebo',Arial,sans-serif; direction:rtl; background:#fff; }
+    .pp { width:210mm; height:296mm; padding:10mm 15mm; display:flex; flex-direction:column; page-break-after:always; }
+    .pp:last-child { page-break-after:avoid; }
+    .pp-bsd { text-align:right; font-weight:bold; font-size:11px; margin-bottom:3px; }
+    .pp-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:4mm; padding-bottom:4mm; border-bottom:2px solid #000; }
+    .pp-biz { font-weight:bold; font-size:13px; line-height:1.4; }
+    .pp-biz-name { font-size:16px; font-weight:900; }
+    .pp-logo-wrap { text-align:center; }
+    .pp-logo-img { max-height:140px; max-width:300px; object-fit:contain; display:block; margin:0 auto; }
+    .pp-logo-svc { font-size:9px; text-align:center; font-weight:bold; margin-top:4px; letter-spacing:0.5px; color:#333; }
+    .pp-doc-titles { text-align:center; margin-bottom:4mm; }
+    .pp-doc-titles h2 { font-size:12px; border-top:1px solid #000; border-bottom:1px solid #000; padding:3px 0; margin:4px 0; font-weight:bold; }
+    .pp-doc-titles h1 { font-size:22px; margin:5px 0; text-decoration:underline; font-weight:900; }
+    .pp-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-bottom:4mm; }
+    .pp-info-section h3 { font-size:16px; border-bottom:2px solid #000; margin-bottom:5px; font-weight:900; }
+    .pp-info-row { display:flex; align-items:baseline; margin-bottom:6px; font-size:14px; }
+    .pp-info-row span { white-space:nowrap; font-weight:600; }
+    .pp-line { border-bottom:1px solid #000; flex-grow:1; margin-right:6px; min-height:1.3em; }
+    .pp-legal { font-size:13.5px; line-height:1.5; text-align:justify; flex-grow:1; }
+    .pp-blank-wide { display:inline-block; border-bottom:1px solid #000; min-width:130px; padding:0 12px; font-weight:bold; vertical-align:bottom; }
+    .pp-blank-narrow { display:inline-block; border-bottom:1px solid #000; min-width:100px; padding:0 12px; font-weight:bold; vertical-align:bottom; }
+    .pp-bullets { margin:8px 0; list-style-type:"❖ "; padding-right:20px; font-weight:bold; font-size:13px; }
+    .pp-bullets li { margin-bottom:3px; }
+    .pp-warn { border:2.5px solid #000; padding:8px 12px; margin:8px 0; background:#f5f5f5; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .pp-warn h4 { margin:0 0 4px 0; text-decoration:underline; font-size:15px; }
+    .pp-sig { margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end; padding-top:8px; border-top:1px dashed #ccc; }
+    .pp-sig-item { width:30%; text-align:center; font-size:13px; }
+    .pp-sig-line { border-bottom:1.5px solid #000; margin-bottom:4px; min-height:1.5em; }
+    @media screen { body { background:#e5e7eb; padding:30px; } .pp { box-shadow:0 4px 32px rgba(0,0,0,.18); background:#fff; } }
+  </style>
+</head>
+<body>
+  ${Array(copies).fill(pageHTML).join('\n')}
+  <script>window.onload=function(){window.print()}<\/script>
+</body></html>`
+
+  const w = window.open('', '_blank')
+  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
+  w.document.write(html)
+  w.document.close()
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function DocumentsClient() {
@@ -298,6 +424,7 @@ export default function DocumentsClient() {
 
   // ── Built-in checklist card state ─────────────────────────────────────────────
   const [clCopies, setClCopies] = useState(1)
+  const [wCopies,  setWCopies]  = useState(1)
 
   // Per-form copies + menu state
   const [copiesMap, setCopiesMap] = useState<Record<string, number>>({})
@@ -330,10 +457,10 @@ export default function DocumentsClient() {
       const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.id).single()
       if (!profile) { setLoading(false); return }
       tenantId.current = profile.tenant_id
-      const { data: settings } = await sb.from('settings').select('business_name, logo_base64').eq('tenant_id', profile.tenant_id).single()
-      if (settings) {
-        bizName.current    = settings.business_name || ''
-        logoBase64.current = settings.logo_base64   || ''
+      const { data: tenant } = await sb.from('tenants').select('name, logo_base64').eq('id', profile.tenant_id).single()
+      if (tenant) {
+        bizName.current    = tenant.name        || ''
+        logoBase64.current = tenant.logo_base64 || ''
       }
       await fetchAll()
     }
@@ -478,6 +605,44 @@ export default function DocumentsClient() {
               variant="primary"
               style={{ marginRight: 'auto' }}
               onClick={() => printChecklist(clCopies, '', '', '', logoBase64.current)}
+            >
+              🖨️ הדפס
+            </Button>
+          </div>
+        </div>
+
+        {/* ── Built-in: תעודת אחריות ── */}
+        <div style={{
+          background: '#fff', borderRadius: 'var(--radius)',
+          boxShadow: 'var(--shadow)', borderRight: '5px solid #d97706',
+          padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+              📋 הצהרת לקוח – בדיקת רכב
+            </div>
+            <span style={{
+              fontSize: 11, fontWeight: 600, padding: '2px 8px',
+              borderRadius: 99, background: '#fffbeb', color: '#d97706',
+              border: '1px solid #d97706',
+            }}>מובנה</span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            עמוד 1 ריק למילוי ידני · הצהרה · פרטי לקוח/רכב · חתימות
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>עותקים:</label>
+            <input
+              type="number" min={1} max={10}
+              value={wCopies}
+              onChange={e => setWCopies(Math.max(1, parseInt(e.target.value) || 1))}
+              style={{ width: 50, padding: '4px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, textAlign: 'center' }}
+            />
+            <Button
+              variant="primary"
+              style={{ marginRight: 'auto', background: '#d97706', borderColor: '#d97706' }}
+              onClick={() => printWarranty(wCopies, bizName.current, logoBase64.current)}
             >
               🖨️ הדפס
             </Button>

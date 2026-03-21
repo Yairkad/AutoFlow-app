@@ -151,8 +151,8 @@ export default function DebtsClient() {
 
   useEffect(() => { loadAll() }, [loadAll])
 
-  // Clear selection on tab change
-  useEffect(() => { setSelectedId(null) }, [tab])
+  // Clear selection + reset filter on tab change
+  useEffect(() => { setSelectedId(null); setFilter('open'); setSearch('') }, [tab])
 
   // ESC to deselect
   useEffect(() => {
@@ -775,7 +775,7 @@ export default function DebtsClient() {
                 <input value={sNotes} onChange={e => setSNotes(e.target.value)} placeholder="פירוט נוסף..." style={inputSt} />
               </label>
             </div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '22px', justifyContent: 'flex-end' }}>
+            <div className="sticky-actions">
               <button onClick={() => setShowSuppModal(false)} style={btnSec}>ביטול</button>
               <button onClick={saveSuppDebt} disabled={sSaving} style={btnPrim}>{sSaving ? 'שומר...' : '💾 שמור'}</button>
             </div>

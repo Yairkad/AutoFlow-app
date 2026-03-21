@@ -28,6 +28,7 @@ interface Inspection {
   owner_id: string | null
   owner_phone: string | null
   owner_address: string | null
+  car_code: string | null
   date: string | null
   inspector: string | null
   findings: string | null
@@ -49,6 +50,7 @@ const emptyForm = {
   plate: '',
   make: '', model: '', year: '', km: '', engine_cc: '', chassis: '',
   owner_name: '', owner_id: '', owner_phone: '', owner_address: '',
+  car_code: '',
 }
 
 function todayStr() {
@@ -257,7 +259,7 @@ function PrintReport({ data }: { data: PrintData }) {
           <div className="pp-info-bar-lbl">טלפון</div>
           <div className="pp-info-bar-val-phone">{ins.owner_phone || ''}</div>
           <div className="pp-info-bar-lbl" style={{ borderLeft: 'none' }}>קוד</div>
-          <div className="pp-info-bar-code" />
+          <div className="pp-info-bar-code">{ins.car_code || ''}</div>
         </div>
 
         <div className="pp-findings-title">פירוט ליקויים והערות:</div>
@@ -425,6 +427,7 @@ export default function InspectionsClient() {
       owner_id:     ins.owner_id    ?? '',
       owner_phone:  ins.owner_phone ?? '',
       owner_address: ins.owner_address ?? '',
+      car_code:     ins.car_code    ?? '',
     })
     setTab('entry')
   }
@@ -457,6 +460,7 @@ export default function InspectionsClient() {
       owner_id:     form.owner_id.trim()       || null,
       owner_phone:  form.owner_phone.trim()    || null,
       owner_address: form.owner_address.trim() || null,
+      car_code:     form.car_code.trim()       || null,
       date:         todayStr(),
       status:       'completed' as const,
     }
@@ -513,6 +517,7 @@ export default function InspectionsClient() {
       owner_id:     form.owner_id.trim()       || null,
       owner_phone:  form.owner_phone.trim()    || null,
       owner_address: form.owner_address.trim() || null,
+      car_code:     form.car_code.trim()       || null,
       date:         todayStr(),
       status:       'completed' as const,
     }
@@ -672,6 +677,7 @@ export default function InspectionsClient() {
                   { key: 'km',        label: "ק\"מ",       placeholder: '100000' },
                   { key: 'engine_cc', label: 'מספר מנוע',  placeholder: '' },
                   { key: 'chassis',   label: 'מספר שלדה',  placeholder: '' },
+                  { key: 'car_code',  label: 'קוד רכב',    placeholder: '' },
                 ].map(({ key, label, placeholder }) => (
                   <div key={key}>
                     <FL>{label}</FL>

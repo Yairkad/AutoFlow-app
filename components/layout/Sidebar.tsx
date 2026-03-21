@@ -34,6 +34,7 @@ export default function Sidebar({
   const pathname = usePathname()
   const sb = useRef(createClient()).current
   const [pressed, setPressed]     = useState<string | null>(null)
+  const [brandPressed, setBrandPressed] = useState(false)
   const [pendingHref, setPendingHref] = useState<string | null>(null)
   const [isAdmin, setIsAdmin]     = useState(false)
   const [modules, setModules]     = useState<string[]>([])
@@ -104,12 +105,18 @@ export default function Sidebar({
       {/* Business branding — links to dashboard */}
       <Link
         href="/dashboard"
+        onMouseDown={() => setBrandPressed(true)}
+        onMouseUp={() => setBrandPressed(false)}
+        onMouseLeave={() => setBrandPressed(false)}
         style={{
           display: 'flex', alignItems: 'center', gap: '10px',
           padding: '12px 14px',
           borderBottom: '1px solid var(--border)',
           marginBottom: '4px',
           textDecoration: 'none', color: 'var(--text)',
+          transition: 'transform .1s, opacity .1s',
+          transform: brandPressed ? 'scale(0.94)' : 'scale(1)',
+          opacity: brandPressed ? 0.8 : 1,
         }}
         title={tenantName || 'AutoFlow — דף ראשי'}
       >

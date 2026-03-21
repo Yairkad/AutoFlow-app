@@ -224,6 +224,9 @@ export default function EmployeesClient() {
   // Employee card 3-dots open
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
+  // Quick bank/personal info view
+  const [bankViewEmp, setBankViewEmp] = useState<Employee | null>(null)
+
   // Bank name dropdown
   const [showBankDrop, setShowBankDrop] = useState(false)
   const bankDropRef = useRef<HTMLDivElement>(null)
@@ -669,6 +672,7 @@ export default function EmployeesClient() {
                 >
                   {[
                     { label: '✏️ עריכה', action: () => { openEdit(e); setOpenMenuId(null) } },
+                    { label: '🏦 פרטי בנק / אישי', action: () => { setBankViewEmp(e); setOpenMenuId(null) } },
                     ...(e.email ? [{ label: '🔗 שלח הזמנה', action: () => { sendInviteLink(e.email!); setOpenMenuId(null) } }] : []),
                     { label: '📋 היסטוריה', action: () => { openHistory(e); setOpenMenuId(null) } },
                     { label: '🗑️ מחק', action: () => { deleteEmp(e); setOpenMenuId(null) }, danger: true },
@@ -1348,6 +1352,95 @@ export default function EmployeesClient() {
           </div>
         )}
       </Modal>
+
+      {/* ── Bank / Personal Quick View ──────────────────────────────────────────── */}
+      {bankViewEmp && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setBankViewEmp(null)}
+        >
+          <div
+            style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', width: 'min(480px, calc(100vw - 32px))', maxHeight: 'calc(100dvh - 60px)', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.2)', direction: 'rtl' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>🏦 פרטי בנק ואישי – {bankViewEmp.full_name}</h3>
+              <button onClick={() => setBankViewEmp(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
+
+            {/* Bank details */}
+            {(bankViewEmp.bank_name || bankViewEmp.bank_account) ? (
+              <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '14px', marginBottom: '14px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>פרטי חשבון בנק</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px' }}>
+                  {bankViewEmp.bank_name && (
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>בנק</div>
+                      <div style={{ fontWeight: 700 }}>{bankViewEmp.bank_name}</div>
+                    </div>
+                  )}
+                  {bankViewEmp.bank_branch && (
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>סניף</div>
+                      <div style={{ fontWeight: 700 }}>{bankViewEmp.bank_branch}</div>
+                    </div>
+                  )}
+                  {bankViewEmp.bank_account && (
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>מספר חשבון</div>
+                      <div style={{ fontWeight: 700, direction: 'ltr', textAlign: 'right' }}>{bankViewEmp.bank_account}</div>
+                    </div>
+                  )}
+                  {bankViewEmp.bank_holder && (
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>שם בעל החשבון</div>
+                      <div style={{ fontWeight: 700 }}>{bankViewEmp.bank_holder}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div style={{ color: 'var(--text-muted)', fontSize: '13px', padding: '12px', background: 'var(--bg)', borderRadius: '8px', marginBottom: '14px', textAlign: 'center' }}>
+                לא הוזנו פרטי בנק לעובד זה
+              </div>
+            )}
+
+            {/* Personal details */}
+            {(bankViewEmp.id_number || bankViewEmp.birth_date || bankViewEmp.address) && (
+              <div style={{ background: '#f9fafb', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>פרטים אישיים</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px' }}>
+                  {bankViewEmp.id_number && (
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>תעודת זהות</div>
+                      <div style={{ fontWeight: 700 }}>{bankViewEmp.id_number}</div>
+                    </div>
+                  )}
+                  {bankViewEmp.birth_date && (
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>תאריך לידה</div>
+                      <div style={{ fontWeight: 700 }}>{bankViewEmp.birth_date}</div>
+                    </div>
+                  )}
+                  {bankViewEmp.address && (
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>כתובת</div>
+                      <div style={{ fontWeight: 700 }}>{bankViewEmp.address}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginTop: '16px', textAlign: 'center' }}>
+              <button
+                onClick={() => { openEdit(bankViewEmp); setBankViewEmp(null) }}
+                style={{ padding: '8px 20px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+              >✏️ עריכה מלאה</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

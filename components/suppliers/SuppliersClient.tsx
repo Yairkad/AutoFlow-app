@@ -10,6 +10,7 @@ interface Supplier {
   id: string
   tenant_id: string
   name: string
+  category: string | null
   contact_name: string | null
   phone: string | null
   email: string | null
@@ -41,6 +42,31 @@ interface InvoiceEntry {
   amount: number
   description?: string
 }
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const SUPPLIER_CATEGORIES = [
+  'חלפים', 'צמיגים', 'שירות ותחזוקה', 'גרר / חילוץ', 'ביטוח',
+  'עיצוב / טיפול חיצוני', 'טכנולוגיה / תוכנה', 'שיווק ופרסום', 'אחר',
+]
+
+const ISRAELI_BANKS: { name: string; code: string }[] = [
+  { name: 'בנק לאומי',                   code: '10' },
+  { name: 'בנק דיסקונט',                 code: '11' },
+  { name: 'בנק הפועלים',                 code: '12' },
+  { name: 'בנק אגוד',                    code: '13' },
+  { name: 'בנק אוצר החייל',              code: '14' },
+  { name: 'בנק מרכנתיל דיסקונט',         code: '17' },
+  { name: 'בנק מזרחי טפחות',             code: '20' },
+  { name: 'סיטיבנק',                     code: '22' },
+  { name: 'HSBC',                        code: '23' },
+  { name: 'בנק יהב',                     code: '04' },
+  { name: 'בנק הדואר',                   code: '09' },
+  { name: 'בנק ירושלים',                 code: '54' },
+  { name: 'הבנק הבינלאומי הראשון',        code: '31' },
+  { name: 'בנק פועלי אגודת ישראל',        code: '40' },
+  { name: 'ONE ZERO',                    code: '39' },
+]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -118,10 +144,12 @@ export default function SuppliersClient() {
   const [fEmail, setFEmail]       = useState('')
   const [fAddress, setFAddress]   = useState('')
   const [fNotes, setFNotes]       = useState('')
+  const [fCategory, setFCategory]             = useState('')
   const [fBankName, setFBankName]             = useState('')
   const [fBankBranch, setFBankBranch]         = useState('')
   const [fBankAccount, setFBankAccount]       = useState('')
   const [fBankHolder, setFBankHolder]         = useState('')
+  const [showBankDrop, setShowBankDrop]       = useState(false)
   const [saving, setSaving]       = useState(false)
 
   // ── Tenant ─────────────────────────────────────────────────────────────────
@@ -171,16 +199,17 @@ export default function SuppliersClient() {
   const openModal = (s?: Supplier) => {
     if (s) {
       setEditItem(s)
-      setFName(s.name); setFContact(s.contact_name ?? ''); setFPhone(s.phone ?? '')
+      setFName(s.name); setFCategory(s.category ?? ''); setFContact(s.contact_name ?? ''); setFPhone(s.phone ?? '')
       setFEmail(s.email ?? ''); setFAddress(s.address ?? ''); setFNotes(s.notes ?? '')
       setFBankName(s.bank_name ?? ''); setFBankBranch(s.bank_branch ?? '')
       setFBankAccount(s.bank_account ?? ''); setFBankHolder(s.bank_account_holder ?? '')
     } else {
       setEditItem(null)
-      setFName(''); setFContact(''); setFPhone('')
+      setFName(''); setFCategory(''); setFContact(''); setFPhone('')
       setFEmail(''); setFAddress(''); setFNotes('')
       setFBankName(''); setFBankBranch(''); setFBankAccount(''); setFBankHolder('')
     }
+    setShowBankDrop(false)
     setShowModal(true)
   }
 
@@ -191,6 +220,7 @@ export default function SuppliersClient() {
     const row = {
       tenant_id: tid,
       name: fName.trim(),
+      category: fCategory.trim() || null,
       contact_name: fContact.trim() || null,
       phone: fPhone.trim() || null,
       email: fEmail.trim() || null,
@@ -297,7 +327,7 @@ export default function SuppliersClient() {
       <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
 
         {/* ── Suppliers list ── */}
-        <div style={{ flex: selected ? '0 0 360px' : '1', minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
               <div style={{ fontSize: '52px', marginBottom: '12px' }}>🏭</div>
@@ -338,7 +368,14 @@ export default function SuppliersClient() {
 
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '2px' }}>{s.name}</div>
+                      <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {s.name}
+                        {s.category && (
+                          <span style={{ fontSize: '10px', background: '#ede9fe', color: '#7c3aed', padding: '1px 7px', borderRadius: '20px', fontWeight: 600, flexShrink: 0 }}>
+                            {s.category}
+                          </span>
+                        )}
+                      </div>
                       <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                         {s.contact_name && <span>👤 {s.contact_name}</span>}
                         {s.phone && <span>📞 {s.phone}</span>}
@@ -419,9 +456,16 @@ export default function SuppliersClient() {
               </div>
               <div style={{ flex: 1 }}>
                 <h2 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 800 }}>{selected.name}</h2>
-                {selected.contact_name && (
-                  <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>👤 {selected.contact_name}</div>
-                )}
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {selected.category && (
+                    <span style={{ fontSize: '11px', background: '#ede9fe', color: '#7c3aed', padding: '2px 8px', borderRadius: '20px', fontWeight: 600 }}>
+                      {selected.category}
+                    </span>
+                  )}
+                  {selected.contact_name && (
+                    <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>👤 {selected.contact_name}</div>
+                  )}
+                </div>
               </div>
               {/* WhatsApp button in panel header */}
               {selected.phone && (
@@ -566,10 +610,19 @@ export default function SuppliersClient() {
               {editItem ? '✏️ עריכת ספק' : '+ ספק חדש'}
             </h3>
             <div style={{ display: 'grid', gap: '14px' }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                שם ספק *
-                <input value={fName} onChange={e => setFName(e.target.value)} placeholder="שם החברה / הספק" style={inputSt} />
-              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                  שם ספק *
+                  <input value={fName} onChange={e => setFName(e.target.value)} placeholder="שם החברה / הספק" style={inputSt} />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                  קטגוריה
+                  <select value={fCategory} onChange={e => setFCategory(e.target.value)} style={inputSt}>
+                    <option value="">— בחר קטגוריה —</option>
+                    {SUPPLIER_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </label>
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   איש קשר
@@ -600,9 +653,50 @@ export default function SuppliersClient() {
                   פרטי חשבון לתשלום
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  {/* Bank name with auto-detect dropdown */}
                   <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                     בנק
-                    <input value={fBankName} onChange={e => setFBankName(e.target.value)} placeholder="בנק לאומי, הפועלים..." style={inputSt} />
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        value={fBankName}
+                        placeholder="התחל להקליד..."
+                        style={{ ...inputSt, paddingLeft: '32px' }}
+                        onFocus={() => setShowBankDrop(true)}
+                        onBlur={() => setTimeout(() => setShowBankDrop(false), 150)}
+                        onChange={e => { setFBankName(e.target.value); setShowBankDrop(true) }}
+                      />
+                      {/* Arrow toggle */}
+                      <button
+                        type="button"
+                        onMouseDown={e => { e.preventDefault(); setShowBankDrop(v => !v) }}
+                        style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '30px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >▼</button>
+                      {/* Bank code badge */}
+                      {ISRAELI_BANKS.find(b => b.name === fBankName) && (
+                        <span style={{ position: 'absolute', left: '34px', top: '50%', transform: 'translateY(-50%)', background: '#e8f5ee', color: 'var(--primary)', fontSize: '11px', fontWeight: 700, padding: '2px 6px', borderRadius: '6px', pointerEvents: 'none' }}>
+                          {ISRAELI_BANKS.find(b => b.name === fBankName)!.code}
+                        </span>
+                      )}
+                      {/* Dropdown */}
+                      {showBankDrop && (
+                        <div style={{ position: 'absolute', top: '100%', right: 0, left: 0, zIndex: 300, background: '#fff', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.12)', maxHeight: '200px', overflowY: 'auto', marginTop: '2px' }}>
+                          {ISRAELI_BANKS
+                            .filter(b => !fBankName || b.name.includes(fBankName) || fBankName === b.name)
+                            .map(b => (
+                              <div
+                                key={b.code + b.name}
+                                onMouseDown={e => { e.preventDefault(); setFBankName(b.name); setShowBankDrop(false) }}
+                                style={{ padding: '9px 12px', cursor: 'pointer', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: fBankName === b.name ? '#f0fdf4' : undefined }}
+                                onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                                onMouseLeave={e => (e.currentTarget.style.background = fBankName === b.name ? '#f0fdf4' : '')}
+                              >
+                                <span>{b.name}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>{b.code}</span>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
                   </label>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                     סניף
@@ -619,7 +713,7 @@ export default function SuppliersClient() {
                 </div>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '22px', justifyContent: 'flex-end' }}>
+            <div className="sticky-actions">
               <button onClick={() => setShowModal(false)} style={btnSec}>ביטול</button>
               <button onClick={saveSupplier} disabled={saving} style={btnPrim}>
                 {saving ? 'שומר...' : '💾 שמור'}
