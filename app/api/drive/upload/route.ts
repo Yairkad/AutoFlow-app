@@ -9,6 +9,7 @@ export async function POST(req: Request) {
     const tenantId  = formData.get('tenant_id') as string | null
     const subFolder = formData.get('sub_folder') as string | null   // e.g. 'רכבים'
     const itemName  = formData.get('item_name')  as string | null   // e.g. plate number
+    const directFolderId = formData.get('folder_id') as string | null  // direct folder ID (bypass sub_folder logic)
 
     if (!file || !tenantId) {
       return NextResponse.json({ error: 'Missing file or tenant_id' }, { status: 400 })
@@ -31,14 +32,16 @@ export async function POST(req: Request) {
     }
 
     const accessToken = await getAccessToken(tenant.drive_refresh_token)
-    let targetFolderId = tenant.drive_root_folder_id
+    let targetFolderId = directFolderId || tenant.drive_root_folder_id
 
-    // Navigate to sub-folder (e.g. רכבים → plate)
-    if (subFolder && targetFolderId) {
-      targetFolderId = await getOrCreateFolder(accessToken, subFolder, targetFolderId)
-    }
-    if (itemName && targetFolderId) {
-      targetFolderId = await getOrCreateFolder(accessToken, itemName, targetFolderId)
+    if (!directFolderId) {
+      // Navigate to sub-folder (e.g. רכבים → plate)
+      if (subFolder && targetFolderId) {
+        targetFolderId = await getOrCreateFolder(accessToken, subFolder, targetFolderId)
+      }
+      if (itemName && targetFolderId) {
+        targetFolderId = await getOrCreateFolder(accessToken, itemName, targetFolderId)
+      }
     }
 
     // Upload

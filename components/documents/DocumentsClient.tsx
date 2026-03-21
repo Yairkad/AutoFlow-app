@@ -279,7 +279,7 @@ function printChecklist(copies: number, _car: string, _owner: string, _phone: st
 // ── printWarranty ─────────────────────────────────────────────────────────────
 // Blank version of inspection Page 1 – identical layout, empty fields for manual fill
 
-function printWarranty(copies: number, bizNameStr: string, logoBase64: string) {
+function printWarranty(copies: number, bizNameStr: string, logoBase64: string, subTitle: string, phone: string, address: string, license: string) {
   const logoHTML = logoBase64
     ? `<img src="${logoBase64}" class="pp-logo-img" alt="לוגו"/>`
     : ``
@@ -291,6 +291,10 @@ function printWarranty(copies: number, bizNameStr: string, logoBase64: string) {
     <div class="pp-hdr">
       <div class="pp-biz">
         <div class="pp-biz-name">${bizNameStr}</div>
+        ${subTitle  ? `<div style="font-size:12px">${subTitle}</div>`  : ''}
+        ${address   ? `<div>${address}</div>`   : ''}
+        ${phone     ? `<div>טל׳: ${phone}</div>` : ''}
+        ${license   ? `<div>מס׳ רישיון מוסך: ${license}</div>` : ''}
       </div>
       <div class="pp-logo-wrap">
         ${logoHTML}
@@ -408,6 +412,10 @@ export default function DocumentsClient() {
   const sb         = useRef(createClient()).current
   const tenantId   = useRef<string>('')
   const bizName    = useRef<string>('')
+  const bizSubTitle    = useRef<string>('')
+  const bizPhone       = useRef<string>('')
+  const bizAddress     = useRef<string>('')
+  const bizLicense     = useRef<string>('')
   const logoBase64 = useRef<string>('')
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
@@ -430,11 +438,18 @@ export default function DocumentsClient() {
   const [wCopies,  setWCopies]  = useState(1)
 
   // ── Drive state ───────────────────────────────────────────────────────────────
+  type DriveItem = { id: string; name: string; mimeType: string; size?: string; createdTime?: string; thumbnailLink?: string; webViewLink?: string }
   const [driveConnected,  setDriveConnected]  = useState(false)
-  const [driveFiles,      setDriveFiles]      = useState<{id:string;name:string;mimeType:string;size?:string;createdTime?:string;thumbnailLink?:string;webViewLink?:string}[]>([])
+  const [driveItems,      setDriveItems]      = useState<DriveItem[]>([])
   const [driveLoading,    setDriveLoading]    = useState(false)
   const [driveUploading,  setDriveUploading]  = useState(false)
   const [driveDeletingId, setDriveDeletingId] = useState<string|null>(null)
+  // folder navigation: stack of {id, name}
+  const [folderStack,     setFolderStack]     = useState<{id:string;name:string}[]>([])
+  const rootDocsFolderId  = useRef<string>('')   // id of מסמכים folder
+  const [newFolderMode,   setNewFolderMode]   = useState(false)
+  const [newFolderName,   setNewFolderName]   = useState('')
+  const [creatingFolder,  setCreatingFolder]  = useState(false)
 
   // Per-form copies + menu state
   const [copiesMap, setCopiesMap] = useState<Record<string, number>>({})
@@ -467,10 +482,14 @@ export default function DocumentsClient() {
       const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.id).single()
       if (!profile) { setLoading(false); return }
       tenantId.current = profile.tenant_id
-      const { data: tenant } = await sb.from('tenants').select('name, logo_base64').eq('id', profile.tenant_id).single()
+      const { data: tenant } = await sb.from('tenants').select('name, sub_title, phone, address, license_number, logo_base64').eq('id', profile.tenant_id).single()
       if (tenant) {
-        bizName.current    = tenant.name        || ''
-        logoBase64.current = tenant.logo_base64 || ''
+        bizName.current     = tenant.name            || ''
+        bizSubTitle.current = tenant.sub_title       || ''
+        bizPhone.current    = tenant.phone           || ''
+        bizAddress.current  = tenant.address         || ''
+        bizLicense.current  = tenant.license_number  || ''
+        logoBase64.current  = tenant.logo_base64     || ''
       }
       fetch(`/api/drive/status?tenant_id=${profile.tenant_id}`)
         .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => {})
@@ -481,25 +500,54 @@ export default function DocumentsClient() {
 
   // ── Drive file helpers ────────────────────────────────────────────────────────
 
-  const loadDriveFiles = useCallback(async () => {
+  const currentFolderId = useCallback(() => {
+    return folderStack.length > 0
+      ? folderStack[folderStack.length - 1].id
+      : rootDocsFolderId.current
+  }, [folderStack])
+
+  const loadDriveFiles = useCallback(async (folderId?: string) => {
     if (!tenantId.current) return
     setDriveLoading(true)
     try {
-      const res = await fetch(`/api/drive/files?tenant_id=${tenantId.current}&sub_folder=מסמכים`)
-      const { files } = await res.json()
-      setDriveFiles(files ?? [])
+      const id = folderId ?? (folderStack.length > 0 ? folderStack[folderStack.length - 1].id : '')
+      const url = id
+        ? `/api/drive/files?tenant_id=${tenantId.current}&folder_id=${id}`
+        : `/api/drive/files?tenant_id=${tenantId.current}&sub_folder=מסמכים`
+      const res  = await fetch(url)
+      const data = await res.json()
+      if (!id && data.folderId) rootDocsFolderId.current = data.folderId
+      setDriveItems(data.files ?? [])
     } catch { /* ignore */ }
     setDriveLoading(false)
-  }, [])
+  }, [folderStack])
+
+  const navigateInto = (item: {id:string;name:string}) => {
+    setFolderStack(p => [...p, item])
+    loadDriveFiles(item.id)
+  }
+
+  const navigateBack = () => {
+    const newStack = folderStack.slice(0, -1)
+    setFolderStack(newStack)
+    const parentId = newStack.length > 0 ? newStack[newStack.length - 1].id : rootDocsFolderId.current
+    loadDriveFiles(parentId)
+  }
 
   const uploadDriveFile = async (file: File) => {
     if (!tenantId.current) return
     setDriveUploading(true)
     try {
+      const targetId = currentFolderId() || rootDocsFolderId.current
       const fd = new FormData()
       fd.append('file', file)
       fd.append('tenant_id', tenantId.current)
-      fd.append('sub_folder', 'מסמכים')
+      if (targetId) {
+        // upload directly to folder id via a custom field
+        fd.append('folder_id', targetId)
+      } else {
+        fd.append('sub_folder', 'מסמכים')
+      }
       const res = await fetch('/api/drive/upload', { method: 'POST', body: fd })
       if (!res.ok) throw new Error()
       showToast('הקובץ הועלה ✓', 'success')
@@ -519,9 +567,28 @@ export default function DocumentsClient() {
         body: JSON.stringify({ tenant_id: tenantId.current, file_id: fileId }),
       })
       showToast('נמחק', 'success')
-      setDriveFiles(p => p.filter(f => f.id !== fileId))
+      setDriveItems(p => p.filter(f => f.id !== fileId))
     } catch { showToast('שגיאה במחיקה', 'error') }
     setDriveDeletingId(null)
+  }
+
+  const createDriveFolder = async () => {
+    if (!newFolderName.trim() || !tenantId.current) return
+    setCreatingFolder(true)
+    const parentId = currentFolderId() || rootDocsFolderId.current
+    try {
+      const res = await fetch('/api/drive/files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenantId.current, parent_id: parentId, name: newFolderName.trim() }),
+      })
+      if (!res.ok) throw new Error()
+      showToast('תיקיה נוצרה ✓', 'success')
+      setNewFolderName('')
+      setNewFolderMode(false)
+      loadDriveFiles()
+    } catch { showToast('שגיאה ביצירת תיקיה', 'error') }
+    setCreatingFolder(false)
   }
 
   // ── Template CRUD ─────────────────────────────────────────────────────────────
@@ -650,7 +717,7 @@ export default function DocumentsClient() {
           ['templates', '📄 תבניות הדפסה'],
           ['drive',     '📂 קבצים בדרייב'],
         ] as const).map(([key, label]) => (
-          <button key={key} onClick={() => { setDocTab(key); if (key === 'drive') loadDriveFiles() }}
+          <button key={key} onClick={() => { setDocTab(key); if (key === 'drive') { setFolderStack([]); loadDriveFiles('') } }}
             style={{
               padding: '9px 22px', border: 'none', background: 'none', cursor: 'pointer',
               fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
@@ -671,53 +738,97 @@ export default function DocumentsClient() {
               <div style={{ fontWeight: 700, marginBottom: 8 }}>Google Drive לא מחובר</div>
               <a href="/settings" style={{ color: 'var(--primary)', fontSize: 13 }}>חבר מהגדרות ←</a>
             </div>
-          ) : driveLoading ? (
-            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>טוען קבצים...</div>
-          ) : driveFiles.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
-              <div style={{ fontWeight: 700 }}>אין קבצים עדיין</div>
-              <div style={{ fontSize: 13, marginTop: 6 }}>העלה קובץ עם הכפתור למעלה</div>
-            </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14 }}>
-              {driveFiles.map(file => {
-                const isImage = file.mimeType?.startsWith('image/')
-                const isPdf   = file.mimeType === 'application/pdf'
-                return (
-                  <div key={file.id} style={{
-                    background: '#fff', borderRadius: 'var(--radius)',
-                    boxShadow: 'var(--shadow)', border: '1px solid var(--border)',
-                    overflow: 'hidden', display: 'flex', flexDirection: 'column',
-                  }}>
-                    {/* Preview */}
-                    <a href={file.webViewLink} target="_blank" rel="noreferrer" style={{ display: 'block', height: 130, background: 'var(--bg)', position: 'relative' }}>
-                      {isImage && file.thumbnailLink
-                        ? <img src={`https://drive.google.com/thumbnail?id=${file.id}&sz=w400`} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 48 }}>
-                            {isPdf ? '📄' : '📎'}
-                          </div>
-                      }
-                    </a>
-                    {/* Info + actions */}
-                    <div style={{ padding: '10px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, wordBreak: 'break-word', lineHeight: 1.3 }}>{file.name}</div>
-                      {file.size && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{(parseInt(file.size)/1024).toFixed(0)} KB</div>}
-                      <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                        <a href={file.webViewLink} target="_blank" rel="noreferrer"
-                          style={{ flex: 1, textAlign: 'center', fontSize: 12, padding: '5px 0', background: 'var(--bg)', borderRadius: 6, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}
-                        >🔗 פתח</a>
-                        <button
-                          onClick={() => deleteDriveFile(file.id, file.name)}
-                          disabled={driveDeletingId === file.id}
-                          style={{ padding: '5px 10px', background: 'none', border: '1px solid var(--danger)', borderRadius: 6, color: 'var(--danger)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
-                        >{driveDeletingId === file.id ? '...' : '🗑️'}</button>
-                      </div>
-                    </div>
+            <>
+              {/* Breadcrumb + actions bar */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+                {/* Back button */}
+                {folderStack.length > 0 && (
+                  <button onClick={navigateBack} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+                    ← חזור
+                  </button>
+                )}
+                {/* Breadcrumb path */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-muted)', flex: 1 }}>
+                  <span style={{ color: 'var(--primary)', fontWeight: 600 }}>מסמכים</span>
+                  {folderStack.map((f, i) => (
+                    <span key={f.id}>
+                      <span style={{ margin: '0 2px' }}>/</span>
+                      <span style={{ color: i === folderStack.length - 1 ? 'var(--text)' : 'var(--primary)', fontWeight: 600 }}>{f.name}</span>
+                    </span>
+                  ))}
+                </div>
+                {/* New folder */}
+                {newFolderMode ? (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      autoFocus
+                      value={newFolderName}
+                      onChange={e => setNewFolderName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') createDriveFolder(); if (e.key === 'Escape') { setNewFolderMode(false); setNewFolderName('') } }}
+                      placeholder="שם תיקיה..."
+                      style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', width: 140 }}
+                    />
+                    <button onClick={createDriveFolder} disabled={creatingFolder || !newFolderName.trim()} style={{ padding: '6px 12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      {creatingFolder ? '...' : '✓'}
+                    </button>
+                    <button onClick={() => { setNewFolderMode(false); setNewFolderName('') }} style={{ padding: '6px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
                   </div>
-                )
-              })}
-            </div>
+                ) : (
+                  <button onClick={() => setNewFolderMode(true)} style={{ padding: '6px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+                    📁 תיקיה חדשה
+                  </button>
+                )}
+              </div>
+
+              {driveLoading ? (
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>טוען...</div>
+              ) : driveItems.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
+                  <div style={{ fontWeight: 700 }}>תיקיה ריקה</div>
+                  <div style={{ fontSize: 13, marginTop: 6 }}>העלה קובץ או צור תיקיה חדשה</div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+                  {driveItems.map(item => {
+                    const isFolder = item.mimeType === 'application/vnd.google-apps.folder'
+                    const isImage  = item.mimeType?.startsWith('image/')
+                    const isPdf    = item.mimeType === 'application/pdf'
+                    if (isFolder) return (
+                      <div key={item.id}
+                        onClick={() => navigateInto({ id: item.id, name: item.name })}
+                        style={{ background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', border: '1px solid var(--border)', padding: '18px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
+                      >
+                        <span style={{ fontSize: 28 }}>📁</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, wordBreak: 'break-word' }}>{item.name}</span>
+                      </div>
+                    )
+                    return (
+                      <div key={item.id} style={{ background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', border: '1px solid var(--border)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        <a href={item.webViewLink} target="_blank" rel="noreferrer" style={{ display: 'block', height: 110, background: 'var(--bg)' }}>
+                          {isImage
+                            ? <img src={`https://drive.google.com/thumbnail?id=${item.id}&sz=w400`} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 40 }}>{isPdf ? '📄' : '📎'}</div>
+                          }
+                        </a>
+                        <div style={{ padding: '8px 10px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, wordBreak: 'break-word', lineHeight: 1.3 }}>{item.name}</div>
+                          {item.size && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{(parseInt(item.size)/1024).toFixed(0)} KB</div>}
+                          <div style={{ display: 'flex', gap: 5, marginTop: 4 }}>
+                            <a href={item.webViewLink} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center', fontSize: 11, padding: '4px 0', background: 'var(--bg)', borderRadius: 6, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>🔗 פתח</a>
+                            <button onClick={() => deleteDriveFile(item.id, item.name)} disabled={driveDeletingId === item.id}
+                              style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--danger)', borderRadius: 6, color: 'var(--danger)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              {driveDeletingId === item.id ? '...' : '🗑️'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -794,7 +905,7 @@ export default function DocumentsClient() {
             <Button
               variant="primary"
               style={{ marginRight: 'auto' }}
-              onClick={() => printWarranty(wCopies, bizName.current, logoBase64.current)}
+              onClick={() => printWarranty(wCopies, bizName.current, logoBase64.current, bizSubTitle.current, bizPhone.current, bizAddress.current, bizLicense.current)}
             >
               🖨️ הדפס
             </Button>
