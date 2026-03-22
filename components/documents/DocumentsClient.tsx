@@ -446,7 +446,8 @@ export default function DocumentsClient() {
   const [driveDeletingId, setDriveDeletingId] = useState<string|null>(null)
   // folder navigation: stack of {id, name}
   const [folderStack,     setFolderStack]     = useState<{id:string;name:string}[]>([])
-  const rootDocsFolderId  = useRef<string>('')   // id of מסמכים folder
+  const rootDocsFolderId  = useRef<string>('')
+  const [docsFolderReady, setDocsFolderReady] = useState(false)
   const [newFolderMode,   setNewFolderMode]   = useState(false)
   const [newFolderName,   setNewFolderName]   = useState('')
   const [creatingFolder,  setCreatingFolder]  = useState(false)
@@ -516,7 +517,7 @@ export default function DocumentsClient() {
         : `/api/drive/files?tenant_id=${tenantId.current}&sub_folder=מסמכים`
       const res  = await fetch(url)
       const data = await res.json()
-      if (!id && data.folderId) rootDocsFolderId.current = data.folderId
+      if (!id && data.folderId) { rootDocsFolderId.current = data.folderId; setDocsFolderReady(true) }
       setDriveItems(data.files ?? [])
     } catch { /* ignore */ }
     setDriveLoading(false)
@@ -574,7 +575,7 @@ export default function DocumentsClient() {
 
   const createDriveFolder = async () => {
     if (!newFolderName.trim() || !tenantId.current) return
-    if (!rootDocsFolderId.current) {
+    if (!docsFolderReady || !rootDocsFolderId.current) {
       showToast('עדיין טוען... נסה שוב', 'error')
       loadDriveFiles('')
       return
@@ -784,7 +785,7 @@ export default function DocumentsClient() {
                     <button onClick={() => { setNewFolderMode(false); setNewFolderName('') }} style={{ padding: '6px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
                   </div>
                 ) : (
-                  <button onClick={() => setNewFolderMode(true)} disabled={driveLoading || !rootDocsFolderId.current} style={{ padding: '6px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, opacity: driveLoading ? 0.5 : 1 }}>
+                  <button onClick={() => setNewFolderMode(true)} disabled={driveLoading || !docsFolderReady} style={{ padding: '6px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, opacity: driveLoading ? 0.5 : 1 }}>
                     📁 תיקיה חדשה
                   </button>
                 )}
