@@ -245,32 +245,72 @@ export default function DashboardStats() {
 
   const profit = stats.incomeMonth - stats.expensesMonth
 
+  const cardGrid: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '12px',
+  }
+
+  const sectionLabel = (icon: string, title: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, marginTop: 4 }}>
+      <span style={{ fontSize: 15 }}>{icon}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{title}</span>
+      <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+    </div>
+  )
+
+  const showFinance = can('income', 'expenses', 'debts', 'products', 'employees')
+  const showTires   = can('tires', 'tires_view', 'alignment')
+  const showCars    = can('cars', 'inspections')
+
   return (
-    <div className="stats-grid" style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(3, 1fr)',
-      gridAutoRows: 'minmax(90px, 130px)',
-      gap: '16px',
-      alignContent: 'start',
-    }}>
-      {can('income', 'expenses') && <StatCard label="הכנסות החודש"    value={stats.incomeMonth}    icon="💰" color="var(--primary)"  isCurrency href="/income" />}
-      {can('expenses')           && <StatCard label="הוצאות החודש"    value={stats.expensesMonth}  icon="📤" color="var(--danger)"   isCurrency href="/expenses" />}
-      {can('income', 'expenses') && <StatCard label="רווח החודש"      value={profit}               icon="📈" color={profit >= 0 ? 'var(--primary)' : 'var(--danger)'} isCurrency href="/income" />}
-      {can('debts') && (
-        <DebtCard
-          customerDebts={stats.customerDebts}
-          supplierDebts={stats.supplierDebts}
-          custCount={stats.custDebtCount}
-          suppCount={stats.suppDebtCount}
-          href="/debts"
-        />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* ── פיננסי ומשרד ── */}
+      {showFinance && (
+        <div>
+          {sectionLabel('💼', 'פיננסי ומשרד')}
+          <div style={cardGrid}>
+            {can('income', 'expenses') && <StatCard label="הכנסות החודש" value={stats.incomeMonth}   icon="💰" color="var(--primary)" isCurrency href="/income" />}
+            {can('expenses')           && <StatCard label="הוצאות החודש" value={stats.expensesMonth} icon="📤" color="var(--danger)"  isCurrency href="/expenses" />}
+            {can('income', 'expenses') && <StatCard label="רווח החודש"   value={profit}              icon="📈" color={profit >= 0 ? 'var(--primary)' : 'var(--danger)'} isCurrency href="/income" />}
+            {can('debts') && (
+              <DebtCard
+                customerDebts={stats.customerDebts}
+                supplierDebts={stats.supplierDebts}
+                custCount={stats.custDebtCount}
+                suppCount={stats.suppDebtCount}
+                href="/debts"
+              />
+            )}
+            {can('products', 'products_view') && <StatCard label="פריטים במלאי" value={stats.inventoryItems}  icon="📦" color="var(--purple)" href="/products" />}
+            {can('employees')                 && <StatCard label="עובדים פעילים" value={stats.activeEmployees} icon="👷" color="var(--purple)" href="/employees" />}
+          </div>
+        </div>
       )}
-      {can('products', 'products_view') && <StatCard label="פריטים במלאי"        value={stats.inventoryItems}   icon="📦" color="var(--purple)" href="/products" />}
-      {can('employees')                 && <StatCard label="עובדים פעילים"        value={stats.activeEmployees}  icon="👷" color="var(--purple)" href="/employees" />}
-      {can('cars')                      && <CarsCard inInventory={stats.carsInInventory} openRequests={stats.openCarRequests} href="/cars" />}
-      {can('tires', 'tires_view')       && <StatCard label="סוגי צמיג במלאי"      value={stats.tiresInStock}     icon="🔘" color="var(--cyan)"   href="/tires" />}
-      {can('alignment')                 && <StatCard label="עבודות פרונט פעילות"  value={stats.activeJobs}       icon="🔩" color="var(--warning)" href="/alignment" />}
-      {can('inspections')               && <StatCard label="בדיקות קניה"           value={stats.totalInspections} icon="📝" color="var(--purple)" href="/inspections" />}
+
+      {/* ── פנצרייה ── */}
+      {showTires && (
+        <div>
+          {sectionLabel('🔘', 'פנצרייה')}
+          <div style={cardGrid}>
+            {can('tires', 'tires_view') && <StatCard label="סוגי צמיג במלאי"     value={stats.tiresInStock} icon="🔘" color="var(--cyan)"    href="/tires" />}
+            {can('alignment')           && <StatCard label="עבודות פרונט פעילות" value={stats.activeJobs}   icon="🔩" color="var(--warning)" href="/alignment" />}
+          </div>
+        </div>
+      )}
+
+      {/* ── רכבים ── */}
+      {showCars && (
+        <div>
+          {sectionLabel('🚗', 'רכבים')}
+          <div style={cardGrid}>
+            {can('cars')        && <CarsCard inInventory={stats.carsInInventory} openRequests={stats.openCarRequests} href="/cars" />}
+            {can('inspections') && <StatCard label="בדיקות קניה" value={stats.totalInspections} icon="📝" color="var(--purple)" href="/inspections" />}
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
