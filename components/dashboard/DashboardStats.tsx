@@ -1,8 +1,31 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+
+type Section = 'finance' | 'tires' | 'cars'
+type CardId = 'income' | 'expenses' | 'profit' | 'debts' | 'products' | 'employees' | 'tires' | 'alignment' | 'cars' | 'inspections'
+
+const DEFAULT_LAYOUT: Record<CardId, Section> = {
+  income: 'finance', expenses: 'finance', profit: 'finance',
+  debts: 'finance', products: 'finance', employees: 'finance',
+  tires: 'tires', alignment: 'tires',
+  cars: 'cars', inspections: 'cars',
+}
+
+const LAYOUT_KEY = 'dashboard-layout-v1'
+
+function loadLayout(): Record<CardId, Section> {
+  try {
+    const s = localStorage.getItem(LAYOUT_KEY)
+    return s ? { ...DEFAULT_LAYOUT, ...JSON.parse(s) } : { ...DEFAULT_LAYOUT }
+  } catch { return { ...DEFAULT_LAYOUT } }
+}
+
+function saveLayout(l: Record<CardId, Section>) {
+  localStorage.setItem(LAYOUT_KEY, JSON.stringify(l))
+}
 
 interface Stats {
   expensesMonth:   number
@@ -146,6 +169,11 @@ export default function DashboardStats() {
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [modules, setModules] = useState<string[]>([])
+  const [editLayout, setEditLayout] = useState(false)
+  const [layout, setLayout]         = useState<Record<CardId, Section>>(DEFAULT_LAYOUT)
+  const dragCard = useRef<CardId | null>(null)
+
+  useEffect(() => { setLayout(loadLayout()) }, [])
 
   // helper: admin bypasses all module checks
   function can(...mods: string[]) {
@@ -245,72 +273,119 @@ export default function DashboardStats() {
 
   const profit = stats.incomeMonth - stats.expensesMonth
 
-  const cardGrid: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '12px',
+  // All cards with their render fn and permission check
+  const allCards: { id: CardId; show: boolean; node: React.ReactNode }[] = [
+    { id: 'income',     show: can('income','expenses'), node: <StatCard label="הכנסות החודש" value={stats.incomeMonth}   icon="💰" color="var(--primary)" isCurrency href="/income" /> },
+    { id: 'expenses',   show: can('expenses'),          node: <StatCard label="הוצאות החודש" value={stats.expensesMonth} icon="📤" color="var(--danger)"  isCurrency href="/expenses" /> },
+    { id: 'profit',     show: can('income','expenses'), node: <StatCard label="רווח החודש"   value={profit}              icon="📈" color={profit >= 0 ? 'var(--primary)' : 'var(--danger)'} isCurrency href="/income" /> },
+    { id: 'debts',      show: can('debts'),             node: <DebtCard customerDebts={stats.customerDebts} supplierDebts={stats.supplierDebts} custCount={stats.custDebtCount} suppCount={stats.suppDebtCount} href="/debts" /> },
+    { id: 'products',   show: can('products','products_view'), node: <StatCard label="פריטים במלאי" value={stats.inventoryItems}  icon="📦" color="var(--purple)" href="/products" /> },
+    { id: 'employees',  show: can('employees'),         node: <StatCard label="עובדים פעילים" value={stats.activeEmployees} icon="👷" color="var(--purple)" href="/employees" /> },
+    { id: 'tires',      show: can('tires','tires_view'),node: <StatCard label="סוגי צמיג במלאי" value={stats.tiresInStock} icon="🔘" color="var(--cyan)" href="/tires" /> },
+    { id: 'alignment',  show: can('alignment'),         node: <StatCard label="עבודות פרונט" value={stats.activeJobs} icon="🔩" color="var(--warning)" href="/alignment" /> },
+    { id: 'cars',       show: can('cars'),              node: <CarsCard inInventory={stats.carsInInventory} openRequests={stats.openCarRequests} href="/cars" /> },
+    { id: 'inspections',show: can('inspections'),       node: <StatCard label="בדיקות קניה" value={stats.totalInspections} icon="📝" color="var(--purple)" href="/inspections" /> },
+  ]
+
+  const moveCard = (cardId: CardId, toSection: Section) => {
+    const next = { ...layout, [cardId]: toSection }
+    setLayout(next)
+    saveLayout(next)
   }
 
-  const sectionLabel = (icon: string, title: string) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, marginTop: 4 }}>
-      <span style={{ fontSize: 15 }}>{icon}</span>
-      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{title}</span>
-      <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-    </div>
-  )
+  const cardGrid: React.CSSProperties = {
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px',
+  }
 
-  const showFinance = can('income', 'expenses', 'debts', 'products', 'employees')
-  const showTires   = can('tires', 'tires_view', 'alignment')
-  const showCars    = can('cars', 'inspections')
+  const SECTIONS: { id: Section; icon: string; label: string }[] = [
+    { id: 'finance', icon: '💼', label: 'פיננסי ומשרד' },
+    { id: 'tires',   icon: '🔘', label: 'פנצרייה' },
+    { id: 'cars',    icon: '🚗', label: 'רכבים' },
+  ]
+
+  const renderSection = (sec: Section, icon: string, label: string) => {
+    const cards = allCards.filter(c => c.show && layout[c.id] === sec)
+    if (cards.length === 0 && !editLayout) return null
+    return (
+      <div key={sec}
+        onDragOver={e => { if (editLayout) e.preventDefault() }}
+        onDrop={e => {
+          e.preventDefault()
+          if (dragCard.current && editLayout) moveCard(dragCard.current, sec)
+        }}
+        style={{ minHeight: editLayout ? 80 : undefined }}
+      >
+        {/* Section header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, marginTop: 4 }}>
+          <span style={{ fontSize: 15 }}>{icon}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{label}</span>
+          <div style={{ flex: 1, height: 1, background: editLayout ? 'var(--primary)' : 'var(--border)', transition: 'background .2s' }} />
+          {editLayout && (
+            <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 600 }}>שחרר כאן</span>
+          )}
+        </div>
+
+        {/* Cards grid */}
+        <div style={{ ...cardGrid, minHeight: editLayout && cards.length === 0 ? 70 : undefined,
+          background: editLayout && cards.length === 0 ? '#f0fdf4' : undefined,
+          borderRadius: editLayout && cards.length === 0 ? 10 : undefined,
+          border: editLayout && cards.length === 0 ? '2px dashed var(--primary)' : undefined,
+        }}>
+          {cards.length === 0 && editLayout && (
+            <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontSize: 13, fontWeight: 600, padding: 16 }}>
+              גרור לכאן
+            </div>
+          )}
+          {cards.map(c => (
+            <div key={c.id}
+              draggable={editLayout}
+              onDragStart={() => { dragCard.current = c.id }}
+              onDragEnd={() => { dragCard.current = null }}
+              style={{
+                cursor: editLayout ? 'grab' : undefined,
+                opacity: 1,
+                position: 'relative',
+              }}
+            >
+              {editLayout && (
+                <div style={{
+                  position: 'absolute', inset: 0, zIndex: 5, borderRadius: 'var(--radius)',
+                  background: 'rgba(16,185,129,0.08)', border: '2px dashed var(--primary)',
+                  display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
+                  padding: 6, pointerEvents: 'none',
+                }}>
+                  <span style={{ fontSize: 16 }}>⠿</span>
+                </div>
+              )}
+              {c.node}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-      {/* ── פיננסי ומשרד ── */}
-      {showFinance && (
-        <div>
-          {sectionLabel('💼', 'פיננסי ומשרד')}
-          <div style={cardGrid}>
-            {can('income', 'expenses') && <StatCard label="הכנסות החודש" value={stats.incomeMonth}   icon="💰" color="var(--primary)" isCurrency href="/income" />}
-            {can('expenses')           && <StatCard label="הוצאות החודש" value={stats.expensesMonth} icon="📤" color="var(--danger)"  isCurrency href="/expenses" />}
-            {can('income', 'expenses') && <StatCard label="רווח החודש"   value={profit}              icon="📈" color={profit >= 0 ? 'var(--primary)' : 'var(--danger)'} isCurrency href="/income" />}
-            {can('debts') && (
-              <DebtCard
-                customerDebts={stats.customerDebts}
-                supplierDebts={stats.supplierDebts}
-                custCount={stats.custDebtCount}
-                suppCount={stats.suppDebtCount}
-                href="/debts"
-              />
-            )}
-            {can('products', 'products_view') && <StatCard label="פריטים במלאי" value={stats.inventoryItems}  icon="📦" color="var(--purple)" href="/products" />}
-            {can('employees')                 && <StatCard label="עובדים פעילים" value={stats.activeEmployees} icon="👷" color="var(--purple)" href="/employees" />}
-          </div>
+    <div>
+      {/* Edit layout toggle */}
+      {isAdmin && (
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 12 }}>
+          {editLayout && (
+            <button onClick={() => { setLayout({ ...DEFAULT_LAYOUT }); saveLayout({ ...DEFAULT_LAYOUT }) }}
+              style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontFamily: 'inherit' }}>
+              אפס פריסה
+            </button>
+          )}
+          <button onClick={() => setEditLayout(v => !v)}
+            style={{ fontSize: 12, padding: '4px 12px', borderRadius: 6, border: '1px solid var(--border)', background: editLayout ? 'var(--primary)' : 'none', color: editLayout ? '#fff' : 'var(--text-muted)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+            {editLayout ? '✓ סיום עריכה' : '⚙️ ערוך פריסה'}
+          </button>
         </div>
       )}
 
-      {/* ── פנצרייה ── */}
-      {showTires && (
-        <div>
-          {sectionLabel('🔘', 'פנצרייה')}
-          <div style={cardGrid}>
-            {can('tires', 'tires_view') && <StatCard label="סוגי צמיג במלאי"     value={stats.tiresInStock} icon="🔘" color="var(--cyan)"    href="/tires" />}
-            {can('alignment')           && <StatCard label="עבודות פרונט פעילות" value={stats.activeJobs}   icon="🔩" color="var(--warning)" href="/alignment" />}
-          </div>
-        </div>
-      )}
-
-      {/* ── רכבים ── */}
-      {showCars && (
-        <div>
-          {sectionLabel('🚗', 'רכבים')}
-          <div style={cardGrid}>
-            {can('cars')        && <CarsCard inInventory={stats.carsInInventory} openRequests={stats.openCarRequests} href="/cars" />}
-            {can('inspections') && <StatCard label="בדיקות קניה" value={stats.totalInspections} icon="📝" color="var(--purple)" href="/inspections" />}
-          </div>
-        </div>
-      )}
-
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {SECTIONS.map(s => renderSection(s.id, s.icon, s.label))}
+      </div>
     </div>
   )
 }

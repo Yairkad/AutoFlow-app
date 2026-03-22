@@ -555,6 +555,12 @@ export default function DocumentsClient() {
         : `/api/drive/files?tenant_id=${tenantId.current}&sub_folder=מסמכים`
       const res  = await fetch(url)
       const data = await res.json()
+      if (data.error === 'folder_not_found') {
+        showToast('תיקיית Drive נמחקה — נא לנתק ולחבר מחדש מההגדרות', 'error')
+        setDriveItems([])
+        setDriveLoading(false)
+        return
+      }
       if (!id && data.folderId) { rootDocsFolderId.current = data.folderId; setDocsFolderReady(true) }
       setDriveItems(data.files ?? [])
     } catch { /* ignore */ }

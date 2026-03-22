@@ -37,8 +37,10 @@ export async function GET(req: Request) {
     const files = await listFiles(accessToken, folderId)
     return NextResponse.json({ files, folderId })
   } catch (err) {
+    const msg = String(err)
+    const notFound = msg.includes('404') || msg.includes('notFound')
     console.error('Drive files error:', err)
-    return NextResponse.json({ files: [] })
+    return NextResponse.json({ files: [], error: notFound ? 'folder_not_found' : 'unknown' })
   }
 }
 
