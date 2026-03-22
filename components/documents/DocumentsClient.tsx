@@ -913,7 +913,8 @@ export default function DocumentsClient() {
       )}
 
       {/* ── Templates tab ── */}
-      {docTab === 'templates' && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 16 }}>
+      {docTab === 'templates' && <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
 
         {/* ── Built-in: בדיקת רכב ── */}
         <div style={{
@@ -1020,6 +1021,9 @@ export default function DocumentsClient() {
           </div>
         </div>
 
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 16 }}>
         {/* ── Custom templates ── */}
         {forms.map(f => (
           <div key={f.id} style={{
@@ -1101,6 +1105,7 @@ export default function DocumentsClient() {
             <div style={{ fontSize: 13, fontWeight: 600 }}>צור תבנית חדשה</div>
           </div>
         )}
+        </div>
       </div>}
 
       {/* ── Add/Edit Template Modal ── */}

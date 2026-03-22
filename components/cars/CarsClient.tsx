@@ -411,7 +411,7 @@ export default function CarsClient() {
   }
 
   async function deleteCarDriveFile(fileId: string) {
-    if (!await confirm('מחוק קובץ זה מ-Drive?')) return
+    if (!await confirm({ msg: 'מחוק קובץ זה מד-Drive?' })) return
     try {
       await fetch('/api/drive/delete', {
         method: 'DELETE',
