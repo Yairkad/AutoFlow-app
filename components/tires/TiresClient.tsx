@@ -557,7 +557,7 @@ export default function TiresClient() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(130px, calc(50% - 6px)), 1fr))', gap: '12px', marginBottom: '20px' }}>
         <StatCard label='סוגי צמיג'         value={totalTypes} />
         <StatCard label='יחידות במלאי'       value={totalUnits}           color='blue' />
         <StatCard label='סוגים במלאי'        value={inStock}              color='green' />
@@ -584,22 +584,22 @@ export default function TiresClient() {
       {tab === 'tires' && (
         <>
           {/* Filters */}
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
-            <input style={{ ...inp, maxWidth: '220px' }} placeholder="🔍  חיפוש מותג / מידה..."
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center' }}>
+            <input style={{ ...inp, flex: '1 1 160px', minWidth: 0 }} placeholder="🔍  חיפוש מותג / מידה..."
               value={search} onChange={e => setSearch(e.target.value)} />
-            <select style={{ ...inp, width: '90px' }} value={filterWidth} onChange={e => setFilterWidth(e.target.value)}>
+            <select style={{ ...inp, flex: '1 1 80px', minWidth: 0 }} value={filterWidth} onChange={e => setFilterWidth(e.target.value)}>
               <option value=''>רוחב</option>
               {WIDTHS.map(w => <option key={w} value={w}>{w}</option>)}
             </select>
-            <select style={{ ...inp, width: '90px' }} value={filterProf} onChange={e => setFilterProf(e.target.value)}>
+            <select style={{ ...inp, flex: '1 1 80px', minWidth: 0 }} value={filterProf} onChange={e => setFilterProf(e.target.value)}>
               <option value=''>פרופיל</option>
               {PROFILES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-            <select style={{ ...inp, width: '85px' }} value={filterRim} onChange={e => setFilterRim(e.target.value)}>
+            <select style={{ ...inp, flex: '1 1 75px', minWidth: 0 }} value={filterRim} onChange={e => setFilterRim(e.target.value)}>
               <option value=''>קוטר</option>
               {RIMS.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
-            <select style={{ ...inp, width: 'auto' }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
+            <select style={{ ...inp, flex: '1 1 90px', minWidth: 0 }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
               <option value=''>כל המלאי</option>
               <option value='instock'>במלאי</option>
               <option value='out'>אזל</option>
@@ -607,14 +607,16 @@ export default function TiresClient() {
             {(search || filterWidth || filterProf || filterRim || filterStock) && (
               <button onClick={() => { setSearch(''); setFilterWidth(''); setFilterProf(''); setFilterRim(''); setFilterStock('') }}
                 style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--danger)', background: '#fef2f2', color: 'var(--danger)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
-                ✕ נקה סינון
+                ✕ נקה
               </button>
             )}
+          </div>
 
-            <div style={{ marginRight: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {!viewOnly && <Button variant="outline" onClick={printPriceList} style={{ fontSize: '13px' }}>🖨️ מחירון</Button>}
-              {!viewOnly && <Button variant="outline" onClick={exportExcel} style={{ fontSize: '13px' }}>📊 ייצא Excel</Button>}
-              {!viewOnly && (
+          {/* Actions row */}
+          {!viewOnly && (
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
+              <Button variant="outline" onClick={printPriceList} style={{ fontSize: '13px' }}>🖨️ מחירון</Button>
+              <Button variant="outline" onClick={exportExcel} style={{ fontSize: '13px' }}>📊 ייצא Excel</Button>
               <label style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                 padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--border)',
@@ -623,17 +625,17 @@ export default function TiresClient() {
               }}>
                 📥 ייבא Excel
                 <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={importExcel} />
-              </label>)}
-              {!viewOnly && (editMode ? (
+              </label>
+              {editMode ? (
                 <>
                   <Button onClick={saveInlineEdit}>💾 שמור הכל</Button>
                   <Button variant="secondary" onClick={() => setEditMode(false)}>ביטול</Button>
                 </>
               ) : (
                 <Button variant="outline" onClick={enterEditMode}>✏️ עריכה</Button>
-              ))}
+              )}
             </div>
-          </div>
+          )}
 
           {/* Table */}
           <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
