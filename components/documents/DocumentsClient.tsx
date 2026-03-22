@@ -281,29 +281,37 @@ function printChecklist(copies: number, _car: string, _owner: string, _phone: st
 
 function printBlankHeader(bizNameStr: string, logoBase64: string, subTitle: string, phone: string, address: string, license: string) {
   const logoHTML = logoBase64
-    ? `<img src="${logoBase64}" style="max-height:70px;max-width:160px;object-fit:contain" alt="לוגו"/>`
+    ? `<img src="${logoBase64}" class="pp-logo-img" alt="לוגו"/>`
     : ''
   const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="utf-8"/>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Heebo', sans-serif; background: #fff; }
-    .page { width: 210mm; min-height: 296mm; padding: 14mm 16mm; }
-    .hdr { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1a9e5c; padding-bottom: 8mm; margin-bottom: 8mm; }
-    .biz-name { font-size: 22pt; font-weight: 900; color: #1a9e5c; }
-    .biz-detail { font-size: 10pt; color: #444; margin-top: 2mm; }
-    @media print { @page { size: A4; margin: 0; } body { background: #fff; } }
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;900&display=swap');
+    * { box-sizing:border-box; margin:0; padding:0; }
+    @page { size:A4 portrait; margin:0; }
+    body { font-family:'Heebo',Arial,sans-serif; direction:rtl; background:#fff; }
+    .pp { width:210mm; height:296mm; padding:10mm 15mm; display:flex; flex-direction:column; }
+    .pp-bsd { text-align:right; font-weight:bold; font-size:11px; margin-bottom:3px; }
+    .pp-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:4mm; padding-bottom:4mm; border-bottom:2px solid #000; }
+    .pp-biz { font-weight:bold; font-size:13px; line-height:1.4; }
+    .pp-biz-name { font-size:16px; font-weight:900; }
+    .pp-logo-wrap { text-align:center; }
+    .pp-logo-img { max-height:110px; max-width:240px; object-fit:contain; display:block; margin:0 auto; }
+    .pp-logo-svc { font-size:9px; text-align:center; font-weight:bold; margin-top:4px; letter-spacing:0.5px; color:#333; }
   </style></head><body>
-  <div class="page">
-    <div class="hdr">
-      <div>
-        <div class="biz-name">${bizNameStr}</div>
-        ${subTitle  ? `<div class="biz-detail">${subTitle}</div>`  : ''}
-        ${address   ? `<div class="biz-detail">${address}</div>`   : ''}
-        ${phone     ? `<div class="biz-detail">טל׳: ${phone}</div>` : ''}
-        ${license   ? `<div class="biz-detail">מס׳ רישיון מוסך: ${license}</div>` : ''}
+  <div class="pp">
+    <div class="pp-bsd">בס"ד</div>
+    <div class="pp-hdr">
+      <div class="pp-biz">
+        <div class="pp-biz-name">${bizNameStr}</div>
+        ${subTitle  ? `<div style="font-size:12px">${subTitle}</div>`  : ''}
+        ${address   ? `<div>${address}</div>`   : ''}
+        ${phone     ? `<div>טל׳: ${phone}</div>` : ''}
+        ${license   ? `<div>מס׳ רישיון מוסך: ${license}</div>` : ''}
       </div>
-      ${logoHTML}
+      <div class="pp-logo-wrap">
+        ${logoHTML}
+        <div class="pp-logo-svc">מוסך מורשה | פנצ׳רייה | פחחות | מכון בדיקת רכב | כיוון פרונט</div>
+      </div>
     </div>
   </div>
   <script>window.onload=function(){window.print()}<\/script>
@@ -555,12 +563,13 @@ export default function DocumentsClient() {
         : `/api/drive/files?tenant_id=${tenantId.current}&sub_folder=מסמכים`
       const res  = await fetch(url)
       const data = await res.json()
-      if (data.error === 'folder_not_found') {
-        showToast('תיקיית Drive נמחקה — נא לנתק ולחבר מחדש מההגדרות', 'error')
+      if (data.error === 'rebuild_failed') {
+        showToast('שגיאה בשחזור Drive — נא לנתק ולחבר מחדש מההגדרות', 'error')
         setDriveItems([])
         setDriveLoading(false)
         return
       }
+      if (data.rebuilt) showToast('תיקיות Drive נוצרו מחדש אוטומטית ✓', 'success')
       if (!id && data.folderId) { rootDocsFolderId.current = data.folderId; setDocsFolderReady(true) }
       setDriveItems(data.files ?? [])
     } catch { /* ignore */ }

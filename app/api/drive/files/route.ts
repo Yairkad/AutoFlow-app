@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getAccessToken, getOrCreateFolder, createFolder, listFiles } from '@/lib/drive'
+import { getAccessToken, getOrCreateFolder, createFolder, listFiles, setupRootFolders } from '@/lib/drive'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const tenantId  = searchParams.get('tenant_id')
-  const subFolder = searchParams.get('sub_folder')   // folder name under root
-  const folderId2 = searchParams.get('folder_id')    // direct folder id
+  const subFolder = searchParams.get('sub_folder')
+  const folderId2 = searchParams.get('folder_id')
 
   if (!tenantId) return NextResponse.json({ files: [] })
 
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
   )
   const { data: tenant } = await sb
     .from('tenants')
-    .select('drive_refresh_token, drive_root_folder_id')
+    .select('drive_refresh_token, drive_root_folder_id, name')
     .eq('id', tenantId)
     .single()
 
@@ -24,23 +24,36 @@ export async function GET(req: Request) {
     return NextResponse.json({ files: [] })
   }
 
+  const accessToken = await getAccessToken(tenant.drive_refresh_token)
+
+  async function resolveFolderId(rootId: string): Promise<string> {
+    if (folderId2) return folderId2
+    if (subFolder)  return getOrCreateFolder(accessToken, subFolder, rootId)
+    return rootId
+  }
+
   try {
-    const accessToken = await getAccessToken(tenant.drive_refresh_token)
-    let folderId = tenant.drive_root_folder_id
-
-    if (folderId2) {
-      folderId = folderId2
-    } else if (subFolder) {
-      folderId = await getOrCreateFolder(accessToken, subFolder, folderId)
-    }
-
-    const files = await listFiles(accessToken, folderId)
+    const folderId = await resolveFolderId(tenant.drive_root_folder_id)
+    const files    = await listFiles(accessToken, folderId)
     return NextResponse.json({ files, folderId })
   } catch (err) {
     const msg = String(err)
-    const notFound = msg.includes('404') || msg.includes('notFound')
+    if (msg.includes('404') || msg.includes('notFound')) {
+      // Root folder deleted — recreate automatically
+      console.warn('Drive root folder missing, recreating...')
+      try {
+        const newRootId = await setupRootFolders(accessToken, tenant.name || 'AutoFlow')
+        await sb.from('tenants').update({ drive_root_folder_id: newRootId }).eq('id', tenantId)
+        const folderId = await resolveFolderId(newRootId)
+        const files    = await listFiles(accessToken, folderId)
+        return NextResponse.json({ files, folderId, rebuilt: true })
+      } catch (e2) {
+        console.error('Drive rebuild failed:', e2)
+        return NextResponse.json({ files: [], error: 'rebuild_failed' })
+      }
+    }
     console.error('Drive files error:', err)
-    return NextResponse.json({ files: [], error: notFound ? 'folder_not_found' : 'unknown' })
+    return NextResponse.json({ files: [], error: 'unknown' })
   }
 }
 
@@ -61,8 +74,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Not connected' }, { status: 403 })
     }
     const accessToken = await getAccessToken(tenant.drive_refresh_token)
-    const id = await createFolder(accessToken, name, parent_id)
-    return NextResponse.json({ id, name })
+    try {
+      const id = await createFolder(accessToken, name, parent_id)
+      return NextResponse.json({ id, name })
+    } catch (err) {
+      const msg = String(err)
+      if (msg.includes('404') || msg.includes('notFound')) {
+        // parent folder gone — rebuild root and retry under מסמכים
+        const { data: t2 } = await sb.from('tenants').select('name').eq('id', tenant_id).single()
+        const newRootId = await setupRootFolders(accessToken, t2?.name || 'AutoFlow')
+        await sb.from('tenants').update({ drive_root_folder_id: newRootId }).eq('id', tenant_id)
+        const docsId = await getOrCreateFolder(accessToken, 'מסמכים', newRootId)
+        const id = await createFolder(accessToken, name, docsId)
+        return NextResponse.json({ id, name, rebuilt: true })
+      }
+      throw err
+    }
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
