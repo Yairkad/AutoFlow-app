@@ -203,9 +203,13 @@ export default function CarsClient() {
   const [reqSubTab,    setReqSubTab]    = useState<'buy' | 'sell'>('buy')
 
   // Drive
-  const [driveConnected, setDriveConnected] = useState(false)
-  const [isAdmin,        setIsAdmin]        = useState(false)
-  const [uploadingIdx,   setUploadingIdx]   = useState<number | null>(null)
+  const [driveConnected,    setDriveConnected]    = useState(false)
+  const [isAdmin,           setIsAdmin]           = useState(false)
+  const [uploadingIdx,      setUploadingIdx]      = useState<number | null>(null)
+  const [carDriveFiles,     setCarDriveFiles]     = useState<{id:string;name:string;mimeType:string;webViewLink?:string}[]>([])
+  const [carDriveFolderId,  setCarDriveFolderId]  = useState<string | null>(null)
+  const [carDriveLoading,   setCarDriveLoading]   = useState(false)
+  const [carDriveUploading, setCarDriveUploading] = useState(false)
 
   // Car form
   const [carModal,   setCarModal]   = useState(false)
@@ -310,10 +314,14 @@ export default function CarsClient() {
         reserved_for: (car as any).reserved_for || '',
       })
       setPhotoUrls(car.photos.length ? [...car.photos] : [''])
+      if (driveConnected) loadCarDriveFiles(car.plate || '')
+      else { setCarDriveFiles([]); setCarDriveFolderId(null) }
     } else {
       setEditCarId(null)
       setCarForm({ ...emptyCarForm })
       setPhotoUrls([''])
+      setCarDriveFiles([])
+      setCarDriveFolderId(null)
     }
     setCarModal(true)
   }
@@ -361,6 +369,59 @@ export default function CarsClient() {
       toast('שגיאת רשת', 'error')
     } finally {
       setUploadingIdx(null)
+    }
+  }
+
+  async function loadCarDriveFiles(plate: string) {
+    if (!plate) { setCarDriveFiles([]); setCarDriveFolderId(null); return }
+    setCarDriveLoading(true)
+    try {
+      const res  = await fetch(`/api/drive/files?tenant_id=${tenantId.current}&sub_folder=${encodeURIComponent('רכבים')}&item_name=${encodeURIComponent(plate)}`)
+      const data = await res.json()
+      setCarDriveFiles(data.files || [])
+      setCarDriveFolderId(data.folderId || null)
+    } catch {
+      setCarDriveFiles([])
+    } finally {
+      setCarDriveLoading(false)
+    }
+  }
+
+  async function uploadCarDriveFile(file: File) {
+    if (!carDriveFolderId) return
+    setCarDriveUploading(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('tenant_id', tenantId.current)
+    fd.append('folder_id', carDriveFolderId)
+    try {
+      const res  = await fetch('/api/drive/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (data.id) {
+        setCarDriveFiles(f => [{ id: data.id, name: data.name, mimeType: data.mimeType, webViewLink: data.webViewLink }, ...f])
+        toast('הקובץ הועלה ✓', 'success')
+      } else {
+        toast(data.error || 'שגיאה בהעלאה', 'error')
+      }
+    } catch {
+      toast('שגיאת רשת', 'error')
+    } finally {
+      setCarDriveUploading(false)
+    }
+  }
+
+  async function deleteCarDriveFile(fileId: string) {
+    if (!await confirm('מחוק קובץ זה מ-Drive?')) return
+    try {
+      await fetch('/api/drive/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: tenantId.current, file_id: fileId }),
+      })
+      setCarDriveFiles(f => f.filter(x => x.id !== fileId))
+      toast('הקובץ נמחק', 'success')
+    } catch {
+      toast('שגיאה במחיקה', 'error')
     }
   }
 
@@ -1291,6 +1352,39 @@ export default function CarsClient() {
               + הוסף תמונה
             </button>
           </Section>
+
+          {/* Car Drive Files */}
+          {isAdmin && driveConnected && editCarId && (
+            <Section title="📁 קבצי רכב ב-Drive">
+              {carDriveLoading ? (
+                <div style={{ color: 'var(--muted)', fontSize: 13, padding: '6px 0' }}>טוען...</div>
+              ) : (
+                <>
+                  {carDriveFiles.length === 0 && (
+                    <div style={{ color: 'var(--muted)', fontSize: 12, marginBottom: 8 }}>אין קבצים בתיקיית הרכב</div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
+                    {carDriveFiles.map(f => (
+                      <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', background: '#f8fafc', borderRadius: 7, border: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: 16 }}>{f.mimeType.startsWith('image/') ? '🖼️' : f.mimeType === 'application/pdf' ? '📄' : '📎'}</span>
+                        <span style={{ flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                        {f.webViewLink && (
+                          <a href={f.webViewLink} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--primary)', textDecoration: 'none', flexShrink: 0 }}>פתח</a>
+                        )}
+                        <button onClick={() => deleteCarDriveFile(f.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 14, flexShrink: 0 }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <label style={{ cursor: 'pointer' }}>
+                    <input type="file" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadCarDriveFile(f); e.target.value = '' }} />
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, padding: '5px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      {carDriveUploading ? '⏳ מעלה...' : '📤 העלה קובץ'}
+                    </span>
+                  </label>
+                </>
+              )}
+            </Section>
+          )}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>

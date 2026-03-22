@@ -6,6 +6,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const tenantId  = searchParams.get('tenant_id')
   const subFolder = searchParams.get('sub_folder')
+  const itemName  = searchParams.get('item_name')   // second level under sub_folder
   const folderId2 = searchParams.get('folder_id')
 
   if (!tenantId) return NextResponse.json({ files: [] })
@@ -28,7 +29,11 @@ export async function GET(req: Request) {
 
   async function resolveFolderId(rootId: string): Promise<string> {
     if (folderId2) return folderId2
-    if (subFolder)  return getOrCreateFolder(accessToken, subFolder, rootId)
+    if (subFolder) {
+      const subId = await getOrCreateFolder(accessToken, subFolder, rootId)
+      if (itemName) return getOrCreateFolder(accessToken, itemName, subId)
+      return subId
+    }
     return rootId
   }
 

@@ -123,7 +123,7 @@ function PrintReport({ data }: { data: PrintData }) {
           .pp-biz { font-weight:bold; font-size:13px; line-height:1.4; }
           .pp-biz-name { font-size:16px; font-weight:900; }
           .pp-logo-wrap { text-align:center; }
-          .pp-logo-wrap img { max-height:140px; max-width:300px; object-fit:contain; mix-blend-mode:multiply; filter:contrast(1.1); border:none; display:block; margin:0 auto; }
+          .pp-logo-wrap img { max-height:110px; max-width:240px; object-fit:contain; mix-blend-mode:multiply; filter:contrast(1.1); border:none; display:block; margin:0 auto; }
           .pp-logo-svc { font-size:9px; text-align:center; font-weight:bold; margin-top:4px; letter-spacing:0.5px; color:#333; }
           .pp-doc-titles { text-align:center; margin-bottom:4mm; }
           .pp-doc-titles h2 { font-size:12px; border-top:1px solid #000; border-bottom:1px solid #000; padding:3px 0; margin:4px 0; font-weight:bold; }

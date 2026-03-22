@@ -279,25 +279,11 @@ function printChecklist(copies: number, _car: string, _owner: string, _phone: st
 // ── printBlankHeader ──────────────────────────────────────────────────────────
 // Blank page: just logo + business details header, rest is empty
 
-function printBlankHeader(bizNameStr: string, logoBase64: string, subTitle: string, phone: string, address: string, license: string) {
+function printBlankHeader(copies: number, bizNameStr: string, logoBase64: string, subTitle: string, phone: string, address: string, license: string) {
   const logoHTML = logoBase64
     ? `<img src="${logoBase64}" class="pp-logo-img" alt="לוגו"/>`
     : ''
-  const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="utf-8"/>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;900&display=swap');
-    * { box-sizing:border-box; margin:0; padding:0; }
-    @page { size:A4 portrait; margin:0; }
-    body { font-family:'Heebo',Arial,sans-serif; direction:rtl; background:#fff; }
-    .pp { width:210mm; height:296mm; padding:10mm 15mm; display:flex; flex-direction:column; }
-    .pp-bsd { text-align:right; font-weight:bold; font-size:11px; margin-bottom:3px; }
-    .pp-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:4mm; padding-bottom:4mm; border-bottom:2px solid #000; }
-    .pp-biz { font-weight:bold; font-size:13px; line-height:1.4; }
-    .pp-biz-name { font-size:16px; font-weight:900; }
-    .pp-logo-wrap { text-align:center; }
-    .pp-logo-img { max-height:110px; max-width:240px; object-fit:contain; display:block; margin:0 auto; }
-    .pp-logo-svc { font-size:9px; text-align:center; font-weight:bold; margin-top:4px; letter-spacing:0.5px; color:#333; }
-  </style></head><body>
+  const pageHTML = `
   <div class="pp">
     <div class="pp-bsd">בס"ד</div>
     <div class="pp-hdr">
@@ -313,7 +299,24 @@ function printBlankHeader(bizNameStr: string, logoBase64: string, subTitle: stri
         <div class="pp-logo-svc">מוסך מורשה | פנצ׳רייה | פחחות | מכון בדיקת רכב | כיוון פרונט</div>
       </div>
     </div>
-  </div>
+  </div>`
+  const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="utf-8"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;900&display=swap');
+    * { box-sizing:border-box; margin:0; padding:0; }
+    @page { size:A4 portrait; margin:0; }
+    body { font-family:'Heebo',Arial,sans-serif; direction:rtl; background:#fff; }
+    .pp { width:210mm; height:296mm; padding:10mm 15mm; display:flex; flex-direction:column; page-break-after:always; }
+    .pp:last-child { page-break-after:avoid; }
+    .pp-bsd { text-align:right; font-weight:bold; font-size:11px; margin-bottom:3px; }
+    .pp-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:4mm; padding-bottom:4mm; border-bottom:2px solid #000; }
+    .pp-biz { font-weight:bold; font-size:13px; line-height:1.4; }
+    .pp-biz-name { font-size:16px; font-weight:900; }
+    .pp-logo-wrap { text-align:center; }
+    .pp-logo-img { max-height:110px; max-width:240px; object-fit:contain; display:block; margin:0 auto; }
+    .pp-logo-svc { font-size:9px; text-align:center; font-weight:bold; margin-top:4px; letter-spacing:0.5px; color:#333; }
+  </style></head><body>
+  ${Array(copies).fill(pageHTML).join('\n')}
   <script>window.onload=function(){window.print()}<\/script>
   </body></html>`
   const w = window.open('', '_blank')
@@ -418,7 +421,7 @@ function printWarranty(copies: number, bizNameStr: string, logoBase64: string, s
     .pp-biz { font-weight:bold; font-size:13px; line-height:1.4; }
     .pp-biz-name { font-size:16px; font-weight:900; }
     .pp-logo-wrap { text-align:center; }
-    .pp-logo-img { max-height:140px; max-width:300px; object-fit:contain; display:block; margin:0 auto; }
+    .pp-logo-img { max-height:110px; max-width:240px; object-fit:contain; display:block; margin:0 auto; }
     .pp-logo-svc { font-size:9px; text-align:center; font-weight:bold; margin-top:4px; letter-spacing:0.5px; color:#333; }
     .pp-doc-titles { text-align:center; margin-bottom:4mm; }
     .pp-doc-titles h2 { font-size:12px; border-top:1px solid #000; border-bottom:1px solid #000; padding:3px 0; margin:4px 0; font-weight:bold; }
@@ -482,6 +485,7 @@ export default function DocumentsClient() {
   // ── Built-in checklist card state ─────────────────────────────────────────────
   const [clCopies, setClCopies] = useState(1)
   const [wCopies,  setWCopies]  = useState(1)
+  const [bhCopies, setBhCopies] = useState(1)
 
   // ── Drive state ───────────────────────────────────────────────────────────────
   type DriveItem = { id: string; name: string; mimeType: string; size?: string; createdTime?: string; thumbnailLink?: string; webViewLink?: string }
@@ -1002,9 +1006,18 @@ export default function DocumentsClient() {
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             לוגו + פרטי עסק + שטח ריק לכתיבה ידנית
           </div>
-          <Button size="sm" onClick={() => printBlankHeader(bizName.current, logoBase64.current, bizSubTitle.current, bizPhone.current, bizAddress.current, bizLicense.current)}>
-            🖨️ הדפס
-          </Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>עותקים:</label>
+            <input
+              type="number" min={1} max={10}
+              value={bhCopies}
+              onChange={e => setBhCopies(Math.max(1, parseInt(e.target.value) || 1))}
+              style={{ width: 50, padding: '4px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, textAlign: 'center' }}
+            />
+            <Button variant="primary" style={{ marginRight: 'auto' }} onClick={() => printBlankHeader(bhCopies, bizName.current, logoBase64.current, bizSubTitle.current, bizPhone.current, bizAddress.current, bizLicense.current)}>
+              🖨️ הדפס
+            </Button>
+          </div>
         </div>
 
         {/* ── Custom templates ── */}
