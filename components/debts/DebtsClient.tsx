@@ -355,8 +355,8 @@ export default function DebtsClient() {
     if (debt.is_closed)
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>שולם ✓</span>
     if (Number(debt.paid) > 0)
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef3c7', color: '#d97706', fontWeight: 600 }}>חלקי</span>
-    return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef2f2', color: '#dc2626', fontWeight: 600 }}>פתוח</span>
+      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef3c7', color: 'var(--warning)', fontWeight: 600 }}>חלקי</span>
+    return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>פתוח</span>
   }
 
   if (loading) return (
@@ -433,7 +433,7 @@ export default function DebtsClient() {
         {/* Close/open */}
         <button
           onClick={() => toggleClose(selectedId, selectedType, debt.is_closed)}
-          style={{ padding: '5px 10px', background: debt.is_closed ? '#fef2f2' : '#f0fdf6', color: debt.is_closed ? '#dc2626' : '#16a34a', border: '1px solid', borderColor: debt.is_closed ? '#fecaca' : '#bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+          style={{ padding: '5px 10px', background: debt.is_closed ? '#fef2f2' : '#f0fdf6', color: debt.is_closed ? 'var(--danger)' : '#16a34a', border: '1px solid', borderColor: debt.is_closed ? '#fecaca' : '#bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
         >{debt.is_closed ? '↩ פתח' : '✓ סגור'}</button>
         {/* Edit */}
         <button
@@ -443,7 +443,7 @@ export default function DebtsClient() {
         {/* Delete */}
         <button
           onClick={() => selectedType === 'customer' ? deleteCustDebt(selectedId) : deleteSuppDebt(selectedId)}
-          style={{ padding: '5px 10px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
+          style={{ padding: '5px 10px', background: '#fef2f2', color: 'var(--danger)', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
         >🗑 מחק</button>
         {/* Deselect */}
         <button
@@ -552,7 +552,7 @@ export default function DebtsClient() {
                         </td>
                         <td style={{ ...tdSt, fontWeight: 600 }}>{fmt(d.amount)}</td>
                         <td style={{ ...tdSt, color: '#16a34a' }}>{fmt(d.paid)}</td>
-                        <td style={{ ...tdSt, fontWeight: 700, color: bal(d) > 0 ? '#dc2626' : '#16a34a' }}>{fmt(bal(d))}</td>
+                        <td style={{ ...tdSt, fontWeight: 700, color: bal(d) > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(bal(d))}</td>
                         <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
                         <td style={tdSt}><StatusChip debt={d} /></td>
                       </tr>
@@ -606,7 +606,7 @@ export default function DebtsClient() {
                         <td style={{ ...tdSt, maxWidth: '220px' }}><InvoiceCell d={d} /></td>
                         <td style={{ ...tdSt, fontWeight: 600 }}>{fmt(d.amount)}</td>
                         <td style={{ ...tdSt, color: '#16a34a' }}>{fmt(d.paid)}</td>
-                        <td style={{ ...tdSt, fontWeight: 700, color: bal(d) > 0 ? '#dc2626' : '#16a34a' }}>{fmt(bal(d))}</td>
+                        <td style={{ ...tdSt, fontWeight: 700, color: bal(d) > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(bal(d))}</td>
                         <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
                         <td style={tdSt}><StatusChip debt={d} /></td>
                       </tr>
@@ -624,9 +624,9 @@ export default function DebtsClient() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
             {[
-              { label: 'חובות לקוחות פתוחים', value: openCustTotal, color: '#dc2626', icon: '💳', sub: `${customerDebts.filter(d => !d.is_closed).length} רשומות` },
-              { label: 'חובות לספקים פתוחים', value: openSuppTotal, color: '#d97706', icon: '🏭', sub: `${supplierDebts.filter(d => !d.is_closed).length} רשומות` },
-              { label: netOwed >= 0 ? 'חייבים לספקים נטו' : 'חייבים לנו נטו', value: Math.abs(netOwed), color: netOwed >= 0 ? '#dc2626' : '#1a9e5c', icon: '📊', sub: netOwed >= 0 ? 'מצב שלילי' : 'מצב חיובי' },
+              { label: 'חובות לקוחות פתוחים', value: openCustTotal, color: 'var(--danger)', icon: '💳', sub: `${customerDebts.filter(d => !d.is_closed).length} רשומות` },
+              { label: 'חובות לספקים פתוחים', value: openSuppTotal, color: 'var(--warning)', icon: '🏭', sub: `${supplierDebts.filter(d => !d.is_closed).length} רשומות` },
+              { label: netOwed >= 0 ? 'חייבים לספקים נטו' : 'חייבים לנו נטו', value: Math.abs(netOwed), color: netOwed >= 0 ? 'var(--danger)' : 'var(--primary)', icon: '📊', sub: netOwed >= 0 ? 'מצב שלילי' : 'מצב חיובי' },
             ].map(c => (
               <div key={c.label} style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', padding: '20px', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', borderTop: `3px solid ${c.color}` }}>
                 <div style={{ fontSize: '26px', marginBottom: '8px' }}>{c.icon}</div>
@@ -642,7 +642,7 @@ export default function DebtsClient() {
               {customerDebts.filter(d => !d.is_closed && bal(d) > 0).sort((a, b) => bal(b) - bal(a)).slice(0, 8).map(d => (
                 <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
                   <div><div style={{ fontWeight: 600 }}>{d.name}</div>{d.phone && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{d.phone}</div>}</div>
-                  <strong style={{ color: '#dc2626' }}>{fmt(bal(d))}</strong>
+                  <strong style={{ color: 'var(--danger)' }}>{fmt(bal(d))}</strong>
                 </div>
               ))}
               {customerDebts.filter(d => !d.is_closed).length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>✓ אין חובות פתוחים</div>}
@@ -655,7 +655,7 @@ export default function DebtsClient() {
                     <div style={{ fontWeight: 600 }}>{suppliers.find(s => s.id === d.supplier_id)?.name ?? 'לא צוין'}</div>
                     {d.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{d.description}</div>}
                   </div>
-                  <strong style={{ color: '#d97706' }}>{fmt(bal(d))}</strong>
+                  <strong style={{ color: 'var(--warning)' }}>{fmt(bal(d))}</strong>
                 </div>
               ))}
               {supplierDebts.filter(d => !d.is_closed).length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>✓ אין חובות פתוחים</div>}
@@ -758,7 +758,7 @@ export default function DebtsClient() {
                         type="button"
                         onClick={() => removeInvoiceLine(i)}
                         disabled={sInvoices.length === 1}
-                        style={{ padding: '4px 8px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '13px', cursor: sInvoices.length === 1 ? 'default' : 'pointer', opacity: sInvoices.length === 1 ? 0.4 : 1 }}
+                        style={{ padding: '4px 8px', background: '#fef2f2', color: 'var(--danger)', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '13px', cursor: sInvoices.length === 1 ? 'default' : 'pointer', opacity: sInvoices.length === 1 ? 0.4 : 1 }}
                       >✕</button>
                     </div>
                   ))}
@@ -789,7 +789,7 @@ export default function DebtsClient() {
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '380px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>₪ רשום תשלום</h3>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '18px' }}>
-              יתרה: <strong style={{ color: '#dc2626' }}>{fmt(payItem.balance)}</strong>
+              יתרה: <strong style={{ color: 'var(--danger)' }}>{fmt(payItem.balance)}</strong>
             </div>
             <div style={{ display: 'grid', gap: '14px' }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>

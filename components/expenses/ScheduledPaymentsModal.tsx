@@ -55,9 +55,9 @@ function daysUntil(isoDate: string) {
 function statusInfo(p: ScheduledPayment): { label: string; color: string; bg: string } {
   if (p.is_paid) return { label: 'שולם', color: '#16a34a', bg: '#f0fdf4' }
   const d = daysUntil(p.due_date)
-  if (d < 0)  return { label: `באיחור ${Math.abs(d)} ימים`, color: '#dc2626', bg: '#fef2f2' }
-  if (d === 0) return { label: 'היום!', color: '#dc2626', bg: '#fef2f2' }
-  if (d <= 7)  return { label: `עוד ${d} ימים`, color: '#d97706', bg: '#fffbeb' }
+  if (d < 0)  return { label: `באיחור ${Math.abs(d)} ימים`, color: 'var(--danger)', bg: '#fef2f2' }
+  if (d === 0) return { label: 'היום!', color: 'var(--danger)', bg: '#fef2f2' }
+  if (d <= 7)  return { label: `עוד ${d} ימים`, color: 'var(--warning)', bg: '#fffbeb' }
   if (d <= 30) return { label: `עוד ${d} ימים`, color: '#2563eb', bg: '#eff6ff' }
   return { label: `עוד ${d} ימים`, color: 'var(--text-muted)', bg: '#f8fafc' }
 }
@@ -283,10 +283,7 @@ export default function ScheduledPaymentsModal({
                   {unpaid.map(p => {
                     const st = statusInfo(p)
                     return (
-                      <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#f8fafc'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}
-                      >
+                      <tr key={p.id} className="tr-hover" style={{ borderBottom: '1px solid var(--border)' }}>
                         <td style={{ ...TD, fontWeight: 500 }}>
                           {p.description}
                           {p.notes && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{p.notes}</div>}
@@ -332,10 +329,7 @@ export default function ScheduledPaymentsModal({
 
                   {/* Paid rows */}
                   {paid.map(p => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', opacity: 0.55 }}
-                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.75'}
-                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '0.55'}
-                    >
+                    <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', opacity: 0.55 }}>
                       <td style={{ ...TD, textDecoration: 'line-through', color: 'var(--text-muted)' }}>{p.description}</td>
                       <td style={{ ...TD, fontWeight: 600, color: 'var(--text-muted)' }}>{fmt(Number(p.amount))}</td>
                       <td style={{ ...TD, whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>{fmtDate(p.due_date)}</td>

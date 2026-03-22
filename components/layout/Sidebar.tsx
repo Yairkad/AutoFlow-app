@@ -84,6 +84,20 @@ export default function Sidebar({
     return required.some(m => modules.includes(m))
   }
 
+  // Skeleton nav items shown while permissions are loading
+  function SkeletonNav() {
+    return (
+      <div style={{ padding: '4px 0' }}>
+        {[80, 60, 90, 70, 85, 55, 75].map((w, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 16px' }}>
+            <div className="shimmer" style={{ width: 20, height: 20, borderRadius: '5px', flexShrink: 0 }} />
+            <div className="shimmer sidebar-brand-text" style={{ width: w, height: 11, borderRadius: '4px' }} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <aside
       data-mobile-open={String(mobileOpen)}
@@ -132,7 +146,8 @@ export default function Sidebar({
         </div>
       </Link>
 
-      {/* Nav items */}
+      {/* Nav items — shimmer skeleton while loading */}
+      {!loaded && <SkeletonNav />}
       <div style={{ padding: '4px 0' }}>
       {NAV_ITEMS.filter(isVisible).map((item) => {
         const isActive = pathname === item.href
@@ -170,7 +185,7 @@ export default function Sidebar({
                 border: '2px solid var(--primary)',
                 borderTopColor: 'transparent',
                 display: 'inline-block',
-                animation: 'sidebar-spin .6s linear infinite',
+                animation: 'spin .6s linear infinite',
                 flexShrink: 0,
               }} />
             )}

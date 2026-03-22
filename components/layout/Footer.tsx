@@ -25,14 +25,10 @@ export default function Footer() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <Link href="/privacy" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
+        <Link href="/privacy" className="link-hover" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
           מדיניות פרטיות
         </Link>
-        <Link href="/accessibility" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
+        <Link href="/accessibility" className="link-hover" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
           הצהרת נגישות
         </Link>
         <span style={{ color: 'var(--border)' }}>|</span>

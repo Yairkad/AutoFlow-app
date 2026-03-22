@@ -677,7 +677,7 @@ export default function InspectionsClient() {
                       onChange={e => onChange(key, e.target.value)}
                       className="form-input"
                       placeholder={placeholder}
-                      style={fieldErrors.has(key) ? { borderColor: '#dc2626', boxShadow: '0 0 0 2px rgba(220,38,38,.15)' } : undefined}
+                      style={fieldErrors.has(key) ? { borderColor: 'var(--danger)', boxShadow: '0 0 0 2px rgba(220,38,38,.15)' } : undefined}
                     />
                   </div>
                 ))}
@@ -694,7 +694,7 @@ export default function InspectionsClient() {
                     value={form.plate}
                     onChange={e => onChange('plate', e.target.value)}
                     className="form-input font-mono font-bold"
-                    style={{ fontSize: 15, letterSpacing: 1, ...(fieldErrors.has('plate') ? { borderColor: '#dc2626', boxShadow: '0 0 0 2px rgba(220,38,38,.15)' } : {}) }}
+                    style={{ fontSize: 15, letterSpacing: 1, ...(fieldErrors.has('plate') ? { borderColor: 'var(--danger)', boxShadow: '0 0 0 2px rgba(220,38,38,.15)' } : {}) }}
                     placeholder="12-345-67"
                     dir="ltr"
                   />
@@ -833,10 +833,7 @@ export default function InspectionsClient() {
                   </thead>
                   <tbody>
                     {filtered.map(ins => (
-                      <tr key={ins.id} style={{ borderBottom: '1px solid var(--border)' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = '')}
-                      >
+                      <tr key={ins.id} className="tr-hover" style={{ borderBottom: '1px solid var(--border)' }}>
                         <td style={{ padding: '8px 10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                           <CopyCell value={ins.date || ins.created_at?.slice(0, 10) || null} />
                         </td>

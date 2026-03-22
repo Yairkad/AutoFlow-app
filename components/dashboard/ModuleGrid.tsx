@@ -40,9 +40,9 @@ const INITIAL_GROUPS: Group[] = [
     id: 'finance',
     label: '💼 ניהול פיננסי',
     modules: [
-      { id: 'expenses',   href: '/expenses',   label: 'הוצאות',     icon: '💰', color: '#1a9e5c', description: 'הכנסות, הוצאות ורווח חודשי' },
+      { id: 'expenses',   href: '/expenses',   label: 'הוצאות',     icon: '💰', color: 'var(--primary)', description: 'הכנסות, הוצאות ורווח חודשי' },
       { id: 'billing',    href: '/billing',    label: 'חשבונות',    icon: '🧾', color: '#2563eb', description: 'חיובים חודשיים קבועים ותשלומים' },
-      { id: 'debts',      href: '/debts',      label: 'חובות',      icon: '💳', color: '#dc2626', description: 'חובות לקוחות וחובות לספקים' },
+      { id: 'debts',      href: '/debts',      label: 'חובות',      icon: '💳', color: 'var(--danger)', description: 'חובות לקוחות וחובות לספקים' },
       { id: 'employees',  href: '/employees',  label: 'עובדים',     icon: '👷', color: '#7c3aed', description: 'ניהול שכר, בונוסים וניכויים' },
       { id: 'suppliers',  href: '/suppliers',  label: 'ספקים',      icon: '🏭', color: '#64748b', description: 'ספקים פעילים, הזמנות וחובות' },
       { id: 'documents',  href: '/documents',  label: 'מסמכים',     icon: '📄', color: '#475569', description: 'תבניות הדפסה, הצהרות וטפסים' },
@@ -52,7 +52,7 @@ const INITIAL_GROUPS: Group[] = [
     id: 'inventory',
     label: '🔧 מלאי ועבודות',
     modules: [
-      { id: 'products',    href: '/products',    label: 'מוצרים',      icon: '📦', color: '#d97706', description: 'אביזרים, חלקים ומחירי מכירה' },
+      { id: 'products',    href: '/products',    label: 'מוצרים',      icon: '📦', color: 'var(--warning)', description: 'אביזרים, חלקים ומחירי מכירה' },
       { id: 'tires',       href: '/tires',       label: 'צמיגים',      icon: '🔘', color: '#0891b2', description: 'מלאי צמיגים לפי מידה ועונה' },
       { id: 'alignment',   href: '/alignment',   label: 'פרונט',       icon: '🔩', color: '#ea580c', description: 'עבודות כיוון גלגלים ופרונט' },
       { id: 'cars',        href: '/cars',        label: 'רכבים',       icon: '🚗', color: '#059669', description: 'קניה ומכירה של רכבים' },

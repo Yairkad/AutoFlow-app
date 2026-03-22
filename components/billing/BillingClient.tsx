@@ -87,9 +87,9 @@ const entryStatus = (e: BillingEntry): 'paid' | 'partial' | 'pending' => {
 }
 const statusBadge = (e: BillingEntry) => {
   const s = entryStatus(e)
-  if (s === 'paid')    return { label: '✓ שולם',       color: '#1a9e5c', bg: '#f0fdf4' }
-  if (s === 'partial') return { label: '◑ שולם חלקית', color: '#d97706', bg: '#fffbeb' }
-  return                        { label: '○ ממתין',      color: '#64748b', bg: '#f8fafc' }
+  if (s === 'paid')    return { label: '✓ שולם',       color: 'var(--primary)', bg: '#f0fdf4' }
+  if (s === 'partial') return { label: '◑ שולם חלקית', color: 'var(--warning)', bg: '#fffbeb' }
+  return                        { label: '○ ממתין',      color: 'var(--text-muted)', bg: '#f8fafc' }
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -712,9 +712,8 @@ export default function BillingClient() {
                     return (
                       <tr key={e.id}
                         onClick={() => !editMode && (setPayEntry(e), setPayAmount(String(bal.toFixed(2))), setPayDate(todayISO()), setPayNotes(''))}
-                        style={{ borderBottom: '1px solid var(--border)', cursor: editMode ? 'default' : 'pointer', transition: 'background .1s' }}
-                        onMouseEnter={ev => { if (!editMode) (ev.currentTarget as HTMLElement).style.background = 'var(--bg)' }}
-                        onMouseLeave={ev => { (ev.currentTarget as HTMLElement).style.background = '' }}
+                        className={!editMode ? 'tr-hover' : undefined}
+                        style={{ borderBottom: '1px solid var(--border)', cursor: editMode ? 'default' : 'pointer' }}
                       >
                         <td style={tdSt}>
                           <div style={{ fontWeight: 500 }}>{e.name}</div>
@@ -737,15 +736,15 @@ export default function BillingClient() {
                           <span style={{
                             display: 'inline-block', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600,
                             background: e.direction === 'expense' ? '#fef2f2' : '#f0fdf4',
-                            color:      e.direction === 'expense' ? '#dc2626'  : '#1a9e5c',
+                            color:      e.direction === 'expense' ? 'var(--danger)'  : 'var(--primary)',
                           }}>
                             {e.direction === 'expense' ? '↑ הוצאה' : '↓ הכנסה'}
                           </span>
                         </td>
                         <td style={{ ...tdSt, fontWeight: 600 }}>{fmt(e.amount)}</td>
-                        <td style={{ ...tdSt, color: '#1a9e5c' }}>{paid > 0 ? fmt(paid) : '—'}</td>
+                        <td style={{ ...tdSt, color: 'var(--primary)' }}>{paid > 0 ? fmt(paid) : '—'}</td>
                         <td style={{ ...tdSt,
-                          color: bal > 0 ? '#dc2626' : bal < 0 ? '#1a9e5c' : 'var(--text-muted)',
+                          color: bal > 0 ? 'var(--danger)' : bal < 0 ? 'var(--primary)' : 'var(--text-muted)',
                           fontWeight: bal !== 0 ? 600 : 400,
                         }}>
                           {bal > 0 ? fmt(bal) : bal < 0 ? `זכות ${fmt(-bal)}` : '—'}
@@ -776,8 +775,8 @@ export default function BillingClient() {
           {entries.length > 0 && (
             <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
               {[
-                { label: 'סה"כ הוצאות', total: totalExpenses, paid: totalPaidExp, color: '#dc2626' },
-                { label: 'סה"כ הכנסות', total: totalIncome,   paid: totalPaidInc, color: '#1a9e5c' },
+                { label: 'סה"כ הוצאות', total: totalExpenses, paid: totalPaidExp, color: 'var(--danger)' },
+                { label: 'סה"כ הכנסות', total: totalIncome,   paid: totalPaidInc, color: 'var(--primary)' },
               ].map(({ label, total, paid, color }) => (
                 <div key={label} style={{
                   flex: '1 1 200px', background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -845,7 +844,7 @@ export default function BillingClient() {
                           <span style={{
                             padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600,
                             background: it.direction === 'expense' ? '#fef2f2' : '#f0fdf4',
-                            color:      it.direction === 'expense' ? '#dc2626'  : '#1a9e5c',
+                            color:      it.direction === 'expense' ? 'var(--danger)'  : 'var(--primary)',
                           }}>
                             {it.direction === 'expense' ? '↑ הוצאה' : '↓ הכנסה'}
                           </span>
@@ -858,7 +857,7 @@ export default function BillingClient() {
                         </td>
                         <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{it.valid_from}</td>
                         <td style={tdSt}>
-                          <span style={{ color: it.active ? '#1a9e5c' : '#94a3b8', fontWeight: 600, fontSize: '12px' }}>
+                          <span style={{ color: it.active ? 'var(--primary)' : '#94a3b8', fontWeight: 600, fontSize: '12px' }}>
                             {it.active ? '✓' : '✗'}
                           </span>
                         </td>
@@ -919,7 +918,7 @@ export default function BillingClient() {
                           <span style={{
                             padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600,
                             background: c.default_direction === 'expense' ? '#fef2f2' : '#f0fdf4',
-                            color:      c.default_direction === 'expense' ? '#dc2626'  : '#1a9e5c',
+                            color:      c.default_direction === 'expense' ? 'var(--danger)'  : 'var(--primary)',
                           }}>
                             {c.default_direction === 'expense' ? '↑ הוצאה' : '↓ הכנסה'}
                           </span>
@@ -949,10 +948,10 @@ export default function BillingClient() {
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginBottom: '24px' }}>
             {[
-              { label: 'סה"כ הוצאות', val: totalExpenses, sub: `שולם: ${fmt(totalPaidExp)}`, color: '#dc2626' },
-              { label: 'סה"כ הכנסות', val: totalIncome,   sub: `שולם: ${fmt(totalPaidInc)}`, color: '#1a9e5c' },
+              { label: 'סה"כ הוצאות', val: totalExpenses, sub: `שולם: ${fmt(totalPaidExp)}`, color: 'var(--danger)' },
+              { label: 'סה"כ הכנסות', val: totalIncome,   sub: `שולם: ${fmt(totalPaidInc)}`, color: 'var(--primary)' },
               { label: 'מאזן חודשי',  val: totalIncome - totalExpenses,
-                sub: monthLabel(currentMonth), color: totalIncome >= totalExpenses ? '#1a9e5c' : '#dc2626' },
+                sub: monthLabel(currentMonth), color: totalIncome >= totalExpenses ? 'var(--primary)' : 'var(--danger)' },
             ].map(c => (
               <div key={c.label} style={{
                 background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -984,8 +983,8 @@ export default function BillingClient() {
                       </div>
                       <div style={{ display: 'flex', gap: '16px', fontSize: '13px' }}>
                         <span>סה&quot;כ: <strong>{fmt(cTotal)}</strong></span>
-                        <span style={{ color: '#1a9e5c' }}>שולם: <strong>{fmt(cPaid)}</strong></span>
-                        {cBal > 0 && <span style={{ color: '#dc2626' }}>יתרה: <strong>{fmt(cBal)}</strong></span>}
+                        <span style={{ color: 'var(--primary)' }}>שולם: <strong>{fmt(cPaid)}</strong></span>
+                        {cBal > 0 && <span style={{ color: 'var(--danger)' }}>יתרה: <strong>{fmt(cBal)}</strong></span>}
                       </div>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -1037,7 +1036,7 @@ export default function BillingClient() {
               {balance(payEntry) > 0
                 ? `יתרה: ${fmt(balance(payEntry))}`
                 : balance(payEntry) < 0
-                ? <span style={{ color: '#1a9e5c' }}>יתרת זכות: {fmt(-balance(payEntry))}</span>
+                ? <span style={{ color: 'var(--primary)' }}>יתרת זכות: {fmt(-balance(payEntry))}</span>
                 : 'שולם במלואו'}
             </div>
 
@@ -1047,7 +1046,7 @@ export default function BillingClient() {
                 {[...payEntry.payments].sort((a, b) => a.paid_date.localeCompare(b.paid_date)).map(p => (
                   <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--bg)', borderRadius: '8px', marginBottom: '6px' }}>
                     <div>
-                      <span style={{ fontWeight: 600, color: '#1a9e5c' }}>{fmt(p.amount)}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{fmt(p.amount)}</span>
                       {p.notes && <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginRight: '8px' }}>{p.notes}</span>}
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1057,7 +1056,7 @@ export default function BillingClient() {
                           const ok = await confirm({ msg: 'מחק תשלום זה?', icon: '⚠️', confirmLabel: 'מחק' })
                           if (ok) deletePayment(p.id)
                         }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '13px', padding: '0 4px' }}>
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: '13px', padding: '0 4px' }}>
                         ✕
                       </button>
                     </div>
@@ -1297,7 +1296,7 @@ export default function BillingClient() {
                   placeholder={ePpuUnit === 'agorot' ? '54.33' : '0.0000'} />
               </div>
               {ePrev && eCurr && ePpu && (
-                <div style={{ gridColumn: '1/-1', fontSize: '12px', color: '#1a9e5c', fontWeight: 600 }}>
+                <div style={{ gridColumn: '1/-1', fontSize: '12px', color: 'var(--primary)', fontWeight: 600 }}>
                   סה&quot;כ: {fmt((parseFloat(eCurr) - parseFloat(ePrev)) * (parseFloat(ePpu) / (ePpuUnit === 'agorot' ? 100 : 1)))}
                   {ePpuUnit === 'agorot' && (
                     <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginRight: '8px' }}>

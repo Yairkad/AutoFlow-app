@@ -33,9 +33,9 @@ function daysUntil(isoDate: string) {
 }
 
 function chipStyle(days: number): React.CSSProperties {
-  if (days < 0)   return { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }
-  if (days === 0) return { background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }
-  if (days <= 7)  return { background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' }
+  if (days < 0)   return { background: '#fef2f2', color: 'var(--danger)', border: '1px solid #fecaca' }
+  if (days === 0) return { background: '#fef2f2', color: 'var(--danger)', border: '1px solid #fecaca' }
+  if (days <= 7)  return { background: '#fffbeb', color: 'var(--warning)', border: '1px solid #fde68a' }
   return            { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' }
 }
 

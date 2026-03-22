@@ -661,12 +661,11 @@ export default function ProductsClient() {
                             setMvDropOpen(false)
                             setMvQty('')
                           }}
+                          className="tr-hover"
                           style={{
-                            padding: '9px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)',
+                            padding: '9px 12px', borderBottom: '1px solid var(--border)',
                             fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                           }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg)')}
-                          onMouseLeave={e => (e.currentTarget.style.background = '')}
                         >
                           <span>
                             {p.sku && <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '6px' }}>[{p.sku}]</span>}
@@ -932,7 +931,7 @@ function PriceListOverlay({ products, onClose }: { products: Product[]; onClose:
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={() => window.print()}
-              style={{ padding: '8px 20px', background: '#1a9e5c', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ padding: '8px 20px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}
             >
               הדפס / שמור PDF
             </button>
@@ -967,7 +966,7 @@ function PriceListOverlay({ products, onClose }: { products: Product[]; onClose:
                     <tr key={p.id} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
                       <td style={tdSt}>{p.name}</td>
                       <td style={{ ...tdSt, color: '#64748b', fontFamily: 'monospace' }}>{p.sku || '—'}</td>
-                      <td style={{ ...tdSt, fontWeight: 700, color: '#1a9e5c', textAlign: 'left' }}>
+                      <td style={{ ...tdSt, fontWeight: 700, color: 'var(--primary)', textAlign: 'left' }}>
                         ₪{Number(p.sell_price).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>

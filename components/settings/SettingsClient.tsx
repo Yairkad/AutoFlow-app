@@ -239,7 +239,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <button onClick={() => fileRef.current?.click()} style={{ ...btnSec, fontSize: '12px', padding: '5px 12px' }}>בחר תמונה</button>
                   {logoPreview && (
-                    <button onClick={() => { setLogoPreview(null); setTenant(t => t ? { ...t, logo_base64: null } : t) }} style={{ ...btnSec, fontSize: '12px', padding: '5px 12px', color: '#dc2626', borderColor: '#fecaca' }}>הסר</button>
+                    <button onClick={() => { setLogoPreview(null); setTenant(t => t ? { ...t, logo_base64: null } : t) }} style={{ ...btnSec, fontSize: '12px', padding: '5px 12px', color: 'var(--danger)', borderColor: '#fecaca' }}>הסר</button>
                   )}
                 </div>
               </div>
@@ -255,7 +255,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
                 {field('טלפון', <input style={inputSt} value={tenant.phone ?? ''} onChange={e => setTenant(t => t ? { ...t, phone: e.target.value } : t)} placeholder="050-0000000" dir="ltr" />)}
                 {field('כתובת', <input style={inputSt} value={tenant.address ?? ''} onChange={e => setTenant(t => t ? { ...t, address: e.target.value } : t)} placeholder="רחוב, עיר" />)}
                 {field('ח.פ / ע.מ', <input style={inputSt} value={tenant.tax_id ?? ''} onChange={e => setTenant(t => t ? { ...t, tax_id: e.target.value } : t)} placeholder="מספר עוסק" dir="ltr" />)}
-                {field('מספר רישיון', <input style={inputSt} value={tenant.license_number ?? ''} onChange={e => setTenant(t => t ? { ...t, license_number: e.target.value } : t)} placeholder="מס׳ רישיון מוסך" />)}
+                {field('מספר רישיון', <input style={inputSt} value={tenant.license_number ?? ''} onChange={e => setTenant(t => t ? { ...t, license_number: e.target.value } : t)} placeholder="הכנס מספר בלבד" />)}
               </div>
               {field('אימייל (ליצירת קשר)', <input style={inputSt} dir="ltr" type="email" value={tenant.public_info?.email ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, email: e.target.value } } : t)} placeholder="info@example.com" />)}
 
@@ -515,7 +515,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px', display: 'flex', gap: '12px' }}>
                   <span>{roleLabel(p.role)}</span>
                   {p.phone && <span>{p.phone}</span>}
-                  {!p.is_active && <span style={{ color: '#dc2626' }}>מושבת</span>}
+                  {!p.is_active && <span style={{ color: 'var(--danger)' }}>מושבת</span>}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '6px' }}>
@@ -526,7 +526,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
                   <button
                     onClick={() => handleDelete(p.id, p.full_name ?? p.id)}
                     disabled={deleting === p.id}
-                    style={{ padding: '6px 10px', background: 'transparent', border: '1px solid #fca5a5', borderRadius: '8px', color: '#dc2626', fontSize: '12px', cursor: 'pointer', opacity: deleting === p.id ? .5 : 1 }}
+                    style={{ padding: '6px 10px', background: 'transparent', border: '1px solid #fca5a5', borderRadius: '8px', color: 'var(--danger)', fontSize: '12px', cursor: 'pointer', opacity: deleting === p.id ? .5 : 1 }}
                   >
                     {deleting === p.id ? '...' : '🗑'}
                   </button>
@@ -652,7 +652,7 @@ function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType
           {tokens.map(t => {
             const expired = isExpired(t)
             const status  = t.used ? 'נוצל' : expired ? 'פג תוקף' : 'פעיל'
-            const statusColor = t.used ? '#94a3b8' : expired ? '#dc2626' : '#1a9e5c'
+            const statusColor = t.used ? '#94a3b8' : expired ? 'var(--danger)' : 'var(--primary)'
             return (
               <div key={t.id} style={{
                 background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px',
@@ -669,7 +669,7 @@ function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType
                 {!t.used && !expired && (
                   <button onClick={() => copyLink(t.token)} style={{ ...btnSec, padding: '5px 12px', fontSize: '12px' }}>העתק</button>
                 )}
-                <button onClick={() => revokeToken(t.id)} style={{ padding: '5px 10px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '12px' }}>×</button>
+                <button onClick={() => revokeToken(t.id)} style={{ padding: '5px 10px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px' }}>×</button>
               </div>
             )
           })}
@@ -824,7 +824,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                   style={{ ...inputSt, textAlign: 'center', letterSpacing: '4px', fontSize: '18px', marginBottom: '12px' }}
                 />
               )}
-              {pinError && <div style={{ color: '#dc2626', fontSize: '13px', marginBottom: '12px' }}>{pinError}</div>}
+              {pinError && <div style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{pinError}</div>}
               <button onClick={savePin} style={{ ...btnPrim, width: '100%' }}>הגדר קוד</button>
               {settingPin && <button onClick={() => { setSettingPin(false); setPinInput(''); setPinConfirm(''); setPinError('') }} style={{ ...btnSec, width: '100%', marginTop: '8px' }}>ביטול</button>}
             </>
@@ -838,7 +838,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                 style={{ ...inputSt, textAlign: 'center', letterSpacing: '4px', fontSize: '18px', marginBottom: '12px' }}
                 autoFocus
               />
-              {pinError && <div style={{ color: '#dc2626', fontSize: '13px', marginBottom: '12px' }}>{pinError}</div>}
+              {pinError && <div style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{pinError}</div>}
               <button onClick={verifyPin} style={{ ...btnPrim, width: '100%' }}>🔓 פתח כספת</button>
             </>
           )}
@@ -883,7 +883,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                 <label style={labelSt}>אמת קוד חדש</label>
                 <input type="password" inputMode="numeric" maxLength={12} autoComplete="new-password" readOnly onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.removeAttribute('readonly')} autoCorrect="off" autoCapitalize="off" spellCheck={false} data-lpignore="true" data-1p-ignore="true" style={{ ...inputSt, textAlign: 'center', letterSpacing: '4px', fontSize: '16px' }} value={newPinConfirm} onChange={e => setNewPinConfirm(e.target.value)} onKeyDown={e => e.key === 'Enter' && changePin()} />
               </div>
-              {pinError && <div style={{ color: '#dc2626', fontSize: '12px' }}>{pinError}</div>}
+              {pinError && <div style={{ color: 'var(--danger)', fontSize: '12px' }}>{pinError}</div>}
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <button onClick={changePin} style={{ ...btnPrim, flex: 1 }}>שמור קוד</button>
                 <button onClick={() => { setChangingPin(false); setOldPinInput(''); setNewPin(''); setNewPinConfirm(''); setPinError('') }} style={btnSec}>ביטול</button>
@@ -983,7 +983,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                         <button onClick={() => { openEdit(item); setMenuOpen(null) }} style={{ width: '100%', textAlign: 'right', padding: '9px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           ✏️ ערוך
                         </button>
-                        <button onClick={() => { deleteItem(item.id); setMenuOpen(null) }} style={{ width: '100%', textAlign: 'right', padding: '9px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '13px', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '8px', borderTop: '1px solid var(--border)' }}>
+                        <button onClick={() => { deleteItem(item.id); setMenuOpen(null) }} style={{ width: '100%', textAlign: 'right', padding: '9px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '13px', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '8px', borderTop: '1px solid var(--border)' }}>
                           🗑 מחק
                         </button>
                       </div>
@@ -1106,7 +1106,7 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
               {form.image_url && (
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   <img src={form.image_url} alt="" style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }} />
-                  <button onClick={() => setForm(f => ({ ...f, image_url: null }))} style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: '#dc2626', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                  <button onClick={() => setForm(f => ({ ...f, image_url: null }))} style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: 'var(--danger)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                 </div>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
@@ -1147,7 +1147,7 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
             </div>
             <button onClick={() => toggleActive(i)} style={{ ...btnSec, padding: '4px 10px', fontSize: '11px', color: i.is_active ? 'var(--primary)' : 'var(--text-muted)' }}>{i.is_active ? '✓ פעיל' : 'מושבת'}</button>
             <button onClick={() => openEdit(i)} style={{ ...btnSec, padding: '4px 10px', fontSize: '11px' }}>✏️</button>
-            <button onClick={() => del(i.id)} style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
+            <button onClick={() => del(i.id)} style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
           </div>
         ))}
       </div>
@@ -1222,7 +1222,7 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
             </div>
             <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? '#dcfce7' : '#f1f5f9', color: i.is_active ? '#16a34a' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
             <button onClick={() => openEdit(i)} style={{ ...btnSec, padding: '4px 10px', fontSize: '11px' }}>✏️</button>
-            <button onClick={() => del(i.id)} style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
+            <button onClick={() => del(i.id)} style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
           </div>
         ))}
       </div>
@@ -1302,7 +1302,7 @@ function PricesSection({ supabase, tenantId, showToast }: { supabase: ReturnType
                 </div>
                 <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '13px' }}>{i.price != null ? `₪${Number(i.price).toLocaleString('he-IL')}` : '—'}</span>
                 <button onClick={() => openEdit(i)} style={{ ...btnSec, padding: '3px 8px', fontSize: '11px' }}>✏️</button>
-                <button onClick={() => del(i.id)} style={{ padding: '3px 7px', border: '1px solid #fecaca', borderRadius: '5px', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
+                <button onClick={() => del(i.id)} style={{ padding: '3px 7px', border: '1px solid #fecaca', borderRadius: '5px', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
               </div>
             ))}
           </div>
@@ -1402,7 +1402,7 @@ export default function SettingsClient() {
           {!driveConnected && tenantId && (
             <a
               href={`/api/drive/auth?tenant_id=${tenantId}`}
-              style={{ padding: '8px 16px', background: '#1a9e5c', color: '#fff', borderRadius: '8px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
+              style={{ padding: '8px 16px', background: 'var(--primary)', color: '#fff', borderRadius: '8px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
             >
               חבר Drive →
             </a>

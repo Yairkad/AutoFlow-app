@@ -161,9 +161,8 @@ export default function RecurringTab({ rows, suppliers, tenantId, supabase, onRe
             ) : rows.map(r => (
               <tr
                 key={r.id}
+                className="tr-hover"
                 style={{ borderBottom: '1px solid var(--border)', opacity: r.is_active ? 1 : 0.5 }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#f8fafc'}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}
               >
                 <td style={{ ...TD, fontWeight: 500 }}>{r.description}</td>
                 <td style={TD}>

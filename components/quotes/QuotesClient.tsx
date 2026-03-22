@@ -300,7 +300,7 @@ function OffersSection({
             onClick={() => removeOffer(offers, o.id, setOffers)}
             style={{
               width: 34, height: 34, border: 'none', borderRadius: 6, cursor: 'pointer',
-              background: '#fee2e2', color: '#dc2626', fontWeight: 700,
+              background: '#fee2e2', color: 'var(--danger)', fontWeight: 700,
             }}
           >✕</button>
         </div>
@@ -633,7 +633,7 @@ export default function QuotesClient() {
       }}>
         <span>עלות: <strong>{fmt(cost)}</strong></span>
         <span>מחיר ללקוח: <strong>{fmt(sell)}</strong></span>
-        <span>רווח ליח׳: <strong style={{ color: profitUnit >= 0 ? 'var(--primary)' : '#dc2626' }}>
+        <span>רווח ליח׳: <strong style={{ color: profitUnit >= 0 ? 'var(--primary)' : 'var(--danger)' }}>
           {fmt(profitUnit)} ({pct}%)
         </strong></span>
         {qty > 1 && <span>סה״כ רווח: <strong>{fmt(profitTotal)}</strong></span>}
@@ -846,7 +846,7 @@ export default function QuotesClient() {
                     </td>
                     <td style={{
                       ...tdStyle, fontWeight: 700, whiteSpace: 'nowrap',
-                      color: q.profit != null ? (q.profit >= 0 ? 'var(--primary)' : '#dc2626') : 'var(--text-muted)',
+                      color: q.profit != null ? (q.profit >= 0 ? 'var(--primary)' : 'var(--danger)') : 'var(--text-muted)',
                     }}>
                       {q.profit != null ? fmt(q.profit) : '—'}
                     </td>
@@ -868,7 +868,7 @@ export default function QuotesClient() {
                             {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                           </select>
                           <button title="ערוך" onClick={() => openEdit(q)} style={iconBtn('var(--accent)', 'white')}>✏️</button>
-                          <button title="מחק" onClick={() => del(q.id)} style={iconBtn('#dc2626', 'white')}>🗑️</button>
+                          <button title="מחק" onClick={() => del(q.id)} style={iconBtn('var(--danger)', 'white')}>🗑️</button>
                         </div>
                       </td>
                     )}
@@ -954,7 +954,7 @@ export default function QuotesClient() {
                   >{loadingTirePlate ? '⏳' : '🔍 פרטי רכב'}</button>
                 </div>
                 {tirePlateMeta && (
-                  <div style={{ fontSize: 12, color: tirePlateMeta === 'לא נמצא' ? '#dc2626' : 'var(--primary)', fontWeight: 600, marginTop: 3 }}>
+                  <div style={{ fontSize: 12, color: tirePlateMeta === 'לא נמצא' ? 'var(--danger)' : 'var(--primary)', fontWeight: 600, marginTop: 3 }}>
                     {tirePlateMeta === 'לא נמצא' ? '⚠️ לא נמצא רכב' : `✓ ${tirePlateMeta}`}
                   </div>
                 )}

@@ -885,9 +885,8 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                     return (
                       <tr
                         key={r.month}
+                        className={!isCurrent ? 'tr-hover' : undefined}
                         style={{ borderBottom: '1px solid var(--border)', background: isCurrent ? '#f0fdf4' : '' }}
-                        onMouseEnter={e => { if (!isCurrent) (e.currentTarget as HTMLElement).style.background = '#f8fafc' }}
-                        onMouseLeave={e => { if (!isCurrent) (e.currentTarget as HTMLElement).style.background = '' }}
                       >
                         <td style={{ ...TD, fontWeight: isCurrent ? 700 : 400 }}>
                           {monthLabel(r.month)}
@@ -954,10 +953,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                     </td>
                   </tr>
                 ) : filteredRows.map(row => (
-                  <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#f8fafc'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}
-                  >
+                  <tr key={row.id} className="tr-hover" style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ ...TD, color: 'var(--text-muted)' }}>{new Date(row.date + 'T00:00:00').toLocaleDateString('he-IL')}</td>
                     <td style={TD}><span style={{ background: '#f1f5f9', borderRadius: '6px', padding: '2px 8px', fontSize: '12px', fontWeight: 500 }}>{row.category}</span></td>
                     <td style={{ ...TD, color: row.description ? 'var(--text)' : 'var(--text-muted)' }}>{row.description || '—'}</td>

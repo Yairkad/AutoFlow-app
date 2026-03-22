@@ -22,7 +22,7 @@ export function useToast() {
 
 const COLORS: Record<ToastType, string> = {
   success: '#16a34a',
-  error:   '#dc2626',
+  error:   'var(--danger)',
   info:    '#2563eb',
 }
 
@@ -38,23 +38,27 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const showToast = useCallback((msg: string, type: ToastType = 'success') => {
     const id = Date.now()
     setToasts(prev => [...prev, { id, msg, type }])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000)
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500)
   }, [])
+
+  function dismiss(id: number) {
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
       <div style={{
-        position: 'fixed', bottom: '24px', left: '50%',
-        transform: 'translateX(-50%)',
+        position: 'fixed', bottom: '24px', left: '24px',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         display: 'flex', flexDirection: 'column', gap: '8px',
-        zIndex: 2000, alignItems: 'center',
+        zIndex: 2000, alignItems: 'flex-start',
       }}>
         {toasts.map(t => (
           <div key={t.id} style={{
             background: '#1e293b',
             color: '#fff',
-            padding: '10px 18px',
+            padding: '10px 12px 10px 18px',
             borderRadius: '10px',
             fontSize: '14px',
             display: 'flex', alignItems: 'center', gap: '8px',
@@ -63,8 +67,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             animation: 'fadeInUp .2s ease',
             whiteSpace: 'nowrap',
           }}>
-            <span>{ICONS[t.type]}</span>
+            <span aria-hidden="true">{ICONS[t.type]}</span>
             <span>{t.msg}</span>
+            <button
+              onClick={() => dismiss(t.id)}
+              aria-label="סגור התראה"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'rgba(255,255,255,.5)', fontSize: '16px', lineHeight: 1,
+                padding: '0 2px', marginRight: '4px',
+                transition: 'color .15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,.5)')}
+            >✕</button>
           </div>
         ))}
       </div>

@@ -295,7 +295,7 @@ export default function SuppliersClient() {
           style={{
             padding: '9px 16px',
             background: editMode ? '#fef3c7' : 'transparent',
-            color: editMode ? '#d97706' : 'var(--text-muted)',
+            color: editMode ? 'var(--warning)' : 'var(--text-muted)',
             border: `1px solid ${editMode ? '#fcd34d' : 'var(--border)'}`,
             borderRadius: '8px',
             fontSize: '13px',
@@ -385,7 +385,7 @@ export default function SuppliersClient() {
                     {/* Debt badge */}
                     {openCnt > 0 ? (
                       <div style={{ textAlign: 'left', flexShrink: 0 }}>
-                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#dc2626' }}>{fmt(debt)}</div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(debt)}</div>
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{openCnt} חובות</div>
                       </div>
                     ) : (
@@ -419,7 +419,7 @@ export default function SuppliersClient() {
                           >✏️</button>
                           <button
                             onClick={() => deleteSupplier(s)}
-                            style={{ padding: '5px 9px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '7px', fontSize: '13px', cursor: 'pointer' }}
+                            style={{ padding: '5px 9px', background: '#fef2f2', color: 'var(--danger)', border: '1px solid #fecaca', borderRadius: '7px', fontSize: '13px', cursor: 'pointer' }}
                           >🗑</button>
                         </>
                       )}
@@ -520,7 +520,7 @@ export default function SuppliersClient() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>חובות לספק</h3>
                 {selectedOpenTotal > 0 && (
-                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--danger)' }}>
                     סה"כ: {fmt(selectedOpenTotal)}
                   </span>
                 )}
@@ -571,7 +571,7 @@ export default function SuppliersClient() {
                               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{d.date}</div>
                             </div>
                             <div style={{ textAlign: 'left', flexShrink: 0 }}>
-                              <div style={{ fontWeight: 700, color: d.is_closed ? '#16a34a' : '#dc2626' }}>
+                              <div style={{ fontWeight: 700, color: d.is_closed ? '#16a34a' : 'var(--danger)' }}>
                                 {d.is_closed ? '✓ שולם' : `יתרה: ${fmt(bal(d))}`}
                               </div>
                               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -687,8 +687,6 @@ export default function SuppliersClient() {
                                 key={b.code + b.name}
                                 onMouseDown={e => { e.preventDefault(); setFBankName(b.name); setShowBankDrop(false) }}
                                 style={{ padding: '9px 12px', cursor: 'pointer', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: fBankName === b.name ? '#f0fdf4' : undefined }}
-                                onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                                onMouseLeave={e => (e.currentTarget.style.background = fBankName === b.name ? '#f0fdf4' : '')}
                               >
                                 <span>{b.name}</span>
                                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>{b.code}</span>

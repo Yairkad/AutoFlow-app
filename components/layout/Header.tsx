@@ -107,7 +107,7 @@ function ChangePasswordModal({ onClose, userEmail }: { onClose: () => void; user
               <label style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>אמת סיסמא</label>
               <input type="password" style={inSt} value={confirm} onChange={e => setConfirm(e.target.value)} onKeyDown={e => e.key === 'Enter' && save()} placeholder="הכנס שוב" autoComplete="new-password" readOnly onFocus={e => e.currentTarget.removeAttribute('readonly')} data-lpignore="true" data-1p-ignore="true" />
             </div>
-            {error && <div style={{ color: '#dc2626', fontSize: '12px' }}>{error}</div>}
+            {error && <div style={{ color: 'var(--danger)', fontSize: '12px' }}>{error}</div>}
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
               <button onClick={save} disabled={saving} style={{ flex: 1, padding: '9px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', opacity: saving ? .7 : 1 }}>
                 {saving ? 'שומר...' : 'שמור'}
@@ -155,7 +155,7 @@ function UserDropdown({ name, email, onClose }: { name: string; email: string; o
         <button onClick={() => setShowChangePw(true)} style={btnStyle}>
           <span>🔑</span> שינוי סיסמא
         </button>
-        <button onClick={logout} style={{ ...btnStyle, color: '#dc2626', borderTop: '1px solid var(--border)' }}>
+        <button onClick={logout} style={{ ...btnStyle, color: 'var(--danger)', borderTop: '1px solid var(--border)' }}>
           <span>🚪</span> התנתקות
         </button>
       </div>
@@ -264,7 +264,9 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   }
 
   function go(r: SearchResult) {
-    router.push(r.href)
+    const q2 = q.trim()
+    const url = q2 ? `${r.href}?q=${encodeURIComponent(q2)}` : r.href
+    router.push(url)
     setQ('')
     setResults([])
     setFocused(false)
@@ -451,8 +453,9 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
               spellCheck={false}
               data-lpignore="true"
               data-1p-ignore="true"
+              placeholder="חיפוש..."
               style={{
-                paddingRight: '34px', paddingLeft: '10px', height: '36px',
+                paddingRight: '34px', paddingLeft: q ? '10px' : '62px', height: '36px',
                 border: `1px solid ${focused ? 'var(--primary)' : 'var(--border)'}`,
                 borderRadius: showDropdownResults ? '8px 8px 0 0' : '8px',
                 background: 'var(--bg)', fontSize: '13px', width: '240px',
@@ -460,6 +463,15 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                 transition: 'border-color .15s',
               }}
             />
+            {!q && !focused && (
+              <span style={{
+                position: 'absolute', left: '8px',
+                background: 'var(--border)', borderRadius: '4px',
+                padding: '2px 5px', fontSize: '10px', fontWeight: 700,
+                color: 'var(--text-muted)', fontFamily: 'monospace',
+                pointerEvents: 'none', whiteSpace: 'nowrap',
+              }}>Ctrl+K</span>
+            )}
           </div>
 
           {/* Dropdown results */}

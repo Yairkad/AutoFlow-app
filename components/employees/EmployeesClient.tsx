@@ -680,14 +680,13 @@ export default function EmployeesClient() {
                     <button
                       key={item.label}
                       onClick={item.action}
+                      className="tr-hover"
                       style={{
                         display: 'block', width: '100%', textAlign: 'right', padding: '10px 14px',
-                        border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px',
+                        border: 'none', background: 'none', fontSize: '13px',
                         color: (item as { danger?: boolean }).danger ? 'var(--danger)' : 'var(--text)',
                         fontFamily: 'inherit',
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                     >{item.label}</button>
                   ))}
                 </div>
@@ -1149,8 +1148,6 @@ export default function EmployeesClient() {
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                             background: form.bank_name === b.name ? '#f0fdf4' : undefined,
                           }}
-                          onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                          onMouseLeave={e => (e.currentTarget.style.background = form.bank_name === b.name ? '#f0fdf4' : '')}
                         >
                           <span>{b.name}</span>
                           <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>{b.code}</span>
