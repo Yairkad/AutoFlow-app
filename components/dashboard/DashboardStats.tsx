@@ -120,7 +120,7 @@ function CarsCard({ inInventory, openRequests, href }: { inInventory: number; op
       className="stat-card"
       style={{
         background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)',
-        padding: '14px 16px', borderTop: '3px solid #0369a1', cursor: 'pointer',
+        padding: '14px 16px', borderTop: '3px solid var(--sky)', cursor: 'pointer',
         transition: 'transform .15s, box-shadow .15s',
         display: 'flex', flexDirection: 'column', gap: '8px', justifyContent: 'center',
       }}
@@ -130,12 +130,12 @@ function CarsCard({ inInventory, openRequests, href }: { inInventory: number; op
       <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>🚗 רכבים</div>
       <div className="stat-card-split-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>📦 למכירה</span>
-        <span style={{ fontSize: '18px', fontWeight: 800, color: '#0369a1' }}>{inInventory}</span>
+        <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--sky)' }}>{inInventory}</span>
       </div>
       <div style={{ height: '1px', background: 'var(--border)' }} />
       <div className="stat-card-split-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>📋 בקשות פתוחות</span>
-        <span style={{ fontSize: '15px', fontWeight: 800, color: openRequests > 0 ? '#7c3aed' : 'var(--text-muted)' }}>{openRequests}</span>
+        <span style={{ fontSize: '15px', fontWeight: 800, color: openRequests > 0 ? 'var(--purple)' : 'var(--text-muted)' }}>{openRequests}</span>
       </div>
     </div>
   )
@@ -232,7 +232,13 @@ export default function DashboardStats() {
   if (loading) return (
     <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: 'minmax(90px, 130px)', gap: '16px', alignContent: 'start' }}>
       {Array(6).fill(0).map((_, i) => (
-        <div key={i} style={{ background: '#f1f5f9', borderRadius: 'var(--radius)' }} />
+        <div key={i} style={{ background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '14px', borderTop: '3px solid #e2e8f0' }}>
+          <div className="shimmer" style={{ width: 44, height: 44, borderRadius: '10px', flexShrink: 0 }} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="shimmer" style={{ height: 22, width: '60%', borderRadius: '5px' }} />
+            <div className="shimmer" style={{ height: 12, width: '80%', borderRadius: '4px' }} />
+          </div>
+        </div>
       ))}
     </div>
   )
@@ -249,7 +255,7 @@ export default function DashboardStats() {
     }}>
       {can('income', 'expenses') && <StatCard label="הכנסות החודש"    value={stats.incomeMonth}    icon="💰" color="var(--primary)"  isCurrency href="/income" />}
       {can('expenses')           && <StatCard label="הוצאות החודש"    value={stats.expensesMonth}  icon="📤" color="var(--danger)"   isCurrency href="/expenses" />}
-      {can('income', 'expenses') && <StatCard label="רווח החודש"      value={profit}               icon="📈" color={profit >= 0 ? 'var(--primary)' : 'var(--danger)'} isCurrency />}
+      {can('income', 'expenses') && <StatCard label="רווח החודש"      value={profit}               icon="📈" color={profit >= 0 ? 'var(--primary)' : 'var(--danger)'} isCurrency href="/income" />}
       {can('debts') && (
         <DebtCard
           customerDebts={stats.customerDebts}
@@ -259,12 +265,12 @@ export default function DashboardStats() {
           href="/debts"
         />
       )}
-      {can('products', 'products_view') && <StatCard label="פריטים במלאי"        value={stats.inventoryItems}   icon="📦" color="#8b5cf6" href="/products" />}
-      {can('employees')                 && <StatCard label="עובדים פעילים"        value={stats.activeEmployees}  icon="👷" color="#7c3aed" href="/employees" />}
+      {can('products', 'products_view') && <StatCard label="פריטים במלאי"        value={stats.inventoryItems}   icon="📦" color="var(--purple)" href="/products" />}
+      {can('employees')                 && <StatCard label="עובדים פעילים"        value={stats.activeEmployees}  icon="👷" color="var(--purple)" href="/employees" />}
       {can('cars')                      && <CarsCard inInventory={stats.carsInInventory} openRequests={stats.openCarRequests} href="/cars" />}
-      {can('tires', 'tires_view')       && <StatCard label="סוגי צמיג במלאי"      value={stats.tiresInStock}     icon="🔘" color="#0891b2" href="/tires" />}
-      {can('alignment')                 && <StatCard label="עבודות פרונט פעילות"  value={stats.activeJobs}       icon="🔩" color="#d97706" href="/alignment" />}
-      {can('inspections')               && <StatCard label="בדיקות קניה"           value={stats.totalInspections} icon="📝" color="#7c3aed" href="/inspections" />}
+      {can('tires', 'tires_view')       && <StatCard label="סוגי צמיג במלאי"      value={stats.tiresInStock}     icon="🔘" color="var(--cyan)"   href="/tires" />}
+      {can('alignment')                 && <StatCard label="עבודות פרונט פעילות"  value={stats.activeJobs}       icon="🔩" color="var(--warning)" href="/alignment" />}
+      {can('inspections')               && <StatCard label="בדיקות קניה"           value={stats.totalInspections} icon="📝" color="var(--purple)" href="/inspections" />}
     </div>
   )
 }

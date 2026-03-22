@@ -52,6 +52,7 @@ export default function Modal({ open, onClose, title, children, footer, maxWidth
           <h3 style={{ fontSize: '16px', fontWeight: 700 }}>{title}</h3>
           <button
             onClick={onClose}
+            aria-label="סגור"
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               fontSize: '18px', color: 'var(--text-muted)', lineHeight: 1,

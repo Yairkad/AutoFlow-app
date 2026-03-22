@@ -76,7 +76,7 @@ export default function Button({
     >
       {(loading || busy)
         ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <Spinner /> {children}
+            <Spinner /> שומר...
           </span>
         : children
       }
@@ -89,7 +89,7 @@ function Spinner() {
     <span style={{
       width: 13, height: 13, border: '2px solid rgba(255,255,255,.4)',
       borderTopColor: 'currentColor', borderRadius: '50%',
-      display: 'inline-block', animation: 'btn-spin .6s linear infinite', flexShrink: 0,
+      display: 'inline-block', animation: 'spin .6s linear infinite', flexShrink: 0,
     }} />
   )
 }

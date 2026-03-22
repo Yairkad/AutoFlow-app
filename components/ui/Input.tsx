@@ -42,7 +42,7 @@ const Input = forwardRef<HTMLInputElement, Props>(function Input(
             transition: 'border-color .15s',
             ...style,
           }}
-          onFocus={e => e.target.style.borderColor = '#0891b2'}
+          onFocus={e => e.target.style.borderColor = 'var(--primary)'}
           onBlur={e => e.target.style.borderColor = error ? 'var(--danger)' : 'var(--border)'}
           {...props}
         />
