@@ -821,7 +821,7 @@ export default function CarsClient() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(130px, calc(50% - 6px)), 1fr))', gap: 12, marginBottom: 24 }}>
         <StatCard label="במלאי"        value={invCars.length}     />
         <StatCard label="למכירה"       value={invCars.filter(c=>c.status==='available').length} color="var(--primary)" />
         <StatCard label="שמורים"       value={invCars.filter(c=>c.status==='reserved').length}  color="#d97706" />
@@ -832,7 +832,7 @@ export default function CarsClient() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20, overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
         {[
           { key: 'inventory', label: `📦 מלאי (${invCars.length})` },
           { key: 'checking',  label: `🔍 בדיקה${checkCars.length ? ` (${checkCars.length})` : ''}` },
@@ -843,7 +843,7 @@ export default function CarsClient() {
             padding: '8px 18px', borderRadius: 20, border: '1.5px solid var(--border)',
             background: tab === t.key ? 'var(--primary)' : '#fff',
             color: tab === t.key ? '#fff' : 'var(--text-muted)',
-            fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+            fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
           }}>{t.label}</button>
         ))}
       </div>
@@ -851,13 +851,13 @@ export default function CarsClient() {
       {/* ── TAB: INVENTORY ── */}
       {tab === 'inventory' && (
         <>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
             {[{ v: 'all', l: 'הכל' }, { v: 'available', l: '🟢 למכירה' }, { v: 'reserved', l: '🟡 שמור' }, { v: 'business', l: '🟣 בשימוש העסק' }].map(f => (
               <button key={f.v} onClick={() => setInvFilter(f.v)} style={{
                 padding: '5px 14px', borderRadius: 16, border: '1.5px solid var(--border)',
                 background: invFilter === f.v ? 'var(--primary)' : '#fff',
                 color: invFilter === f.v ? '#fff' : 'var(--text-muted)',
-                fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
               }}>{f.l}</button>
             ))}
           </div>
