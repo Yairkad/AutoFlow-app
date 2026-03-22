@@ -574,6 +574,11 @@ export default function DocumentsClient() {
 
   const createDriveFolder = async () => {
     if (!newFolderName.trim() || !tenantId.current) return
+    if (!rootDocsFolderId.current) {
+      showToast('עדיין טוען... נסה שוב', 'error')
+      loadDriveFiles('')
+      return
+    }
     setCreatingFolder(true)
     const parentId = currentFolderId() || rootDocsFolderId.current
     try {
@@ -582,11 +587,15 @@ export default function DocumentsClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenant_id: tenantId.current, parent_id: parentId, name: newFolderName.trim() }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'failed')
+      }
       showToast('תיקיה נוצרה ✓', 'success')
       setNewFolderName('')
       setNewFolderMode(false)
-      loadDriveFiles()
+      const reloadId = currentFolderId() || rootDocsFolderId.current
+      loadDriveFiles(reloadId)
     } catch { showToast('שגיאה ביצירת תיקיה', 'error') }
     setCreatingFolder(false)
   }
@@ -775,7 +784,7 @@ export default function DocumentsClient() {
                     <button onClick={() => { setNewFolderMode(false); setNewFolderName('') }} style={{ padding: '6px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
                   </div>
                 ) : (
-                  <button onClick={() => setNewFolderMode(true)} style={{ padding: '6px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+                  <button onClick={() => setNewFolderMode(true)} disabled={driveLoading || !rootDocsFolderId.current} style={{ padding: '6px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, opacity: driveLoading ? 0.5 : 1 }}>
                     📁 תיקיה חדשה
                   </button>
                 )}
