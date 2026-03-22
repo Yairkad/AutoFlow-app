@@ -276,6 +276,44 @@ function printChecklist(copies: number, _car: string, _owner: string, _phone: st
   w.document.close()
 }
 
+// ── printBlankHeader ──────────────────────────────────────────────────────────
+// Blank page: just logo + business details header, rest is empty
+
+function printBlankHeader(bizNameStr: string, logoBase64: string, subTitle: string, phone: string, address: string, license: string) {
+  const logoHTML = logoBase64
+    ? `<img src="${logoBase64}" style="max-height:70px;max-width:160px;object-fit:contain" alt="לוגו"/>`
+    : ''
+  const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="utf-8"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Heebo', sans-serif; background: #fff; }
+    .page { width: 210mm; min-height: 296mm; padding: 14mm 16mm; }
+    .hdr { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1a9e5c; padding-bottom: 8mm; margin-bottom: 8mm; }
+    .biz-name { font-size: 22pt; font-weight: 900; color: #1a9e5c; }
+    .biz-detail { font-size: 10pt; color: #444; margin-top: 2mm; }
+    @media print { @page { size: A4; margin: 0; } body { background: #fff; } }
+  </style></head><body>
+  <div class="page">
+    <div class="hdr">
+      <div>
+        <div class="biz-name">${bizNameStr}</div>
+        ${subTitle  ? `<div class="biz-detail">${subTitle}</div>`  : ''}
+        ${address   ? `<div class="biz-detail">${address}</div>`   : ''}
+        ${phone     ? `<div class="biz-detail">טל׳: ${phone}</div>` : ''}
+        ${license   ? `<div class="biz-detail">מס׳ רישיון מוסך: ${license}</div>` : ''}
+      </div>
+      ${logoHTML}
+    </div>
+  </div>
+  <script>window.onload=function(){window.print()}<\/script>
+  </body></html>`
+  const w = window.open('', '_blank')
+  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
+  w.document.write(html)
+  w.document.close()
+}
+
 // ── printWarranty ─────────────────────────────────────────────────────────────
 // Blank version of inspection Page 1 – identical layout, empty fields for manual fill
 
@@ -442,7 +480,7 @@ export default function DocumentsClient() {
   const [driveConnected,  setDriveConnected]  = useState(false)
   const [driveItems,      setDriveItems]      = useState<DriveItem[]>([])
   const [driveLoading,    setDriveLoading]    = useState(false)
-  const [driveUploading,  setDriveUploading]  = useState(false)
+  const [uploadProgress,  setUploadProgress]  = useState<{done:number;total:number}|null>(null)
   const [driveDeletingId, setDriveDeletingId] = useState<string|null>(null)
   // folder navigation: stack of {id, name}
   const [folderStack,     setFolderStack]     = useState<{id:string;name:string}[]>([])
@@ -535,26 +573,28 @@ export default function DocumentsClient() {
     loadDriveFiles(parentId)
   }
 
-  const uploadDriveFile = async (file: File) => {
-    if (!tenantId.current) return
-    setDriveUploading(true)
-    try {
-      const targetId = currentFolderId() || rootDocsFolderId.current
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('tenant_id', tenantId.current)
-      if (targetId) {
-        // upload directly to folder id via a custom field
-        fd.append('folder_id', targetId)
-      } else {
-        fd.append('sub_folder', 'מסמכים')
-      }
-      const res = await fetch('/api/drive/upload', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error()
-      showToast('הקובץ הועלה ✓', 'success')
-      loadDriveFiles()
-    } catch { showToast('שגיאה בהעלאה', 'error') }
-    setDriveUploading(false)
+  const uploadDriveFiles = async (files: FileList | File[]) => {
+    if (!tenantId.current || !files.length) return
+    const arr = Array.from(files)
+    setUploadProgress({ done: 0, total: arr.length })
+    const targetId = currentFolderId() || rootDocsFolderId.current
+    let done = 0
+    for (const file of arr) {
+      try {
+        const fd = new FormData()
+        fd.append('file', file)
+        fd.append('tenant_id', tenantId.current)
+        if (targetId) fd.append('folder_id', targetId)
+        else fd.append('sub_folder', 'מסמכים')
+        const res = await fetch('/api/drive/upload', { method: 'POST', body: fd })
+        if (!res.ok) throw new Error()
+      } catch { showToast(`שגיאה בהעלאת ${file.name}`, 'error') }
+      done++
+      setUploadProgress({ done, total: arr.length })
+    }
+    showToast(`הועלו ${done}/${arr.length} קבצים ✓`, 'success')
+    setUploadProgress(null)
+    loadDriveFiles()
   }
 
   const deleteDriveFile = async (fileId: string, fileName: string) => {
@@ -705,17 +745,27 @@ export default function DocumentsClient() {
           ? <Button variant="primary" onClick={openAdd}>➕ תבנית חדשה</Button>
           : driveConnected && (
             <>
-              <input type="file" id="doc-drive-upload" style={{ display: 'none' }}
-                onChange={e => { const f = e.target.files?.[0]; if (f) uploadDriveFile(f); e.target.value = '' }}
+              <input type="file" id="doc-drive-upload" style={{ display: 'none' }} multiple
+                onChange={e => { if (e.target.files?.length) uploadDriveFiles(e.target.files); e.target.value = '' }}
               />
               <label htmlFor="doc-drive-upload" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 background: 'var(--primary)', color: '#fff', borderRadius: 8,
-                padding: '8px 16px', fontSize: 14, fontWeight: 600, cursor: driveUploading ? 'default' : 'pointer',
-                opacity: driveUploading ? 0.7 : 1,
+                padding: '8px 16px', fontSize: 14, fontWeight: 600,
+                cursor: uploadProgress ? 'default' : 'pointer',
+                opacity: uploadProgress ? 0.7 : 1,
+                pointerEvents: uploadProgress ? 'none' : 'auto',
               }}>
-                {driveUploading ? '⏳ מעלה...' : '📤 העלה קובץ'}
+                {uploadProgress ? `⏳ ${uploadProgress.done}/${uploadProgress.total}` : '📤 העלה קבצים'}
               </label>
+              {uploadProgress && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 120, height: 6, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', background: 'var(--primary)', borderRadius: 99, width: `${(uploadProgress.done/uploadProgress.total)*100}%`, transition: 'width 0.3s' }} />
+                  </div>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{Math.round((uploadProgress.done/uploadProgress.total)*100)}%</span>
+                </div>
+              )}
             </>
           )
         }
@@ -785,7 +835,7 @@ export default function DocumentsClient() {
                     <button onClick={() => { setNewFolderMode(false); setNewFolderName('') }} style={{ padding: '6px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
                   </div>
                 ) : (
-                  <button onClick={() => setNewFolderMode(true)} disabled={driveLoading || !docsFolderReady} style={{ padding: '6px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, opacity: driveLoading ? 0.5 : 1 }}>
+                  <button onClick={() => setNewFolderMode(true)} disabled={driveLoading} style={{ padding: '6px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, opacity: driveLoading ? 0.5 : 1 }}>
                     📁 תיקיה חדשה
                   </button>
                 )}
@@ -920,6 +970,26 @@ export default function DocumentsClient() {
               🖨️ הדפס
             </Button>
           </div>
+        </div>
+
+        {/* ── Built-in: דף כותרת ריק ── */}
+        <div style={{
+          background: '#fff', borderRadius: 'var(--radius)',
+          boxShadow: 'var(--shadow)', borderRight: '5px solid var(--primary)',
+          padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+              📄 דף כותרת ריק
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: '#f0fdf4', color: 'var(--primary)', border: '1px solid var(--primary)' }}>מובנה</span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            לוגו + פרטי עסק + שטח ריק לכתיבה ידנית
+          </div>
+          <Button size="sm" onClick={() => printBlankHeader(bizName.current, logoBase64.current, bizSubTitle.current, bizPhone.current, bizAddress.current, bizLicense.current)}>
+            🖨️ הדפס
+          </Button>
         </div>
 
         {/* ── Custom templates ── */}

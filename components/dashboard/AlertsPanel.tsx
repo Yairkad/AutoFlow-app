@@ -22,6 +22,10 @@ interface UnpaidSalary {
 interface Supplier  { id: string; name: string }
 interface Employee  { id: string; full_name: string }
 
+interface CustomerDebtAlert {
+  id: string; name: string; amount: number; paid: number; date: string; description: string | null
+}
+
 function fmt(n: number) {
   return '₪' + Number(n).toLocaleString('he-IL', { maximumFractionDigits: 0 })
 }
@@ -30,6 +34,17 @@ function daysUntil(isoDate: string) {
   const today = new Date(); today.setHours(0, 0, 0, 0)
   const due   = new Date(isoDate + 'T00:00:00'); due.setHours(0, 0, 0, 0)
   return Math.round((due.getTime() - today.getTime()) / 86400000)
+}
+
+function daysSince(isoDate: string) {
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const d = new Date(isoDate + 'T00:00:00'); d.setHours(0, 0, 0, 0)
+  return Math.round((today.getTime() - d.getTime()) / 86400000)
+}
+
+function debtChipStyle(days: number): React.CSSProperties {
+  if (days >= 14) return { background: '#fef2f2', color: 'var(--danger)', border: '1px solid #fecaca' }
+  return { background: '#fffbeb', color: 'var(--warning)', border: '1px solid #fde68a' }
 }
 
 function chipStyle(days: number): React.CSSProperties {
@@ -57,10 +72,11 @@ const SALARY_CHIP: React.CSSProperties = {
 }
 
 export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
-  const [payments,  setPayments]  = useState<AlertPayment[]>([])
-  const [salaries,  setSalaries]  = useState<UnpaidSalary[]>([])
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [employees, setEmployees] = useState<Employee[]>([])
+  const [payments,      setPayments]      = useState<AlertPayment[]>([])
+  const [salaries,      setSalaries]      = useState<UnpaidSalary[]>([])
+  const [suppliers,     setSuppliers]     = useState<Supplier[]>([])
+  const [employees,     setEmployees]     = useState<Employee[]>([])
+  const [custDebts,     setCustDebts]     = useState<CustomerDebtAlert[]>([])
   const dismissed = new Set<string>()
   const [loading,   setLoading]   = useState(true)
   const [popupOpen, setPopupOpen] = useState(false)
@@ -70,7 +86,10 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
     const ahead = new Date(); ahead.setDate(ahead.getDate() + 30)
     const aheadStr = ahead.toISOString().slice(0, 10)
 
-    const [pmtRes, supRes, salRes, empRes] = await Promise.all([
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
+    const weekAgoStr = weekAgo.toISOString().slice(0, 10)
+
+    const [pmtRes, supRes, salRes, empRes, debtRes] = await Promise.all([
       supabase
         .from('scheduled_payments')
         .select('id, description, amount, due_date, payment_method, supplier_id')
@@ -84,12 +103,19 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
         .eq('is_paid', false)
         .order('month', { ascending: true }),
       supabase.from('employees').select('id, full_name').eq('is_active', true),
+      supabase
+        .from('customer_debts')
+        .select('id, name, amount, paid, date, description')
+        .eq('is_closed', false)
+        .lte('date', weekAgoStr)
+        .order('date', { ascending: true }),
     ])
 
     setPayments(pmtRes.data ?? [])
     setSuppliers(supRes.data ?? [])
     setSalaries(salRes.data ?? [])
     setEmployees(empRes.data ?? [])
+    setCustDebts((debtRes.data ?? []).filter(d => d.amount - d.paid > 0))
     setLoading(false)
   }
 
@@ -99,13 +125,15 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
       .channel('alerts-panel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'scheduled_payments' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'salaries' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_debts' }, () => load())
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const visiblePayments = payments.filter(p => !dismissed.has(p.id))
-  const visibleSalaries = salaries.filter(s => !dismissed.has(s.id) && (s.total || 0) > 0)
-  const totalCount = visiblePayments.length + visibleSalaries.length
+  const visiblePayments  = payments.filter(p => !dismissed.has(p.id))
+  const visibleSalaries  = salaries.filter(s => !dismissed.has(s.id) && (s.total || 0) > 0)
+  const visibleCustDebts = custDebts.filter(d => !dismissed.has(d.id))
+  const totalCount = visiblePayments.length + visibleSalaries.length + visibleCustDebts.length
 
   if (compact) {
     return (
@@ -175,6 +203,19 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
                       <div key={s.id} style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', ...SALARY_CHIP }}>
                         <div style={{ fontWeight: 700 }}>👷 {emp} · {monthLabel(s.month)}</div>
                         <div style={{ fontWeight: 800, marginTop: '4px' }}>₪{Number(s.total).toLocaleString('he-IL')} · לא שולם</div>
+                      </div>
+                    )
+                  })}
+                  {visibleCustDebts.map(d => {
+                    const days = daysSince(d.date)
+                    const cs   = debtChipStyle(days)
+                    return (
+                      <div key={d.id} style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', ...cs }}>
+                        <div style={{ fontWeight: 700 }}>👤 {d.name}{d.description ? ` · ${d.description}` : ''}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                          <span style={{ fontWeight: 800 }}>₪{Number(d.amount - d.paid).toLocaleString('he-IL')} חוב</span>
+                          <span>{days}י' ממתין</span>
+                        </div>
                       </div>
                     )
                   })}
@@ -256,6 +297,20 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
                 <span style={{ opacity: 0.65, fontWeight: 400 }}>· {monthLabel(s.month)}</span>
                 <span style={{ fontWeight: 800 }}>{fmt(Number(s.total))}</span>
                 <span style={{ opacity: 0.7, fontSize: '11px' }}>לא שולם</span>
+              </div>
+            )
+          })}
+
+          {/* Customer debts 7+ days */}
+          {visibleCustDebts.map(d => {
+            const days = daysSince(d.date)
+            const cs   = debtChipStyle(days)
+            return (
+              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '16px', fontSize: '12px', fontWeight: 600, ...cs }}>
+                <span>👤</span>
+                <span>{d.name}</span>
+                <span style={{ fontWeight: 800 }}>{fmt(d.amount - d.paid)}</span>
+                <span style={{ opacity: 0.75, fontSize: '11px' }}>{days}י' ממתין</span>
               </div>
             )
           })}
