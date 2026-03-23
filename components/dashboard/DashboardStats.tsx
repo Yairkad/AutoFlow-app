@@ -359,7 +359,7 @@ export default function DashboardStats() {
         </div>
 
         {/* Cards grid */}
-        <div style={{ ...cardGrid, minHeight: editLayout && cards.length === 0 ? 70 : undefined,
+        <div className="cards-section-grid" style={{ ...cardGrid, minHeight: editLayout && cards.length === 0 ? 70 : undefined,
           background: editLayout && cards.length === 0 ? '#f0fdf4' : undefined,
           borderRadius: editLayout && cards.length === 0 ? 10 : undefined,
           border: editLayout && cards.length === 0 ? '2px dashed var(--primary)' : undefined,
@@ -371,6 +371,7 @@ export default function DashboardStats() {
           )}
           {cards.map(c => (
             <div key={c.id}
+              className={c.id === 'debts' || c.id === 'cars' ? 'card-slot card-slot-double' : 'card-slot'}
               draggable={editLayout}
               onDragStart={() => { dragCard.current = c.id }}
               onDragEnd={() => { dragCard.current = null }}

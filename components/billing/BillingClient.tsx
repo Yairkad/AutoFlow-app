@@ -618,7 +618,7 @@ export default function BillingClient() {
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid var(--border)' }}>
+      <div className="scrollable-tabs" style={{ marginBottom: '20px', borderBottom: '1px solid var(--border)' }}>
         {([
           ['monthly',  '📅 חודשי'],
           ['items',    '⚙️ סעיפים'],
@@ -689,7 +689,7 @@ export default function BillingClient() {
               <span style={{ fontSize: '12px' }}>לחץ &quot;צור רשומות&quot; ליצירה אוטומטית מהסעיפים הקבועים</span>
             </div>
           ) : (
-            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+            <div className="billing-table-wrap" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
@@ -812,7 +812,7 @@ export default function BillingClient() {
                 : 'הגדר סעיפים קבועים כדי לייצר רשומות אוטומטיות'}
             </div>
           ) : (
-            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+            <div className="billing-table-wrap" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
@@ -895,7 +895,7 @@ export default function BillingClient() {
               הוסף ספק, שוכר, עירייה – כל גורם שמשתתף בחשבונות
             </div>
           ) : (
-            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+            <div className="billing-table-wrap" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>

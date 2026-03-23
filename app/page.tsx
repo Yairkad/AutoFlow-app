@@ -211,11 +211,11 @@ export default async function LandingPage() {
             שירות אדיב, מחירים הוגנים ועבודה מדויקת.
           </p>
 
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <a href="#services" style={heroBtnSt('#F5C800', '#1a2a6c')}>
+          <div className="hero-actions">
+            <a href="#services" className="hero-btn hero-btn-primary">
               השירותים שלנו
             </a>
-            <a href="#customer-area" style={heroBtnSt('transparent', '#fff', '2px solid rgba(255,255,255,.4)')}>
+            <a href="#customer-area" className="hero-btn hero-btn-secondary">
               עקוב אחר הרכב שלי
             </a>
           </div>
@@ -359,19 +359,4 @@ const cardSt: React.CSSProperties = {
   transition: 'transform 0.2s, box-shadow 0.2s',
 }
 
-function heroBtnSt(bg: string, color: string, border?: string): React.CSSProperties {
-  return {
-    display: 'inline-block',
-    background: bg,
-    color,
-    border: border ?? 'none',
-    borderRadius: '10px',
-    padding: '14px 28px',
-    fontWeight: 700,
-    fontSize: '15px',
-    textDecoration: 'none',
-    cursor: 'pointer',
-    fontFamily: 'inherit',
-  }
-}
 
