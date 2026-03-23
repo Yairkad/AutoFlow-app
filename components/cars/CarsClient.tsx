@@ -1,12 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, useId } from 'react'
+import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import PlateInput from '@/components/ui/PlateInput'
+import ExcelMenu from '@/components/ui/ExcelMenu'
 import { VehicleData } from '@/lib/utils/plateApi'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -867,6 +869,22 @@ export default function CarsClient() {
     </div>
   )
 
+  // ── Excel / JSON ──────────────────────────────────────────────────
+
+  function exportExcel() {
+    const rows = cars.map(c => ({ לוחית: c.plate, יצרן: c.make ?? '', דגם: c.model ?? '', שנה: c.year ?? '', צבע: c.color ?? '', 'ק"מ': c.km ?? '', סטטוס: c.status ?? '', 'מחיר קנייה': c.buy_price ?? '', 'מחיר מבוקש': c.ask_price ?? '', 'מחיר מכירה': c.sell_price ?? '', הערות: c.notes ?? '' }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'רכבים')
+    XLSX.writeFile(wb, 'רכבים.xlsx')
+  }
+
+  function exportJson() {
+    const data = cars.map(c => ({ plate: c.plate, make: c.make, model: c.model, year: c.year, color: c.color, km: c.km, status: c.status, buy_price: c.buy_price, ask_price: c.ask_price, sell_price: c.sell_price, notes: c.notes }))
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'רכבים.json'; a.click(); URL.revokeObjectURL(a.href)
+  }
+
   // ── Main render ───────────────────────────────────────────────────
 
   return (
@@ -878,7 +896,10 @@ export default function CarsClient() {
           <h2 style={{ margin: 0, fontWeight: 800, fontSize: 22 }}>🚗 ניהול רכבים</h2>
           <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>מלאי, קנייה, מכירה ובקשות לקוחות</p>
         </div>
-        <Button onClick={() => openCarForm()}>+ הוסף רכב</Button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} />
+          <Button onClick={() => openCarForm()}>+ הוסף רכב</Button>
+        </div>
       </div>
 
       {/* Stats */}

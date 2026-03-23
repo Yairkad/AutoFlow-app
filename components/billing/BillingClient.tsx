@@ -1,12 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import ExcelMenu from '@/components/ui/ExcelMenu'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -594,6 +596,36 @@ export default function BillingClient() {
     showToast('נמחק', 'success')
   }
 
+  // ── Export ─────────────────────────────────────────────────────────────
+
+  function exportExcel() {
+    const wb = XLSX.utils.book_new()
+    const entriesData = entries.map(e => ({
+      חודש: e.month,
+      שם: e.name,
+      כיוון: e.direction === 'expense' ? 'הוצאה' : 'הכנסה',
+      סכום: e.amount,
+      שולם: e.payments.reduce((s, p) => s + p.amount, 0),
+      הערות: e.notes ?? '',
+    }))
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(entriesData), 'רשומות')
+    const itemsData = items.map(i => ({
+      שם: i.name,
+      כיוון: i.direction === 'expense' ? 'הוצאה' : 'הכנסה',
+      סוג: i.type === 'fixed' ? 'קבוע' : 'מונה',
+      סכום: i.amount ?? '',
+      מחיר_ליחידה: i.price_per_unit ?? '',
+      פעיל: i.active ? 'כן' : 'לא',
+    }))
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(itemsData), 'סעיפים')
+    XLSX.writeFile(wb, `חשבונות_${currentMonth}.xlsx`)
+  }
+
+  function exportJson() {
+    const blob = new Blob([JSON.stringify({ entries, items, contacts }, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `חשבונות_${currentMonth}.json`; a.click(); URL.revokeObjectURL(a.href)
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────
 
   if (loading) return (
@@ -662,6 +694,7 @@ export default function BillingClient() {
             )}
 
             <div style={{ marginRight: 'auto', display: 'flex', gap: '8px' }}>
+              <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} />
               <Button variant="secondary" size="sm" onClick={() => openEntryModal()}>➕ חריג</Button>
               <Button variant="secondary" size="sm" onClick={generateEntries} disabled={saving}>🔄 צור רשומות</Button>
               {entries.length > 0 && (

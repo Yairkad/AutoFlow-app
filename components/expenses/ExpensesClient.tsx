@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import * as XLSX from 'xlsx'
 import AppShell from '@/components/layout/AppShell'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
+import ExcelMenu from '@/components/ui/ExcelMenu'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/lib/supabase/client'
@@ -675,6 +677,108 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   const sumTotalExp = summaryRows.reduce((s, r) => s + r.expenses, 0)
   const sumTotalPro = summaryRows.reduce((s, r) => s + r.profit, 0)
 
+  // ── Excel / JSON export & import ───────────────────────────────────────────
+
+  function exportExcel() {
+    if (tab === 'summary') {
+      const rows = summaryRows.map(r => ({ חודש: r.month, הכנסות: r.income, הוצאות: r.expenses, רווח: r.profit }))
+      const ws = XLSX.utils.json_to_sheet(rows)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'סיכום')
+      XLSX.writeFile(wb, 'סיכום-חודשי.xlsx')
+      return
+    }
+    if (tab === 'expenses') {
+      const rows = expenses.map(e => ({
+        תאריך: e.date, קטגוריה: e.category, תיאור: e.description,
+        סכום: e.amount, ספק: suppliers.find(s => s.id === e.supplier_id)?.name ?? '',
+        'אמצעי תשלום': e.payment_method ?? '', אסמכתא: e.payment_ref ?? '',
+      }))
+      const ws = XLSX.utils.json_to_sheet(rows)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'הוצאות')
+      XLSX.writeFile(wb, `הוצאות-${month}.xlsx`)
+    } else {
+      const rows = income.map(e => ({ תאריך: e.date, קטגוריה: e.category, תיאור: e.description, סכום: e.amount }))
+      const ws = XLSX.utils.json_to_sheet(rows)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'הכנסות')
+      XLSX.writeFile(wb, `הכנסות-${month}.xlsx`)
+    }
+  }
+
+  function exportJson() {
+    const data = tab === 'summary' ? summaryRows
+      : tab === 'expenses'
+        ? expenses.map(e => ({ ...e, supplier_name: suppliers.find(s => s.id === e.supplier_id)?.name ?? '' }))
+        : income
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = tab === 'summary' ? 'סיכום-חודשי.json' : tab === 'expenses' ? `הוצאות-${month}.json` : `הכנסות-${month}.json`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; e.target.value = ''
+    if (!file) return
+    const data = await file.arrayBuffer()
+    const wb   = XLSX.read(data)
+    const rows = XLSX.utils.sheet_to_json<Record<string, string>>(wb.Sheets[wb.SheetNames[0]])
+    if (!rows.length) { showToast('הקובץ ריק', 'error'); return }
+    const supabase = createClient()
+    const { data: profile } = await supabase.from('profiles').select('tenant_id').single()
+    if (!profile) return
+    let imported = 0
+    for (const r of rows) {
+      if (tab === 'expenses') {
+        const sup = r['ספק'] ? suppliers.find(s => s.name === r['ספק']) : null
+        await supabase.from('expenses').insert({
+          tenant_id: profile.tenant_id,
+          date: r['תאריך'] || new Date().toISOString().slice(0, 10),
+          category: r['קטגוריה'] || 'אחר',
+          description: r['תיאור'] || '',
+          amount: parseFloat(String(r['סכום'])) || 0,
+          supplier_id: sup?.id ?? null,
+          payment_method: r['אמצעי תשלום'] || null,
+          payment_ref: r['אסמכתא'] || null,
+        })
+      } else {
+        await supabase.from('income').insert({
+          tenant_id: profile.tenant_id,
+          date: r['תאריך'] || new Date().toISOString().slice(0, 10),
+          category: r['קטגוריה'] || 'אחר',
+          description: r['תיאור'] || '',
+          amount: parseFloat(String(r['סכום'])) || 0,
+        })
+      }
+      imported++
+    }
+    await loadData(month)
+    showToast(`יובאו ${imported} רשומות`, 'success')
+  }
+
+  async function importJson(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; e.target.value = ''
+    if (!file) return
+    try {
+      const rows = JSON.parse(await file.text()) as Record<string, unknown>[]
+      const supabase = createClient()
+      const { data: profile } = await supabase.from('profiles').select('tenant_id').single()
+      if (!profile) return
+      for (const r of rows) {
+        if (tab === 'expenses') {
+          await supabase.from('expenses').insert({ tenant_id: profile.tenant_id, date: r['date'], category: r['category'], description: r['description'], amount: r['amount'], supplier_id: r['supplier_id'] ?? null, payment_method: r['payment_method'] ?? null, payment_ref: r['payment_ref'] ?? null })
+        } else {
+          await supabase.from('income').insert({ tenant_id: profile.tenant_id, date: r['date'], category: r['category'], description: r['description'], amount: r['amount'] })
+        }
+      }
+      await loadData(month)
+      showToast(`יובאו ${rows.length} רשומות`, 'success')
+    } catch { showToast('שגיאה בקריאת הקובץ', 'error') }
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -775,6 +879,12 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               </span>
             )}
           </button>
+          <ExcelMenu
+            onExportExcel={exportExcel}
+            onExportJson={exportJson}
+            onImportExcel={tab !== 'summary' ? importExcel : undefined}
+            onImportJson={tab !== 'summary' ? importJson : undefined}
+          />
         </div>
       </div>
 

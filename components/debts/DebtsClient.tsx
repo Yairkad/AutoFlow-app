@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import ExcelMenu from '@/components/ui/ExcelMenu'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -382,6 +384,7 @@ export default function DebtsClient() {
       <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
         יתרה: <strong style={{ color: 'var(--danger)' }}>{fmt(tab === 'customers' ? openCustTotal : openSuppTotal)}</strong>
       </span>
+      <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} />
     </div>
   )
 
@@ -487,6 +490,30 @@ export default function DebtsClient() {
         {d.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{d.description}</div>}
       </div>
     )
+  }
+
+  // ── Excel / JSON ──────────────────────────────────────────────────────────
+
+  function exportExcel() {
+    const wb = XLSX.utils.book_new()
+    if (tab === 'customers' || tab === 'summary') {
+      const rows = customerDebts.map(d => ({ שם: d.name, טלפון: d.phone ?? '', לוחית: d.plate ?? '', סכום: d.amount, שולם: d.paid, יתרה: bal(d), תאריך: d.date, סטטוס: d.is_closed ? 'סגור' : 'פתוח', הערה: d.description ?? '' }))
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'חובות לקוחות')
+    }
+    if (tab === 'suppliers' || tab === 'summary') {
+      const rows = supplierDebts.map(d => ({ ספק: suppliers.find(s => s.id === d.supplier_id)?.name ?? '', סכום: d.amount, שולם: d.paid, יתרה: bal(d), תאריך: d.date, סטטוס: d.is_closed ? 'סגור' : 'פתוח', תיאור: d.description ?? '' }))
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'חובות ספקים')
+    }
+    XLSX.writeFile(wb, 'חובות.xlsx')
+  }
+
+  function exportJson() {
+    const data = {
+      customer_debts: tab !== 'suppliers' ? customerDebts : [],
+      supplier_debts: tab !== 'customers' ? supplierDebts.map(d => ({ ...d, supplier_name: suppliers.find(s => s.id === d.supplier_id)?.name ?? '' })) : [],
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'חובות.json'; a.click(); URL.revokeObjectURL(a.href)
   }
 
   // ── Render ────────────────────────────────────────────────────────────────

@@ -1,11 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import ExcelMenu from '@/components/ui/ExcelMenu'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -905,6 +907,22 @@ export default function EmployeesClient() {
     )
   }
 
+  // ── Excel / JSON ─────────────────────────────────────────────────────────────
+
+  function exportExcel() {
+    const rows = employees.map(e => ({ שם: e.full_name, טלפון: e.phone ?? '', מייל: e.email ?? '', תפקיד: e.role ?? '', 'סוג שכר': e.salary_type ?? '', 'שכר בסיס': e.base_salary ?? '', 'תאריך התחלה': e.start_date ?? '', פעיל: e.is_active ? 'כן' : 'לא', הערות: e.notes ?? '' }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'עובדים')
+    XLSX.writeFile(wb, 'עובדים.xlsx')
+  }
+
+  function exportJson() {
+    const data = employees.map(e => ({ id: e.id, full_name: e.full_name, phone: e.phone, email: e.email, role: e.role, salary_type: e.salary_type, base_salary: e.base_salary, is_active: e.is_active, start_date: e.start_date, notes: e.notes }))
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'עובדים.json'; a.click(); URL.revokeObjectURL(a.href)
+  }
+
   // ── Main render ──────────────────────────────────────────────────────────────
 
   return (
@@ -945,7 +963,8 @@ export default function EmployeesClient() {
       {/* Employees tab */}
       {tab === 'employees' && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
+            <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} />
             <Button onClick={openAdd}>+ הוסף עובד</Button>
           </div>
           {renderEmpCards()}

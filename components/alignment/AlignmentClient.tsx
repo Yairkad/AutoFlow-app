@@ -1,12 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
+import ExcelMenu from '@/components/ui/ExcelMenu'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -402,6 +404,21 @@ export default function AlignmentClient() {
     window.open(`https://wa.me/972${phone.replace(/^0/, '')}?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
+  // ── Excel / JSON ─────────────────────────────────────────────────────────────
+
+  function exportExcel() {
+    const rows = jobs.map(j => ({ לוחית: j.plate, יצרן: j.make ?? '', דגם: j.model ?? '', לקוח: j.customer_name, טלפון: j.customer_phone, 'סוג עבודה': j.job_type, סטטוס: j.status, מחיר: j.price ?? '', טכנאי: j.technician ?? '', הערות: j.notes ?? '', תאריך: j.created_at?.slice(0, 10) }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'עבודות פרונט')
+    XLSX.writeFile(wb, 'פרונט.xlsx')
+  }
+
+  function exportJson() {
+    const blob = new Blob([JSON.stringify(jobs, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'פרונט.json'; a.click(); URL.revokeObjectURL(a.href)
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
   const visibleJobs = statusFilter === 'all'
@@ -425,7 +442,10 @@ export default function AlignmentClient() {
             {activeCount} עבודות פעילות
           </div>
         </div>
-        <Button onClick={openAdd}>+ עבודה חדשה</Button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} />
+          <Button onClick={openAdd}>+ עבודה חדשה</Button>
+        </div>
       </div>
 
       {/* Status filter */}

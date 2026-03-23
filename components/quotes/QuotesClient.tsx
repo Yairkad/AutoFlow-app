@@ -1,11 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import ExcelMenu from '@/components/ui/ExcelMenu'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -679,6 +681,21 @@ export default function QuotesClient() {
   const offers    = isTireModal ? tireOffers : partOffers
   const setOffers = isTireModal ? setTireOffers : setPartOffers
 
+  // ── Excel / JSON ───────────────────────────────────────────────────────────
+
+  function exportExcel() {
+    const rows = quotes.map(q => ({ סוג: q.type === 'tire' ? 'צמיג' : 'חלק', תאריך: q.quote_date, לקוח: q.client_name, טלפון: q.phone ?? '', לוחית: q.plate ?? '', מותג: q.brand ?? '', מידה: q.width && q.profile && q.rim ? `${q.width}/${q.profile}R${q.rim}` : '', כמות: q.qty ?? '', 'שם חלק': q.part_name ?? '', ספק: q.supplier ?? '', 'מחיר עלות': q.cost_price ?? '', 'מחיר ללקוח': q.sell_price ?? '', רווח: q.profit ?? '', סטטוס: q.status, הערות: q.notes ?? '' }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'הצעות מחיר')
+    XLSX.writeFile(wb, 'הצעות-מחיר.xlsx')
+  }
+
+  function exportJson() {
+    const blob = new Blob([JSON.stringify(quotes, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'הצעות-מחיר.json'; a.click(); URL.revokeObjectURL(a.href)
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -692,7 +709,10 @@ export default function QuotesClient() {
             ניהול בקשות לקוחות + הצעות ספקים
           </p>
         </div>
-        <Button onClick={openAdd}>➕ הצעה חדשה</Button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} />
+          <Button onClick={openAdd}>➕ הצעה חדשה</Button>
+        </div>
       </div>
 
       {/* ── Stats */}

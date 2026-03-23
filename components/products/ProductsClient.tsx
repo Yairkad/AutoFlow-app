@@ -7,6 +7,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import * as XLSX from 'xlsx'
+import ExcelMenu from '@/components/ui/ExcelMenu'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -382,6 +383,11 @@ export default function ProductsClient() {
     e.target.value = ''
   }
 
+  function exportJson() {
+    const blob = new Blob([JSON.stringify(products, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'מלאי-מוצרים.json'; a.click(); URL.revokeObjectURL(a.href)
+  }
+
   // ── Styles ──────────────────────────────────────────────────────────────────
 
   const inp: React.CSSProperties = {
@@ -457,17 +463,7 @@ export default function ProductsClient() {
               <option value='out'>אזל</option>
             </select>
             <div style={{ marginRight: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {!viewOnly && <Button variant="outline" onClick={exportExcel} style={{ fontSize: '13px' }}>📊 ייצא Excel</Button>}
-              {!viewOnly && (
-              <label style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--border)',
-                fontSize: '13px', cursor: 'pointer', background: 'var(--bg-card)',
-                color: 'var(--text)', fontWeight: 500,
-              }}>
-                📥 ייבא Excel
-                <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={importExcel} />
-              </label>)}
+              {!viewOnly && <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} onImportExcel={importExcel} />}
               {!viewOnly && (editMode ? (
                 <>
                   <Button onClick={saveInlineEdit}>💾 שמור הכל</Button>

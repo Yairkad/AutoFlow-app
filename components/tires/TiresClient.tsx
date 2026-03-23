@@ -7,6 +7,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import * as XLSX from 'xlsx'
+import ExcelMenu from '@/components/ui/ExcelMenu'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -515,6 +516,11 @@ export default function TiresClient() {
     e.target.value = ''
   }
 
+  function exportJson() {
+    const blob = new Blob([JSON.stringify(tires, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'מלאי-צמיגים.json'; a.click(); URL.revokeObjectURL(a.href)
+  }
+
   // ── Styles ────────────────────────────────────────────────────────────────────
 
   const inp: React.CSSProperties = {
@@ -616,16 +622,7 @@ export default function TiresClient() {
           {!viewOnly && (
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
               <Button variant="outline" onClick={printPriceList} style={{ fontSize: '13px' }}>🖨️ מחירון</Button>
-              <Button variant="outline" onClick={exportExcel} style={{ fontSize: '13px' }}>📊 ייצא Excel</Button>
-              <label style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--border)',
-                fontSize: '13px', cursor: 'pointer', background: 'var(--bg-card)',
-                color: 'var(--text)', fontWeight: 500,
-              }}>
-                📥 ייבא Excel
-                <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={importExcel} />
-              </label>
+              <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} onImportExcel={importExcel} />
               {editMode ? (
                 <>
                   <Button onClick={saveInlineEdit}>💾 שמור הכל</Button>
