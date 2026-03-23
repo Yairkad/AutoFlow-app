@@ -742,7 +742,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
       }
       imported++
     }
-    await loadData(month)
+    await fetchData()
     showToast(`יובאו ${imported} רשומות`, 'success')
   }
 
