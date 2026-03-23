@@ -172,38 +172,58 @@ export default async function LandingPage() {
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
             {BUSINESS.wazeUrl && (
               <a href={BUSINESS.wazeUrl} target="_blank" rel="noopener noreferrer" style={{
-                display: 'inline-flex', alignItems: 'center', gap: '7px',
-                background: '#33CCFF', color: '#fff', border: 'none',
-                borderRadius: '8px', padding: '7px 16px',
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                background: '#fff', color: '#1a1a1a', border: '1.5px solid #33CCFF',
+                borderRadius: '10px', padding: '7px 16px',
                 fontWeight: 700, fontSize: '13px', textDecoration: 'none',
-                boxShadow: '0 2px 6px rgba(51,204,255,.4)',
+                boxShadow: '0 2px 8px rgba(51,204,255,.25)',
               }}>
-                {/* Waze logo – simplified face */}
-                <svg width="18" height="18" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M32 4C17.6 4 6 15.6 6 30c0 8.4 3.9 15.9 10 20.7L14 52l4 8 6-4c2.5.8 5.2 1.2 8 1.2s5.5-.4 8-1.2l6 4 4-8-2-1.3C54.1 45.9 58 38.4 58 30 58 15.6 46.4 4 32 4z" fill="#fff"/>
-                  <circle cx="23" cy="28" r="4" fill="#33CCFF"/>
-                  <circle cx="41" cy="28" r="4" fill="#33CCFF"/>
-                  <path d="M22 38c3 4 17 4 20 0" stroke="#33CCFF" strokeWidth="2.5" strokeLinecap="round"/>
-                  <circle cx="20" cy="52" r="4" fill="#fff"/>
-                  <circle cx="44" cy="52" r="4" fill="#fff"/>
+                {/* Waze official logo colors */}
+                <svg width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="100" height="100" rx="22" fill="#33CCFF"/>
+                  {/* body */}
+                  <path d="M50 10C31.2 10 16 24.8 16 43c0 11.2 5.4 21.1 13.8 27.5l-1.4 3.5 3 5.5 7-3.5c3.5 1 7.2 1.5 11.6 1.5s8.1-.5 11.6-1.5l7 3.5 3-5.5-1.4-3.5C78.6 64.1 84 54.2 84 43 84 24.8 68.8 10 50 10z" fill="#fff"/>
+                  {/* eyes */}
+                  <circle cx="38" cy="41" r="6" fill="#33CCFF"/>
+                  <circle cx="62" cy="41" r="6" fill="#33CCFF"/>
+                  <circle cx="40" cy="39" r="2.5" fill="#fff"/>
+                  <circle cx="64" cy="39" r="2.5" fill="#fff"/>
+                  {/* smile */}
+                  <path d="M36 55 Q50 65 64 55" stroke="#33CCFF" strokeWidth="3.5" strokeLinecap="round" fill="none"/>
+                  {/* wheels */}
+                  <circle cx="36" cy="83" r="6" fill="#4d4d4d"/>
+                  <circle cx="64" cy="83" r="6" fill="#4d4d4d"/>
+                  <circle cx="36" cy="83" r="3" fill="#fff"/>
+                  <circle cx="64" cy="83" r="3" fill="#fff"/>
                 </svg>
-                Waze
+                <span style={{ color: '#33CCFF' }}>Waze</span>
               </a>
             )}
             {BUSINESS.mapsUrl && (
               <a href={BUSINESS.mapsUrl} target="_blank" rel="noopener noreferrer" style={{
-                display: 'inline-flex', alignItems: 'center', gap: '7px',
-                background: '#fff', color: '#3c4043', border: '1px solid #dadce0',
-                borderRadius: '8px', padding: '7px 16px',
-                fontWeight: 700, fontSize: '13px', textDecoration: 'none',
-                boxShadow: '0 1px 4px rgba(0,0,0,.12)',
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                background: '#fff', color: '#3c4043', border: '1.5px solid #dadce0',
+                borderRadius: '10px', padding: '7px 16px',
+                fontWeight: 500, fontSize: '13px', textDecoration: 'none',
+                boxShadow: '0 1px 6px rgba(0,0,0,.12)',
               }}>
-                {/* Google Maps pin icon */}
-                <svg width="14" height="20" viewBox="0 0 14 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M7 0C3.13 0 0 3.13 0 7c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#EA4335"/>
-                  <circle cx="7" cy="7" r="2.8" fill="#fff"/>
+                {/* Google Maps official pin with brand colors */}
+                <svg width="20" height="20" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M24 4C15.16 4 8 11.16 8 20c0 12 16 28 16 28s16-16 16-28C40 11.16 32.84 4 24 4z" fill="#EA4335"/>
+                  <path d="M24 4C15.16 4 8 11.16 8 20c0 3.8 1.2 7.3 3.2 10.2L28 6.2C26.7 4.8 25.4 4 24 4z" fill="#C5221F"/>
+                  <circle cx="24" cy="20" r="7" fill="#fff"/>
+                  {/* Google G colors inside pin */}
+                  <path d="M24 15 A5 5 0 0 1 28.7 18 H24 V20 H30 C29.5 23 27 25 24 25 A5 5 0 1 1 24 15z" fill="#4285F4"/>
                 </svg>
-                Google Maps
+                <span>
+                  <span style={{ color: '#4285F4', fontWeight: 700 }}>G</span>
+                  <span style={{ color: '#EA4335', fontWeight: 700 }}>o</span>
+                  <span style={{ color: '#FBBC04', fontWeight: 700 }}>o</span>
+                  <span style={{ color: '#4285F4', fontWeight: 700 }}>g</span>
+                  <span style={{ color: '#34A853', fontWeight: 700 }}>l</span>
+                  <span style={{ color: '#EA4335', fontWeight: 700 }}>e</span>
+                  <span style={{ color: '#3c4043', fontWeight: 500 }}> Maps</span>
+                </span>
               </a>
             )}
           </div>
