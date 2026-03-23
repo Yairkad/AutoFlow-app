@@ -232,7 +232,7 @@ export default async function LandingPage() {
               השירותים שלנו
             </a>
             <a href="#customer-area" className="hero-btn hero-btn-secondary">
-              עקוב אחר הרכב שלי
+              מעקב סטטוס טיפול
             </a>
           </div>
         </div>
@@ -301,7 +301,7 @@ export default async function LandingPage() {
             איזור לקוחות
           </p>
           <h2 id="customer-title" style={{ color: '#fff', fontSize: '28px', fontWeight: 800, margin: '0 0 10px' }}>
-            עקוב אחר סטטוס הטיפול
+            מעקב סטטוס טיפול
           </h2>
           <p style={{ color: 'rgba(255,255,255,.7)', fontSize: '15px', marginBottom: '32px' }}>
             הזן את מספר הלוחית ו-4 הספרות האחרונות של הטלפון שמסרת – ותוכל לעקוב אחרי סטטוס טיפול הרכב שלך בזמן אמת.
