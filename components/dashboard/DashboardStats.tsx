@@ -16,6 +16,25 @@ const DEFAULT_LAYOUT: Record<CardId, Section> = {
 
 const LAYOUT_KEY = 'dashboard-layout-v1'
 
+// Module-level cache — survives navigation; backed by sessionStorage so it survives refresh too
+interface StatsCache { stats: Stats; admin: boolean; modules: string[]; ts: number }
+const CACHE_TTL = 90_000
+const CACHE_KEY = 'dash-stats-cache'
+
+function readCache(): StatsCache | null {
+  try {
+    const s = sessionStorage.getItem(CACHE_KEY)
+    if (!s) return null
+    const c = JSON.parse(s) as StatsCache
+    return Date.now() - c.ts < CACHE_TTL ? c : null
+  } catch { return null }
+}
+function writeCache(c: StatsCache) {
+  try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(c)) } catch {}
+}
+
+let _cache: StatsCache | null = readCache()
+
 function loadLayout(): Record<CardId, Section> {
   try {
     const s = localStorage.getItem(LAYOUT_KEY)
@@ -104,7 +123,7 @@ function DebtCard({ customerDebts, supplierDebts, custCount, suppCount, href }: 
   return (
     <div
       onClick={() => router.push(href)}
-      className="stat-card"
+      className="stat-card stat-card-double"
       style={{
         background: '#fff',
         borderRadius: 'var(--radius)',
@@ -121,15 +140,17 @@ function DebtCard({ customerDebts, supplierDebts, custCount, suppCount, href }: 
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,0,0,.1)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow)' }}
     >
-      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>חובות</div>
-      <div className="stat-card-split-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>💳 לקוחות <span style={{ color: 'var(--danger)', fontWeight: 600 }}>({custCount})</span></span>
-        <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text)' }}>{fmt(customerDebts)}</span>
-      </div>
-      <div style={{ height: '1px', background: 'var(--border)' }} />
-      <div className="stat-card-split-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>🏭 ספקים <span style={{ color: 'var(--warning)', fontWeight: 600 }}>({suppCount})</span></span>
-        <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text)' }}>{fmt(supplierDebts)}</span>
+      <div className="stat-card-double-title" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>חובות</div>
+      <div className="stat-card-double-body">
+        <div className="stat-card-double-col">
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>💳 לקוחות <span style={{ color: 'var(--danger)', fontWeight: 600 }}>({custCount})</span></span>
+          <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text)' }}>{fmt(customerDebts)}</span>
+        </div>
+        <div className="stat-card-double-sep" />
+        <div className="stat-card-double-col">
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>🏭 ספקים <span style={{ color: 'var(--warning)', fontWeight: 600 }}>({suppCount})</span></span>
+          <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text)' }}>{fmt(supplierDebts)}</span>
+        </div>
       </div>
     </div>
   )
@@ -140,7 +161,7 @@ function CarsCard({ inInventory, openRequests, href }: { inInventory: number; op
   return (
     <div
       onClick={() => router.push(href)}
-      className="stat-card"
+      className="stat-card stat-card-double"
       style={{
         background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)',
         padding: '14px 16px', borderTop: '3px solid var(--sky)', cursor: 'pointer',
@@ -150,25 +171,29 @@ function CarsCard({ inInventory, openRequests, href }: { inInventory: number; op
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,0,0,.1)' }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow)' }}
     >
-      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>🚗 רכבים</div>
-      <div className="stat-card-split-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>📦 למכירה</span>
-        <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--sky)' }}>{inInventory}</span>
-      </div>
-      <div style={{ height: '1px', background: 'var(--border)' }} />
-      <div className="stat-card-split-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>📋 בקשות פתוחות</span>
-        <span style={{ fontSize: '15px', fontWeight: 800, color: openRequests > 0 ? 'var(--purple)' : 'var(--text-muted)' }}>{openRequests}</span>
+      <div className="stat-card-double-title" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>🚗 רכבים</div>
+      <div className="stat-card-double-body">
+        <div className="stat-card-double-col">
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>📦 למכירה</span>
+          <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--sky)' }}>{inInventory}</span>
+        </div>
+        <div className="stat-card-double-sep" />
+        <div className="stat-card-double-col">
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>📋 בקשות פתוחות</span>
+          <span style={{ fontSize: '15px', fontWeight: 800, color: openRequests > 0 ? 'var(--purple)' : 'var(--text-muted)' }}>{openRequests}</span>
+        </div>
       </div>
     </div>
   )
 }
 
 export default function DashboardStats() {
-  const [stats, setStats]     = useState<Stats>(EMPTY)
-  const [loading, setLoading] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [modules, setModules] = useState<string[]>([])
+  const cached = _cache && (Date.now() - _cache.ts < CACHE_TTL) ? _cache : null
+
+  const [stats, setStats]     = useState<Stats>(cached?.stats ?? EMPTY)
+  const [loading, setLoading] = useState(!cached)
+  const [isAdmin, setIsAdmin] = useState(cached?.admin ?? false)
+  const [modules, setModules] = useState<string[]>(cached?.modules ?? [])
   const [editLayout, setEditLayout] = useState(false)
   const [layout, setLayout]         = useState<Record<CardId, Section>>(DEFAULT_LAYOUT)
   const dragCard = useRef<CardId | null>(null)
@@ -213,7 +238,7 @@ export default function DashboardStats() {
     const invCount = (products.data ?? []).reduce((s, r) => s + r.qty, 0)
                    + (tires.data ?? []).reduce((s, r) => s + r.qty, 0)
 
-    setStats({
+    const next: Stats = {
       expensesMonth:    sum(expenses.data ?? []),
       incomeMonth:      sum(incomeRes.data ?? []),
       customerDebts:    debtBal(custDebts.data ?? []),
@@ -228,19 +253,28 @@ export default function DashboardStats() {
       tiresInStock:     (tires.data ?? []).filter((r: { qty: number }) => r.qty > 0).length,
       activeJobs:       (alignJobs.data ?? []).length,
       totalInspections: (inspections.data ?? []).length,
-    })
+    }
+
+    _cache = { stats: next, admin, modules: mods, ts: Date.now() }
+    writeCache(_cache)
+    setStats(next)
     setLoading(false)
   }
 
   useEffect(() => {
     const supabase = createClient()
+    let admin = cached?.admin ?? false
+    let mods  = cached?.modules ?? []
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    // getSession() reads from localStorage — no network round trip
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const user = session?.user
       if (!user) { setLoading(false); return }
+
       supabase.from('profiles').select('role, allowed_modules').eq('id', user.id).single()
         .then(({ data: p }) => {
-          const admin = p?.role === 'admin' || p?.role === 'super_admin'
-          const mods: string[] = p?.allowed_modules ?? []
+          admin = p?.role === 'admin' || p?.role === 'super_admin'
+          mods  = p?.allowed_modules ?? []
           setIsAdmin(admin)
           setModules(mods)
           fetchStats(admin, mods)
@@ -250,8 +284,7 @@ export default function DashboardStats() {
     const channel = supabase
       .channel('dashboard-stats')
       .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-        // re-fetch with current permissions (captured in closure via state)
-        fetchStats(isAdmin, modules)
+        fetchStats(admin, mods)
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
