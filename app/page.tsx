@@ -172,22 +172,38 @@ export default async function LandingPage() {
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
             {BUSINESS.wazeUrl && (
               <a href={BUSINESS.wazeUrl} target="_blank" rel="noopener noreferrer" style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                background: 'rgba(26,42,108,.08)', color: '#1a2a6c', border: '1px solid rgba(26,42,108,.2)',
-                borderRadius: '8px', padding: '7px 14px',
-                fontWeight: 600, fontSize: '13px', textDecoration: 'none',
+                display: 'inline-flex', alignItems: 'center', gap: '7px',
+                background: '#33CCFF', color: '#fff', border: 'none',
+                borderRadius: '8px', padding: '7px 16px',
+                fontWeight: 700, fontSize: '13px', textDecoration: 'none',
+                boxShadow: '0 2px 6px rgba(51,204,255,.4)',
               }}>
-                🧭 Waze
+                {/* Waze logo – simplified face */}
+                <svg width="18" height="18" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M32 4C17.6 4 6 15.6 6 30c0 8.4 3.9 15.9 10 20.7L14 52l4 8 6-4c2.5.8 5.2 1.2 8 1.2s5.5-.4 8-1.2l6 4 4-8-2-1.3C54.1 45.9 58 38.4 58 30 58 15.6 46.4 4 32 4z" fill="#fff"/>
+                  <circle cx="23" cy="28" r="4" fill="#33CCFF"/>
+                  <circle cx="41" cy="28" r="4" fill="#33CCFF"/>
+                  <path d="M22 38c3 4 17 4 20 0" stroke="#33CCFF" strokeWidth="2.5" strokeLinecap="round"/>
+                  <circle cx="20" cy="52" r="4" fill="#fff"/>
+                  <circle cx="44" cy="52" r="4" fill="#fff"/>
+                </svg>
+                Waze
               </a>
             )}
             {BUSINESS.mapsUrl && (
               <a href={BUSINESS.mapsUrl} target="_blank" rel="noopener noreferrer" style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                background: 'rgba(26,42,108,.08)', color: '#1a2a6c', border: '1px solid rgba(26,42,108,.2)',
-                borderRadius: '8px', padding: '7px 14px',
-                fontWeight: 600, fontSize: '13px', textDecoration: 'none',
+                display: 'inline-flex', alignItems: 'center', gap: '7px',
+                background: '#fff', color: '#3c4043', border: '1px solid #dadce0',
+                borderRadius: '8px', padding: '7px 16px',
+                fontWeight: 700, fontSize: '13px', textDecoration: 'none',
+                boxShadow: '0 1px 4px rgba(0,0,0,.12)',
               }}>
-                🗺️ Google Maps
+                {/* Google Maps pin icon */}
+                <svg width="14" height="20" viewBox="0 0 14 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M7 0C3.13 0 0 3.13 0 7c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#EA4335"/>
+                  <circle cx="7" cy="7" r="2.8" fill="#fff"/>
+                </svg>
+                Google Maps
               </a>
             )}
           </div>
