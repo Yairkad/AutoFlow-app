@@ -691,11 +691,6 @@ export default function QuotesClient() {
     XLSX.writeFile(wb, 'הצעות-מחיר.xlsx')
   }
 
-  function exportJson() {
-    const blob = new Blob([JSON.stringify(quotes, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'הצעות-מחיר.json'; a.click(); URL.revokeObjectURL(a.href)
-  }
-
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -710,7 +705,7 @@ export default function QuotesClient() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} />
+          <ExcelMenu onExportExcel={exportExcel} />
           <Button onClick={openAdd}>➕ הצעה חדשה</Button>
         </div>
       </div>

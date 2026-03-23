@@ -59,7 +59,7 @@ interface InviteToken {
   expires_at: string | null
 }
 
-type Tab = 'business' | 'users' | 'vault' | 'landing'
+type Tab = 'business' | 'users' | 'vault' | 'landing' | 'backup'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -1312,6 +1312,194 @@ function PricesSection({ supabase, tenantId, showToast }: { supabase: ReturnType
   )
 }
 
+// ── BackupTab ───────────────────────────────────────────────────────────────
+
+const BACKUP_TABLES = [
+  'tires','tire_sales','products','product_sales',
+  'alignment_jobs','billing_contacts','billing_entries','billing_entry_payments','billing_items',
+  'cars','car_requests','car_sale_requests',
+  'customer_debts','supplier_debts','suppliers',
+  'employees','salaries','scheduled_payments',
+  'expense_categories','expenses','income','income_categories','recurring_expenses',
+  'quotes','car_inspections','reminders',
+] as const
+
+function BackupTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
+  const [exporting, setExporting] = useState(false)
+  const [restoreFile, setRestoreFile] = useState<File | null>(null)
+  const [showPassModal, setShowPassModal] = useState(false)
+  const [password, setPassword] = useState('')
+  const [restoring, setRestoring] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function doExport() {
+    setExporting(true)
+    try {
+      const backup: Record<string, unknown[]> = { _version: 1, _exported_at: new Date().toISOString(), _tenant_id: tenantId } as never
+      for (const table of BACKUP_TABLES) {
+        const { data } = await supabase.from(table).select('*').eq('tenant_id', tenantId)
+        backup[table] = data ?? []
+      }
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `גיבוי_${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(a.href)
+      showToast('גיבוי יוצא בהצלחה ✓', 'success')
+    } catch {
+      showToast('שגיאה בייצוא גיבוי', 'error')
+    }
+    setExporting(false)
+  }
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    if (!f) return
+    setRestoreFile(f)
+    setShowPassModal(true)
+    e.target.value = ''
+  }
+
+  async function doRestore() {
+    if (!restoreFile) return
+    setRestoring(true)
+    try {
+      // Verify password
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user?.email) { showToast('לא ניתן לאמת משתמש', 'error'); setRestoring(false); return }
+      const { error: authErr } = await supabase.auth.signInWithPassword({ email: user.email, password })
+      if (authErr) { showToast('סיסמה שגויה', 'error'); setRestoring(false); return }
+
+      // Parse backup
+      const text = await restoreFile.text()
+      const backup = JSON.parse(text) as Record<string, unknown[]>
+
+      // Upsert each table
+      let restored = 0
+      for (const table of BACKUP_TABLES) {
+        const rows = backup[table]
+        if (!Array.isArray(rows) || rows.length === 0) continue
+        const { error } = await supabase.from(table).upsert(rows as never, { onConflict: 'id' })
+        if (!error) restored += rows.length
+      }
+
+      showToast(`שוחזרו ${restored} רשומות ✓`, 'success')
+      setShowPassModal(false)
+      setRestoreFile(null)
+      setPassword('')
+    } catch {
+      showToast('שגיאה בשחזור גיבוי', 'error')
+    }
+    setRestoring(false)
+  }
+
+  const cardSt: React.CSSProperties = {
+    background: 'var(--bg-card)', border: '1px solid var(--border)',
+    borderRadius: '12px', padding: '20px 24px', marginBottom: '16px',
+  }
+
+  return (
+    <div>
+      {/* Export */}
+      <div style={cardSt}>
+        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>📤 ייצוא גיבוי מלא</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
+          מוריד קובץ JSON עם כל הנתונים של העסק — צמיגים, מוצרים, הוצאות, חובות, רכבים ועוד.
+        </div>
+        <button
+          onClick={doExport}
+          disabled={exporting}
+          style={{
+            padding: '10px 20px', borderRadius: '8px', border: 'none',
+            background: 'var(--primary)', color: '#fff', fontWeight: 700,
+            fontSize: '14px', cursor: exporting ? 'not-allowed' : 'pointer',
+            opacity: exporting ? 0.7 : 1, fontFamily: 'inherit',
+          }}
+        >
+          {exporting ? 'מייצא...' : '⬇️ ייצא גיבוי'}
+        </button>
+      </div>
+
+      {/* Restore */}
+      <div style={{ ...cardSt, borderColor: '#fca5a5' }}>
+        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>📥 שחזור גיבוי</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
+          מעלה קובץ גיבוי ומשחזר את הנתונים. ידרש אימות סיסמת מנהל. נתונים קיימים עם אותו מזהה יידרסו.
+        </div>
+        <label style={{
+          display: 'inline-flex', alignItems: 'center', gap: '8px',
+          padding: '10px 20px', borderRadius: '8px',
+          border: '1px solid #ef4444', color: '#ef4444',
+          fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+          background: 'transparent', fontFamily: 'inherit',
+        }}>
+          📂 בחר קובץ גיבוי
+          <input ref={fileRef} type="file" accept=".json" style={{ display: 'none' }} onChange={onFileChange} />
+        </label>
+      </div>
+
+      {/* Password modal */}
+      {showPassModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+        }}>
+          <div style={{
+            background: 'var(--bg-card)', borderRadius: '14px', padding: '28px',
+            width: '90%', maxWidth: '380px', direction: 'rtl',
+          }}>
+            <div style={{ fontWeight: 700, fontSize: '17px', marginBottom: '8px' }}>🔒 אימות מנהל</div>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              הזן את סיסמתך כדי לאשר את שחזור הגיבוי:
+              <br /><strong style={{ color: '#ef4444' }}>{restoreFile?.name}</strong>
+            </div>
+            <input
+              type="password"
+              placeholder="סיסמה"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !restoring && password && doRestore()}
+              autoFocus
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: '8px',
+                border: '1px solid var(--border)', fontSize: '14px',
+                background: 'var(--bg)', color: 'var(--text)',
+                boxSizing: 'border-box', marginBottom: '16px', fontFamily: 'inherit',
+              }}
+            />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => { setShowPassModal(false); setRestoreFile(null); setPassword('') }}
+                style={{
+                  padding: '9px 18px', borderRadius: '8px', border: '1px solid var(--border)',
+                  background: 'transparent', color: 'var(--text)', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: '13px',
+                }}
+              >
+                ביטול
+              </button>
+              <button
+                onClick={doRestore}
+                disabled={restoring || !password}
+                style={{
+                  padding: '9px 18px', borderRadius: '8px', border: 'none',
+                  background: '#ef4444', color: '#fff', fontWeight: 700,
+                  cursor: restoring || !password ? 'not-allowed' : 'pointer',
+                  opacity: restoring || !password ? 0.6 : 1,
+                  fontFamily: 'inherit', fontSize: '13px',
+                }}
+              >
+                {restoring ? 'משחזר...' : 'שחזר גיבוי'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────
 
 export default function SettingsClient() {
@@ -1358,6 +1546,7 @@ export default function SettingsClient() {
     { key: 'users',    label: 'משתמשים',      icon: '👥' },
     { key: 'landing',  label: 'דף נחיתה',     icon: '🌐' },
     ...(canVault ? [{ key: 'vault' as Tab, label: 'כספת סיסמאות', icon: '🔒' }] : []),
+    ...(isAdmin ? [{ key: 'backup' as Tab, label: 'גיבוי', icon: '🗄️' }] : []),
   ]
 
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
@@ -1372,6 +1561,7 @@ export default function SettingsClient() {
     users:    <UsersTab    supabase={supabase} tenantId={tenantId} myId={myId} showToast={showToast} />,
     landing:  <LandingTab  supabase={supabase} tenantId={tenantId} showToast={showToast} />,
     vault:    canVault ? <VaultTab supabase={supabase} tenantId={tenantId} showToast={showToast} /> : null,
+    backup:   isAdmin ? <BackupTab supabase={supabase} tenantId={tenantId} showToast={showToast} /> : null,
   }
 
   return (
@@ -1462,6 +1652,7 @@ export default function SettingsClient() {
         {tab === 'business' && tabContent.business}
         {tab === 'users'    && tabContent.users}
         {tab === 'landing'  && tabContent.landing}
+        {tab === 'backup'   && tabContent.backup}
         {/* VaultTab always mounted to preserve unlock state */}
         {canVault && (
           <div style={{ display: tab === 'vault' ? 'block' : 'none' }}>

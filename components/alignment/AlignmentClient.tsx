@@ -414,11 +414,6 @@ export default function AlignmentClient() {
     XLSX.writeFile(wb, 'פרונט.xlsx')
   }
 
-  function exportJson() {
-    const blob = new Blob([JSON.stringify(jobs, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'פרונט.json'; a.click(); URL.revokeObjectURL(a.href)
-  }
-
   // ── Render ────────────────────────────────────────────────────────────────────
 
   const visibleJobs = statusFilter === 'all'
@@ -443,7 +438,7 @@ export default function AlignmentClient() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} />
+          <ExcelMenu onExportExcel={exportExcel} />
           <Button onClick={openAdd}>+ עבודה חדשה</Button>
         </div>
       </div>

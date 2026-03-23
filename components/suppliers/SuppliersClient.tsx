@@ -287,11 +287,6 @@ export default function SuppliersClient() {
     XLSX.writeFile(wb, 'ספקים.xlsx')
   }
 
-  function exportJson() {
-    const blob = new Blob([JSON.stringify(suppliers, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ספקים.json'; a.click(); URL.revokeObjectURL(a.href)
-  }
-
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -333,7 +328,7 @@ export default function SuppliersClient() {
         <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
           {suppliers.length} ספקים
         </span>
-        <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} />
+        <ExcelMenu onExportExcel={exportExcel} />
       </div>
 
       {editMode && (

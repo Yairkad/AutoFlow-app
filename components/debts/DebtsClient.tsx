@@ -384,7 +384,7 @@ export default function DebtsClient() {
       <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
         יתרה: <strong style={{ color: 'var(--danger)' }}>{fmt(tab === 'customers' ? openCustTotal : openSuppTotal)}</strong>
       </span>
-      <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} />
+      <ExcelMenu onExportExcel={exportExcel} />
     </div>
   )
 
@@ -505,15 +505,6 @@ export default function DebtsClient() {
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'חובות ספקים')
     }
     XLSX.writeFile(wb, 'חובות.xlsx')
-  }
-
-  function exportJson() {
-    const data = {
-      customer_debts: tab !== 'suppliers' ? customerDebts : [],
-      supplier_debts: tab !== 'customers' ? supplierDebts.map(d => ({ ...d, supplier_name: suppliers.find(s => s.id === d.supplier_id)?.name ?? '' })) : [],
-    }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'חובות.json'; a.click(); URL.revokeObjectURL(a.href)
   }
 
   // ── Render ────────────────────────────────────────────────────────────────

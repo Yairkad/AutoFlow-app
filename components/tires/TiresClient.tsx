@@ -516,11 +516,6 @@ export default function TiresClient() {
     e.target.value = ''
   }
 
-  function exportJson() {
-    const blob = new Blob([JSON.stringify(tires, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'מלאי-צמיגים.json'; a.click(); URL.revokeObjectURL(a.href)
-  }
-
   // ── Styles ────────────────────────────────────────────────────────────────────
 
   const inp: React.CSSProperties = {
@@ -622,7 +617,7 @@ export default function TiresClient() {
           {!viewOnly && (
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
               <Button variant="outline" onClick={printPriceList} style={{ fontSize: '13px' }}>🖨️ מחירון</Button>
-              <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} onImportExcel={importExcel} />
+              <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
               {editMode ? (
                 <>
                   <Button onClick={saveInlineEdit}>💾 שמור הכל</Button>

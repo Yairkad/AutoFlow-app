@@ -879,12 +879,6 @@ export default function CarsClient() {
     XLSX.writeFile(wb, 'רכבים.xlsx')
   }
 
-  function exportJson() {
-    const data = cars.map(c => ({ plate: c.plate, make: c.make, model: c.model, year: c.year, color: c.color, km: c.km, status: c.status, buy_price: c.buy_price, ask_price: c.ask_price, sell_price: c.sell_price, notes: c.notes }))
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'רכבים.json'; a.click(); URL.revokeObjectURL(a.href)
-  }
-
   // ── Main render ───────────────────────────────────────────────────
 
   return (
@@ -897,7 +891,7 @@ export default function CarsClient() {
           <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>מלאי, קנייה, מכירה ובקשות לקוחות</p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} />
+          <ExcelMenu onExportExcel={exportExcel} />
           <Button onClick={() => openCarForm()}>+ הוסף רכב</Button>
         </div>
       </div>

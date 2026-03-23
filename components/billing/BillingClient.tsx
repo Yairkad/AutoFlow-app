@@ -621,11 +621,6 @@ export default function BillingClient() {
     XLSX.writeFile(wb, `חשבונות_${currentMonth}.xlsx`)
   }
 
-  function exportJson() {
-    const blob = new Blob([JSON.stringify({ entries, items, contacts }, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `חשבונות_${currentMonth}.json`; a.click(); URL.revokeObjectURL(a.href)
-  }
-
   // ── Render ─────────────────────────────────────────────────────────────
 
   if (loading) return (
@@ -694,7 +689,7 @@ export default function BillingClient() {
             )}
 
             <div style={{ marginRight: 'auto', display: 'flex', gap: '8px' }}>
-              <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} />
+              <ExcelMenu onExportExcel={exportExcel} />
               <Button variant="secondary" size="sm" onClick={() => openEntryModal()}>➕ חריג</Button>
               <Button variant="secondary" size="sm" onClick={generateEntries} disabled={saving}>🔄 צור רשומות</Button>
               {entries.length > 0 && (

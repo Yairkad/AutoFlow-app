@@ -383,11 +383,6 @@ export default function ProductsClient() {
     e.target.value = ''
   }
 
-  function exportJson() {
-    const blob = new Blob([JSON.stringify(products, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'מלאי-מוצרים.json'; a.click(); URL.revokeObjectURL(a.href)
-  }
-
   // ── Styles ──────────────────────────────────────────────────────────────────
 
   const inp: React.CSSProperties = {
@@ -463,7 +458,7 @@ export default function ProductsClient() {
               <option value='out'>אזל</option>
             </select>
             <div style={{ marginRight: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {!viewOnly && <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} onImportExcel={importExcel} />}
+              {!viewOnly && <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />}
               {!viewOnly && (editMode ? (
                 <>
                   <Button onClick={saveInlineEdit}>💾 שמור הכל</Button>

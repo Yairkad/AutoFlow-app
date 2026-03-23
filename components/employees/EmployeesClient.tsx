@@ -917,12 +917,6 @@ export default function EmployeesClient() {
     XLSX.writeFile(wb, 'עובדים.xlsx')
   }
 
-  function exportJson() {
-    const data = employees.map(e => ({ id: e.id, full_name: e.full_name, phone: e.phone, email: e.email, role: e.role, salary_type: e.salary_type, base_salary: e.base_salary, is_active: e.is_active, start_date: e.start_date, notes: e.notes }))
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'עובדים.json'; a.click(); URL.revokeObjectURL(a.href)
-  }
-
   // ── Main render ──────────────────────────────────────────────────────────────
 
   return (
@@ -964,7 +958,7 @@ export default function EmployeesClient() {
       {tab === 'employees' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
-            <ExcelMenu onExportExcel={exportExcel} onExportJson={exportJson} />
+            <ExcelMenu onExportExcel={exportExcel} />
             <Button onClick={openAdd}>+ הוסף עובד</Button>
           </div>
           {renderEmpCards()}
