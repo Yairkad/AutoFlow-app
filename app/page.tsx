@@ -261,7 +261,7 @@ export default async function LandingPage() {
       {/* ══════════════════════════════════════════════════════
           SERVICES
       ══════════════════════════════════════════════════════ */}
-      <section id="services" style={{ background: '#f8fafc', padding: '80px 40px' }} aria-labelledby="services-title">
+      <section id="services" style={{ background: '#fffde7', padding: '80px 40px' }} aria-labelledby="services-title">
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <SectionHeader id="services-title" title="השירותים שלנו" sub="כל מה שהרכב שלך צריך – במקום אחד" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginTop: '40px' }}>
@@ -302,7 +302,7 @@ export default async function LandingPage() {
           PRICE LIST
       ══════════════════════════════════════════════════════ */}
       {displayPrices.length > 0 && (
-        <section style={{ background: '#f8fafc', padding: '80px 40px' }} aria-labelledby="prices-title">
+        <section style={{ background: '#fffde7', padding: '80px 40px' }} aria-labelledby="prices-title">
           <div style={{ maxWidth: '780px', margin: '0 auto' }}>
             <SectionHeader id="prices-title" title="מחירון שירותים" sub="מחירים שקופים ללא הפתעות" />
             <div style={{ marginTop: '40px' }}>
