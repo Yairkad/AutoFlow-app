@@ -684,7 +684,7 @@ export default function QuotesClient() {
   // ── Excel / JSON ───────────────────────────────────────────────────────────
 
   function exportExcel() {
-    const rows = quotes.map(q => ({ סוג: q.type === 'tire' ? 'צמיג' : 'חלק', תאריך: q.quote_date, לקוח: q.client_name, טלפון: q.phone ?? '', לוחית: q.plate ?? '', מותג: q.brand ?? '', מידה: q.width && q.profile && q.rim ? `${q.width}/${q.profile}R${q.rim}` : '', כמות: q.qty ?? '', 'שם חלק': q.part_name ?? '', ספק: q.supplier ?? '', 'מחיר עלות': q.cost_price ?? '', 'מחיר ללקוח': q.sell_price ?? '', רווח: q.profit ?? '', סטטוס: q.status, הערות: q.notes ?? '' }))
+    const rows = quotes.map(q => ({ סוג: q.type === 'tires' ? 'צמיג' : 'חלק', תאריך: q.quote_date, לקוח: q.client_name, טלפון: q.phone ?? '', לוחית: q.plate ?? '', מותג: q.brand ?? '', מידה: q.width && q.profile && q.rim ? `${q.width}/${q.profile}R${q.rim}` : '', כמות: q.qty ?? '', 'שם חלק': q.part_name ?? '', ספק: q.supplier ?? '', 'מחיר עלות': q.cost_price ?? '', 'מחיר ללקוח': q.sell_price ?? '', רווח: q.profit ?? '', סטטוס: q.status, הערות: q.notes ?? '' }))
     const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'הצעות מחיר')
