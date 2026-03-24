@@ -110,7 +110,7 @@ export default function SidebarLayoutEditor({ open, onClose, defaultSections, al
     },
     body: { overflowY: 'auto' as const, flex: 1, minHeight: 0, padding: '12px 16px', display: 'flex', flexDirection: 'column' as const, gap: '10px' },
     footer: { padding: '12px 20px', borderTop: '1px solid #f0f0f0', display: 'flex', gap: '8px', justifyContent: 'flex-start' },
-    sectionCard: { border: '1px solid #e5e7eb', borderRadius: '10px', overflow: 'hidden' },
+    sectionCard: { border: '1px solid #e5e7eb', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 },
     sectionHead: {
       background: '#f9fafb', padding: '8px 12px',
       display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e5e7eb',
