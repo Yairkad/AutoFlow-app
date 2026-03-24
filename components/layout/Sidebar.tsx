@@ -306,7 +306,7 @@ export default function Sidebar({
             display: 'block', width: '100%',
             padding: '10px 0', marginTop: '4px',
             borderTop: '1px solid var(--border)',
-            background: 'none', border: 'none', borderTop: '1px solid var(--border)',
+            background: 'none', border: 'none',
             fontSize: '11px', color: 'var(--text-muted)', cursor: 'pointer',
             opacity: 0.5, transition: 'opacity .15s',
           }}
