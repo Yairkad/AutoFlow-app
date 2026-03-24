@@ -350,6 +350,7 @@ export default function InspectionsClient() {
   const [isAdmin, setIsAdmin]         = useState(false)
   const [uploadingId,    setUploadingId]    = useState<string | null>(null)
   const [scanningInsId,  setScanningInsId]  = useState<string | null>(null)
+  const [editModalOpen,  setEditModalOpen]  = useState(false)
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -427,6 +428,7 @@ export default function InspectionsClient() {
     setEditingId(null)
     setForm({ ...emptyForm })
     setFieldErrors(new Set())
+    setEditModalOpen(false)
   }
 
   const openEdit = (ins: Inspection) => {
@@ -445,7 +447,7 @@ export default function InspectionsClient() {
       owner_address: ins.owner_address ?? '',
       car_code:     ins.car_code    ?? '',
     })
-    setTab('entry')
+    setEditModalOpen(true)
   }
 
   // ── Save + Print ─────────────────────────────────────────────────────────────
@@ -926,6 +928,135 @@ export default function InspectionsClient() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ── Edit Modal ── */}
+      {editModalOpen && (
+        <>
+          {/* Backdrop */}
+          <div onClick={clearForm} style={{
+            position: 'fixed', inset: 0, zIndex: 499,
+            background: 'rgba(0,0,0,0.45)',
+          }} />
+
+          {/* Drawer panel */}
+          <div style={{
+            position: 'fixed', top: 0, right: 0, bottom: 0,
+            width: '100%', maxWidth: 720,
+            zIndex: 500, background: 'var(--bg)',
+            display: 'flex', flexDirection: 'column',
+            boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
+            overflowY: 'auto',
+          }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '16px 20px',
+              background: 'var(--bg-card)', borderBottom: '1px solid var(--border)',
+              position: 'sticky', top: 0, zIndex: 1, flexShrink: 0,
+            }}>
+              <button onClick={clearForm} style={{
+                background: 'none', border: 'none', fontSize: 20, lineHeight: 1,
+                cursor: 'pointer', color: 'var(--text-muted)', padding: 4,
+              }}>✕</button>
+              <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>עריכת בדיקה</span>
+            </div>
+
+            {/* Form */}
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="inspections-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
+
+                <Section icon="👤" title="פרטי לקוח">
+                  <div className="inspections-customer-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+                    {[
+                      { key: 'owner_name',    label: 'שם לקוח *',  placeholder: 'ישראל ישראלי' },
+                      { key: 'owner_id',      label: 'תעודת זהות', placeholder: '123456789' },
+                      { key: 'owner_phone',   label: 'טלפון',       placeholder: '050-0000000' },
+                      { key: 'owner_address', label: 'כתובת',       placeholder: 'רחוב, עיר' },
+                    ].map(({ key, label, placeholder }) => (
+                      <div key={key}>
+                        <FL>{label}</FL>
+                        <input
+                          value={form[key as keyof typeof emptyForm]}
+                          onChange={e => onChange(key, e.target.value)}
+                          className="form-input"
+                          placeholder={placeholder}
+                          style={fieldErrors.has(key) ? { borderColor: 'var(--danger)', boxShadow: '0 0 0 2px rgba(220,38,38,.15)' } : undefined}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+
+                <Section icon="🚗" title="פרטי רכב">
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                    <div style={{ flex: '0 0 160px' }}>
+                      <FL>מספר רכב *</FL>
+                      <input
+                        value={form.plate}
+                        onChange={e => onChange('plate', e.target.value)}
+                        className="form-input font-mono font-bold"
+                        style={{ fontSize: 15, letterSpacing: 1, ...(fieldErrors.has('plate') ? { borderColor: 'var(--danger)', boxShadow: '0 0 0 2px rgba(220,38,38,.15)' } : {}) }}
+                        placeholder="12-345-67"
+                        dir="ltr"
+                      />
+                    </div>
+                    <div style={{ paddingTop: 20 }}>
+                      <Button size="sm" onClick={handlePlateSearch} disabled={plateLoading}>
+                        {plateLoading ? '...' : '🔍 מלא אוטומטית'}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="inspections-vehicle-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+                    {[
+                      { key: 'make',      label: 'תוצר',      placeholder: 'טויוטה' },
+                      { key: 'model',     label: 'דגם',        placeholder: 'קורולה' },
+                      { key: 'year',      label: 'שנת ייצור',  placeholder: '2020' },
+                      { key: 'km',        label: 'ק"מ',        placeholder: '100000' },
+                      { key: 'engine_cc', label: 'מספר מנוע',  placeholder: '' },
+                      { key: 'chassis',   label: 'מספר שלדה',  placeholder: '' },
+                      { key: 'car_code',  label: 'קוד רכב',    placeholder: '' },
+                    ].map(({ key, label, placeholder }) => (
+                      <div key={key}>
+                        <FL>{label}</FL>
+                        <input
+                          value={form[key as keyof typeof emptyForm]}
+                          onChange={e => onChange(key, e.target.value)}
+                          className="form-input"
+                          placeholder={placeholder}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              </div>
+
+              {/* Action bar */}
+              <div style={{
+                display: 'flex', gap: 10, alignItems: 'center',
+                background: 'var(--bg-card)', border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)', padding: '12px 18px',
+                position: 'sticky', bottom: 0,
+              }}>
+                <Button fullWidth onClick={handlePrintAndSave} disabled={saving}
+                  style={{ fontSize: 15, fontWeight: 800, padding: '10px 0' }}>
+                  {saving ? 'שומר...' : '🖨️ הדפס ושמור'}
+                </Button>
+                <Button variant="secondary" onClick={handleSaveOnly} disabled={saving}
+                  style={{ flexShrink: 0, padding: '10px 20px', whiteSpace: 'nowrap', fontWeight: 700 }}>
+                  💾 שמור
+                </Button>
+                <button onClick={clearForm} style={{
+                  flexShrink: 0, padding: '10px 16px',
+                  border: '1px solid var(--border)', borderRadius: 8,
+                  background: 'white', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
+                  color: 'var(--text-muted)',
+                }}>✕</button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
