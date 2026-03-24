@@ -108,7 +108,7 @@ export default function SidebarLayoutEditor({ open, onClose, defaultSections, al
       padding: '16px 20px', borderBottom: '1px solid #f0f0f0',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     },
-    body: { overflowY: 'auto' as const, flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column' as const, gap: '10px' },
+    body: { overflowY: 'auto' as const, flex: 1, minHeight: 0, padding: '12px 16px', display: 'flex', flexDirection: 'column' as const, gap: '10px' },
     footer: { padding: '12px 20px', borderTop: '1px solid #f0f0f0', display: 'flex', gap: '8px', justifyContent: 'flex-start' },
     sectionCard: { border: '1px solid #e5e7eb', borderRadius: '10px', overflow: 'hidden' },
     sectionHead: {
