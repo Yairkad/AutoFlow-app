@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import SidebarLayoutEditor, { SectionConfig, SIDEBAR_LAYOUT_KEY } from './SidebarLayoutEditor'
-import { loadUiSettings } from '@/lib/uiSettings'
 
 // ─── צבע הבועה לכל פריט ───────────────────────────────────────────────────────
 const NAV_ITEMS = [
@@ -28,7 +27,6 @@ const NAV_ITEMS = [
 ]
 
 // ─── חלוקה לקטגוריות — ערוך כאן כרצונך ──────────────────────────────────────
-// כל href שלא מופיע כאן יוצג בסוף ללא כותרת
 const SECTIONS: { label: string | null; hrefs: string[] }[] = [
   { label: null,       hrefs: ['/dashboard'] },
   { label: 'כספים',   hrefs: ['/expenses', '/billing', '/debts'] },
@@ -59,6 +57,97 @@ const ICONS: Record<string, React.ReactNode> = {
   '/my-profile':  <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
 }
 
+// ─── Skeleton (מחוץ לקומפוננטה — לא יתמאונט מחדש בכל render) ─────────────────
+function SkeletonNav() {
+  return (
+    <div style={{ padding: '4px 0' }}>
+      {[80, 60, 90, 70, 85, 55, 75].map((w, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', margin: '1px 6px' }}>
+          <div className="shimmer" style={{ width: 30, height: 30, borderRadius: '8px', flexShrink: 0 }} />
+          <div className="shimmer sidebar-brand-text" style={{ width: w, height: 11, borderRadius: '4px' }} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+type NavItem = typeof NAV_ITEMS[0]
+
+// ─── NavItem (מחוץ לקומפוננטה — קריטי! מניעת unmount בכל render של Sidebar) ───
+function NavItem({
+  item, pathname, pressed, pendingHref,
+  onDown, onUp, onLeave,
+}: {
+  item: NavItem
+  pathname: string
+  pressed: string | null
+  pendingHref: string | null
+  onDown: (href: string) => void
+  onUp: () => void
+  onLeave: () => void
+}) {
+  const isActive      = pathname === item.href
+  const isPending     = pendingHref === item.href && !isActive
+  const isHighlighted = isActive || isPending
+  const [from, to]    = item.color.split(',')
+
+  return (
+    <Link
+      href={item.href}
+      title={item.label}
+      onMouseDown={() => onDown(item.href)}
+      onMouseUp={onUp}
+      onMouseLeave={onLeave}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '5px 10px',
+        margin: '1px 6px',
+        borderRadius: '9px',
+        fontSize: '13px',
+        fontWeight: isHighlighted ? 600 : 400,
+        color: 'var(--text)',
+        background: isHighlighted ? 'var(--bg-hover, #f3faf6)' : 'transparent',
+        boxShadow: isHighlighted ? 'inset 3px 0 0 var(--primary)' : 'none',
+        textDecoration: 'none',
+        transition: 'all .15s, transform .1s',
+        transform: pressed === item.href ? 'scale(0.95)' : 'scale(1)',
+        opacity: isPending ? 0.75 : 1,
+        cursor: 'pointer',
+      }}
+    >
+      <span style={{
+        width: 30, height: 30,
+        borderRadius: '8px',
+        background: `linear-gradient(135deg, ${from}, ${to})`,
+        boxShadow: `0 2px 5px ${from}55`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+        transition: 'transform .15s',
+        transform: isHighlighted ? 'scale(1.05)' : 'scale(1)',
+      }}>
+        <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          {ICONS[item.href]}
+        </svg>
+      </span>
+
+      <span style={{ flex: 1 }}>{item.label}</span>
+
+      {isPending && (
+        <span style={{
+          width: 8, height: 8, borderRadius: '50%',
+          border: '2px solid var(--primary)',
+          borderTopColor: 'transparent',
+          display: 'inline-block',
+          animation: 'spin .6s linear infinite',
+          flexShrink: 0,
+        }} />
+      )}
+    </Link>
+  )
+}
+
 export default function Sidebar({
   mobileOpen = false,
   onClose,
@@ -76,8 +165,8 @@ export default function Sidebar({
   const [loaded, setLoaded]             = useState(false)
   const [tenantName, setTenantName]     = useState<string | null>(null)
   const [tenantLogo, setTenantLogo]     = useState<string | null>(null)
-  const [editorOpen, setEditorOpen]         = useState(false)
-  const [tenantId, setTenantId]             = useState<string | null>(null)
+  const [editorOpen, setEditorOpen]     = useState(false)
+  const [tenantId, setTenantId]         = useState<string | null>(null)
   const [activeSections, setActiveSections] = useState<SectionConfig[]>(() => {
     if (typeof window === 'undefined') return SECTIONS
     try {
@@ -102,7 +191,6 @@ export default function Sidebar({
                   if (t) {
                     setTenantName(t.name || null)
                     setTenantLogo(t.logo_base64 || null)
-                    // Prefer Supabase layout, fall back to localStorage
                     const remote = (t.ui_settings as any)?.sidebar_layout
                     if (remote) {
                       setActiveSections(remote)
@@ -119,13 +207,14 @@ export default function Sidebar({
     })
   }, [sb])
 
+  // Clear pending state on route change
   useEffect(() => {
     setPendingHref(null)
     setPressed(null)
     onClose?.()
   }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function isVisible(item: typeof NAV_ITEMS[0]) {
+  function isVisible(item: NavItem) {
     if (!loaded) return false
     if (isAdmin && item.href !== '/my-profile') return true
     if (item.module === null) return true
@@ -134,199 +223,133 @@ export default function Sidebar({
   }
 
   const itemsByHref = Object.fromEntries(NAV_ITEMS.map(i => [i.href, i]))
-
-  function SkeletonNav() {
-    return (
-      <div style={{ padding: '4px 0' }}>
-        {[80, 60, 90, 70, 85, 55, 75].map((w, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', margin: '1px 6px' }}>
-            <div className="shimmer" style={{ width: 30, height: 30, borderRadius: '8px', flexShrink: 0 }} />
-            <div className="shimmer sidebar-brand-text" style={{ width: w, height: 11, borderRadius: '4px' }} />
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  function NavItem({ item }: { item: typeof NAV_ITEMS[0] }) {
-    const isActive      = pathname === item.href
-    const isPending     = pendingHref === item.href && !isActive
-    const isHighlighted = isActive || isPending
-    const [from, to]    = item.color.split(',')
-
-    return (
-      <Link
-        href={item.href}
-        title={item.label}
-        onMouseDown={() => { setPressed(item.href); setPendingHref(item.href) }}
-        onMouseUp={() => setPressed(null)}
-        onMouseLeave={() => setPressed(null)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '5px 10px',
-          margin: '1px 6px',
-          borderRadius: '9px',
-          fontSize: '13px',
-          fontWeight: isHighlighted ? 600 : 400,
-          color: isHighlighted ? 'var(--text)' : 'var(--text)',
-          background: isHighlighted ? 'var(--bg-hover, #f3faf6)' : 'transparent',
-          boxShadow: isHighlighted ? 'inset 3px 0 0 var(--primary)' : 'none',
-          textDecoration: 'none',
-          transition: 'all .15s, transform .1s',
-          transform: pressed === item.href ? 'scale(0.95)' : 'scale(1)',
-          opacity: isPending ? 0.75 : 1,
-          cursor: 'pointer',
-        }}
-      >
-        {/* colored icon bubble */}
-        <span style={{
-          width: 30, height: 30,
-          borderRadius: '8px',
-          background: `linear-gradient(135deg, ${from}, ${to})`,
-          boxShadow: `0 2px 5px ${from}55`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-          transition: 'transform .15s',
-          transform: isHighlighted ? 'scale(1.05)' : 'scale(1)',
-        }}>
-          <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            {ICONS[item.href]}
-          </svg>
-        </span>
-
-        <span style={{ flex: 1 }}>{item.label}</span>
-
-        {isPending && (
-          <span style={{
-            width: 8, height: 8, borderRadius: '50%',
-            border: '2px solid var(--primary)',
-            borderTopColor: 'transparent',
-            display: 'inline-block',
-            animation: 'spin .6s linear infinite',
-            flexShrink: 0,
-          }} />
-        )}
-      </Link>
-    )
-  }
-
-  // Build visible items set for rendering
   const visibleHrefs = new Set(NAV_ITEMS.filter(isVisible).map(i => i.href))
+
+  const handleDown  = (href: string) => { setPressed(href); setPendingHref(href) }
+  const handleUp    = () => setPressed(null)
+  const handleLeave = () => setPressed(null)
 
   return (
     <>
-    <aside
-      data-mobile-open={String(mobileOpen)}
-      style={{
-        position: 'fixed',
-        top: 'var(--header-h)',
-        right: 0,
-        bottom: 0,
-        width: 'var(--sidebar-w)',
-        background: 'var(--bg-card)',
-        borderLeft: '1px solid var(--border)',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        zIndex: 90,
-        padding: '0',
-        transition: 'transform .25s ease',
-      }}
-    >
-      {/* Business branding */}
-      <Link
-        href="/dashboard"
-        onMouseDown={() => setBrandPressed(true)}
-        onMouseUp={() => setBrandPressed(false)}
-        onMouseLeave={() => setBrandPressed(false)}
+      <aside
+        data-mobile-open={String(mobileOpen)}
         style={{
-          display: 'flex', alignItems: 'center', gap: '10px',
-          padding: '12px 14px',
-          borderBottom: '1px solid var(--border)',
-          marginBottom: '4px',
-          textDecoration: 'none', color: 'var(--text)',
-          transition: 'transform .1s, opacity .1s',
-          transform: brandPressed ? 'scale(0.94)' : 'scale(1)',
-          opacity: brandPressed ? 0.8 : 1,
+          position: 'fixed',
+          top: 'var(--header-h)',
+          right: 0,
+          bottom: 0,
+          width: 'var(--sidebar-w)',
+          background: 'var(--bg-card)',
+          borderLeft: '1px solid var(--border)',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          zIndex: 90,
+          padding: '0',
+          transition: 'transform .25s ease',
         }}
-        title={tenantName || 'AutoFlow — דף ראשי'}
       >
-        {tenantLogo
-          ? <img src={tenantLogo} alt="לוגו" style={{ width: 32, height: 32, borderRadius: '8px', objectFit: 'contain', flexShrink: 0 }} />
-          : <img src="/icon-512.png" alt="AutoFlow" style={{ width: 32, height: 32, borderRadius: '8px', objectFit: 'contain', flexShrink: 0 }} />
-        }
-        <div className="sidebar-brand-text" style={{ overflow: 'hidden', flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
-            {tenantName || 'AutoFlow'}
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.2 }}>מערכת ניהול</div>
-        </div>
-      </Link>
-
-      {!loaded && <SkeletonNav />}
-
-      {loaded && (
-        <div style={{ padding: '4px 0 8px' }}>
-          {activeSections.map((section, si) => {
-            const sectionItems = section.hrefs
-              .filter(h => visibleHrefs.has(h))
-              .map(h => itemsByHref[h])
-              .filter(Boolean)
-
-            if (sectionItems.length === 0) return null
-
-            return (
-              <div key={si}>
-                {section.label && (
-                  <div style={{
-                    fontSize: '9px',
-                    letterSpacing: '1.3px',
-                    textTransform: 'uppercase',
-                    color: 'var(--text-muted)',
-                    padding: '10px 16px 3px',
-                    opacity: 0.6,
-                  }}>
-                    {section.label}
-                  </div>
-                )}
-                {sectionItems.map(item => (
-                  <NavItem key={item.href} item={item} />
-                ))}
-              </div>
-            )
-          })}
-        </div>
-      )}
-      {/* Edit layout button — subtle footer */}
-      {loaded && (
-        <button
-          onClick={() => setEditorOpen(true)}
+        {/* Business branding */}
+        <Link
+          href="/dashboard"
+          onMouseDown={() => setBrandPressed(true)}
+          onMouseUp={() => setBrandPressed(false)}
+          onMouseLeave={() => setBrandPressed(false)}
           style={{
-            display: 'block', width: '100%',
-            padding: '10px 0', marginTop: '4px',
-            borderTop: '1px solid var(--border)',
-            background: 'none', border: 'none',
-            fontSize: '11px', color: 'var(--text-muted)', cursor: 'pointer',
-            opacity: 0.5, transition: 'opacity .15s',
+            display: 'flex', alignItems: 'center', gap: '10px',
+            padding: '12px 14px',
+            borderBottom: '1px solid var(--border)',
+            marginBottom: '4px',
+            textDecoration: 'none', color: 'var(--text)',
+            transition: 'transform .1s, opacity .1s',
+            transform: brandPressed ? 'scale(0.94)' : 'scale(1)',
+            opacity: brandPressed ? 0.8 : 1,
           }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-          onMouseLeave={e => (e.currentTarget.style.opacity = '0.5')}
+          title={tenantName || 'AutoFlow — דף ראשי'}
         >
-          ✦ ערוך סידור תפריט
-        </button>
-      )}
+          {tenantLogo
+            ? <img src={tenantLogo} alt="לוגו" style={{ width: 32, height: 32, borderRadius: '8px', objectFit: 'contain', flexShrink: 0 }} />
+            : <img src="/icon-512.png" alt="AutoFlow" style={{ width: 32, height: 32, borderRadius: '8px', objectFit: 'contain', flexShrink: 0 }} />
+          }
+          <div className="sidebar-brand-text" style={{ overflow: 'hidden', flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
+              {tenantName || 'AutoFlow'}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.2 }}>מערכת ניהול</div>
+          </div>
+        </Link>
 
-    </aside>
+        {!loaded && <SkeletonNav />}
 
-    <SidebarLayoutEditor
-      open={editorOpen}
-      onClose={() => setEditorOpen(false)}
-      defaultSections={SECTIONS}
-      allItems={NAV_ITEMS.filter(isVisible).map(({ href, label, color }) => ({ href, label, color }))}
-      tenantId={tenantId}
-      onSave={setActiveSections}
-    />
+        {loaded && (
+          <div style={{ padding: '4px 0 8px' }}>
+            {activeSections.map((section, si) => {
+              const sectionItems = section.hrefs
+                .filter(h => visibleHrefs.has(h))
+                .map(h => itemsByHref[h])
+                .filter(Boolean)
+
+              if (sectionItems.length === 0) return null
+
+              return (
+                <div key={si}>
+                  {section.label && (
+                    <div style={{
+                      fontSize: '9px',
+                      letterSpacing: '1.3px',
+                      textTransform: 'uppercase',
+                      color: 'var(--text-muted)',
+                      padding: '10px 16px 3px',
+                      opacity: 0.6,
+                    }}>
+                      {section.label}
+                    </div>
+                  )}
+                  {sectionItems.map(item => (
+                    <NavItem
+                      key={item.href}
+                      item={item}
+                      pathname={pathname}
+                      pressed={pressed}
+                      pendingHref={pendingHref}
+                      onDown={handleDown}
+                      onUp={handleUp}
+                      onLeave={handleLeave}
+                    />
+                  ))}
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Hidden edit button */}
+        {loaded && (
+          <button
+            onClick={() => setEditorOpen(true)}
+            style={{
+              display: 'block', width: '100%',
+              padding: '10px 0', marginTop: '4px',
+              borderTop: '1px solid var(--border)',
+              background: 'none', border: 'none',
+              fontSize: '11px', color: 'var(--text-muted)', cursor: 'pointer',
+              opacity: 0.4, transition: 'opacity .15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '0.4')}
+          >
+            ✦ ערוך סידור תפריט
+          </button>
+        )}
+      </aside>
+
+      <SidebarLayoutEditor
+        open={editorOpen}
+        onClose={() => setEditorOpen(false)}
+        defaultSections={SECTIONS}
+        allItems={NAV_ITEMS.filter(isVisible).map(({ href, label, color }) => ({ href, label, color }))}
+        tenantId={tenantId}
+        onSave={setActiveSections}
+      />
     </>
   )
 }

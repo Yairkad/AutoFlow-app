@@ -3,10 +3,10 @@
 import Link from 'next/link'
 import versionData from '@/lib/version.json'
 
-export default function Footer() {
+export default function Footer({ inner }: { inner?: boolean } = {}) {
   return (
     <footer style={{
-      marginRight: 'var(--sidebar-w)',
+      marginRight: inner ? 0 : 'var(--sidebar-w)',
       borderTop: '1px solid var(--border)',
       padding: '12px 24px',
       display: 'flex',
