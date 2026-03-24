@@ -327,7 +327,7 @@ export default function DashboardStats() {
   }
 
   const cardGrid: React.CSSProperties = {
-    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px',
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', gridAutoRows: '90px',
   }
 
   const SECTIONS: { id: Section; icon: string; label: string }[] = [

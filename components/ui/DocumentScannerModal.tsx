@@ -24,8 +24,18 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
   const [pages, setPages] = useState<Page[]>([])
   const [currentPreview, setCurrentPreview] = useState<string>('')
   const [enhanced, setEnhanced] = useState(false)
+  const [torchOn, setTorchOn] = useState(false)
   const [cameraError, setCameraError] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  const toggleTorch = async () => {
+    const track = streamRef.current?.getVideoTracks()[0]
+    if (!track) return
+    try {
+      await track.applyConstraints({ advanced: [{ torch: !torchOn } as MediaTrackConstraintSet] })
+      setTorchOn(v => !v)
+    } catch { /* torch not supported on this device */ }
+  }
 
   // Start camera
   const startCamera = useCallback(async () => {
@@ -218,6 +228,16 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
                   }} />
                 ))}
               </div>
+              {/* Torch button */}
+              <button onClick={toggleTorch} style={{
+                position: 'absolute', bottom: 36, left: 24,
+                background: torchOn ? 'rgba(255,220,0,0.3)' : 'rgba(0,0,0,0.6)',
+                color: torchOn ? '#ffe066' : '#fff',
+                border: `2px solid ${torchOn ? '#ffe066' : '#fff'}`,
+                borderRadius: 8, padding: '6px 14px', fontSize: 13, cursor: 'pointer',
+              }}>
+                🔦 תאורה
+              </button>
               {/* Capture button */}
               <button onClick={capture} style={{
                 position: 'absolute', bottom: 28,
@@ -260,7 +280,7 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
               color: enhanced ? '#4ade80' : '#aaa', fontSize: 14, cursor: 'pointer',
               fontFamily: 'inherit', fontWeight: 600,
             }}>
-              {enhanced ? '✓ מצב סריקה (שחור-לבן)' : '◐ הפעל מצב סריקה'}
+              {enhanced ? '✓ שחור-לבן (פעיל)' : '◐ המר לשחור לבן'}
             </button>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={addAnotherPage} style={{

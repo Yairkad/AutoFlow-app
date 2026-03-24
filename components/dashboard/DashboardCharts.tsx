@@ -209,9 +209,9 @@ export default function DashboardCharts() {
             <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#64748b' }} />
             <YAxis tickFormatter={v => '₪' + (v/1000).toFixed(0) + 'k'} tick={{ fontSize: 11, fill: '#64748b' }} width={52} />
             <Tooltip content={<CurrencyTooltip />} />
-            <Legend formatter={v => v === 'income' ? 'הכנסות' : 'הוצאות'} />
-            <Bar dataKey="income"   name="income"   fill="var(--primary)" radius={[4,4,0,0]} />
-            <Bar dataKey="expenses" name="expenses" fill="#ef4444"        radius={[4,4,0,0]} />
+            <Legend />
+            <Bar dataKey="income"   name="הכנסות" fill="var(--primary)" radius={[4,4,0,0]} />
+            <Bar dataKey="expenses" name="הוצאות" fill="#ef4444"        radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>}

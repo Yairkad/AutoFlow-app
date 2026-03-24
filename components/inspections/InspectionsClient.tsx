@@ -7,7 +7,6 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Button from '@/components/ui/Button'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
-import { useIsMobile } from '@/lib/hooks/useIsMobile'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -351,7 +350,6 @@ export default function InspectionsClient() {
   const [isAdmin, setIsAdmin]         = useState(false)
   const [uploadingId,    setUploadingId]    = useState<string | null>(null)
   const [scanningInsId,  setScanningInsId]  = useState<string | null>(null)
-  const isMobile = useIsMobile()
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -663,11 +661,11 @@ export default function InspectionsClient() {
           display: 'flex', flexDirection: 'column', gap: 12,
         }}>
           {/* Two-column layout: customer | vehicle */}
-          <div className="inspections-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div className="inspections-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12 }}>
 
             {/* Customer section */}
             <Section icon="👤" title="פרטי לקוח">
-              <div className="inspections-customer-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="inspections-customer-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
                 {[
                   { key: 'owner_name',    label: 'שם לקוח *',  placeholder: 'ישראל ישראלי' },
                   { key: 'owner_id',      label: 'תעודת זהות', placeholder: '123456789' },
@@ -869,7 +867,7 @@ export default function InspectionsClient() {
                   {(ins.owner_id || ins.owner_address || ins.engine_cc || ins.chassis) && (
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                       {ins.owner_id    && <span>ת.ז: <CopyCell value={ins.owner_id} /></span>}
-                      {ins.engine_cc   && <span>מנוע: {ins.engine_cc}</span>}
+                      {ins.engine_cc   && <span>מנוע: <CopyCell value={ins.engine_cc} /></span>}
                       {ins.chassis     && <span>שלדה: {ins.chassis}</span>}
                       {ins.owner_address && <span>{ins.owner_address}</span>}
                     </div>
