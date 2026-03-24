@@ -47,11 +47,6 @@ interface InvoiceEntry {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const SUPPLIER_CATEGORIES = [
-  'חלפים', 'צמיגים', 'שירות ותחזוקה', 'גרר / חילוץ', 'ביטוח',
-  'עיצוב / טיפול חיצוני', 'טכנולוגיה / תוכנה', 'שיווק ופרסום', 'אחר',
-]
-
 const ISRAELI_BANKS: { name: string; code: string }[] = [
   { name: 'בנק לאומי',                   code: '10' },
   { name: 'בנק דיסקונט',                 code: '11' },
@@ -131,8 +126,9 @@ export default function SuppliersClient() {
   const [editMode, setEditMode] = useState(false)  // manage mode (show edit/delete)
 
   // Data
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [debts, setDebts]         = useState<SupplierDebt[]>([])
+  const [suppliers, setSuppliers]     = useState<Supplier[]>([])
+  const [debts, setDebts]             = useState<SupplierDebt[]>([])
+  const [categories, setCategories]   = useState<string[]>([])
 
   // Detail panel
   const [selected, setSelected] = useState<Supplier | null>(null)
@@ -172,15 +168,17 @@ export default function SuppliersClient() {
     if (!tid) return
     setLoading(true)
 
-    const [suppRes, debtRes] = await Promise.all([
+    const [suppRes, debtRes, catRes] = await Promise.all([
       supabase.from('suppliers').select('*').eq('tenant_id', tid).order('name'),
       supabase.from('supplier_debts')
         .select('id,supplier_id,amount,paid,description,date,is_closed,doc_type,doc_number,invoices')
         .eq('tenant_id', tid),
+      supabase.from('supplier_categories').select('name').eq('tenant_id', tid).order('name'),
     ])
 
     if (suppRes.data) setSuppliers(suppRes.data)
     if (debtRes.data) setDebts(debtRes.data)
+    if (catRes.data)  setCategories(catRes.data.map(r => r.name))
     setLoading(false)
   }, [supabase, resolveTenant])
 
@@ -242,6 +240,11 @@ export default function SuppliersClient() {
       const { error } = await supabase.from('suppliers').insert({ ...row, id: crypto.randomUUID() })
       if (error) { showToast('שגיאה בשמירה', 'error'); setSaving(false); return }
       showToast('ספק נוסף ✓', 'success')
+    }
+    // Auto-save new category to DB
+    const cat = fCategory.trim()
+    if (cat && !categories.includes(cat)) {
+      await supabase.from('supplier_categories').insert({ tenant_id: tid, name: cat })
     }
     setSaving(false); setShowModal(false); loadAll()
   }
@@ -630,10 +633,16 @@ export default function SuppliersClient() {
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   קטגוריה
-                  <select value={fCategory} onChange={e => setFCategory(e.target.value)} style={inputSt}>
-                    <option value="">— בחר קטגוריה —</option>
-                    {SUPPLIER_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  <input
+                    value={fCategory}
+                    onChange={e => setFCategory(e.target.value)}
+                    list="supplier-categories-list"
+                    placeholder="בחר או הקלד קטגוריה"
+                    style={inputSt}
+                  />
+                  <datalist id="supplier-categories-list">
+                    {categories.map(c => <option key={c} value={c} />)}
+                  </datalist>
                 </label>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

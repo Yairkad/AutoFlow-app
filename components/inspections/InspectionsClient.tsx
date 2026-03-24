@@ -6,6 +6,8 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Button from '@/components/ui/Button'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
+import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
+import { useIsMobile } from '@/lib/hooks/useIsMobile'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -347,7 +349,9 @@ export default function InspectionsClient() {
   const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set())
   const [driveConnected, setDriveConnected] = useState(false)
   const [isAdmin, setIsAdmin]         = useState(false)
-  const [uploadingId, setUploadingId] = useState<string | null>(null)
+  const [uploadingId,    setUploadingId]    = useState<string | null>(null)
+  const [scanningInsId,  setScanningInsId]  = useState<string | null>(null)
+  const isMobile = useIsMobile()
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -896,6 +900,17 @@ export default function InspectionsClient() {
                               >
                                 {uploadingId === ins.id ? '⏳' : '📤'}
                               </label>
+                              {isMobile && <button
+                                onClick={() => setScanningInsId(ins.id)}
+                                title="סרוק מסמך"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: 0 }}
+                              >📷</button>}
+                              {scanningInsId === ins.id && (
+                                <DocumentScannerModal
+                                  onComplete={file => { setScanningInsId(null); uploadInspectionFile(ins, file) }}
+                                  onClose={() => setScanningInsId(null)}
+                                />
+                              )}
                             </>
                           ) : null}
                         </td>

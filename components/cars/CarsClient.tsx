@@ -9,6 +9,8 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import PlateInput from '@/components/ui/PlateInput'
 import ExcelMenu from '@/components/ui/ExcelMenu'
+import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
+import { useIsMobile } from '@/lib/hooks/useIsMobile'
 import { VehicleData } from '@/lib/utils/plateApi'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -212,6 +214,8 @@ export default function CarsClient() {
   const [carDriveFolderId,  setCarDriveFolderId]  = useState<string | null>(null)
   const [carDriveLoading,   setCarDriveLoading]   = useState(false)
   const [carDriveUploading, setCarDriveUploading] = useState(false)
+  const [showCarScanner,   setShowCarScanner]   = useState(false)
+  const isMobile = useIsMobile()
 
   // Car form
   const [carModal,   setCarModal]   = useState(false)
@@ -1390,12 +1394,23 @@ export default function CarsClient() {
                       </div>
                     ))}
                   </div>
-                  <label style={{ cursor: 'pointer' }}>
-                    <input type="file" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadCarDriveFile(f); e.target.value = '' }} />
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, padding: '5px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
-                      {carDriveUploading ? '⏳ מעלה...' : '📤 העלה קובץ'}
-                    </span>
-                  </label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {isMobile && <button onClick={() => setShowCarScanner(true)} disabled={carDriveUploading} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, padding: '5px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      📷 סרוק
+                    </button>}
+                    <label style={{ cursor: 'pointer' }}>
+                      <input type="file" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadCarDriveFile(f); e.target.value = '' }} />
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, padding: '5px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        {carDriveUploading ? '⏳ מעלה...' : '📤 העלה קובץ'}
+                      </span>
+                    </label>
+                  </div>
+                  {showCarScanner && (
+                    <DocumentScannerModal
+                      onComplete={file => { setShowCarScanner(false); uploadCarDriveFile(file) }}
+                      onClose={() => setShowCarScanner(false)}
+                    />
+                  )}
                 </>
               )}
             </Section>

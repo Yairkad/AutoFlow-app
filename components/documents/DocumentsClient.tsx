@@ -6,6 +6,8 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
+import { useIsMobile } from '@/lib/hooks/useIsMobile'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -493,6 +495,8 @@ export default function DocumentsClient() {
   const [driveItems,      setDriveItems]      = useState<DriveItem[]>([])
   const [driveLoading,    setDriveLoading]    = useState(false)
   const [uploadProgress,  setUploadProgress]  = useState<{done:number;total:number}|null>(null)
+  const [showScanner,     setShowScanner]     = useState(false)
+  const isMobile = useIsMobile()
   const [driveDeletingId, setDriveDeletingId] = useState<string|null>(null)
   // folder navigation: stack of {id, name}
   const [folderStack,     setFolderStack]     = useState<{id:string;name:string}[]>([])
@@ -767,6 +771,17 @@ export default function DocumentsClient() {
               <input type="file" id="doc-drive-upload" style={{ display: 'none' }} multiple
                 onChange={e => { if (e.target.files?.length) uploadDriveFiles(e.target.files); e.target.value = '' }}
               />
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {isMobile && <button onClick={() => setShowScanner(true)} disabled={!!uploadProgress} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: 'var(--surface, #f5f5f5)', color: 'var(--text)', borderRadius: 8,
+                padding: '8px 14px', fontSize: 14, fontWeight: 600,
+                cursor: uploadProgress ? 'default' : 'pointer',
+                opacity: uploadProgress ? 0.7 : 1,
+                border: '1.5px solid var(--border)',
+              }}>
+                📷 סרוק
+              </button>}
               <label htmlFor="doc-drive-upload" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 background: 'var(--primary)', color: '#fff', borderRadius: 8,
@@ -785,6 +800,7 @@ export default function DocumentsClient() {
                   <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{Math.round((uploadProgress.done/uploadProgress.total)*100)}%</span>
                 </div>
               )}
+              </div>
             </>
           )
         }
@@ -1258,6 +1274,13 @@ export default function DocumentsClient() {
           </div>
         </div>
       </Modal>
+
+      {showScanner && (
+        <DocumentScannerModal
+          onComplete={file => { setShowScanner(false); uploadDriveFiles([file]) }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
   )
 }
