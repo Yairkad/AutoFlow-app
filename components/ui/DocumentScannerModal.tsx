@@ -65,23 +65,21 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
     const track = streamRef.current?.getVideoTracks()[0]
     if (!track) return
     const next = !torchOn
-
-    // Check if device supports torch
-    const caps = track.getCapabilities?.() as any
-    if (caps && !('torch' in caps)) {
-      setTorchError(true)
-      setTimeout(() => setTorchError(false), 2500)
-      return
-    }
-
     try {
-      // Standard Chrome Android syntax
+      // Try advanced array (Chrome Android standard)
       await (track.applyConstraints as any)({ advanced: [{ torch: next }] })
       setTorchOn(next)
       setTorchError(false)
     } catch {
-      setTorchError(true)
-      setTimeout(() => setTorchError(false), 2500)
+      try {
+        // Fallback: some browsers accept torch at top level
+        await (track.applyConstraints as any)({ torch: next })
+        setTorchOn(next)
+        setTorchError(false)
+      } catch {
+        setTorchError(true)
+        setTimeout(() => setTorchError(false), 2500)
+      }
     }
   }
 
