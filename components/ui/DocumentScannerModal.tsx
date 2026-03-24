@@ -64,18 +64,22 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
   const toggleTorch = async () => {
     const next = !torchOn
     try {
-      // Restart stream with/without torch — most reliable on Chrome Android
+      // Restart stream, then apply torch after stream is live
       streamRef.current?.getTracks().forEach(t => t.stop())
-      const videoConstraints: any = {
-        facingMode: 'environment',
-        width: { ideal: 1920 }, height: { ideal: 1080 },
-      }
-      if (next) videoConstraints.advanced = [{ torch: true }]
-      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
+      })
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
+      }
+      if (next) {
+        // Small delay — Chrome needs the track to be fully active
+        await new Promise(r => setTimeout(r, 300))
+        const track = stream.getVideoTracks()[0]
+        await (track.applyConstraints as any)({ advanced: [{ torch: true }] })
       }
       setTorchOn(next)
       setTorchError(false)
