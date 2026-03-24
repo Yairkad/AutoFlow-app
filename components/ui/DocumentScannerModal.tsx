@@ -16,28 +16,22 @@ interface Props {
 }
 
 export default function DocumentScannerModal({ onComplete, onClose }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
+  const videoRef    = useRef<HTMLVideoElement>(null)
+  const canvasRef   = useRef<HTMLCanvasElement>(null)
+  const streamRef   = useRef<MediaStream | null>(null)
+  const rawCapture  = useRef<string>('')          // original unmodified capture
 
-  const [phase, setPhase] = useState<Phase>('camera')
-  const [pages, setPages] = useState<Page[]>([])
+  const [phase,       setPhase]       = useState<Phase>('camera')
+  const [pages,       setPages]       = useState<Page[]>([])
   const [currentPreview, setCurrentPreview] = useState<string>('')
-  const [enhanced, setEnhanced] = useState(false)
-  const [torchOn, setTorchOn] = useState(false)
+  const [enhanced,    setEnhanced]    = useState(false)
+  const [brightness,  setBrightness]  = useState(100)   // 50–200
+  const [torchOn,     setTorchOn]     = useState(false)
   const [cameraError, setCameraError] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [loading,     setLoading]     = useState(false)
 
-  const toggleTorch = async () => {
-    const track = streamRef.current?.getVideoTracks()[0]
-    if (!track) return
-    try {
-      await track.applyConstraints({ advanced: [{ torch: !torchOn } as MediaTrackConstraintSet] })
-      setTorchOn(v => !v)
-    } catch { /* torch not supported on this device */ }
-  }
+  // ── Camera ────────────────────────────────────────────────────────────────
 
-  // Start camera
   const startCamera = useCallback(async () => {
     setCameraError(false)
     try {
@@ -65,57 +59,79 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
     return () => stopCamera()
   }, [startCamera, stopCamera])
 
-  // Capture frame from video
+  const toggleTorch = async () => {
+    const track = streamRef.current?.getVideoTracks()[0]
+    if (!track) return
+    try {
+      await track.applyConstraints({ advanced: [{ torch: !torchOn } as any] })
+      setTorchOn(v => !v)
+    } catch { /* torch not supported */ }
+  }
+
+  // ── Capture ───────────────────────────────────────────────────────────────
+
   function capture() {
-    const video = videoRef.current
+    const video  = videoRef.current
     const canvas = canvasRef.current
     if (!video || !canvas) return
-    canvas.width = video.videoWidth
+    canvas.width  = video.videoWidth
     canvas.height = video.videoHeight
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(video, 0, 0)
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+    rawCapture.current = dataUrl
     setCurrentPreview(dataUrl)
     setEnhanced(false)
+    setBrightness(100)
     stopCamera()
     setPhase('preview')
   }
 
-  // Apply B&W enhancement on canvas, return new dataUrl
-  function applyEnhancement(dataUrl: string, bw: boolean): Promise<string> {
+  // ── Image processing ──────────────────────────────────────────────────────
+
+  // Process from raw: apply brightness + optional B&W
+  function processImage(srcUrl: string, bw: boolean, bright: number): Promise<string> {
     return new Promise(resolve => {
       const img = new Image()
       img.onload = () => {
-        const canvas = document.createElement('canvas')
-        canvas.width = img.width
-        canvas.height = img.height
-        const ctx = canvas.getContext('2d')!
+        const c   = document.createElement('canvas')
+        c.width   = img.width
+        c.height  = img.height
+        const ctx = c.getContext('2d')!
+        if (bright !== 100) ctx.filter = `brightness(${bright}%)`
         ctx.drawImage(img, 0, 0)
+        ctx.filter = 'none'
         if (bw) {
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-          const d = imageData.data
+          const id = ctx.getImageData(0, 0, c.width, c.height)
+          const d  = id.data
           for (let i = 0; i < d.length; i += 4) {
             const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]
-            // Increase contrast for scan-like look
-            const v = gray < 128 ? Math.max(0, gray - 30) : Math.min(255, gray + 30)
+            const v    = gray < 128 ? Math.max(0, gray - 30) : Math.min(255, gray + 30)
             d[i] = d[i + 1] = d[i + 2] = v
           }
-          ctx.putImageData(imageData, 0, 0)
+          ctx.putImageData(id, 0, 0)
         }
-        resolve(canvas.toDataURL('image/jpeg', 0.92))
+        resolve(c.toDataURL('image/jpeg', 0.92))
       }
-      img.src = dataUrl
+      img.src = srcUrl
     })
   }
 
   async function toggleEnhance() {
     const next = !enhanced
     setEnhanced(next)
-    const newUrl = await applyEnhancement(currentPreview, next)
-    setCurrentPreview(newUrl)
+    const url = await processImage(rawCapture.current, next, brightness)
+    setCurrentPreview(url)
   }
 
-  // Add page to list and go back to camera
+  async function applyBrightness(val: number) {
+    setBrightness(val)
+    const url = await processImage(rawCapture.current, enhanced, val)
+    setCurrentPreview(url)
+  }
+
+  // ── Pages ─────────────────────────────────────────────────────────────────
+
   function addPage() {
     setPages(prev => [...prev, { dataUrl: currentPreview, enhanced }])
     setPhase('review')
@@ -132,40 +148,39 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
     setPages(prev => prev.filter((_, idx) => idx !== i))
   }
 
-  // Finish – build PDF or single image
-  async function finish() {
+  // ── Finish ────────────────────────────────────────────────────────────────
+
+  async function finish(format: 'pdf' | 'image') {
     setLoading(true)
     try {
       const allPages = pages.length > 0 ? pages : [{ dataUrl: currentPreview, enhanced }]
 
-      if (allPages.length === 1) {
-        // Single page → return as JPEG
-        const res = await fetch(allPages[0].dataUrl)
+      if (format === 'image') {
+        // Save first page as JPEG
+        const res  = await fetch(allPages[0].dataUrl)
         const blob = await res.blob()
-        const file = new File([blob], `scan_${Date.now()}.jpg`, { type: 'image/jpeg' })
-        onComplete(file)
+        onComplete(new File([blob], `scan_${Date.now()}.jpg`, { type: 'image/jpeg' }))
         return
       }
 
-      // Multiple pages → merge to PDF
+      // PDF
       const pdf = await PDFDocument.create()
       for (const page of allPages) {
-        const res = await fetch(page.dataUrl)
+        const res   = await fetch(page.dataUrl)
         const bytes = await res.arrayBuffer()
-        const img = await pdf.embedJpg(bytes)
-        const pdfPage = pdf.addPage([img.width, img.height])
-        pdfPage.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height })
+        const img   = await pdf.embedJpg(bytes)
+        const p     = pdf.addPage([img.width, img.height])
+        p.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height })
       }
       const pdfBytes = await pdf.save()
-      const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' })
-      const file = new File([blob], `scan_${Date.now()}.pdf`, { type: 'application/pdf' })
-      onComplete(file)
+      const blob     = new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' })
+      onComplete(new File([blob], `scan_${Date.now()}.pdf`, { type: 'application/pdf' }))
     } finally {
       setLoading(false)
     }
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div style={{
@@ -184,14 +199,14 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
           ✕
         </button>
         <span style={{ fontSize: 15, fontWeight: 600 }}>
-          {phase === 'camera' && (pages.length > 0 ? `סריקה – עמוד ${pages.length + 1}` : 'סריקת מסמך')}
+          {phase === 'camera'  && (pages.length > 0 ? `סריקה – עמוד ${pages.length + 1}` : 'סריקת מסמך')}
           {phase === 'preview' && 'תצוגה מקדימה'}
-          {phase === 'review' && `${pages.length} עמוד${pages.length !== 1 ? 'ים' : ''}`}
+          {phase === 'review'  && `${pages.length} עמוד${pages.length !== 1 ? 'ים' : ''}`}
         </span>
         <div style={{ width: 32 }} />
       </div>
 
-      {/* Camera phase */}
+      {/* ── Camera phase ── */}
       {phase === 'camera' && (
         <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           {cameraError ? (
@@ -204,30 +219,29 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
             <>
               <video ref={videoRef} playsInline muted
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+
               {/* Guide overlay */}
               <div style={{
                 position: 'absolute',
                 top: '10%', left: '5%', right: '5%', bottom: '18%',
-                border: '2.5px solid rgba(255,255,255,0.8)',
-                borderRadius: 8,
-                boxShadow: '0 0 0 9999px rgba(0,0,0,0.35)',
-                pointerEvents: 'none',
+                border: '2.5px solid rgba(255,255,255,0.8)', borderRadius: 8,
+                boxShadow: '0 0 0 9999px rgba(0,0,0,0.35)', pointerEvents: 'none',
               }}>
-                {/* Corner marks */}
                 {[
                   { top: -3, left: -3 }, { top: -3, right: -3 },
                   { bottom: -3, left: -3 }, { bottom: -3, right: -3 },
                 ].map((pos, i) => (
                   <div key={i} style={{
                     position: 'absolute', width: 18, height: 18,
-                    borderTop: i < 2 ? '3px solid #fff' : undefined,
-                    borderBottom: i >= 2 ? '3px solid #fff' : undefined,
-                    borderLeft: i % 2 === 0 ? '3px solid #fff' : undefined,
-                    borderRight: i % 2 === 1 ? '3px solid #fff' : undefined,
+                    borderTop:    i < 2    ? '3px solid #fff' : undefined,
+                    borderBottom: i >= 2   ? '3px solid #fff' : undefined,
+                    borderLeft:   i % 2 === 0 ? '3px solid #fff' : undefined,
+                    borderRight:  i % 2 === 1 ? '3px solid #fff' : undefined,
                     ...pos,
                   }} />
                 ))}
               </div>
+
               {/* Torch button */}
               <button onClick={toggleTorch} style={{
                 position: 'absolute', bottom: 36, left: 24,
@@ -238,6 +252,7 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
               }}>
                 🔦 תאורה
               </button>
+
               {/* Capture button */}
               <button onClick={capture} style={{
                 position: 'absolute', bottom: 28,
@@ -245,7 +260,8 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
                 background: '#fff', border: '4px solid rgba(255,255,255,0.5)',
                 cursor: 'pointer', boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
               }} />
-              {/* Existing pages count */}
+
+              {/* Pages count */}
               {pages.length > 0 && (
                 <button onClick={() => setPhase('review')} style={{
                   position: 'absolute', bottom: 36, right: 24,
@@ -261,7 +277,7 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
         </div>
       )}
 
-      {/* Preview phase */}
+      {/* ── Preview phase ── */}
       {phase === 'preview' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111' }}>
@@ -269,10 +285,10 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
             <img src={currentPreview} alt="תצוגה מקדימה"
               style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
           </div>
-          <div style={{
-            padding: '16px', display: 'flex', flexDirection: 'column', gap: 10,
-            background: '#1a1a1a', flexShrink: 0,
-          }}>
+
+          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, background: '#1a1a1a', flexShrink: 0 }}>
+
+            {/* B&W toggle */}
             <button onClick={toggleEnhance} style={{
               padding: '10px', borderRadius: 10, border: '2px solid',
               borderColor: enhanced ? '#4ade80' : '#555',
@@ -280,8 +296,21 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
               color: enhanced ? '#4ade80' : '#aaa', fontSize: 14, cursor: 'pointer',
               fontFamily: 'inherit', fontWeight: 600,
             }}>
-              {enhanced ? '✓ שחור-לבן (פעיל)' : '◐ המר לשחור לבן'}
+              {enhanced ? '✓ שחור-לבן (פעיל) — לחץ לביטול' : '◐ המר לשחור לבן'}
             </button>
+
+            {/* Brightness slider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 13, color: '#aaa', whiteSpace: 'nowrap' }}>☀️ בהירות</span>
+              <input
+                type="range" min={50} max={200} step={5} value={brightness}
+                onChange={e => applyBrightness(Number(e.target.value))}
+                style={{ flex: 1, accentColor: 'var(--primary, #1a9e5c)', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: 12, color: '#888', width: 36, textAlign: 'left' }}>{brightness}%</span>
+            </div>
+
+            {/* Actions */}
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={addAnotherPage} style={{
                 flex: 1, padding: '11px', borderRadius: 10,
@@ -292,7 +321,7 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
               </button>
               <button onClick={addPage} style={{
                 flex: 1, padding: '11px', borderRadius: 10,
-                border: 'none', background: 'var(--primary, #2563eb)',
+                border: 'none', background: 'var(--primary, #1a9e5c)',
                 color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
               }}>
                 המשך →
@@ -302,7 +331,7 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
         </div>
       )}
 
-      {/* Review phase */}
+      {/* ── Review phase ── */}
       {phase === 'review' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexWrap: 'wrap', gap: 12, alignContent: 'flex-start' }}>
@@ -325,27 +354,47 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
               </div>
             ))}
           </div>
-          <div style={{ padding: 16, background: '#1a1a1a', display: 'flex', gap: 10, flexShrink: 0 }}>
+
+          <div style={{ padding: 16, background: '#1a1a1a', display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0 }}>
             <button onClick={() => { startCamera(); setPhase('camera') }} style={{
-              flex: 1, padding: '11px', borderRadius: 10,
+              padding: '10px', borderRadius: 10,
               border: '1.5px solid #555', background: 'transparent',
               color: '#ddd', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
             }}>
-              ➕ עמוד נוסף
+              ➕ הוסף עמוד
             </button>
-            <button onClick={finish} disabled={loading || pages.length === 0} style={{
-              flex: 1, padding: '11px', borderRadius: 10, border: 'none',
-              background: loading ? '#555' : 'var(--primary, #2563eb)',
-              color: '#fff', fontSize: 14, fontWeight: 700,
-              cursor: loading ? 'default' : 'pointer', fontFamily: 'inherit',
-            }}>
-              {loading ? '⏳ מעבד...' : `✓ סיים (${pages.length > 1 ? 'PDF' : 'תמונה'})`}
-            </button>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => finish('image')}
+                disabled={loading || pages.length === 0}
+                title={pages.length > 1 ? 'ישמר עמוד ראשון בלבד' : undefined}
+                style={{
+                  flex: 1, padding: '11px', borderRadius: 10,
+                  border: '1.5px solid #555', background: 'transparent',
+                  color: loading || pages.length === 0 ? '#555' : '#ddd',
+                  fontSize: 14, cursor: loading || pages.length === 0 ? 'default' : 'pointer',
+                  fontFamily: 'inherit', fontWeight: 600,
+                }}>
+                🖼 תמונה{pages.length > 1 ? ' (עמ׳ 1)' : ''}
+              </button>
+              <button
+                onClick={() => finish('pdf')}
+                disabled={loading || pages.length === 0}
+                style={{
+                  flex: 1, padding: '11px', borderRadius: 10,
+                  border: 'none', background: loading || pages.length === 0 ? '#555' : 'var(--primary, #1a9e5c)',
+                  color: '#fff', fontSize: 14, fontWeight: 700,
+                  cursor: loading || pages.length === 0 ? 'default' : 'pointer',
+                  fontFamily: 'inherit',
+                }}>
+                {loading ? '⏳ מעבד...' : `📄 PDF (${pages.length} עמ׳)`}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Hidden canvas for capture */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
     </div>
   )
