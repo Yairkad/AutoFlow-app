@@ -59,37 +59,29 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
     return () => stopCamera()
   }, [startCamera, stopCamera])
 
+  const [torchError, setTorchError] = useState(false)
+
   const toggleTorch = async () => {
-    const next = !torchOn
-    // Try applyConstraints first (Chrome Android)
     const track = streamRef.current?.getVideoTracks()[0]
-    if (track) {
-      try {
-        await track.applyConstraints({ advanced: [{ torch: next } as any] })
-        setTorchOn(next)
-        return
-      } catch { /* fall through to restart */ }
+    if (!track) return
+    const next = !torchOn
+
+    // Check if device supports torch
+    const caps = track.getCapabilities?.() as any
+    if (caps && !('torch' in caps)) {
+      setTorchError(true)
+      setTimeout(() => setTorchError(false), 2500)
+      return
     }
-    // Fallback: restart stream with torch in initial constraints
+
     try {
-      streamRef.current?.getTracks().forEach(t => t.stop())
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1920 }, height: { ideal: 1080 },
-          // @ts-ignore – torch is non-standard but supported on Android Chrome
-          advanced: [{ torch: next }],
-        },
-        audio: false,
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
+      // Standard Chrome Android syntax
+      await (track.applyConstraints as any)({ advanced: [{ torch: next }] })
       setTorchOn(next)
+      setTorchError(false)
     } catch {
-      /* torch not supported on this device/browser */
+      setTorchError(true)
+      setTimeout(() => setTorchError(false), 2500)
     }
   }
 
@@ -270,12 +262,13 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
               {/* Torch button */}
               <button onClick={toggleTorch} style={{
                 position: 'absolute', bottom: 36, left: 24,
-                background: torchOn ? 'rgba(255,220,0,0.3)' : 'rgba(0,0,0,0.6)',
-                color: torchOn ? '#ffe066' : '#fff',
-                border: `2px solid ${torchOn ? '#ffe066' : '#fff'}`,
+                background: torchError ? 'rgba(220,38,38,0.7)' : torchOn ? 'rgba(255,220,0,0.3)' : 'rgba(0,0,0,0.6)',
+                color: torchError ? '#fff' : torchOn ? '#ffe066' : '#fff',
+                border: `2px solid ${torchError ? '#ef4444' : torchOn ? '#ffe066' : '#fff'}`,
                 borderRadius: 8, padding: '6px 14px', fontSize: 13, cursor: 'pointer',
+                transition: 'all .2s',
               }}>
-                🔦 תאורה
+                {torchError ? '⚠️ לא נתמך' : `🔦 ${torchOn ? 'כבה' : 'הדלק'}`}
               </button>
 
               {/* Capture button */}
