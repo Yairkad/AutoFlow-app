@@ -26,7 +26,6 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
   const [currentPreview, setCurrentPreview] = useState<string>('')
   const [enhanced,    setEnhanced]    = useState(false)
   const [brightness,  setBrightness]  = useState(100)   // 50–200
-  const [torchOn,     setTorchOn]     = useState(false)
   const [cameraError, setCameraError] = useState(false)
   const [loading,     setLoading]     = useState(false)
 
@@ -58,36 +57,6 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
     startCamera()
     return () => stopCamera()
   }, [startCamera, stopCamera])
-
-  const [torchError, setTorchError] = useState(false)
-
-  const toggleTorch = async () => {
-    const next = !torchOn
-    try {
-      // Restart stream, then apply torch after stream is live
-      streamRef.current?.getTracks().forEach(t => t.stop())
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: false,
-      })
-      streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-      if (next) {
-        // Small delay — Chrome needs the track to be fully active
-        await new Promise(r => setTimeout(r, 300))
-        const track = stream.getVideoTracks()[0]
-        await (track.applyConstraints as any)({ advanced: [{ torch: true }] })
-      }
-      setTorchOn(next)
-      setTorchError(false)
-    } catch {
-      setTorchError(true)
-      setTimeout(() => setTorchError(false), 2500)
-    }
-  }
 
   // ── Capture ───────────────────────────────────────────────────────────────
 
@@ -262,18 +231,6 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
                   }} />
                 ))}
               </div>
-
-              {/* Torch button */}
-              <button onClick={toggleTorch} style={{
-                position: 'absolute', bottom: 36, left: 24,
-                background: torchError ? 'rgba(220,38,38,0.7)' : torchOn ? 'rgba(255,220,0,0.3)' : 'rgba(0,0,0,0.6)',
-                color: torchError ? '#fff' : torchOn ? '#ffe066' : '#fff',
-                border: `2px solid ${torchError ? '#ef4444' : torchOn ? '#ffe066' : '#fff'}`,
-                borderRadius: 8, padding: '6px 14px', fontSize: 13, cursor: 'pointer',
-                transition: 'all .2s',
-              }}>
-                {torchError ? '⚠️ לא נתמך' : `🔦 ${torchOn ? 'כבה' : 'הדלק'}`}
-              </button>
 
               {/* Capture button */}
               <button onClick={capture} style={{

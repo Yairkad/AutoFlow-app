@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { saveUiSettings } from '@/lib/uiSettings'
 
 type Section = 'finance' | 'tires' | 'cars'
 type CardId = 'income' | 'expenses' | 'profit' | 'debts' | 'products' | 'employees' | 'tires' | 'alignment' | 'cars' | 'inspections'
@@ -196,6 +197,7 @@ export default function DashboardStats() {
   const [modules, setModules] = useState<string[]>(cached?.modules ?? [])
   const [editLayout, setEditLayout] = useState(false)
   const [layout, setLayout]         = useState<Record<CardId, Section>>(DEFAULT_LAYOUT)
+  const [tenantId, setTenantId]     = useState<string | null>(null)
   const dragCard = useRef<CardId | null>(null)
 
   useEffect(() => { setLayout(loadLayout()) }, [])
@@ -271,12 +273,24 @@ export default function DashboardStats() {
       const user = session?.user
       if (!user) { setLoading(false); return }
 
-      supabase.from('profiles').select('role, allowed_modules').eq('id', user.id).single()
+      supabase.from('profiles').select('role, allowed_modules, tenant_id').eq('id', user.id).single()
         .then(({ data: p }) => {
           admin = p?.role === 'admin' || p?.role === 'super_admin'
           mods  = p?.allowed_modules ?? []
           setIsAdmin(admin)
           setModules(mods)
+          if (p?.tenant_id) {
+            setTenantId(p.tenant_id)
+            supabase.from('tenants').select('ui_settings').eq('id', p.tenant_id).single()
+              .then(({ data: t }) => {
+                const remote = (t?.ui_settings as any)?.dashboard_layout
+                if (remote) {
+                  const merged = { ...DEFAULT_LAYOUT, ...remote }
+                  setLayout(merged)
+                  saveLayout(merged)
+                }
+              })
+          }
           fetchStats(admin, mods)
         })
     })
@@ -324,6 +338,7 @@ export default function DashboardStats() {
     const next = { ...layout, [cardId]: toSection }
     setLayout(next)
     saveLayout(next)
+    if (tenantId) saveUiSettings(tenantId, { dashboard_layout: next })
   }
 
   const cardGrid: React.CSSProperties = {
@@ -401,18 +416,28 @@ export default function DashboardStats() {
 
   return (
     <div>
-      {/* Edit layout toggle */}
-      {isAdmin && (
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 12 }}>
-          {editLayout && (
-            <button onClick={() => { setLayout({ ...DEFAULT_LAYOUT }); saveLayout({ ...DEFAULT_LAYOUT }) }}
-              style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontFamily: 'inherit' }}>
-              אפס פריסה
-            </button>
-          )}
-          <button onClick={() => setEditLayout(v => !v)}
-            style={{ fontSize: 12, padding: '4px 12px', borderRadius: 6, border: '1px solid var(--border)', background: editLayout ? 'var(--primary)' : 'none', color: editLayout ? '#fff' : 'var(--text-muted)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
-            {editLayout ? '✓ סיום עריכה' : '⚙️ ערוך פריסה'}
+      {/* Edit mode banner — visible only when editing */}
+      {editLayout && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          marginBottom: 12, padding: '6px 12px',
+          background: '#f0fdf4', borderRadius: 8, border: '1px solid var(--primary)',
+        }}>
+          <span style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600, flex: 1 }}>
+            ✦ מצב עריכה — גרור כרטיסים בין קטגוריות
+          </span>
+          <button
+            onClick={() => {
+              const reset = { ...DEFAULT_LAYOUT }
+              setLayout(reset); saveLayout(reset)
+              if (tenantId) saveUiSettings(tenantId, { dashboard_layout: reset })
+            }}
+            style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', color: 'var(--text-muted)', fontFamily: 'inherit' }}>
+            אפס
+          </button>
+          <button onClick={() => setEditLayout(false)}
+            style={{ fontSize: 12, padding: '3px 12px', borderRadius: 6, border: 'none', background: 'var(--primary)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+            ✓ סיום
           </button>
         </div>
       )}
@@ -420,6 +445,24 @@ export default function DashboardStats() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {SECTIONS.map(s => renderSection(s.id, s.icon, s.label))}
       </div>
+
+      {/* Hidden edit button — subtle footer, only for admins */}
+      {isAdmin && !editLayout && (
+        <button
+          onClick={() => setEditLayout(true)}
+          style={{
+            display: 'block', width: '100%', marginTop: 16,
+            padding: '8px 0', background: 'none',
+            border: 'none', borderTop: '1px solid var(--border)',
+            fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer',
+            opacity: 0.4, transition: 'opacity .15s', fontFamily: 'inherit',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '0.4')}
+        >
+          ✦ ערוך סידור כרטיסים
+        </button>
+      )}
     </div>
   )
 }
