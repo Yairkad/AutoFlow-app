@@ -630,6 +630,9 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   .inspections-form-grid {
     grid-template-columns: 1fr !important;
   }
+  .inspections-customer-grid {
+    grid-template-columns: 1fr !important;
+  }
   .inspections-vehicle-grid {
     grid-template-columns: repeat(2, 1fr) !important;
   }

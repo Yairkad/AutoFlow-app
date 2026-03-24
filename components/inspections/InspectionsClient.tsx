@@ -667,7 +667,7 @@ export default function InspectionsClient() {
 
             {/* Customer section */}
             <Section icon="👤" title="פרטי לקוח">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="inspections-customer-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 {[
                   { key: 'owner_name',    label: 'שם לקוח *',  placeholder: 'ישראל ישראלי' },
                   { key: 'owner_id',      label: 'תעודת זהות', placeholder: '123456789' },
@@ -815,121 +815,118 @@ export default function InspectionsClient() {
             />
           </div>
 
-          {/* Table */}
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-            {filtered.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-                <div style={{ fontSize: 36, marginBottom: 10 }}>📋</div>
-                <div style={{ fontWeight: 700 }}>אין בדיקות עדיין</div>
-                <div style={{ fontSize: 13, marginTop: 4 }}>עבור לטאב &quot;הזנת נתונים&quot; להתחלה</div>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 900 }}>
-                  <thead>
-                    <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
-                      {['תאריך', 'מס׳ רכב', 'שם לקוח', 'ת.ז', 'טלפון', 'כתובת', 'תוצר', 'שנה', 'ק"מ', 'מנוע', 'שלדה'].map(h => (
-                        <th key={h} style={{ textAlign: 'right', padding: '10px 10px', fontWeight: 700, fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
-                      ))}
-                      <th style={{ width: 60, textAlign: 'center', padding: '10px 6px', fontWeight: 700, fontSize: 11, color: 'var(--text-muted)' }}>📎 דרייב</th>
-                      {showActions && <th style={{ width: 90 }} />}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map(ins => (
-                      <tr key={ins.id} className="tr-hover" style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '8px 10px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                          <CopyCell value={ins.date || ins.created_at?.slice(0, 10) || null} />
-                        </td>
-                        <td style={{ padding: '8px 10px' }}>
-                          <span style={{
-                            background: 'var(--primary-light,#e8f7f0)', color: 'var(--primary)',
-                            fontWeight: 800, fontFamily: 'monospace', padding: '2px 8px',
-                            borderRadius: 6, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 4,
-                          }}>
-                            🚗 <CopyCell value={ins.plate} />
-                          </span>
-                        </td>
-                        <td style={{ padding: '8px 10px', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>
-                          <CopyCell value={ins.owner_name} />
-                        </td>
-                        <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>
-                          <CopyCell value={ins.owner_id} />
-                        </td>
-                        <td style={{ padding: '8px 10px', color: 'var(--text-muted)', direction: 'ltr' }}>
-                          <CopyCell value={ins.owner_phone} />
-                        </td>
-                        <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>
-                          <CopyCell value={ins.owner_address} />
-                        </td>
-                        <td style={{ padding: '8px 10px', color: 'var(--text)' }}>
-                          <CopyCell value={ins.make} />
-                        </td>
-                        <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>
-                          <CopyCell value={ins.year} />
-                        </td>
-                        <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>
-                          <CopyCell value={ins.km} />
-                        </td>
-                        <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>
-                          <CopyCell value={ins.engine_cc} />
-                        </td>
-                        <td style={{ padding: '8px 10px', color: 'var(--text-muted)' }}>
-                          <CopyCell value={ins.chassis} />
-                        </td>
-                        <td style={{ padding: '8px 6px', textAlign: 'center' }}>
-                          {ins.drive_file_id ? (
-                            <a
-                              href={`https://drive.google.com/file/d/${ins.drive_file_id}/view`}
-                              target="_blank" rel="noreferrer"
-                              title="פתח בדרייב"
-                              style={{ fontSize: 16, textDecoration: 'none' }}
-                            >📄</a>
-                          ) : isAdmin && driveConnected ? (
-                            <>
-                              <input
-                                type="file" accept="image/*,application/pdf"
-                                style={{ display: 'none' }}
-                                id={`drive-upload-${ins.id}`}
-                                onChange={e => { const f = e.target.files?.[0]; if (f) uploadInspectionFile(ins, f); e.target.value = '' }}
-                              />
-                              <label
-                                htmlFor={`drive-upload-${ins.id}`}
-                                title="העלה סריקה לדרייב"
-                                style={{ cursor: uploadingId === ins.id ? 'default' : 'pointer', fontSize: 16 }}
-                              >
-                                {uploadingId === ins.id ? '⏳' : '📤'}
-                              </label>
-                              {isMobile && <button
-                                onClick={() => setScanningInsId(ins.id)}
-                                title="סרוק מסמך"
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: 0 }}
-                              >📷</button>}
-                              {scanningInsId === ins.id && (
-                                <DocumentScannerModal
-                                  onComplete={file => { setScanningInsId(null); uploadInspectionFile(ins, file) }}
-                                  onClose={() => setScanningInsId(null)}
-                                />
-                              )}
-                            </>
-                          ) : null}
-                        </td>
-                        {showActions && (
-                          <td style={{ padding: '8px 6px', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'flex', gap: 2 }}>
-                              <ActionBtn onClick={() => openEdit(ins)} title="עריכה">✏️</ActionBtn>
-                              <ActionBtn onClick={() => handlePrint(ins)} title="הדפס">🖨️</ActionBtn>
-                              <ActionBtn onClick={() => handleDelete(ins.id)} title="מחיקה">🗑️</ActionBtn>
-                            </div>
-                          </td>
+          {/* Cards */}
+          {filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>📋</div>
+              <div style={{ fontWeight: 700 }}>אין בדיקות עדיין</div>
+              <div style={{ fontSize: 13, marginTop: 4 }}>עבור לטאב &quot;הזנת נתונים&quot; להתחלה</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {filtered.map(ins => (
+                <div key={ins.id} style={{
+                  background: 'var(--bg-card)', border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)', padding: '12px 16px',
+                  display: 'flex', flexDirection: 'column', gap: 8,
+                }}>
+                  {/* Header: plate + date */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{
+                      background: 'var(--primary-light,#e8f7f0)', color: 'var(--primary)',
+                      fontWeight: 800, fontFamily: 'monospace', padding: '3px 10px',
+                      borderRadius: 6, fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 4,
+                    }}>
+                      🚗 <CopyCell value={ins.plate} />
+                    </span>
+                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                      {ins.date || ins.created_at?.slice(0, 10) || ''}
+                    </span>
+                  </div>
+
+                  {/* Owner name + phone */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>
+                      <CopyCell value={ins.owner_name} />
+                    </span>
+                    {ins.owner_phone && (
+                      <span style={{ fontSize: 13, color: 'var(--text-muted)', direction: 'ltr', flexShrink: 0 }}>
+                        <CopyCell value={ins.owner_phone} />
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Vehicle info */}
+                  {(ins.make || ins.year || ins.km) && (
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      {ins.make && <span>{ins.make}</span>}
+                      {ins.year && <span>{ins.year}</span>}
+                      {ins.km && <span>{Number(ins.km).toLocaleString()} ק&quot;מ</span>}
+                    </div>
+                  )}
+
+                  {/* Extra: owner_id / address / engine / chassis */}
+                  {(ins.owner_id || ins.owner_address || ins.engine_cc || ins.chassis) && (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      {ins.owner_id    && <span>ת.ז: <CopyCell value={ins.owner_id} /></span>}
+                      {ins.engine_cc   && <span>מנוע: {ins.engine_cc}</span>}
+                      {ins.chassis     && <span>שלדה: {ins.chassis}</span>}
+                      {ins.owner_address && <span>{ins.owner_address}</span>}
+                    </div>
+                  )}
+
+                  {/* Footer: drive + actions */}
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+                    {ins.drive_file_id ? (
+                      <a
+                        href={`https://drive.google.com/file/d/${ins.drive_file_id}/view`}
+                        target="_blank" rel="noreferrer"
+                        title="פתח בדרייב"
+                        style={{ fontSize: 18, textDecoration: 'none' }}
+                      >📄</a>
+                    ) : isAdmin && driveConnected ? (
+                      <>
+                        <input
+                          type="file" accept="image/*,application/pdf"
+                          style={{ display: 'none' }}
+                          id={`drive-upload-${ins.id}`}
+                          onChange={e => { const f = e.target.files?.[0]; if (f) uploadInspectionFile(ins, f); e.target.value = '' }}
+                        />
+                        <label
+                          htmlFor={`drive-upload-${ins.id}`}
+                          title="העלה קובץ לדרייב"
+                          style={{ cursor: uploadingId === ins.id ? 'default' : 'pointer', fontSize: 18 }}
+                        >
+                          {uploadingId === ins.id ? '⏳' : '📤'}
+                        </label>
+                        <button
+                          onClick={() => setScanningInsId(ins.id)}
+                          title="סרוק מסמך"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: 0 }}
+                        >📷</button>
+                        {scanningInsId === ins.id && (
+                          <DocumentScannerModal
+                            onComplete={file => { setScanningInsId(null); uploadInspectionFile(ins, file) }}
+                            onClose={() => setScanningInsId(null)}
+                          />
                         )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                      </>
+                    ) : null}
+
+                    <div style={{ flex: 1 }} />
+
+                    {showActions && (
+                      <div style={{ display: 'flex', gap: 2 }}>
+                        <ActionBtn onClick={() => openEdit(ins)} title="עריכה">✏️</ActionBtn>
+                        <ActionBtn onClick={() => handlePrint(ins)} title="הדפס">🖨️</ActionBtn>
+                        <ActionBtn onClick={() => handleDelete(ins.id)} title="מחיקה">🗑️</ActionBtn>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
