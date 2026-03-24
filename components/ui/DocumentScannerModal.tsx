@@ -60,12 +60,37 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
   }, [startCamera, stopCamera])
 
   const toggleTorch = async () => {
+    const next = !torchOn
+    // Try applyConstraints first (Chrome Android)
     const track = streamRef.current?.getVideoTracks()[0]
-    if (!track) return
+    if (track) {
+      try {
+        await track.applyConstraints({ advanced: [{ torch: next } as any] })
+        setTorchOn(next)
+        return
+      } catch { /* fall through to restart */ }
+    }
+    // Fallback: restart stream with torch in initial constraints
     try {
-      await track.applyConstraints({ advanced: [{ torch: !torchOn } as any] })
-      setTorchOn(v => !v)
-    } catch { /* torch not supported */ }
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1920 }, height: { ideal: 1080 },
+          // @ts-ignore – torch is non-standard but supported on Android Chrome
+          advanced: [{ torch: next }],
+        },
+        audio: false,
+      })
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
+      }
+      setTorchOn(next)
+    } catch {
+      /* torch not supported on this device/browser */
+    }
   }
 
   // ── Capture ───────────────────────────────────────────────────────────────

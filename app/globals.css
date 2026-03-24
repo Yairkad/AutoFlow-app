@@ -491,6 +491,23 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   z-index: 1;
 }
 
+/* ── Stat card double body: always side by side (desktop + mobile) ── */
+.stat-card-double-body {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  align-items: center;
+}
+
+/* Card slot fills its grid row height */
+.card-slot {
+  display: flex;
+  flex-direction: column;
+}
+.card-slot > .stat-card,
+.card-slot > .stat-card-double {
+  flex: 1;
+}
+
 /* ── Stat cards mobile – Option 1 design ────────────────────────────────── */
 @media (max-width: 640px) {
 
