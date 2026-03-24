@@ -216,6 +216,7 @@ export default function Sidebar({
   const visibleHrefs = new Set(NAV_ITEMS.filter(isVisible).map(i => i.href))
 
   return (
+    <>
     <aside
       data-mobile-open={String(mobileOpen)}
       style={{
@@ -326,5 +327,6 @@ export default function Sidebar({
       tenantId={tenantId}
       onSave={setActiveSections}
     />
+    </>
   )
 }
