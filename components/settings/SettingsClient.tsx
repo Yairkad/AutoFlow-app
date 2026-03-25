@@ -1010,7 +1010,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
 type LandingSub = 'services' | 'promotions' | 'prices'
 
 interface LandingService { id: string; name: string; description: string | null; icon: string | null; image_url: string | null; sort_order: number; is_active: boolean }
-interface LandingPromotion { id: string; title: string; description: string | null; start_date: string | null; end_date: string | null; sort_order: number; is_active: boolean }
+interface LandingPromotion { id: string; title: string; description: string | null; image_url: string | null; link_url: string | null; start_date: string | null; end_date: string | null; sort_order: number; is_active: boolean }
 interface LandingPrice { id: string; category: string; service_name: string; price: number | null; price_note: string | null; sort_order: number; is_active: boolean }
 
 function LandingTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
@@ -1169,7 +1169,7 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
   const [items, setItems] = useState<LandingPromotion[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState<LandingPromotion | null>(null)
-  const [form, setForm] = useState({ title: '', description: '', start_date: '', end_date: '', sort_order: '0', is_active: true })
+  const [form, setForm] = useState({ title: '', description: '', image_url: null as string | null, link_url: '', start_date: '', end_date: '', sort_order: '0', is_active: true })
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -1179,13 +1179,33 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
 
   useEffect(() => { load() }, [load])
 
-  function openAdd() { setForm({ title: '', description: '', start_date: new Date().toISOString().slice(0,10), end_date: '', sort_order: '0', is_active: true }); setEditItem(null); setShowForm(true) }
-  function openEdit(i: LandingPromotion) { setForm({ title: i.title, description: i.description ?? '', start_date: i.start_date ?? '', end_date: i.end_date ?? '', sort_order: String(i.sort_order), is_active: i.is_active }); setEditItem(i); setShowForm(true) }
+  function toDriveDirectUrl(url: string): string {
+    const m = url.match(/\/file\/d\/([^/]+)/)
+    if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`
+    return url
+  }
+
+  function onImageUrlInput(raw: string) {
+    const url = toDriveDirectUrl(raw.trim())
+    setForm(f => ({ ...f, image_url: url || null }))
+  }
+
+  function onImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 500_000) { showToast('התמונה גדולה מדי (מקסימום 500KB)', 'error'); return }
+    const reader = new FileReader()
+    reader.onload = ev => { setForm(f => ({ ...f, image_url: ev.target?.result as string })) }
+    reader.readAsDataURL(file)
+  }
+
+  function openAdd() { setForm({ title: '', description: '', image_url: null, link_url: '', start_date: new Date().toISOString().slice(0,10), end_date: '', sort_order: '0', is_active: true }); setEditItem(null); setShowForm(true) }
+  function openEdit(i: LandingPromotion) { setForm({ title: i.title, description: i.description ?? '', image_url: i.image_url ?? null, link_url: i.link_url ?? '', start_date: i.start_date ?? '', end_date: i.end_date ?? '', sort_order: String(i.sort_order), is_active: i.is_active }); setEditItem(i); setShowForm(true) }
 
   async function save() {
     if (!form.title.trim()) { showToast('חובה כותרת', 'error'); return }
     setSaving(true)
-    const payload = { tenant_id: tenantId, title: form.title.trim(), description: form.description.trim() || null, start_date: form.start_date || null, end_date: form.end_date || null, sort_order: parseInt(form.sort_order) || 0, is_active: form.is_active }
+    const payload = { tenant_id: tenantId, title: form.title.trim(), description: form.description.trim() || null, image_url: form.image_url ?? null, link_url: form.link_url.trim() || null, start_date: form.start_date || null, end_date: form.end_date || null, sort_order: parseInt(form.sort_order) || 0, is_active: form.is_active }
     if (editItem) await supabase.from('promotions').update(payload).eq('id', editItem.id)
     else await supabase.from('promotions').insert(payload)
     setSaving(false); setShowForm(false); load(); showToast(editItem ? 'עודכן' : 'נוסף', 'success')
@@ -1203,6 +1223,27 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
           <div style={{ marginBottom: '10px' }}><label style={labelSt}>כותרת *</label><input style={inputSt} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="לדוגמה: 20% הנחה על צמיגים" /></div>
           <div style={{ marginBottom: '10px' }}><label style={labelSt}>תיאור</label><textarea style={{ ...inputSt, height: '60px', resize: 'vertical' } as React.CSSProperties} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="פרטי המבצע..." /></div>
+          <div style={{ marginBottom: '10px' }}>
+            <label style={labelSt}>תמונה למבצע (אופציונלי)</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              {form.image_url && (
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <img src={form.image_url} alt="" style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }} />
+                  <button onClick={() => setForm(f => ({ ...f, image_url: null }))} style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: 'var(--danger)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
+                <input type="file" accept="image/*" onChange={onImageChange} style={{ fontSize: '13px' }} />
+                <input
+                  style={{ ...inputSt, fontSize: '12px' }}
+                  placeholder="או הדבק קישור תמונה / Google Drive..."
+                  defaultValue={form.image_url && !form.image_url.startsWith('data:') ? form.image_url : ''}
+                  onBlur={e => { if (!form.image_url?.startsWith('data:')) onImageUrlInput(e.target.value) }}
+                />
+              </div>
+            </div>
+          </div>
+          <div style={{ marginBottom: '10px' }}><label style={labelSt}>קישור (כפתור "למידע נוסף")</label><input style={inputSt} value={form.link_url} onChange={e => setForm(f => ({ ...f, link_url: e.target.value }))} placeholder="https://..." /></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
             <div><label style={labelSt}>מתאריך</label><input type="date" style={inputSt} value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} /></div>
             <div><label style={labelSt}>עד תאריך</label><input type="date" style={inputSt} value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} /></div>
@@ -1227,6 +1268,10 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {items.map(i => (
           <div key={i.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', opacity: i.is_active ? 1 : .55 }}>
+            {i.image_url
+              ? <img src={i.image_url} alt="" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }} />
+              : <span style={{ fontSize: '22px' }}>🏷️</span>
+            }
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600, fontSize: '13px' }}>{i.title}</div>
               {i.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{i.description}</div>}

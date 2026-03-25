@@ -20,7 +20,6 @@ export default function PromotionsCarousel({ promotions }: Props) {
   const next = useCallback(() => setIdx(i => (i + 1) % promotions.length), [promotions.length])
   const prev = useCallback(() => setIdx(i => (i - 1 + promotions.length) % promotions.length), [promotions.length])
 
-  // Auto-advance every 5 seconds
   useEffect(() => {
     if (promotions.length <= 1) return
     const t = setInterval(next, 5000)
@@ -32,28 +31,121 @@ export default function PromotionsCarousel({ promotions }: Props) {
   const promo = promotions[idx]
 
   return (
-    <div style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden', background: '#1a2a6c' }}>
-      {/* Image / placeholder */}
-      <div style={{ height: '320px', background: promo.image_url ? `url(${promo.image_url}) center/cover` : 'linear-gradient(135deg,#1a2a6c,#2d4a9e)', display: 'flex', alignItems: 'flex-end' }}>
+    <div style={{ position: 'relative', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(26,42,108,.25)' }}>
+      <div style={{
+        minHeight: '280px',
+        background: promo.image_url
+          ? `url(${promo.image_url}) center/cover`
+          : 'linear-gradient(135deg, #1a2a6c 0%, #23389e 55%, #1b3a8f 100%)',
+        position: 'relative',
+        display: 'flex',
+        alignItems: promo.image_url ? 'flex-end' : 'center',
+      }}>
+
+        {/* Decorative circles (no-image only) */}
         {!promo.image_url && (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#F5C800', fontSize: '48px', opacity: 0.3 }}>
-            %
+          <>
+            <div style={{
+              position: 'absolute', top: '-80px', right: '-80px',
+              width: '300px', height: '300px', borderRadius: '50%',
+              background: 'rgba(255,255,255,.06)', pointerEvents: 'none',
+            }} />
+            <div style={{
+              position: 'absolute', bottom: '-50px', left: '-50px',
+              width: '200px', height: '200px', borderRadius: '50%',
+              background: 'rgba(245,200,0,.08)', pointerEvents: 'none',
+            }} />
+            <div style={{
+              position: 'absolute', top: '30px', left: '38%',
+              width: '120px', height: '120px', borderRadius: '50%',
+              border: '2px solid rgba(245,200,0,.12)', pointerEvents: 'none',
+            }} />
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 30px, rgba(255,255,255,.015) 30px, rgba(255,255,255,.015) 60px)',
+              pointerEvents: 'none',
+            }} />
+          </>
+        )}
+
+        {/* Gradient overlay for image */}
+        {promo.image_url && (
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '70%',
+            background: 'linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.4) 60%, transparent 100%)',
+            pointerEvents: 'none',
+          }} />
+        )}
+
+        {/* "Hot deal" badge */}
+        <div style={{
+          position: 'absolute', top: '20px', right: '20px',
+          background: '#F5C800', color: '#1a2a6c',
+          fontSize: '12px', fontWeight: 800, letterSpacing: '0.5px',
+          padding: '5px 14px', borderRadius: '20px',
+          display: 'flex', alignItems: 'center', gap: '5px',
+          boxShadow: '0 2px 10px rgba(245,200,0,.45)',
+          zIndex: 3,
+        }}>
+          🔥 מבצע חם
+        </div>
+
+        {/* Slide counter */}
+        {promotions.length > 1 && (
+          <div style={{
+            position: 'absolute', top: '20px', left: '20px',
+            background: 'rgba(255,255,255,.12)', color: '#fff',
+            fontSize: '12px', fontWeight: 600, padding: '4px 10px',
+            borderRadius: '12px', zIndex: 3, backdropFilter: 'blur(4px)',
+          }}>
+            {idx + 1} / {promotions.length}
           </div>
         )}
 
-        {/* Gradient overlay for text */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', background: 'linear-gradient(to top, rgba(0,0,0,.75), transparent)' }} />
-
-        {/* Text */}
-        <div style={{ position: 'relative', padding: '24px', color: '#fff', zIndex: 1 }}>
-          <h3 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 6px' }}>{promo.title}</h3>
+        {/* Main content */}
+        <div style={{
+          position: 'relative', zIndex: 2,
+          padding: promo.image_url ? '24px 28px' : '40px 32px',
+          color: '#fff', width: '100%',
+        }}>
+          <h3 style={{
+            fontSize: '26px', fontWeight: 900, margin: '0 0 12px',
+            lineHeight: 1.3,
+          }}>
+            {promo.title}
+          </h3>
           {promo.description && (
-            <p style={{ fontSize: '15px', opacity: 0.9, margin: 0 }}>{promo.description}</p>
+            <p style={{
+              fontSize: '15px', color: 'rgba(255,255,255,.82)',
+              margin: '0 0 24px', lineHeight: 1.7, maxWidth: '520px',
+            }}>
+              {promo.description}
+            </p>
           )}
           {promo.link_url && (
-            <a href={promo.link_url} style={{ display: 'inline-block', marginTop: '10px', background: '#F5C800', color: '#1a2a6c', padding: '6px 16px', borderRadius: '6px', fontWeight: 700, fontSize: '14px', textDecoration: 'none' }}>
-              למידע נוסף
+            <a
+              href={promo.link_url}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                background: '#F5C800', color: '#1a2a6c',
+                padding: '10px 22px', borderRadius: '8px',
+                fontWeight: 800, fontSize: '14px', textDecoration: 'none',
+                boxShadow: '0 4px 16px rgba(245,200,0,.4)',
+              }}
+            >
+              למידע נוסף ←
             </a>
+          )}
+
+          {/* Bottom separator line (no-image only) */}
+          {!promo.image_url && (
+            <div style={{
+              marginTop: '28px',
+              height: '2px',
+              background: 'linear-gradient(to left, rgba(245,200,0,.6), transparent)',
+              borderRadius: '1px',
+              maxWidth: '200px',
+            }} />
           )}
         </div>
       </div>
@@ -68,20 +160,22 @@ export default function PromotionsCarousel({ promotions }: Props) {
 
       {/* Dots */}
       {promotions.length > 1 && (
-        <div style={{ position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 2 }}>
+        <div style={{
+          position: 'absolute', bottom: '16px', left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex', gap: '6px', zIndex: 2,
+        }}>
           {promotions.map((_, i) => (
             <button
               key={i}
               onClick={() => setIdx(i)}
               aria-label={`מבצע ${i + 1}`}
               style={{
-                width: i === idx ? '20px' : '8px',
+                width: i === idx ? '24px' : '8px',
                 height: '8px',
                 borderRadius: '4px',
-                background: i === idx ? '#F5C800' : 'rgba(255,255,255,.5)',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 0,
+                background: i === idx ? '#F5C800' : 'rgba(255,255,255,.4)',
+                border: 'none', cursor: 'pointer', padding: 0,
                 transition: 'width 0.3s, background 0.3s',
               }}
             />
@@ -96,14 +190,14 @@ function arrowSt(side: 'left' | 'right'): React.CSSProperties {
   return {
     position: 'absolute',
     top: '50%',
-    [side]: '12px',
+    [side]: '14px',
     transform: 'translateY(-50%)',
-    background: 'rgba(0,0,0,.4)',
-    border: 'none',
+    background: 'rgba(255,255,255,.15)',
+    border: '1px solid rgba(255,255,255,.2)',
     color: '#fff',
     fontSize: '28px',
-    width: '40px',
-    height: '40px',
+    width: '42px',
+    height: '42px',
     borderRadius: '50%',
     cursor: 'pointer',
     display: 'flex',
@@ -112,5 +206,6 @@ function arrowSt(side: 'left' | 'right'): React.CSSProperties {
     zIndex: 2,
     lineHeight: 1,
     padding: 0,
+    backdropFilter: 'blur(4px)',
   }
 }
