@@ -431,7 +431,7 @@ export default function ProductsClient() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'inline-flex', gap: '4px', marginBottom: '16px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
+      <div className="scroll-x" style={{ marginBottom: '16px' }}><div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
         {([['products', '📋 מוצרים'], ['movements', '📊 תנועות מלאי']] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: '7px 16px', border: 'none', borderRadius: '8px',
@@ -442,7 +442,7 @@ export default function ProductsClient() {
             transition: 'all .15s', fontFamily: 'inherit', whiteSpace: 'nowrap',
           }}>{label}</button>
         ))}
-      </div>
+      </div></div>
 
       {/* ══════════ TAB: PRODUCTS ══════════ */}
       {tab === 'products' && (

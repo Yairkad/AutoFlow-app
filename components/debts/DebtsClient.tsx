@@ -524,10 +524,12 @@ export default function DebtsClient() {
       </div>
 
       {/* Tabs */}
-      <div style={{ marginBottom: '20px', display: 'flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px', width: 'fit-content' }}>
-        <TabBtn t="customers" label={`💳 לקוחות (${customerDebts.filter(d => !d.is_closed).length} פתוחים)`} />
-        <TabBtn t="suppliers" label={`🏭 ספקים (${supplierDebts.filter(d => !d.is_closed).length} פתוחים)`} />
-        <TabBtn t="summary"   label="📊 סיכום" />
+      <div className="scroll-x" style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
+          <TabBtn t="customers" label={`💳 לקוחות (${customerDebts.filter(d => !d.is_closed).length} פתוחים)`} />
+          <TabBtn t="suppliers" label={`🏭 ספקים (${supplierDebts.filter(d => !d.is_closed).length} פתוחים)`} />
+          <TabBtn t="summary"   label="📊 סיכום" />
+        </div>
       </div>
 
       {/* ── CUSTOMERS TAB ── */}

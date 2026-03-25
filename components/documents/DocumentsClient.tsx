@@ -811,7 +811,7 @@ export default function DocumentsClient() {
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: 'inline-flex', gap: '4px', marginBottom: 20, padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
+      <div className="scroll-x" style={{ marginBottom: 20 }}><div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
         {([
           ['templates', '📄 תבניות הדפסה'],
           ['drive',     '📂 קבצים בדרייב'],
@@ -828,7 +828,7 @@ export default function DocumentsClient() {
             }}
           >{label}</button>
         ))}
-      </div>
+      </div></div>
 
       {/* ── Drive files tab ── */}
       {docTab === 'drive' && (

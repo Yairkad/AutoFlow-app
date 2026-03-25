@@ -651,7 +651,7 @@ export default function BillingClient() {
       </div>
 
       {/* ── Tabs ── */}
-      <div className="scrollable-tabs" style={{ marginBottom: '20px', display: 'flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px', width: 'fit-content' }}>
+      <div className="scrollable-tabs" style={{ marginBottom: '20px', display: 'flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
         {([
           ['monthly',  '📅 חודשי'],
           ['items',    '⚙️ סעיפים'],

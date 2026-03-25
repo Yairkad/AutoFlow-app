@@ -921,6 +921,19 @@ export default function EmployeesClient() {
 
   return (
     <div>
+      {/* Page Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#8b5cf6,#a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #8b5cf644' }}>
+            <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div>
+            <h1 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>עובדים</h1>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>ניהול עובדים ומשכורות</p>
+          </div>
+        </div>
+      </div>
+
       {/* Stats */}
       <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
         {[
@@ -940,7 +953,7 @@ export default function EmployeesClient() {
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '11px', padding: '4px', gap: '4px', marginBottom: '24px' }}>
+      <div className="scroll-x" style={{ marginBottom: '24px' }}><div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '11px', padding: '4px', gap: '4px' }}>
         {(['employees', 'salaries'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: '8px 22px', borderRadius: '8px', border: 'none', cursor: 'pointer',
@@ -953,7 +966,7 @@ export default function EmployeesClient() {
             {t === 'employees' ? '👷 עובדים' : '💰 משכורות'}
           </button>
         ))}
-      </div>
+      </div></div>
 
       {/* Employees tab */}
       {tab === 'employees' && (

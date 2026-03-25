@@ -639,7 +639,7 @@ export default function InspectionsClient() {
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: 'inline-flex', gap: '4px', marginBottom: 24, padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
+      <div className="scroll-x" style={{ marginBottom: 24 }}><div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
         {([
           { key: 'entry',   label: 'הזנת נתונים', icon: '📝' },
           { key: 'history', label: 'היסטוריה',    icon: '📋' },
@@ -660,7 +660,7 @@ export default function InspectionsClient() {
             {t.icon} {t.label}
           </button>
         ))}
-      </div>
+      </div></div>
 
       {/* ── TAB: הזנת נתונים ── */}
       {tab === 'entry' && (
