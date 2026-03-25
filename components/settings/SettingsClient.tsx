@@ -1007,11 +1007,12 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
 
 // ── LandingTab ──────────────────────────────────────────────────────────────
 
-type LandingSub = 'services' | 'promotions' | 'prices'
+type LandingSub = 'services' | 'promotions' | 'prices' | 'faq'
 
 interface LandingService { id: string; name: string; description: string | null; icon: string | null; image_url: string | null; sort_order: number; is_active: boolean }
 interface LandingPromotion { id: string; title: string; description: string | null; fine_print: string | null; image_url: string | null; link_url: string | null; start_date: string | null; end_date: string | null; sort_order: number; is_active: boolean }
 interface LandingPrice { id: string; category: string; service_name: string; price: number | null; price_note: string | null; sort_order: number; is_active: boolean }
+interface LandingFaq { id: string; question: string; answer: string; image_url: string | null; sort_order: number; is_active: boolean }
 
 function LandingTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
   const [sub, setSub] = useState<LandingSub>('services')
@@ -1020,6 +1021,7 @@ function LandingTab({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
     { key: 'services',   label: '🔧 שירותים' },
     { key: 'promotions', label: '🏷️ מבצעים' },
     { key: 'prices',     label: '💲 מחירון' },
+    { key: 'faq',        label: '❓ שאלות נפוצות' },
   ]
 
   return (
@@ -1041,6 +1043,7 @@ function LandingTab({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
       {sub === 'services'   && <ServicesSection   supabase={supabase} tenantId={tenantId} showToast={showToast} />}
       {sub === 'promotions' && <PromotionsSection supabase={supabase} tenantId={tenantId} showToast={showToast} />}
       {sub === 'prices'     && <PricesSection     supabase={supabase} tenantId={tenantId} showToast={showToast} />}
+      {sub === 'faq'        && <FaqSection        supabase={supabase} tenantId={tenantId} showToast={showToast} />}
     </div>
   )
 }
@@ -1279,6 +1282,112 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                 {i.start_date && `מ-${i.start_date}`}{i.end_date && ` עד ${i.end_date}`}
               </div>
+            </div>
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? '#dcfce7' : '#f1f5f9', color: i.is_active ? '#16a34a' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
+            <button onClick={() => openEdit(i)} style={{ ...btnSec, padding: '4px 10px', fontSize: '11px' }}>✏️</button>
+            <button onClick={() => del(i.id)} style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function FaqSection({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
+  const [items, setItems] = useState<LandingFaq[]>([])
+  const [showForm, setShowForm] = useState(false)
+  const [editItem, setEditItem] = useState<LandingFaq | null>(null)
+  const [form, setForm] = useState({ question: '', answer: '', image_url: null as string | null, sort_order: '0', is_active: true })
+  const [saving, setSaving] = useState(false)
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('faq').select('*').eq('tenant_id', tenantId).order('sort_order')
+    setItems(data ?? [])
+  }, [supabase, tenantId])
+
+  useEffect(() => { load() }, [load])
+
+  function toDriveDirectUrl(url: string): string {
+    const m = url.match(/\/file\/d\/([^/]+)/)
+    if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`
+    return url
+  }
+  function onImageUrlInput(raw: string) { setForm(f => ({ ...f, image_url: toDriveDirectUrl(raw.trim()) || null })) }
+  function onImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 500_000) { showToast('התמונה גדולה מדי (מקסימום 500KB)', 'error'); return }
+    const reader = new FileReader()
+    reader.onload = ev => { setForm(f => ({ ...f, image_url: ev.target?.result as string })) }
+    reader.readAsDataURL(file)
+  }
+
+  function openAdd() { setForm({ question: '', answer: '', image_url: null, sort_order: String(items.length * 10), is_active: true }); setEditItem(null); setShowForm(true) }
+  function openEdit(i: LandingFaq) { setForm({ question: i.question, answer: i.answer, image_url: i.image_url ?? null, sort_order: String(i.sort_order), is_active: i.is_active }); setEditItem(i); setShowForm(true) }
+
+  async function save() {
+    if (!form.question.trim() || !form.answer.trim()) { showToast('חובה שאלה ותשובה', 'error'); return }
+    setSaving(true)
+    const payload = { tenant_id: tenantId, question: form.question.trim(), answer: form.answer.trim(), image_url: form.image_url ?? null, sort_order: parseInt(form.sort_order) || 0, is_active: form.is_active }
+    if (editItem) await supabase.from('faq').update(payload).eq('id', editItem.id)
+    else await supabase.from('faq').insert(payload)
+    setSaving(false); setShowForm(false); load(); showToast(editItem ? 'עודכן' : 'נוסף', 'success')
+  }
+
+  async function del(id: string) { await supabase.from('faq').delete().eq('id', id); load(); showToast('נמחק', 'success') }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <span style={{ fontSize: '14px', fontWeight: 600 }}>שאלות נפוצות ({items.length})</span>
+        <button onClick={openAdd} style={btnPrim}>+ הוסף שאלה</button>
+      </div>
+      {showForm && (
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
+          <div style={{ marginBottom: '10px' }}><label style={labelSt}>שאלה *</label><input style={inputSt} value={form.question} onChange={e => setForm(f => ({ ...f, question: e.target.value }))} placeholder="לדוגמה: איפה מוצאים את קבוצת הרישוי?" /></div>
+          <div style={{ marginBottom: '10px' }}><label style={labelSt}>תשובה *</label><textarea style={{ ...inputSt, height: '80px', resize: 'vertical' } as React.CSSProperties} value={form.answer} onChange={e => setForm(f => ({ ...f, answer: e.target.value }))} placeholder="התשובה המפורטת..." /></div>
+          <div style={{ marginBottom: '10px' }}>
+            <label style={labelSt}>תמונה להמחשה (אופציונלי)</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              {form.image_url && (
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <img src={form.image_url} alt="" style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }} />
+                  <button onClick={() => setForm(f => ({ ...f, image_url: null }))} style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: 'var(--danger)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
+                <input type="file" accept="image/*" onChange={onImageChange} style={{ fontSize: '13px' }} />
+                <input style={{ ...inputSt, fontSize: '12px' }} placeholder="או הדבק קישור / Google Drive..." defaultValue={form.image_url && !form.image_url.startsWith('data:') ? form.image_url : ''} onBlur={e => { if (!form.image_url?.startsWith('data:')) onImageUrlInput(e.target.value) }} />
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+            <div style={{ flex: 1 }}><label style={labelSt}>סדר הצגה</label><input type="number" style={inputSt} value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px', fontSize: '13px' }}>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
+                <span className="toggle-track" />
+              </label>
+              <span>פעיל</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
+            <button onClick={() => setShowForm(false)} style={btnSec}>ביטול</button>
+          </div>
+        </div>
+      )}
+      {items.length === 0 && !showForm && <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '13px', border: '2px dashed var(--border)', borderRadius: '10px' }}>אין שאלות — לחץ &quot;+ הוסף שאלה&quot;</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {items.map(i => (
+          <div key={i.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', opacity: i.is_active ? 1 : .55 }}>
+            {i.image_url
+              ? <img src={i.image_url} alt="" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }} />
+              : <span style={{ fontSize: '18px' }}>❓</span>
+            }
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: '13px' }}>{i.question}</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{i.answer.slice(0, 80)}{i.answer.length > 80 ? '...' : ''}</div>
             </div>
             <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? '#dcfce7' : '#f1f5f9', color: i.is_active ? '#16a34a' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
             <button onClick={() => openEdit(i)} style={{ ...btnSec, padding: '4px 10px', fontSize: '11px' }}>✏️</button>

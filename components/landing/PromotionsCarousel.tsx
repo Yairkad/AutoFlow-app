@@ -99,61 +99,49 @@ export default function PromotionsCarousel({ promotions }: Props) {
           </div>
         )}
 
-        {/* Main content */}
+        {/* Main content – flex column so fine_print sticks to bottom */}
         <div style={{
           position: 'relative', zIndex: 2,
           padding: '24px 28px',
           color: '#fff', width: '100%',
+          display: 'flex', flexDirection: 'column',
+          minHeight: '100%',
         }}>
-          <h3 style={{
-            fontSize: '22px', fontWeight: 900, margin: '0 0 8px',
-            lineHeight: 1.3,
-          }}>
-            {promo.title}
-          </h3>
-          {promo.description && (
-            <p style={{
-              fontSize: '14px', color: 'rgba(255,255,255,.82)',
-              margin: '0 0 16px', lineHeight: 1.6, maxWidth: '520px',
-            }}>
-              {promo.description}
-            </p>
-          )}
-          {promo.link_url && (
-            <a
-              href={promo.link_url}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                background: '#F5C800', color: '#1a2a6c',
-                padding: '8px 18px', borderRadius: '8px',
-                fontWeight: 800, fontSize: '13px', textDecoration: 'none',
-                boxShadow: '0 4px 16px rgba(245,200,0,.4)',
-              }}
-            >
-              למידע נוסף ←
-            </a>
-          )}
+          <div style={{ flex: 1 }}>
+            <h3 style={{ fontSize: '22px', fontWeight: 900, margin: '0 0 8px', lineHeight: 1.3 }}>
+              {promo.title}
+            </h3>
+            {promo.description && (
+              <p style={{ fontSize: '14px', color: 'rgba(255,255,255,.82)', margin: '0 0 16px', lineHeight: 1.6, maxWidth: '520px' }}>
+                {promo.description}
+              </p>
+            )}
+            {promo.link_url && (
+              <a
+                href={promo.link_url}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '6px',
+                  background: '#F5C800', color: '#1a2a6c',
+                  padding: '8px 18px', borderRadius: '8px',
+                  fontWeight: 800, fontSize: '13px', textDecoration: 'none',
+                  boxShadow: '0 4px 16px rgba(245,200,0,.4)',
+                }}
+              >
+                למידע נוסף ←
+              </a>
+            )}
+          </div>
 
-          {/* Bottom separator line (no-image only) */}
-          {!promo.image_url && (
-            <div style={{
-              marginTop: '20px',
-              height: '1px',
-              background: 'linear-gradient(to left, rgba(245,200,0,.5), transparent)',
-              borderRadius: '1px',
-              maxWidth: '160px',
-            }} />
-          )}
-
-          {/* Fine print */}
+          {/* Fine print – always at bottom */}
           {promo.fine_print && (
-            <p style={{
-              fontSize: '11px', color: 'rgba(255,255,255,.45)',
-              margin: promo.image_url ? '12px 0 0' : '10px 0 0',
-              lineHeight: 1.5,
-            }}>
-              * {promo.fine_print}
-            </p>
+            <>
+              {!promo.image_url && (
+                <div style={{ marginTop: '16px', height: '1px', background: 'linear-gradient(to left, rgba(245,200,0,.4), transparent)', maxWidth: '140px' }} />
+              )}
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', marginTop: '8px', lineHeight: 1.5 }}>
+                * {promo.fine_print}
+              </p>
+            </>
           )}
         </div>
       </div>

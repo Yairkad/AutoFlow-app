@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import CustomerSearch from '@/components/landing/CustomerSearch'
 import PromotionsCarousel from '@/components/landing/PromotionsCarousel'
 import PriceList from '@/components/landing/PriceList'
+import FaqAccordion from '@/components/landing/FaqAccordion'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,11 +34,12 @@ export default async function LandingPage() {
   const today = new Date().toISOString().slice(0, 10)
 
   // Fetch tenant info + landing data in parallel (all via service client – public page, no auth required)
-  const [{ data: tenant }, { data: services }, { data: promotions }, { data: priceItems }] = await Promise.all([
+  const [{ data: tenant }, { data: services }, { data: promotions }, { data: priceItems }, { data: faqItems }] = await Promise.all([
     service.from('tenants').select('name,sub_title,phone,address,logo_base64,public_info').eq('id', TENANT_ID).single(),
     service.from('services').select('id,name,description,icon,image_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('sort_order'),
     service.from('promotions').select('id,title,description,fine_print,image_url,link_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).lte('start_date', today).or('end_date.is.null,end_date.gte.' + today).order('sort_order'),
     service.from('price_list').select('id,category,service_name,price,price_note,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('category').order('sort_order'),
+    service.from('faq').select('id,question,answer,image_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('sort_order'),
   ])
 
   const pi = (tenant?.public_info ?? {}) as PublicInfo
@@ -61,6 +63,7 @@ export default async function LandingPage() {
   const displayServices = services && services.length > 0 ? services : DEFAULT_SERVICES
   const displayPromotions = promotions ?? []
   const displayPrices = priceItems ?? []
+  const displayFaq = faqItems ?? []
 
   return (
     <div dir="rtl" style={{ fontFamily: 'var(--font-heebo, Heebo), sans-serif', color: '#1e293b' }}>
@@ -307,6 +310,20 @@ export default async function LandingPage() {
             <SectionHeader id="prices-title" title="מחירון שירותים" sub="מחירים שקופים ללא הפתעות" />
             <div style={{ marginTop: '40px' }}>
               <PriceList items={displayPrices} />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          FAQ
+      ══════════════════════════════════════════════════════ */}
+      {displayFaq.length > 0 && (
+        <section style={{ background: '#fff', padding: '80px 40px' }} aria-labelledby="faq-title">
+          <div style={{ maxWidth: '780px', margin: '0 auto' }}>
+            <SectionHeader id="faq-title" title="שאלות נפוצות" sub="תשובות לשאלות הכי נפוצות שלכם" />
+            <div style={{ marginTop: '40px' }}>
+              <FaqAccordion items={displayFaq} />
             </div>
           </div>
         </section>
