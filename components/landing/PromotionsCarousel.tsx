@@ -40,7 +40,7 @@ export default function PromotionsCarousel({ promotions }: Props) {
           : 'linear-gradient(135deg, #1a2a6c 0%, #23389e 55%, #1b3a8f 100%)',
         position: 'relative',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'stretch',
       }}>
 
         {/* Decorative circles (no-image only) */}
