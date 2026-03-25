@@ -55,15 +55,15 @@ const emptyForm = {
 // ── Shared styles ──────────────────────────────────────────────────────────────
 
 const selSt: React.CSSProperties = {
-  padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px',
-  fontSize: '14px', background: '#fff', color: 'var(--text)', fontFamily: 'inherit', width: '100%',
+  padding: '8px 12px', border: '1.5px solid var(--border)', borderRadius: '9px',
+  fontSize: '14px', background: '#f8fafc', color: 'var(--text)', fontFamily: 'inherit', width: '100%',
 }
 const labelSt: React.CSSProperties = {
-  fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px',
+  fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px',
 }
 const areaSt: React.CSSProperties = {
-  width: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px',
-  fontSize: '14px', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
+  width: '100%', padding: '8px 12px', border: '1.5px solid var(--border)', borderRadius: '9px',
+  fontSize: '14px', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', background: '#f8fafc',
 }
 
 // ── Job Card ───────────────────────────────────────────────────────────────────
@@ -431,10 +431,11 @@ export default function AlignmentClient() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>🔧 פרונט / כיוון צירים</h1>
-          <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            {activeCount} עבודות פעילות
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#6366f1,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #6366f144' }}>🔧</div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>פרונט / כיוון צירים</h1>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{activeCount} עבודות פעילות</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

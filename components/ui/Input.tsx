@@ -16,7 +16,7 @@ const Input = forwardRef<HTMLInputElement, Props>(function Input(
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
       {label && (
-        <label style={{ fontSize: '13px', fontWeight: 500, color: error ? 'var(--danger)' : 'var(--text)' }}>
+        <label style={{ fontSize: '12px', fontWeight: 600, color: error ? 'var(--danger)' : '#374151' }}>
           {label}{required && <span style={{ color: 'var(--danger)', marginRight: 2 }}>*</span>}
         </label>
       )}
@@ -33,17 +33,17 @@ const Input = forwardRef<HTMLInputElement, Props>(function Input(
             width: '100%',
             padding: `8px ${prefix ? '32px' : '12px'} 8px ${suffix ? '32px' : '12px'}`,
             fontSize: '14px',
-            border: `1px solid ${error ? 'var(--danger)' : 'var(--border)'}`,
-            borderRadius: '8px',
-            background: error ? '#fff5f5' : '#fff',
+            border: `1.5px solid ${error ? 'var(--danger)' : 'var(--border)'}`,
+            borderRadius: '9px',
+            background: error ? '#fff5f5' : '#f8fafc',
             color: 'var(--text)',
             fontFamily: 'inherit',
             outline: 'none',
             transition: 'border-color .15s',
             ...style,
           }}
-          onFocus={e => e.target.style.borderColor = 'var(--primary)'}
-          onBlur={e => e.target.style.borderColor = error ? 'var(--danger)' : 'var(--border)'}
+          onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(26,158,92,.12)' }}
+          onBlur={e => { e.target.style.borderColor = error ? 'var(--danger)' : 'var(--border)'; e.target.style.background = error ? '#fff5f5' : '#f8fafc'; e.target.style.boxShadow = 'none' }}
           {...props}
         />
         {suffix && (
@@ -54,7 +54,7 @@ const Input = forwardRef<HTMLInputElement, Props>(function Input(
         )}
       </div>
       {error && (
-        <span style={{ fontSize: '12px', color: 'var(--danger)' }}>{error}</span>
+        <span style={{ fontSize: '11px', color: 'var(--danger)' }}>⚠ {error}</span>
       )}
     </div>
   )

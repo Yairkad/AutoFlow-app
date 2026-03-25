@@ -890,9 +890,12 @@ export default function CarsClient() {
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h2 style={{ margin: 0, fontWeight: 800, fontSize: 22 }}>🚗 ניהול רכבים</h2>
-          <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: 13 }}>מלאי, קנייה, מכירה ובקשות לקוחות</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#8b5cf6,#a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #8b5cf644' }}>🚗</div>
+          <div>
+            <h2 style={{ margin: 0, fontWeight: 700, fontSize: 18, color: 'var(--text)' }}>ניהול רכבים</h2>
+            <p style={{ margin: '2px 0 0', color: 'var(--text-muted)', fontSize: 12 }}>מלאי, קנייה, מכירה ובקשות לקוחות</p>
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <ExcelMenu onExportExcel={exportExcel} />
@@ -912,7 +915,7 @@ export default function CarsClient() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20, overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, overflowX: 'auto', WebkitOverflowScrolling: 'touch', padding: '4px', background: '#f1f5f9', borderRadius: '11px', width: 'fit-content' }}>
         {[
           { key: 'inventory', label: `📦 מלאי (${invCars.length})` },
           { key: 'checking',  label: `🔍 בדיקה${checkCars.length ? ` (${checkCars.length})` : ''}` },
@@ -920,10 +923,13 @@ export default function CarsClient() {
           { key: 'requests',  label: `📋 בקשות${openReqs.length ? ` (${openReqs.length})` : ''}` },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as typeof tab)} style={{
-            padding: '8px 18px', borderRadius: 20, border: '1.5px solid var(--border)',
-            background: tab === t.key ? 'var(--primary)' : '#fff',
-            color: tab === t.key ? '#fff' : 'var(--text-muted)',
-            fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
+            padding: '7px 16px', borderRadius: 8, border: 'none',
+            background: tab === t.key ? '#fff' : 'transparent',
+            color: tab === t.key ? 'var(--text)' : 'var(--text-muted)',
+            fontWeight: tab === t.key ? 600 : 400, fontSize: 13,
+            cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
+            boxShadow: tab === t.key ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+            transition: 'all .15s',
           }}>{t.label}</button>
         ))}
       </div>
@@ -1126,17 +1132,19 @@ export default function CarsClient() {
         return (
           <>
             {/* Sub-tabs */}
-            <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '2px solid var(--border)', paddingBottom: 0 }}>
+            <div style={{ display: 'inline-flex', gap: 4, marginBottom: 16, padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
               {([{ v: 'buy', l: '🛒 בקשת קנייה', count: requests.filter(r=>r.status==='open').length },
                  { v: 'sell', l: '🏷️ בקשת מכירה', count: saleRequests.filter(r=>r.status==='open').length }] as const).map(t => (
                 <button key={t.v} onClick={() => setReqSubTab(t.v)} style={{
-                  padding: '8px 18px', background: 'none', border: 'none', cursor: 'pointer',
-                  fontFamily: 'inherit', fontWeight: 700, fontSize: 14,
-                  color: reqSubTab === t.v ? 'var(--primary)' : 'var(--text-muted)',
-                  borderBottom: reqSubTab === t.v ? '2px solid var(--primary)' : '2px solid transparent',
-                  marginBottom: -2,
+                  padding: '7px 16px', border: 'none', cursor: 'pointer',
+                  fontFamily: 'inherit', fontWeight: reqSubTab === t.v ? 600 : 400, fontSize: 13,
+                  color: reqSubTab === t.v ? 'var(--text)' : 'var(--text-muted)',
+                  background: reqSubTab === t.v ? '#fff' : 'transparent',
+                  borderRadius: '8px', whiteSpace: 'nowrap',
+                  boxShadow: reqSubTab === t.v ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+                  transition: 'all .15s',
                 }}>
-                  {t.l}{t.count > 0 ? <span style={{ marginRight: 5, background: 'var(--primary)', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 11 }}>{t.count}</span> : ''}
+                  {t.l}{t.count > 0 ? <span style={{ marginRight: 5, background: '#dcfce7', color: '#15803d', borderRadius: 10, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{t.count}</span> : ''}
                 </button>
               ))}
             </div>

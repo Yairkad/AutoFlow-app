@@ -55,20 +55,33 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             onClick={e => e.stopPropagation()}
             style={{
               background: '#fff',
-              borderRadius: 'var(--radius)',
-              padding: '32px 28px',
-              maxWidth: '360px', width: '100%',
-              textAlign: 'center',
-              boxShadow: '0 8px 40px rgba(0,0,0,.18)',
+              borderRadius: 16,
+              maxWidth: '380px', width: '100%',
+              boxShadow: '0 12px 40px rgba(0,0,0,.18)',
+              overflow: 'hidden',
             }}
           >
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>
-              {state.options.icon ?? '🗑️'}
+            {/* body */}
+            <div style={{ padding: '24px 24px 20px', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '22px',
+                background: (state.options.variant ?? 'danger') === 'danger' ? '#fee2e2' : '#f0fdf9',
+              }}>
+                {state.options.icon ?? '🗑️'}
+              </div>
+              <p style={{ fontSize: '14px', color: 'var(--text)', lineHeight: 1.55, paddingTop: '4px' }}>
+                {state.options.msg}
+              </p>
             </div>
-            <p style={{ fontSize: '15px', marginBottom: '24px', color: 'var(--text)' }}>
-              {state.options.msg}
-            </p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            {/* footer */}
+            <div style={{
+              padding: '12px 20px',
+              borderTop: '1px solid var(--border)',
+              background: '#f8fafc',
+              display: 'flex', gap: '8px', justifyContent: 'flex-end',
+            }}>
               <Button variant="secondary" onClick={() => close(false)}>ביטול</Button>
               <Button
                 variant={state.options.variant ?? 'danger'}

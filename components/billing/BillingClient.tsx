@@ -151,12 +151,13 @@ function VatToggle({ mode, onChange }: { mode: 'before' | 'after'; onChange: (v:
 // ── Shared styles (table + select) ─────────────────────────────────────────
 const thSt: React.CSSProperties = {
   padding: '10px 12px', textAlign: 'right', fontWeight: 600,
-  color: 'var(--text-muted)', fontSize: '12px', whiteSpace: 'nowrap',
+  color: 'var(--text-muted)', fontSize: '11px', whiteSpace: 'nowrap',
+  background: '#f8fafc', borderBottom: '1px solid var(--border)', letterSpacing: '0.3px',
 }
-const tdSt: React.CSSProperties = { padding: '10px 12px', fontSize: '13px', verticalAlign: 'middle' }
+const tdSt: React.CSSProperties = { padding: '11px 12px', fontSize: '13px', verticalAlign: 'middle', borderBottom: '1px solid #f1f5f9' }
 const selSt: React.CSSProperties = {
-  padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px',
-  fontSize: '14px', background: '#fff', color: 'var(--text)', fontFamily: 'inherit', width: '100%',
+  padding: '8px 12px', border: '1.5px solid var(--border)', borderRadius: '9px',
+  fontSize: '14px', background: '#f8fafc', color: 'var(--text)', fontFamily: 'inherit', width: '100%',
 }
 const labelSt: React.CSSProperties = { fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }
 
@@ -632,7 +633,12 @@ export default function BillingClient() {
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>🧾 חשבונות</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#f59e0b,#fbbf24)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #f59e0b44' }}>🧾</div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>חשבונות</h1>
+          </div>
+        </div>
         {tab === 'monthly' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Button variant="secondary" size="sm" onClick={() => changeMonth(prevMonth(currentMonth))}>→</Button>
@@ -645,7 +651,7 @@ export default function BillingClient() {
       </div>
 
       {/* ── Tabs ── */}
-      <div className="scrollable-tabs" style={{ marginBottom: '20px', borderBottom: '1px solid var(--border)' }}>
+      <div className="scrollable-tabs" style={{ marginBottom: '20px', display: 'flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px', width: 'fit-content' }}>
         {([
           ['monthly',  '📅 חודשי'],
           ['items',    '⚙️ סעיפים'],
@@ -653,11 +659,13 @@ export default function BillingClient() {
           ['summary',  '📊 סיכום'],
         ] as [Tab, string][]).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)} style={{
-            padding: '8px 18px', border: 'none', background: 'transparent', cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: '13px', fontWeight: tab === t ? 700 : 400,
-            color: tab === t ? 'var(--primary)' : 'var(--text-muted)',
-            borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent',
-            marginBottom: '-1px',
+            padding: '7px 16px', border: 'none', cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: '13px', fontWeight: tab === t ? 600 : 400,
+            color: tab === t ? 'var(--text)' : 'var(--text-muted)',
+            background: tab === t ? '#fff' : 'transparent',
+            borderRadius: '8px', whiteSpace: 'nowrap', flexShrink: 0,
+            boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+            transition: 'all .15s',
           }}>{label}</button>
         ))}
       </div>
@@ -1240,8 +1248,11 @@ export default function BillingClient() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             <Input label="תוקף מ- (YYYY-MM)" type="month" value={iFrom} onChange={e => setIFrom(e.target.value)} />
             <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '2px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                <input type="checkbox" checked={iActive} onChange={e => setIActive(e.target.checked)} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer' }}>
+                <label className="toggle-switch" style={{ marginLeft: 2 }}>
+                  <input type="checkbox" checked={iActive} onChange={e => setIActive(e.target.checked)} />
+                  <span className="toggle-track" />
+                </label>
                 סעיף פעיל
               </label>
             </div>

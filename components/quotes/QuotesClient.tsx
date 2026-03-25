@@ -151,8 +151,8 @@ function removeOffer(
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const inpStyle: React.CSSProperties = {
-  padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 6,
-  fontSize: 13, background: 'white', fontFamily: 'inherit', width: '100%',
+  padding: '7px 10px', border: '1.5px solid var(--border)', borderRadius: 9,
+  fontSize: 13, background: '#f8fafc', fontFamily: 'inherit', width: '100%',
 }
 const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4 }
 const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }
@@ -698,11 +698,12 @@ export default function QuotesClient() {
 
       {/* ── Page title */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>💬 הצעות מחיר</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '4px 0 0' }}>
-            ניהול בקשות לקוחות + הצעות ספקים
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#0ea5e9,#38bdf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #0ea5e944' }}>💬</div>
+          <div>
+            <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text)' }}>הצעות מחיר</h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: '2px 0 0' }}>ניהול בקשות לקוחות + הצעות ספקים</p>
+          </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <ExcelMenu onExportExcel={exportExcel} />
@@ -751,12 +752,15 @@ export default function QuotesClient() {
 
       {/* ── Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        <input
-          placeholder="🔍 חיפוש לפי שם / טלפון / רכב..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ ...inpStyle, width: 280 }}
-        />
+        <div style={{ position: 'relative', width: 280, display: 'flex', alignItems: 'center' }}>
+          <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 10, pointerEvents: 'none', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            placeholder="חיפוש לפי שם / טלפון / רכב..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ ...inpStyle, paddingRight: 30 }}
+          />
+        </div>
         <select
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value)}

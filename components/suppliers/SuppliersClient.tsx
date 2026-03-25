@@ -69,10 +69,10 @@ const ISRAELI_BANKS: { name: string; code: string }[] = [
 
 const inputSt: React.CSSProperties = {
   padding: '9px 12px',
-  border: '1px solid var(--border)',
-  borderRadius: '8px',
+  border: '1.5px solid var(--border)',
+  borderRadius: '9px',
   fontSize: '13px',
-  background: 'var(--bg)',
+  background: '#f8fafc',
   direction: 'rtl',
   width: '100%',
   boxSizing: 'border-box',
@@ -80,10 +80,10 @@ const inputSt: React.CSSProperties = {
 
 const btnPrim: React.CSSProperties = {
   padding: '9px 20px',
-  background: 'var(--primary)',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '8px',
+  background: '#f0fdf9',
+  color: '#15803d',
+  border: '1.5px solid #bbf7d0',
+  borderRadius: '9px',
   fontSize: '13px',
   fontWeight: 600,
   cursor: 'pointer',
@@ -91,10 +91,10 @@ const btnPrim: React.CSSProperties = {
 
 const btnSec: React.CSSProperties = {
   padding: '9px 20px',
-  background: 'transparent',
+  background: '#fff',
   color: 'var(--text-muted)',
-  border: '1px solid var(--border)',
-  borderRadius: '8px',
+  border: '1.5px solid var(--border)',
+  borderRadius: '9px',
   fontSize: '13px',
   cursor: 'pointer',
 }
@@ -295,9 +295,12 @@ export default function SuppliersClient() {
   return (
     <div>
       {/* Page heading */}
-      <div style={{ marginBottom: '20px' }}>
-        <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 800 }}>🏭 ספקים / נותני שירות</h1>
-        <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>ניהול ספקים ונותני שירות, אנשי קשר וחובות</p>
+      <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#64748b,#94a3b8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #64748b44' }}>🏭</div>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>ספקים / נותני שירות</h1>
+          <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>ניהול ספקים ונותני שירות, אנשי קשר וחובות</p>
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -322,12 +325,15 @@ export default function SuppliersClient() {
           {editMode ? '✓ סיום עריכה' : '✏️ נהל ספקים'}
         </button>
 
-        <input
-          placeholder="חיפוש ספק / טלפון / איש קשר..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ ...inputSt, flex: 1, minWidth: '200px', maxWidth: '340px' }}
-        />
+        <div style={{ position: 'relative', flex: 1, minWidth: '200px', maxWidth: '340px', display: 'flex', alignItems: 'center' }}>
+          <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 10, pointerEvents: 'none', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            placeholder="חיפוש ספק / טלפון / איש קשר..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ ...inputSt, paddingRight: 30 }}
+          />
+        </div>
         <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
           {suppliers.length} ספקים
         </span>

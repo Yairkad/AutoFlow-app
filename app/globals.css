@@ -101,8 +101,25 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   transition: background .12s;
 }
 .tr-hover:hover {
-  background: var(--bg) !important;
+  background: #f0fdf9 !important;
 }
+
+/* Toggle switch — replaces native checkbox where used */
+.toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-track {
+  position: absolute; inset: 0; border-radius: 999px;
+  background: #e2e8f0; cursor: pointer;
+  transition: background .2s;
+}
+.toggle-track::after {
+  content: ''; position: absolute; top: 3px; right: 3px;
+  width: 18px; height: 18px; border-radius: 50%; background: #fff;
+  transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.18);
+}
+.toggle-switch input:checked + .toggle-track { background: var(--primary); }
+.toggle-switch input:checked + .toggle-track::after { transform: translateX(-20px); }
+.toggle-switch input:disabled + .toggle-track { opacity: 0.5; cursor: not-allowed; }
 
 /* Footer links hover */
 .link-hover {

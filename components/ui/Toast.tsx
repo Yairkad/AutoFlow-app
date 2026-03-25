@@ -22,14 +22,20 @@ export function useToast() {
 
 const COLORS: Record<ToastType, string> = {
   success: '#16a34a',
-  error:   'var(--danger)',
+  error:   '#dc2626',
   info:    '#2563eb',
 }
 
+const ICON_BG: Record<ToastType, string> = {
+  success: '#dcfce7',
+  error:   '#fee2e2',
+  info:    '#dbeafe',
+}
+
 const ICONS: Record<ToastType, string> = {
-  success: '✅',
-  error:   '❌',
-  info:    'ℹ️',
+  success: '✓',
+  error:   '✕',
+  info:    'i',
 }
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -56,30 +62,35 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       }}>
         {toasts.map(t => (
           <div key={t.id} style={{
-            background: '#1e293b',
-            color: '#fff',
-            padding: '10px 12px 10px 18px',
-            borderRadius: '10px',
-            fontSize: '14px',
-            display: 'flex', alignItems: 'center', gap: '8px',
-            boxShadow: '0 4px 16px rgba(0,0,0,.25)',
-            borderRight: `4px solid ${COLORS[t.type]}`,
+            background: '#fff',
+            padding: '12px 14px',
+            borderRadius: '12px',
+            fontSize: '13px',
+            display: 'flex', alignItems: 'center', gap: '10px',
+            boxShadow: '0 4px 20px rgba(0,0,0,.12)',
+            border: '1px solid var(--border)',
+            borderRight: `3px solid ${COLORS[t.type]}`,
             animation: 'fadeInUp .2s ease',
-            whiteSpace: 'nowrap',
+            minWidth: 220, maxWidth: 340,
           }}>
-            <span aria-hidden="true">{ICONS[t.type]}</span>
-            <span>{t.msg}</span>
+            <span aria-hidden="true" style={{
+              width: 28, height: 28, borderRadius: '7px', flexShrink: 0,
+              background: ICON_BG[t.type], color: COLORS[t.type],
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '13px', fontWeight: 700,
+            }}>{ICONS[t.type]}</span>
+            <span style={{ flex: 1, color: 'var(--text)' }}>{t.msg}</span>
             <button
               onClick={() => dismiss(t.id)}
               aria-label="סגור התראה"
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: 'rgba(255,255,255,.5)', fontSize: '16px', lineHeight: 1,
-                padding: '0 2px', marginRight: '4px',
-                transition: 'color .15s',
+                color: 'var(--text-muted)', fontSize: '13px', lineHeight: 1,
+                padding: '2px 4px', borderRadius: '5px',
+                transition: 'background .12s',
               }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,.5)')}
+              onMouseEnter={e => (e.currentTarget.style.background = '#f1f5f9')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
             >✕</button>
           </div>
         ))}

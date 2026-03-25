@@ -45,9 +45,9 @@ function fmt(n: number | null) {
   return '₪' + Number(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-const TD: React.CSSProperties = { padding: '10px 14px', textAlign: 'right', verticalAlign: 'middle', fontSize: '14px' }
-const TH: React.CSSProperties = { padding: '10px 14px', textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }
-const SELECT: React.CSSProperties = { width: '100%', padding: '8px 12px', fontSize: '14px', border: '1px solid var(--border)', borderRadius: '8px', background: '#fff', color: 'var(--text)', fontFamily: 'inherit', outline: 'none' }
+const TD: React.CSSProperties = { padding: '10px 14px', textAlign: 'right', verticalAlign: 'middle', fontSize: '14px', borderBottom: '1px solid #f1f5f9' }
+const TH: React.CSSProperties = { padding: '10px 14px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: '#f8fafc', borderBottom: '1px solid var(--border)', letterSpacing: '0.3px' }
+const SELECT: React.CSSProperties = { width: '100%', padding: '8px 12px', fontSize: '14px', border: '1.5px solid var(--border)', borderRadius: '9px', background: '#f8fafc', color: 'var(--text)', fontFamily: 'inherit', outline: 'none' }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

@@ -52,22 +52,23 @@ const waUrl = (phone: string, text: string) => {
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
 const inputSt: React.CSSProperties = {
-  padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '8px',
-  fontSize: '13px', background: 'var(--bg)', direction: 'rtl', width: '100%', boxSizing: 'border-box',
+  padding: '9px 12px', border: '1.5px solid var(--border)', borderRadius: '9px',
+  fontSize: '13px', background: '#f8fafc', direction: 'rtl', width: '100%', boxSizing: 'border-box',
 }
 const btnPrim: React.CSSProperties = {
-  padding: '9px 20px', background: 'var(--primary)', color: '#fff', border: 'none',
-  borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+  padding: '9px 20px', background: '#f0fdf9', color: '#15803d',
+  border: '1.5px solid #bbf7d0', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
 }
 const btnSec: React.CSSProperties = {
-  padding: '9px 20px', background: 'transparent', color: 'var(--text-muted)',
-  border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', cursor: 'pointer',
+  padding: '9px 20px', background: '#fff', color: 'var(--text-muted)',
+  border: '1.5px solid var(--border)', borderRadius: '9px', fontSize: '13px', cursor: 'pointer',
 }
 const thSt: React.CSSProperties = {
   padding: '10px 12px', textAlign: 'right', fontWeight: 600,
-  color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: '12px',
+  color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: '11px',
+  background: '#f8fafc', borderBottom: '1px solid var(--border)', letterSpacing: '0.3px',
 }
-const tdSt: React.CSSProperties = { padding: '10px 12px', verticalAlign: 'middle' }
+const tdSt: React.CSSProperties = { padding: '11px 12px', verticalAlign: 'middle', fontSize: '13px', borderBottom: '1px solid #f1f5f9' }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -335,10 +336,13 @@ export default function DebtsClient() {
 
   const TabBtn = ({ t, label }: { t: Tab; label: string }) => (
     <button onClick={() => setTab(t)} style={{
-      padding: '10px 20px', border: 'none',
-      borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent',
-      background: 'transparent', color: tab === t ? 'var(--primary)' : 'var(--text-muted)',
-      fontWeight: tab === t ? 700 : 400, fontSize: '14px', cursor: 'pointer', transition: 'all .15s',
+      padding: '7px 16px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+      fontSize: '13px', fontWeight: tab === t ? 600 : 400,
+      color: tab === t ? 'var(--text)' : 'var(--text-muted)',
+      background: tab === t ? '#fff' : 'transparent',
+      borderRadius: '8px', whiteSpace: 'nowrap', flexShrink: 0,
+      boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+      transition: 'all .15s',
     }}>{label}</button>
   )
 
@@ -511,15 +515,16 @@ export default function DebtsClient() {
 
   return (
     <div>
-      <div style={{ marginBottom: '20px' }}>
-        <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 800 }}>💳 חובות</h1>
-        <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
-          מעקב חובות לקוחות וספקים — לחץ על שורה לבחירה ופעולות
-        </p>
+      <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#ef4444,#f87171)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #ef444444' }}>💳</div>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>חובות</h1>
+          <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>מעקב חובות לקוחות וספקים</p>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ borderBottom: '1px solid var(--border)', marginBottom: '20px', display: 'flex', gap: '2px' }}>
+      <div style={{ marginBottom: '20px', display: 'flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px', width: 'fit-content' }}>
         <TabBtn t="customers" label={`💳 לקוחות (${customerDebts.filter(d => !d.is_closed).length} פתוחים)`} />
         <TabBtn t="suppliers" label={`🏭 ספקים (${supplierDebts.filter(d => !d.is_closed).length} פתוחים)`} />
         <TabBtn t="summary"   label="📊 סיכום" />

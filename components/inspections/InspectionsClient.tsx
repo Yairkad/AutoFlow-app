@@ -630,13 +630,16 @@ export default function InspectionsClient() {
       {printData && <PrintReport data={printData} />}
 
       {/* Page title */}
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 900, color: 'var(--text)' }}>בדיקות קניה</h1>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{inspections.length} בדיקות שמורות</p>
+      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#10b981,#34d399)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #10b98144' }}>📝</div>
+        <div>
+          <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text)' }}>בדיקות קניה</h1>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>{inspections.length} בדיקות שמורות</p>
+        </div>
       </div>
 
-      {/* Tab bar – underline style */}
-      <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: 24, gap: 0 }}>
+      {/* Tab bar */}
+      <div style={{ display: 'inline-flex', gap: '4px', marginBottom: 24, padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
         {([
           { key: 'entry',   label: 'הזנת נתונים', icon: '📝' },
           { key: 'history', label: 'היסטוריה',    icon: '📋' },
@@ -645,11 +648,13 @@ export default function InspectionsClient() {
             key={t.key}
             onClick={() => setTab(t.key)}
             style={{
-              padding: '10px 24px', border: 'none', background: 'none', cursor: 'pointer',
-              fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
-              color: tab === t.key ? 'var(--primary)' : 'var(--text-muted)',
-              borderBottom: tab === t.key ? '3px solid var(--primary)' : '3px solid transparent',
-              marginBottom: -2, transition: 'all .15s',
+              padding: '7px 18px', border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: 13, fontWeight: tab === t.key ? 600 : 400,
+              color: tab === t.key ? 'var(--text)' : 'var(--text-muted)',
+              background: tab === t.key ? '#fff' : 'transparent',
+              borderRadius: '8px', whiteSpace: 'nowrap',
+              boxShadow: tab === t.key ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+              transition: 'all .15s',
             }}
           >
             {t.icon} {t.label}
@@ -806,12 +811,14 @@ export default function InspectionsClient() {
           </div>
 
           {/* Search */}
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 16, position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 12, pointerEvents: 'none', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="search-input-global"
               placeholder="חיפוש לפי שם, מספר רכב, טלפון, שלדה..."
+              style={{ paddingRight: 34 }}
             />
           </div>
 

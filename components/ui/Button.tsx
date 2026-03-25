@@ -6,11 +6,11 @@ type Variant = 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost'
 type Size = 'sm' | 'md' | 'lg'
 
 const VARIANTS: Record<Variant, React.CSSProperties> = {
-  primary:   { background: 'var(--primary)', color: '#fff',             border: '1px solid var(--primary)' },
-  secondary: { background: '#f1f5f9',        color: 'var(--text)',      border: '1px solid var(--border)'  },
-  danger:    { background: 'var(--danger)',   color: '#fff',             border: '1px solid var(--danger)'  },
-  outline:   { background: 'transparent',    color: 'var(--text)',      border: '1px solid var(--border)'  },
-  ghost:     { background: 'transparent',    color: 'var(--text-muted)',border: '1px solid transparent'    },
+  primary:   { background: '#f0fdf9', color: '#15803d', border: '1.5px solid #bbf7d0', fontWeight: 600 },
+  secondary: { background: '#fff',    color: 'var(--text)',       border: '1.5px solid var(--border)'  },
+  danger:    { background: '#fff0f0', color: '#dc2626',           border: '1.5px solid #fca5a5'        },
+  outline:   { background: 'transparent', color: 'var(--text)',   border: '1.5px solid var(--border)'  },
+  ghost:     { background: 'transparent', color: 'var(--text-muted)', border: '1px solid transparent'  },
 }
 
 const SIZES: Record<Size, React.CSSProperties> = {
@@ -39,6 +39,7 @@ export default function Button({
 }: Props) {
   const [busy, setBusy] = useState(false)
   const [pressed, setPressed] = useState(false)
+  const [hovered, setHovered] = useState(false)
 
   const isDisabled = disabled || loading || busy
 
@@ -58,15 +59,25 @@ export default function Button({
       onClick={handleClick}
       onMouseDown={() => setPressed(true)}
       onMouseUp={() => setPressed(false)}
-      onMouseLeave={() => setPressed(false)}
+      onMouseEnter={() => !isDisabled && setHovered(true)}
+      onMouseLeave={() => { setPressed(false); setHovered(false) }}
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        gap: 6, borderRadius: 8, fontFamily: 'inherit', fontWeight: 500,
+        gap: 6, borderRadius: 9, fontFamily: 'inherit', fontWeight: 500,
         cursor: isDisabled ? 'not-allowed' : 'pointer',
         whiteSpace: 'nowrap',
-        transition: 'opacity .15s, transform .1s',
+        transition: 'opacity .15s, transform .12s, box-shadow .15s',
         opacity: isDisabled ? 0.55 : 1,
-        transform: pressed && !isDisabled ? 'scale(0.96)' : 'scale(1)',
+        transform: pressed && !isDisabled
+          ? 'scale(0.96) translateY(1px)'
+          : hovered && !isDisabled
+            ? 'translateY(-1px)'
+            : 'scale(1) translateY(0)',
+        boxShadow: pressed || isDisabled
+          ? 'none'
+          : hovered
+            ? '0 4px 12px rgba(0,0,0,0.14)'
+            : '0 1px 3px rgba(0,0,0,0.08)',
         width: fullWidth ? '100%' : undefined,
         ...VARIANTS[variant],
         ...SIZES[size],
@@ -87,7 +98,7 @@ export default function Button({
 function Spinner() {
   return (
     <span style={{
-      width: 13, height: 13, border: '2px solid rgba(255,255,255,.4)',
+      width: 13, height: 13, border: '2px solid rgba(0,0,0,.12)',
       borderTopColor: 'currentColor', borderRadius: '50%',
       display: 'inline-block', animation: 'spin .6s linear infinite', flexShrink: 0,
     }} />

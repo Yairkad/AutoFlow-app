@@ -18,7 +18,7 @@ export default function DashboardPage() {
       <div style={{ width: '100%' }}>
 
         {/* Tab bar */}
-        <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--border)', marginBottom: '20px' }}>
+        <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '11px', padding: '4px', gap: '4px', marginBottom: '20px' }}>
           {([
             ['stats',  '📊 סטטיסטיקות'],
             ['charts', '📈 גרפים'],
@@ -27,12 +27,14 @@ export default function DashboardPage() {
               key={t}
               onClick={() => setTab(t)}
               style={{
-                border: 'none', background: 'none', cursor: 'pointer',
-                padding: '10px 20px', fontSize: '14px',
-                fontWeight: tab === t ? 700 : 400,
-                color: tab === t ? 'var(--primary)' : 'var(--text-muted)',
-                borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent',
-                marginBottom: '-1px', transition: 'all .15s',
+                border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                padding: '8px 20px', fontSize: '13px',
+                fontWeight: tab === t ? 600 : 400,
+                color: tab === t ? 'var(--text)' : 'var(--text-muted)',
+                background: tab === t ? '#fff' : 'transparent',
+                borderRadius: '8px',
+                boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+                transition: 'all .15s', whiteSpace: 'nowrap',
               }}
             >{label}</button>
           ))}

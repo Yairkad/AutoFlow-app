@@ -763,7 +763,10 @@ export default function DocumentsClient() {
     <div>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>📄 מסמכים</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#06b6d4,#22d3ee)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #06b6d444' }}>📄</div>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text)' }}>מסמכים</h2>
+        </div>
         {docTab === 'templates'
           ? <Button variant="primary" onClick={openAdd}>➕ תבנית חדשה</Button>
           : driveConnected && (
@@ -784,7 +787,8 @@ export default function DocumentsClient() {
               </button>}
               <label htmlFor="doc-drive-upload" style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
-                background: 'var(--primary)', color: '#fff', borderRadius: 8,
+                background: '#f0fdf9', color: '#15803d', borderRadius: 9,
+                border: '1.5px solid #bbf7d0',
                 padding: '8px 16px', fontSize: 14, fontWeight: 600,
                 cursor: uploadProgress ? 'default' : 'pointer',
                 opacity: uploadProgress ? 0.7 : 1,
@@ -807,18 +811,20 @@ export default function DocumentsClient() {
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: 'flex', borderBottom: '2px solid var(--border)', marginBottom: 20 }}>
+      <div style={{ display: 'inline-flex', gap: '4px', marginBottom: 20, padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
         {([
           ['templates', '📄 תבניות הדפסה'],
           ['drive',     '📂 קבצים בדרייב'],
         ] as const).map(([key, label]) => (
           <button key={key} onClick={() => { setDocTab(key); if (key === 'drive') { setFolderStack([]); loadDriveFiles('') } }}
             style={{
-              padding: '9px 22px', border: 'none', background: 'none', cursor: 'pointer',
-              fontFamily: 'inherit', fontSize: 14, fontWeight: 700,
-              color: docTab === key ? 'var(--primary)' : 'var(--text-muted)',
-              borderBottom: docTab === key ? '3px solid var(--primary)' : '3px solid transparent',
-              marginBottom: -2, transition: 'all .15s',
+              padding: '7px 18px', border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: 13, fontWeight: docTab === key ? 600 : 400,
+              color: docTab === key ? 'var(--text)' : 'var(--text-muted)',
+              background: docTab === key ? '#fff' : 'transparent',
+              borderRadius: '8px', whiteSpace: 'nowrap',
+              boxShadow: docTab === key ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+              transition: 'all .15s',
             }}
           >{label}</button>
         ))}
@@ -864,7 +870,7 @@ export default function DocumentsClient() {
                       placeholder="שם תיקיה..."
                       style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', width: 140 }}
                     />
-                    <button onClick={createDriveFolder} disabled={creatingFolder || !newFolderName.trim()} style={{ padding: '6px 12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <button onClick={createDriveFolder} disabled={creatingFolder || !newFolderName.trim()} style={{ padding: '6px 12px', background: '#f0fdf9', color: '#15803d', border: '1.5px solid #bbf7d0', borderRadius: 9, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
                       {creatingFolder ? '...' : '✓'}
                     </button>
                     <button onClick={() => { setNewFolderMode(false); setNewFolderName('') }} style={{ padding: '6px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>

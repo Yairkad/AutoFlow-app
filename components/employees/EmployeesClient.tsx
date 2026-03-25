@@ -130,9 +130,9 @@ function calcTotal(base: number, hours: number, payType: string, additions: AdjI
 // ── Inline styles ──────────────────────────────────────────────────────────────
 
 const inp: React.CSSProperties = {
-  padding: '8px 10px', border: '1px solid var(--border)',
-  borderRadius: '8px', fontSize: '13px', width: '100%',
-  boxSizing: 'border-box', direction: 'rtl', background: 'var(--bg)',
+  padding: '8px 10px', border: '1.5px solid var(--border)',
+  borderRadius: '9px', fontSize: '13px', width: '100%',
+  boxSizing: 'border-box', direction: 'rtl', background: '#f8fafc',
   fontFamily: 'inherit',
 }
 
@@ -154,13 +154,13 @@ const sectionTitle: React.CSSProperties = {
 }
 
 const thSt: React.CSSProperties = {
-  padding: '10px 12px', textAlign: 'right', fontWeight: 700,
-  fontSize: '12px', color: 'var(--text-muted)', background: '#f8fafc',
-  borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap',
+  padding: '10px 12px', textAlign: 'right', fontWeight: 600,
+  fontSize: '11px', color: 'var(--text-muted)', background: '#f8fafc',
+  borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', letterSpacing: '0.3px',
 }
 
 const tdSt: React.CSSProperties = {
-  padding: '11px 12px', borderBottom: '1px solid var(--border)',
+  padding: '11px 12px', borderBottom: '1px solid #f1f5f9',
   fontSize: '13px', verticalAlign: 'middle',
 }
 
@@ -940,14 +940,15 @@ export default function EmployeesClient() {
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: 'inline-flex', background: '#e8f5ee', borderRadius: '14px', padding: '4px', gap: '2px', marginBottom: '24px' }}>
+      <div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '11px', padding: '4px', gap: '4px', marginBottom: '24px' }}>
         {(['employees', 'salaries'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
-            padding: '8px 24px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: '14px', fontWeight: 700,
-            background: tab === t ? 'var(--primary)' : 'transparent',
-            color: tab === t ? '#fff' : 'var(--primary)',
-            opacity: tab === t ? 1 : 0.65,
+            padding: '8px 22px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: '13px', fontWeight: tab === t ? 600 : 400,
+            background: tab === t ? '#fff' : 'transparent',
+            color: tab === t ? 'var(--text)' : 'var(--text-muted)',
+            boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+            transition: 'all .15s', whiteSpace: 'nowrap',
           }}>
             {t === 'employees' ? '👷 עובדים' : '💰 משכורות'}
           </button>
@@ -1085,11 +1086,14 @@ export default function EmployeesClient() {
             <label style={lbl}>תאריך סיום עבודה <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(ריק = פעיל)</span></label>
             <input style={inp} type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
           </div>
-          <div style={{ ...field, justifyContent: 'flex-end' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>
-              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} style={{ width: '16px', height: '16px' }} />
-              עובד פעיל (גישה למערכת)
-            </label>
+          <div style={{ ...field }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#f8fafc', borderRadius: '9px', border: '1.5px solid var(--border)' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>עובד פעיל (גישה למערכת)</span>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
+                <span className="toggle-track" />
+              </label>
+            </div>
           </div>
           <div style={{ ...field, gridColumn: '1/-1' }}>
             <label style={lbl}>הערות</label>
@@ -1445,7 +1449,7 @@ export default function EmployeesClient() {
             <div style={{ marginTop: '16px', textAlign: 'center' }}>
               <button
                 onClick={() => { openEdit(bankViewEmp); setBankViewEmp(null) }}
-                style={{ padding: '8px 20px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                style={{ padding: '8px 20px', background: '#f0fdf9', color: '#15803d', border: '1.5px solid #bbf7d0', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
               >✏️ עריכה מלאה</button>
             </div>
           </div>

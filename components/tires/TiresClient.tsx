@@ -519,9 +519,9 @@ export default function TiresClient() {
   // ── Styles ────────────────────────────────────────────────────────────────────
 
   const inp: React.CSSProperties = {
-    width: '100%', padding: '8px 10px', border: '1px solid var(--border)',
-    borderRadius: '8px', fontSize: '14px', background: 'var(--bg)',
-    color: 'var(--text)', boxSizing: 'border-box',
+    width: '100%', padding: '8px 10px', border: '1.5px solid var(--border)',
+    borderRadius: '9px', fontSize: '13px', background: '#f8fafc',
+    color: 'var(--text)', boxSizing: 'border-box', fontFamily: 'inherit',
   }
   const inpErr = (err?: boolean): React.CSSProperties => ({
     ...inp,
@@ -545,9 +545,12 @@ export default function TiresClient() {
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🔘 צמיגים</h1>
-          {viewOnly && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>מצב צפיה בלבד</div>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#6b7280,#9ca3af)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #6b728044' }}>🔘</div>
+          <div>
+            <h1 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>צמיגים</h1>
+            {viewOnly && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>מצב צפיה בלבד</div>}
+          </div>
         </div>
         {!viewOnly && (
           <div style={{ display: 'flex', gap: 8 }}>
@@ -568,15 +571,15 @@ export default function TiresClient() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', borderBottom: '2px solid var(--border)' }}>
+      <div style={{ display: 'inline-flex', gap: '4px', marginBottom: '16px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
         {([['tires', '🔘 מלאי'], ['movements', '📊 תנועות מלאי']] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)} style={{
-            padding: '8px 18px', border: 'none', borderRadius: '8px 8px 0 0',
-            cursor: 'pointer', fontWeight: tab === t ? 700 : 400, fontSize: '14px',
-            background: tab === t ? 'var(--bg-card)' : 'transparent',
-            color: tab === t ? 'var(--primary)' : 'var(--text-muted)',
-            borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent',
-            marginBottom: '-2px',
+            padding: '7px 16px', border: 'none', borderRadius: '8px',
+            cursor: 'pointer', fontWeight: tab === t ? 600 : 400, fontSize: '13px',
+            background: tab === t ? '#fff' : 'transparent',
+            color: tab === t ? 'var(--text)' : 'var(--text-muted)',
+            boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+            transition: 'all .15s', fontFamily: 'inherit', whiteSpace: 'nowrap',
           }}>{label}</button>
         ))}
       </div>
@@ -586,8 +589,11 @@ export default function TiresClient() {
         <>
           {/* Filters */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center' }}>
-            <input style={{ ...inp, flex: '1 1 160px', minWidth: 0 }} placeholder="🔍  חיפוש מותג / מידה..."
-              value={search} onChange={e => setSearch(e.target.value)} />
+            <div style={{ position: 'relative', flex: '1 1 160px', minWidth: 0, display: 'flex', alignItems: 'center' }}>
+              <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 10, pointerEvents: 'none', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input style={{ ...inp, paddingRight: 30 }} placeholder="חיפוש מותג / מידה..."
+                value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
             <select style={{ ...inp, flex: '1 1 80px', minWidth: 0 }} value={filterWidth} onChange={e => setFilterWidth(e.target.value)}>
               <option value=''>רוחב</option>
               {WIDTHS.map(w => <option key={w} value={w}>{w}</option>)}

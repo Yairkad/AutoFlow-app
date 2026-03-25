@@ -75,8 +75,8 @@ function fmt(n: number) {
   return '₪' + n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
-function StatCard({ label, value, icon, color, isCurrency = false, href, sub }: {
-  label: string; value: number; icon: string; color: string
+function StatCard({ label, value, icon, color, gradient, isCurrency = false, href, sub }: {
+  label: string; value: number; icon: string; color: string; gradient?: string
   isCurrency?: boolean; href?: string; sub?: string
 }) {
   const router = useRouter()
@@ -102,9 +102,10 @@ function StatCard({ label, value, icon, color, isCurrency = false, href, sub }: 
       <div className="stat-card-icon" style={{
         width: 44, height: 44,
         borderRadius: '10px',
-        background: color + '18',
+        background: gradient || color + '18',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: '22px', flexShrink: 0,
+        boxShadow: gradient ? '0 2px 8px rgba(0,0,0,.1)' : undefined,
       }}>{icon}</div>
       <div>
         <div className="stat-card-value" style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)', lineHeight: 1.2 }}>
@@ -322,16 +323,16 @@ export default function DashboardStats() {
 
   // All cards with their render fn and permission check
   const allCards: { id: CardId; show: boolean; node: React.ReactNode }[] = [
-    { id: 'income',     show: can('income','expenses'), node: <StatCard label="הכנסות החודש" value={stats.incomeMonth}   icon="💰" color="var(--primary)" isCurrency href="/income" /> },
-    { id: 'expenses',   show: can('expenses'),          node: <StatCard label="הוצאות החודש" value={stats.expensesMonth} icon="📤" color="var(--danger)"  isCurrency href="/expenses" /> },
-    { id: 'profit',     show: can('income','expenses'), node: <StatCard label="רווח החודש"   value={profit}              icon="📈" color={profit >= 0 ? 'var(--primary)' : 'var(--danger)'} isCurrency href="/income" /> },
+    { id: 'income',     show: can('income','expenses'), node: <StatCard label="הכנסות החודש" value={stats.incomeMonth}   icon="💰" color="#16a34a" gradient="linear-gradient(135deg,#16a34a,#4ade80)" isCurrency href="/income" /> },
+    { id: 'expenses',   show: can('expenses'),          node: <StatCard label="הוצאות החודש" value={stats.expensesMonth} icon="📤" color="#dc2626" gradient="linear-gradient(135deg,#dc2626,#f87171)" isCurrency href="/expenses" /> },
+    { id: 'profit',     show: can('income','expenses'), node: <StatCard label="רווח החודש"   value={profit}              icon="📈" color={profit >= 0 ? '#16a34a' : '#dc2626'} gradient={profit >= 0 ? 'linear-gradient(135deg,#16a34a,#4ade80)' : 'linear-gradient(135deg,#dc2626,#f87171)'} isCurrency href="/income" /> },
     { id: 'debts',      show: can('debts'),             node: <DebtCard customerDebts={stats.customerDebts} supplierDebts={stats.supplierDebts} custCount={stats.custDebtCount} suppCount={stats.suppDebtCount} href="/debts" /> },
-    { id: 'products',   show: can('products','products_view'), node: <StatCard label="פריטים במלאי" value={stats.inventoryItems}  icon="📦" color="var(--purple)" href="/products" /> },
-    { id: 'employees',  show: can('employees'),         node: <StatCard label="עובדים פעילים" value={stats.activeEmployees} icon="👷" color="var(--purple)" href="/employees" /> },
-    { id: 'tires',      show: can('tires','tires_view'),node: <StatCard label="סוגי צמיג במלאי" value={stats.tiresInStock} icon="🔘" color="var(--cyan)" href="/tires" /> },
-    { id: 'alignment',  show: can('alignment'),         node: <StatCard label="עבודות פרונט" value={stats.activeJobs} icon="🔩" color="var(--warning)" href="/alignment" /> },
+    { id: 'products',   show: can('products','products_view'), node: <StatCard label="פריטים במלאי" value={stats.inventoryItems}  icon="📦" color="#7c3aed" gradient="linear-gradient(135deg,#7c3aed,#a78bfa)" href="/products" /> },
+    { id: 'employees',  show: can('employees'),         node: <StatCard label="עובדים פעילים" value={stats.activeEmployees} icon="👷" color="#2563eb" gradient="linear-gradient(135deg,#2563eb,#60a5fa)" href="/employees" /> },
+    { id: 'tires',      show: can('tires','tires_view'),node: <StatCard label="סוגי צמיג במלאי" value={stats.tiresInStock} icon="🔘" color="#0891b2" gradient="linear-gradient(135deg,#0891b2,#22d3ee)" href="/tires" /> },
+    { id: 'alignment',  show: can('alignment'),         node: <StatCard label="עבודות פרונט" value={stats.activeJobs} icon="🔩" color="#d97706" gradient="linear-gradient(135deg,#d97706,#fbbf24)" href="/alignment" /> },
     { id: 'cars',       show: can('cars'),              node: <CarsCard inInventory={stats.carsInInventory} openRequests={stats.openCarRequests} href="/cars" /> },
-    { id: 'inspections',show: can('inspections'),       node: <StatCard label="בדיקות קניה" value={stats.totalInspections} icon="📝" color="var(--purple)" href="/inspections" /> },
+    { id: 'inspections',show: can('inspections'),       node: <StatCard label="בדיקות קניה" value={stats.totalInspections} icon="📝" color="#6366f1" gradient="linear-gradient(135deg,#6366f1,#a5b4fc)" href="/inspections" /> },
   ]
 
   const moveCard = (cardId: CardId, toSection: Section) => {
@@ -436,7 +437,7 @@ export default function DashboardStats() {
             אפס
           </button>
           <button onClick={() => setEditLayout(false)}
-            style={{ fontSize: 12, padding: '3px 12px', borderRadius: 6, border: 'none', background: 'var(--primary)', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+            style={{ fontSize: 12, padding: '3px 12px', borderRadius: 6, border: '1.5px solid #bbf7d0', background: '#f0fdf9', color: '#15803d', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
             ✓ סיום
           </button>
         </div>

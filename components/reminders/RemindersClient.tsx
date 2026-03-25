@@ -248,7 +248,10 @@ export default function RemindersClient() {
     <div style={{ maxWidth: 1100 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, marginLeft: 'auto' }}>🔔 תזכורות ומשימות</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginLeft: 'auto' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#f59e0b,#fbbf24)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #f59e0b44' }}>🔔</div>
+          <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text)' }}>תזכורות ומשימות</h1>
+        </div>
         <Button variant="secondary" onClick={() => openAdd('task')}>+ משימה</Button>
         <Button onClick={() => openAdd('reminder')}>+ תזכורת</Button>
       </div>
@@ -453,10 +456,10 @@ function RemindersTab({
                 boxShadow: 'var(--shadow)',
                 borderRight: `3px solid ${PRIORITY_COLOR[r.priority ?? 'medium']}`,
               }}>
-                <input
-                  type="checkbox" checked={r.is_done} onChange={() => onToggle(r)}
-                  style={{ marginTop: 3, width: 15, height: 15, cursor: 'pointer', flexShrink: 0 }}
-                />
+                <label className="toggle-switch" style={{ marginTop: 2 }}>
+                  <input type="checkbox" checked={r.is_done} onChange={() => onToggle(r)} />
+                  <span className="toggle-track" />
+                </label>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>{r.title}</div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>

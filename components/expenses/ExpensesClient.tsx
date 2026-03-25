@@ -103,9 +103,9 @@ function presetRange(p: SumPreset): { from: string; to: string } {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const TH: React.CSSProperties = { padding: '10px 14px', textAlign: 'right', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }
-const TD: React.CSSProperties = { padding: '10px 14px', textAlign: 'right', verticalAlign: 'middle', fontSize: '14px' }
-const SEL: React.CSSProperties = { padding: '8px 12px', fontSize: '14px', border: '1px solid var(--border)', borderRadius: '8px', background: '#fff', color: 'var(--text)', fontFamily: 'inherit', outline: 'none' }
+const TH: React.CSSProperties = { padding: '10px 14px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap', background: '#f8fafc', borderBottom: '1px solid var(--border)', letterSpacing: '0.3px' }
+const TD: React.CSSProperties = { padding: '10px 14px', textAlign: 'right', verticalAlign: 'middle', fontSize: '14px', borderBottom: '1px solid #f1f5f9' }
+const SEL: React.CSSProperties = { padding: '8px 12px', fontSize: '14px', border: '1.5px solid var(--border)', borderRadius: '9px', background: '#f8fafc', color: 'var(--text)', fontFamily: 'inherit', outline: 'none' }
 const ICON_BTN: React.CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: '6px', fontSize: '15px', opacity: 0.7 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -173,7 +173,7 @@ function CategorySelect({
             onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') setAdding(false) }}
             style={{ ...SEL, flex: 1 }}
           />
-          <button onClick={submit} style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--primary)', background: 'var(--primary)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>הוסף</button>
+          <button onClick={submit} style={{ padding: '7px 12px', borderRadius: '9px', border: '1.5px solid #bbf7d0', background: '#f0fdf9', color: '#15803d', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>הוסף</button>
           <button onClick={() => setAdding(false)} style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '13px', color: 'var(--text-muted)' }}>✕</button>
         </div>
       ) : managing ? (
@@ -752,9 +752,12 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     <AppShell>
       {/* ── Page header ──────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700 }}>הוצאות והכנסות</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '2px' }}>ניהול תזרים מזומנים חודשי</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#1a9e5c,#4ade80)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #1a9e5c44' }}>💰</div>
+          <div>
+            <h1 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>הוצאות והכנסות</h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '2px', marginBottom: 0 }}>ניהול תזרים מזומנים חודשי</p>
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {tab !== 'summary' && (
@@ -780,21 +783,23 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
       )}
 
       {/* ── Tabs row ──────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid var(--border)', marginBottom: '16px', flexWrap: 'wrap', gap: '4px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
         {/* Tabs */}
-        <div className="scrollable-tabs" style={{ display: 'flex', gap: '4px' }}>
+        <div className="scrollable-tabs" style={{ display: 'flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
           {([
             ['expenses', '📤 הוצאות'],
             ['income',   '💰 הכנסות'],
             ['summary',  '📊 סיכום חודשי'],
           ] as [Tab, string][]).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)} style={{
-              border: 'none', background: 'none', cursor: 'pointer',
-              padding: '10px 18px', fontSize: '14px',
-              fontWeight: tab === t ? 700 : 400,
-              color: tab === t ? 'var(--primary)' : 'var(--text-muted)',
-              borderBottom: tab === t ? '2px solid var(--primary)' : '2px solid transparent',
-              marginBottom: '-1px', transition: 'all .15s',
+              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              padding: '7px 16px', fontSize: '13px',
+              fontWeight: tab === t ? 600 : 400,
+              color: tab === t ? 'var(--text)' : 'var(--text-muted)',
+              background: tab === t ? '#fff' : 'transparent',
+              borderRadius: '8px', whiteSpace: 'nowrap',
+              boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+              transition: 'all .15s',
             }}>{label}</button>
           ))}
         </div>

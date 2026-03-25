@@ -66,17 +66,18 @@ function statusInfo(p: ScheduledPayment): { label: string; color: string; bg: st
 
 const SEL: React.CSSProperties = {
   padding: '8px 12px', fontSize: '14px',
-  border: '1px solid var(--border)', borderRadius: '8px',
-  background: '#fff', color: 'var(--text)', fontFamily: 'inherit', outline: 'none',
+  border: '1.5px solid var(--border)', borderRadius: '9px',
+  background: '#f8fafc', color: 'var(--text)', fontFamily: 'inherit', outline: 'none',
   width: '100%',
 }
 const TH: React.CSSProperties = {
   padding: '10px 14px', textAlign: 'right',
-  fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap',
+  fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap',
+  background: '#f8fafc', borderBottom: '1px solid var(--border)', letterSpacing: '0.3px',
 }
 const TD: React.CSSProperties = {
   padding: '10px 14px', textAlign: 'right',
-  verticalAlign: 'middle', fontSize: '13px',
+  verticalAlign: 'middle', fontSize: '13px', borderBottom: '1px solid #f1f5f9',
 }
 const ICON_BTN: React.CSSProperties = {
   background: 'none', border: 'none', cursor: 'pointer',

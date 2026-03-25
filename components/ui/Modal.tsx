@@ -46,17 +46,21 @@ export default function Modal({ open, onClose, title, children, footer, maxWidth
         {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 20px',
+          padding: '14px 20px',
           borderBottom: '1px solid var(--border)',
+          background: '#fff',
+          borderRadius: 'var(--radius) var(--radius) 0 0',
         }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700 }}>{title}</h3>
+          <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{title}</h3>
           <button
             onClick={onClose}
             aria-label="סגור"
             style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: '18px', color: 'var(--text-muted)', lineHeight: 1,
-              padding: '2px 6px', borderRadius: '6px',
+              background: '#f1f5f9', border: 'none', cursor: 'pointer',
+              fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1,
+              width: 28, height: 28, borderRadius: '7px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
             }}
           >✕</button>
         </div>
@@ -69,9 +73,11 @@ export default function Modal({ open, onClose, title, children, footer, maxWidth
         {/* Footer */}
         {footer && (
           <div style={{
-            padding: '14px 20px',
+            padding: '12px 20px',
             borderTop: '1px solid var(--border)',
+            background: '#f8fafc',
             display: 'flex', justifyContent: 'flex-end', gap: '8px',
+            borderRadius: '0 0 var(--radius) var(--radius)',
           }}>
             {footer}
           </div>

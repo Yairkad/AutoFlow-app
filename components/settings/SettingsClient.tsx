@@ -85,17 +85,17 @@ const ALL_MODULES = [
 ]
 
 const inputSt: React.CSSProperties = {
-  padding: '9px 12px', border: '1px solid var(--border)', borderRadius: '8px',
-  fontSize: '13px', background: 'var(--bg)', direction: 'rtl', width: '100%', boxSizing: 'border-box',
+  padding: '9px 12px', border: '1.5px solid var(--border)', borderRadius: '9px',
+  fontSize: '13px', background: '#f8fafc', direction: 'rtl', width: '100%', boxSizing: 'border-box',
 }
-const labelSt: React.CSSProperties = { fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }
+const labelSt: React.CSSProperties = { fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '5px' }
 const btnPrim: React.CSSProperties = {
-  padding: '9px 20px', background: 'var(--primary)', color: '#fff', border: 'none',
-  borderRadius: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+  padding: '9px 20px', background: '#f0fdf9', color: '#15803d',
+  border: '1.5px solid #bbf7d0', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
 }
 const btnSec: React.CSSProperties = {
-  padding: '9px 20px', background: 'transparent', color: 'var(--text-muted)',
-  border: '1px solid var(--border)', borderRadius: '8px', fontSize: '13px', cursor: 'pointer',
+  padding: '9px 20px', background: '#fff', color: 'var(--text-muted)',
+  border: '1.5px solid var(--border)', borderRadius: '9px', fontSize: '13px', cursor: 'pointer',
 }
 
 function field(label: string, el: React.ReactNode) {
@@ -487,9 +487,15 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
                 </div>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input type="checkbox" id={`active-${p.id}`} checked={editData.is_active} onChange={e => setEditData(d => ({ ...d, is_active: e.target.checked }))} />
-                <label htmlFor={`active-${p.id}`} style={{ fontSize: '13px', cursor: 'pointer' }}>משתמש פעיל</label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#f8fafc', borderRadius: '9px', border: '1.5px solid var(--border)' }}>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>משתמש פעיל</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>אפשר גישה למערכת</div>
+                </div>
+                <label className="toggle-switch">
+                  <input type="checkbox" id={`active-${p.id}`} checked={editData.is_active} onChange={e => setEditData(d => ({ ...d, is_active: e.target.checked }))} />
+                  <span className="toggle-track" />
+                </label>
               </div>
 
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -1123,9 +1129,13 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
           <div style={{ marginBottom: '10px' }}><label style={labelSt}>תיאור</label><input style={inputSt} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="תיאור קצר של השירות..." /></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
             <div style={{ flex: 1 }}><label style={labelSt}>סדר הצגה</label><input type="number" style={inputSt} value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', marginTop: '16px' }}>
-              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} /> פעיל
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px', fontSize: '13px' }}>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
+                <span className="toggle-track" />
+              </label>
+              <span>פעיל</span>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
@@ -1199,9 +1209,13 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
             <div style={{ flex: 1 }}><label style={labelSt}>סדר הצגה</label><input type="number" style={inputSt} value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', marginTop: '16px' }}>
-              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} /> פעיל
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px', fontSize: '13px' }}>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
+                <span className="toggle-track" />
+              </label>
+              <span>פעיל</span>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
@@ -1279,9 +1293,13 @@ function PricesSection({ supabase, tenantId, showToast }: { supabase: ReturnType
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
             <div style={{ flex: 1 }}><label style={labelSt}>סדר</label><input type="number" style={inputSt} value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', marginTop: '16px' }}>
-              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} /> פעיל
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px', fontSize: '13px' }}>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
+                <span className="toggle-track" />
+              </label>
+              <span>פעיל</span>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
@@ -1567,9 +1585,12 @@ export default function SettingsClient() {
   return (
     <div style={{ direction: 'rtl' }}>
       {/* Title */}
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 700 }}>⚙️ הגדרות</h1>
-        <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '13px' }}>ניהול עסק, משתמשים והרשאות</p>
+      <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#64748b,#94a3b8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #64748b44' }}>⚙️</div>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>הגדרות</h1>
+          <p style={{ margin: '2px 0 0', color: 'var(--text-muted)', fontSize: '12px' }}>ניהול עסק, משתמשים והרשאות</p>
+        </div>
       </div>
 
       {/* Google Drive status — admins only */}
@@ -1601,18 +1622,20 @@ export default function SettingsClient() {
       )}
 
       {/* Desktop: horizontal scrollable tabs */}
-      <div className="settings-desktop-tabs scrollable-tabs" style={{ marginBottom: '24px', borderBottom: '2px solid var(--border)', paddingBottom: '0' }}>
+      <div className="settings-desktop-tabs scrollable-tabs" style={{ marginBottom: '24px', display: 'flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px', width: 'fit-content' }}>
         {tabs.map(t => (
           <button
             key={t.key}
             onClick={() => toggleTab(t.key)}
             style={{
-              padding: '10px 20px', border: 'none', background: 'transparent', cursor: 'pointer',
-              fontSize: '13px', fontWeight: tab === t.key ? 700 : 400,
-              color: tab === t.key ? 'var(--primary)' : 'var(--text-muted)',
-              borderBottom: tab === t.key ? '2px solid var(--primary)' : '2px solid transparent',
-              marginBottom: '-2px', display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '8px 18px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: '13px', fontWeight: tab === t.key ? 600 : 400,
+              color: tab === t.key ? 'var(--text)' : 'var(--text-muted)',
+              background: tab === t.key ? '#fff' : 'transparent',
+              borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px',
               whiteSpace: 'nowrap', flexShrink: 0,
+              boxShadow: tab === t.key ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+              transition: 'all .15s',
             }}
           >
             <span>{t.icon}</span> {t.label}
