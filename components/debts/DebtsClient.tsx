@@ -334,16 +334,25 @@ export default function DebtsClient() {
 
   // ── Sub-components ────────────────────────────────────────────────────────
 
-  const TabBtn = ({ t, label }: { t: Tab; label: string }) => (
+  const TabBtn = ({ t, label, count }: { t: Tab; label: string; count?: number }) => (
     <button onClick={() => setTab(t)} style={{
-      padding: '7px 16px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+      padding: '7px 14px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
       fontSize: '13px', fontWeight: tab === t ? 600 : 400,
       color: tab === t ? 'var(--text)' : 'var(--text-muted)',
       background: tab === t ? '#fff' : 'transparent',
       borderRadius: '8px', whiteSpace: 'nowrap', flexShrink: 0,
       boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-      transition: 'all .15s',
-    }}>{label}</button>
+      transition: 'all .15s', display: 'flex', alignItems: 'center', gap: '5px',
+    }}>
+      {label}
+      {count != null && count > 0 && (
+        <span style={{
+          background: tab === t ? '#dcfce7' : '#e2e8f0',
+          color: tab === t ? '#15803d' : 'var(--text-muted)',
+          borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: 700,
+        }}>{count}</span>
+      )}
+    </button>
   )
 
   const FilterBtn = ({ f, label }: { f: Filter; label: string }) => (
@@ -526,8 +535,8 @@ export default function DebtsClient() {
       {/* Tabs */}
       <div className="scroll-x" style={{ marginBottom: '20px' }}>
         <div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
-          <TabBtn t="customers" label={`💳 לקוחות (${customerDebts.filter(d => !d.is_closed).length} פתוחים)`} />
-          <TabBtn t="suppliers" label={`🏭 ספקים (${supplierDebts.filter(d => !d.is_closed).length} פתוחים)`} />
+          <TabBtn t="customers" label="💳 לקוחות" count={customerDebts.filter(d => !d.is_closed).length} />
+          <TabBtn t="suppliers" label="🏭 ספקים"  count={supplierDebts.filter(d => !d.is_closed).length} />
           <TabBtn t="summary"   label="📊 סיכום" />
         </div>
       </div>

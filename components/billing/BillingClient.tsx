@@ -651,23 +651,25 @@ export default function BillingClient() {
       </div>
 
       {/* ── Tabs ── */}
-      <div className="scrollable-tabs" style={{ marginBottom: '20px', display: 'flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
-        {([
-          ['monthly',  '📅 חודשי'],
-          ['items',    '⚙️ סעיפים'],
-          ['contacts', '👥 אנשי קשר'],
-          ['summary',  '📊 סיכום'],
-        ] as [Tab, string][]).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)} style={{
-            padding: '7px 16px', border: 'none', cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: '13px', fontWeight: tab === t ? 600 : 400,
-            color: tab === t ? 'var(--text)' : 'var(--text-muted)',
-            background: tab === t ? '#fff' : 'transparent',
-            borderRadius: '8px', whiteSpace: 'nowrap', flexShrink: 0,
-            boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-            transition: 'all .15s',
-          }}>{label}</button>
-        ))}
+      <div className="scroll-x" style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
+          {([
+            ['monthly',  '📅 חודשי'],
+            ['items',    '⚙️ סעיפים'],
+            ['contacts', '👥 אנשי קשר'],
+            ['summary',  '📊 סיכום'],
+          ] as [Tab, string][]).map(([t, label]) => (
+            <button key={t} onClick={() => setTab(t)} style={{
+              padding: '7px 16px', border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: '13px', fontWeight: tab === t ? 600 : 400,
+              color: tab === t ? 'var(--text)' : 'var(--text-muted)',
+              background: tab === t ? '#fff' : 'transparent',
+              borderRadius: '8px', whiteSpace: 'nowrap', flexShrink: 0,
+              boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+              transition: 'all .15s',
+            }}>{label}</button>
+          ))}
+        </div>
       </div>
 
       {/* ════════════════ MONTHLY TAB ════════════════ */}
@@ -696,7 +698,7 @@ export default function BillingClient() {
               </select>
             )}
 
-            <div style={{ marginRight: 'auto', display: 'flex', gap: '8px' }}>
+            <div style={{ marginRight: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <ExcelMenu onExportExcel={exportExcel} />
               <Button variant="secondary" size="sm" onClick={() => openEntryModal()}>➕ חריג</Button>
               <Button variant="secondary" size="sm" onClick={generateEntries} disabled={saving}>🔄 צור רשומות</Button>

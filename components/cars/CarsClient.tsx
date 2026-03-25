@@ -201,7 +201,7 @@ export default function CarsClient() {
   const [loading,       setLoading]       = useState(true)
   const [updatingReqId, setUpdatingReqId] = useState<string | null>(null)
 
-  const [tab, setTab] = useState<'inventory' | 'checking' | 'sold' | 'requests'>('inventory')
+  const [tab, setTab] = useState<'all' | 'inventory' | 'checking' | 'sold' | 'requests'>('inventory')
   const [invFilter, setInvFilter] = useState<string>('all')
   const [reqFilter,    setReqFilter]    = useState<string>('all')
   const [reqSubTab,    setReqSubTab]    = useState<'buy' | 'sell'>('buy')
@@ -917,6 +917,7 @@ export default function CarsClient() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, overflowX: 'auto', WebkitOverflowScrolling: 'touch', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
         {[
+          { key: 'all',       label: `🚗 הכל (${invCars.length + checkCars.length + soldCars.length})` },
           { key: 'inventory', label: `📦 מלאי (${invCars.length})` },
           { key: 'checking',  label: `🔍 בדיקה${checkCars.length ? ` (${checkCars.length})` : ''}` },
           { key: 'sold',      label: `💰 מכירות (${soldCars.length})` },
@@ -933,6 +934,16 @@ export default function CarsClient() {
           }}>{t.label}</button>
         ))}
       </div>
+
+      {/* ── TAB: ALL ── */}
+      {tab === 'all' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(290px,1fr))', gap: 18 }}>
+          {[...invCars, ...checkCars, ...soldCars].length === 0
+            ? <Empty icon="🚗" text="אין רכבים" />
+            : [...invCars, ...checkCars, ...soldCars].map(c => <div key={c.id}>{CarCard({ car: c })}</div>)
+          }
+        </div>
+      )}
 
       {/* ── TAB: INVENTORY ── */}
       {tab === 'inventory' && (
