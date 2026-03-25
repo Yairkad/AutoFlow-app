@@ -6,6 +6,7 @@ interface Promotion {
   id: string
   title: string
   description: string | null
+  fine_print: string | null
   image_url: string | null
   link_url: string | null
 }
@@ -33,7 +34,7 @@ export default function PromotionsCarousel({ promotions }: Props) {
   return (
     <div style={{ position: 'relative', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(26,42,108,.25)' }}>
       <div style={{
-        minHeight: '280px',
+        minHeight: promo.image_url ? '220px' : 'unset',
         background: promo.image_url
           ? `url(${promo.image_url}) center/cover`
           : 'linear-gradient(135deg, #1a2a6c 0%, #23389e 55%, #1b3a8f 100%)',
@@ -105,19 +106,19 @@ export default function PromotionsCarousel({ promotions }: Props) {
         {/* Main content */}
         <div style={{
           position: 'relative', zIndex: 2,
-          padding: promo.image_url ? '24px 28px' : '40px 32px',
+          padding: promo.image_url ? '20px 24px' : '28px 28px',
           color: '#fff', width: '100%',
         }}>
           <h3 style={{
-            fontSize: '26px', fontWeight: 900, margin: '0 0 12px',
+            fontSize: '22px', fontWeight: 900, margin: '0 0 8px',
             lineHeight: 1.3,
           }}>
             {promo.title}
           </h3>
           {promo.description && (
             <p style={{
-              fontSize: '15px', color: 'rgba(255,255,255,.82)',
-              margin: '0 0 24px', lineHeight: 1.7, maxWidth: '520px',
+              fontSize: '14px', color: 'rgba(255,255,255,.82)',
+              margin: '0 0 16px', lineHeight: 1.6, maxWidth: '520px',
             }}>
               {promo.description}
             </p>
@@ -128,8 +129,8 @@ export default function PromotionsCarousel({ promotions }: Props) {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                 background: '#F5C800', color: '#1a2a6c',
-                padding: '10px 22px', borderRadius: '8px',
-                fontWeight: 800, fontSize: '14px', textDecoration: 'none',
+                padding: '8px 18px', borderRadius: '8px',
+                fontWeight: 800, fontSize: '13px', textDecoration: 'none',
                 boxShadow: '0 4px 16px rgba(245,200,0,.4)',
               }}
             >
@@ -140,12 +141,23 @@ export default function PromotionsCarousel({ promotions }: Props) {
           {/* Bottom separator line (no-image only) */}
           {!promo.image_url && (
             <div style={{
-              marginTop: '28px',
-              height: '2px',
-              background: 'linear-gradient(to left, rgba(245,200,0,.6), transparent)',
+              marginTop: '20px',
+              height: '1px',
+              background: 'linear-gradient(to left, rgba(245,200,0,.5), transparent)',
               borderRadius: '1px',
-              maxWidth: '200px',
+              maxWidth: '160px',
             }} />
+          )}
+
+          {/* Fine print */}
+          {promo.fine_print && (
+            <p style={{
+              fontSize: '11px', color: 'rgba(255,255,255,.45)',
+              margin: promo.image_url ? '12px 0 0' : '10px 0 0',
+              lineHeight: 1.5,
+            }}>
+              * {promo.fine_print}
+            </p>
           )}
         </div>
       </div>

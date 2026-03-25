@@ -1010,7 +1010,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
 type LandingSub = 'services' | 'promotions' | 'prices'
 
 interface LandingService { id: string; name: string; description: string | null; icon: string | null; image_url: string | null; sort_order: number; is_active: boolean }
-interface LandingPromotion { id: string; title: string; description: string | null; image_url: string | null; link_url: string | null; start_date: string | null; end_date: string | null; sort_order: number; is_active: boolean }
+interface LandingPromotion { id: string; title: string; description: string | null; fine_print: string | null; image_url: string | null; link_url: string | null; start_date: string | null; end_date: string | null; sort_order: number; is_active: boolean }
 interface LandingPrice { id: string; category: string; service_name: string; price: number | null; price_note: string | null; sort_order: number; is_active: boolean }
 
 function LandingTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
@@ -1169,7 +1169,7 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
   const [items, setItems] = useState<LandingPromotion[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState<LandingPromotion | null>(null)
-  const [form, setForm] = useState({ title: '', description: '', image_url: null as string | null, link_url: '', start_date: '', end_date: '', sort_order: '0', is_active: true })
+  const [form, setForm] = useState({ title: '', description: '', fine_print: '', image_url: null as string | null, link_url: '', start_date: '', end_date: '', sort_order: '0', is_active: true })
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -1199,13 +1199,13 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
     reader.readAsDataURL(file)
   }
 
-  function openAdd() { setForm({ title: '', description: '', image_url: null, link_url: '', start_date: new Date().toISOString().slice(0,10), end_date: '', sort_order: '0', is_active: true }); setEditItem(null); setShowForm(true) }
-  function openEdit(i: LandingPromotion) { setForm({ title: i.title, description: i.description ?? '', image_url: i.image_url ?? null, link_url: i.link_url ?? '', start_date: i.start_date ?? '', end_date: i.end_date ?? '', sort_order: String(i.sort_order), is_active: i.is_active }); setEditItem(i); setShowForm(true) }
+  function openAdd() { setForm({ title: '', description: '', fine_print: '', image_url: null, link_url: '', start_date: new Date().toISOString().slice(0,10), end_date: '', sort_order: '0', is_active: true }); setEditItem(null); setShowForm(true) }
+  function openEdit(i: LandingPromotion) { setForm({ title: i.title, description: i.description ?? '', fine_print: i.fine_print ?? '', image_url: i.image_url ?? null, link_url: i.link_url ?? '', start_date: i.start_date ?? '', end_date: i.end_date ?? '', sort_order: String(i.sort_order), is_active: i.is_active }); setEditItem(i); setShowForm(true) }
 
   async function save() {
     if (!form.title.trim()) { showToast('חובה כותרת', 'error'); return }
     setSaving(true)
-    const payload = { tenant_id: tenantId, title: form.title.trim(), description: form.description.trim() || null, image_url: form.image_url ?? null, link_url: form.link_url.trim() || null, start_date: form.start_date || null, end_date: form.end_date || null, sort_order: parseInt(form.sort_order) || 0, is_active: form.is_active }
+    const payload = { tenant_id: tenantId, title: form.title.trim(), description: form.description.trim() || null, fine_print: form.fine_print.trim() || null, image_url: form.image_url ?? null, link_url: form.link_url.trim() || null, start_date: form.start_date || null, end_date: form.end_date || null, sort_order: parseInt(form.sort_order) || 0, is_active: form.is_active }
     if (editItem) await supabase.from('promotions').update(payload).eq('id', editItem.id)
     else await supabase.from('promotions').insert(payload)
     setSaving(false); setShowForm(false); load(); showToast(editItem ? 'עודכן' : 'נוסף', 'success')
@@ -1223,6 +1223,7 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
           <div style={{ marginBottom: '10px' }}><label style={labelSt}>כותרת *</label><input style={inputSt} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="לדוגמה: 20% הנחה על צמיגים" /></div>
           <div style={{ marginBottom: '10px' }}><label style={labelSt}>תיאור</label><textarea style={{ ...inputSt, height: '60px', resize: 'vertical' } as React.CSSProperties} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="פרטי המבצע..." /></div>
+          <div style={{ marginBottom: '10px' }}><label style={labelSt}>אותיות קטנות (תנאים, הגבלות, תוקף)</label><input style={inputSt} value={form.fine_print} onChange={e => setForm(f => ({ ...f, fine_print: e.target.value }))} placeholder="לדוגמה: בתוקף עד 30.4. לרכבים פרטיים בלבד." /></div>
           <div style={{ marginBottom: '10px' }}>
             <label style={labelSt}>תמונה למבצע (אופציונלי)</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
