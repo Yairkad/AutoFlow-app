@@ -78,23 +78,10 @@ export default function PromotionsCarousel({ promotions }: Props) {
           }} />
         )}
 
-        {/* "Hot deal" badge */}
-        <div style={{
-          position: 'absolute', top: '20px', right: '20px',
-          background: '#F5C800', color: '#1a2a6c',
-          fontSize: '12px', fontWeight: 800, letterSpacing: '0.5px',
-          padding: '5px 14px', borderRadius: '20px',
-          display: 'flex', alignItems: 'center', gap: '5px',
-          boxShadow: '0 2px 10px rgba(245,200,0,.45)',
-          zIndex: 3,
-        }}>
-          🔥 מבצע חם
-        </div>
-
         {/* Slide counter */}
         {promotions.length > 1 && (
           <div style={{
-            position: 'absolute', top: '20px', left: '20px',
+            position: 'absolute', top: '16px', left: '16px',
             background: 'rgba(255,255,255,.12)', color: '#fff',
             fontSize: '12px', fontWeight: 600, padding: '4px 10px',
             borderRadius: '12px', zIndex: 3, backdropFilter: 'blur(4px)',
@@ -106,9 +93,20 @@ export default function PromotionsCarousel({ promotions }: Props) {
         {/* Main content */}
         <div style={{
           position: 'relative', zIndex: 2,
-          padding: promo.image_url ? '20px 24px' : '28px 28px',
+          padding: promo.image_url ? '20px 24px' : '24px 28px',
           color: '#fff', width: '100%',
         }}>
+          {/* Inline badge */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '5px',
+            background: '#F5C800', color: '#1a2a6c',
+            fontSize: '11px', fontWeight: 800, letterSpacing: '0.5px',
+            padding: '4px 12px', borderRadius: '20px',
+            boxShadow: '0 2px 8px rgba(245,200,0,.4)',
+            marginBottom: '10px',
+          }}>
+            🔥 מבצע חם
+          </div>
           <h3 style={{
             fontSize: '22px', fontWeight: 900, margin: '0 0 8px',
             lineHeight: 1.3,
