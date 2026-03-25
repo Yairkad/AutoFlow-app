@@ -40,7 +40,7 @@ export default function PromotionsCarousel({ promotions }: Props) {
           : 'linear-gradient(135deg, #1a2a6c 0%, #23389e 55%, #1b3a8f 100%)',
         position: 'relative',
         display: 'flex',
-        alignItems: promo.image_url ? 'flex-end' : 'center',
+        alignItems: 'center',
       }}>
 
         {/* Decorative circles (no-image only) */}
@@ -69,19 +69,28 @@ export default function PromotionsCarousel({ promotions }: Props) {
           </>
         )}
 
-        {/* Gradient overlay for image */}
+        {/* Overlay – works for both dark and light images */}
         {promo.image_url && (
           <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: '70%',
-            background: 'linear-gradient(to top, rgba(0,0,0,.85) 0%, rgba(0,0,0,.4) 60%, transparent 100%)',
+            position: 'absolute', inset: 0,
+            background: 'rgba(8,16,55,0.82)',
             pointerEvents: 'none',
           }} />
         )}
 
+        {/* Flame – top left */}
+        <div style={{
+          position: 'absolute', top: '16px', left: '18px',
+          fontSize: '22px', zIndex: 3, lineHeight: 1,
+          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.4))',
+        }}>
+          🔥
+        </div>
+
         {/* Slide counter */}
         {promotions.length > 1 && (
           <div style={{
-            position: 'absolute', top: '16px', left: '16px',
+            position: 'absolute', top: '16px', right: '16px',
             background: 'rgba(255,255,255,.12)', color: '#fff',
             fontSize: '12px', fontWeight: 600, padding: '4px 10px',
             borderRadius: '12px', zIndex: 3, backdropFilter: 'blur(4px)',
@@ -93,20 +102,9 @@ export default function PromotionsCarousel({ promotions }: Props) {
         {/* Main content */}
         <div style={{
           position: 'relative', zIndex: 2,
-          padding: promo.image_url ? '20px 24px' : '24px 28px',
+          padding: '24px 28px',
           color: '#fff', width: '100%',
         }}>
-          {/* Inline badge */}
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '5px',
-            background: '#F5C800', color: '#1a2a6c',
-            fontSize: '11px', fontWeight: 800, letterSpacing: '0.5px',
-            padding: '4px 12px', borderRadius: '20px',
-            boxShadow: '0 2px 8px rgba(245,200,0,.4)',
-            marginBottom: '10px',
-          }}>
-            🔥 מבצע חם
-          </div>
           <h3 style={{
             fontSize: '22px', fontWeight: 900, margin: '0 0 8px',
             lineHeight: 1.3,
