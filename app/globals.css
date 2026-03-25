@@ -814,6 +814,23 @@ footer {
   justify-content: center;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   Global button hover/press animations
+   (Button.tsx overrides these via inline styles — only affects plain buttons)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+button:not(:disabled) {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,.10);
+}
+button:not(:disabled):active {
+  transform: scale(0.96) translateY(0px);
+  box-shadow: none !important;
+}
+
 @media (max-width: 900px) {
   footer {
     flex-direction: column;

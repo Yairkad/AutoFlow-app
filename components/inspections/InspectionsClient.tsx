@@ -631,7 +631,7 @@ export default function InspectionsClient() {
 
       {/* Page title */}
       <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#10b981,#34d399)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #10b98144' }}>📝</div>
+        <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#10b981,#34d399)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #10b98144' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 12 2 2 4-4"/></svg></div>
         <div>
           <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text)' }}>בדיקות קניה</h1>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>{inspections.length} בדיקות שמורות</p>

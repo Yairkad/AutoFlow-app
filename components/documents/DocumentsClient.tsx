@@ -764,7 +764,7 @@ export default function DocumentsClient() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#06b6d4,#22d3ee)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 3px 10px #06b6d444' }}>📄</div>
+          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#06b6d4,#22d3ee)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #06b6d444' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
           <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text)' }}>מסמכים</h2>
         </div>
         {docTab === 'templates'
