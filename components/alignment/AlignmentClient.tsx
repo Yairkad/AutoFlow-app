@@ -31,8 +31,19 @@ interface AlignmentJob {
   price: number | null
   status: JobStatus
   track_token: string | null
+  external_supplier: string | null
+  work_order_number: number | null
   created_at: string
   updated_at: string
+}
+
+interface BizInfo {
+  name: string
+  sub_title: string | null
+  logo: string | null
+  phone: string | null
+  address: string | null
+  license_number: string | null
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -50,6 +61,131 @@ const emptyForm = {
   plate: '', customer_name: '', customer_phone: '',
   make: '', model: '', year: '', color: '',
   job_type: 'כיוון צירים', notes: '', technician: '', price: '',
+  external_supplier: '',
+}
+
+function todayStr() {
+  const d = new Date()
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
+}
+
+function printWorkOrder(job: AlignmentJob, biz: BizInfo) {
+  const woNum   = job.work_order_number ? `WO-${String(job.work_order_number).padStart(4,'0')}` : '—'
+  const dateStr = todayStr()
+  const makeModel = [job.make, job.model].filter(Boolean).join(' ')
+  const logoHTML  = biz.logo
+    ? `<img src="${biz.logo}" style="max-height:16mm;max-width:38mm;object-fit:contain;display:block;mix-blend-mode:multiply">`
+    : `<div style="width:38mm;height:16mm;border:1.5px dashed #bbb;display:flex;align-items:center;justify-content:center;font-size:10px;color:#bbb">לוגו</div>`
+
+  const html = `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  @page{size:A4 portrait;margin:0}
+  body{font-family:Arial,'Heebo',sans-serif;direction:rtl;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pp{width:210mm;min-height:297mm;padding:12mm 15mm 15mm;display:flex;flex-direction:column;position:relative;font-size:13px;color:#111}
+  .bsd{text-align:right;font-weight:bold;font-size:10px;margin-bottom:3px;color:#444}
+  .hdr{display:flex;justify-content:space-between;align-items:center;border-bottom:2.5px solid #000;padding-bottom:5mm;margin-bottom:4mm}
+  .biz-name{font-size:17px;font-weight:900}
+  .biz-line{font-size:11px;color:#444;line-height:1.7;margin-top:3px}
+  .doc-title{text-align:center;font-size:22px;font-weight:900;text-decoration:underline;margin-bottom:5mm}
+  .info-bar{display:flex;border:2px solid #000;font-size:12px;margin-bottom:5mm}
+  .ibc{display:flex;align-items:center;border-left:1.5px solid #000;padding:4px 10px}
+  .ibc:last-child{border-left:none;flex:1}
+  .ibc .lbl{font-weight:700;white-space:nowrap;margin-left:6px;color:#444}
+  .ibc .val{font-weight:900;font-size:13px}
+  .ibc.serial{background:#f0f0f0}
+  .sup-box{border:2px solid #000;padding:5px 10px;margin-bottom:5mm;display:flex;align-items:center}
+  .sup-box .lbl{font-weight:700;font-size:13px;white-space:nowrap;margin-left:10px;border-left:1.5px solid #000;padding-left:10px}
+  .sup-box .val{font-weight:900;font-size:14px;flex:1;border-bottom:1px solid #000;padding:0 4px;min-height:1.2em}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:5mm;margin-bottom:5mm}
+  .sec h3{font-size:15px;font-weight:900;border-bottom:2px solid #000;margin-bottom:4px;padding-bottom:2px}
+  .row{display:flex;align-items:baseline;margin-bottom:5px;font-size:12.5px}
+  .row .lbl{white-space:nowrap;font-weight:600;margin-left:5px}
+  .row .line{border-bottom:1px solid #000;flex-grow:1;min-height:1.2em;font-weight:700;padding:0 3px;font-size:13px}
+  .sec-full{margin-bottom:5mm}
+  .sec-full h3{font-size:15px;font-weight:900;border-bottom:2px solid #000;margin-bottom:5px;padding-bottom:2px}
+  .eline{border-bottom:1.5px solid #000;height:9mm;margin-bottom:2px}
+  .notes-box{border:1.5px solid #555;padding:5px 8px;min-height:18mm;font-size:12px;color:#999}
+  .sigs{display:flex;justify-content:space-between;margin-top:auto;padding-top:6mm;border-top:1px dashed #888}
+  .sig-item{width:30%;text-align:center;font-size:12px}
+  .sig-line{border-bottom:1.5px solid #000;min-height:14mm;margin-bottom:4px}
+  .sig-label{font-weight:600;font-size:11px;color:#444}
+  .pagenum{position:absolute;bottom:8mm;left:15mm;font-size:9px;color:#aaa}
+</style>
+</head>
+<body>
+<div class="pp">
+  <div class="bsd">בס"ד</div>
+  <div class="hdr">
+    <div>
+      <div class="biz-name">${biz.name}</div>
+      ${biz.sub_title ? `<div style="font-size:11px;color:#333;margin-top:2px">${biz.sub_title}</div>` : ''}
+      <div class="biz-line">
+        ${biz.address ? biz.address + '<br>' : ''}
+        ${biz.phone   ? `טל׳: ${biz.phone}` : ''}
+        ${biz.license_number ? `&nbsp;|&nbsp;רישיון מוסך: ${biz.license_number}` : ''}
+      </div>
+    </div>
+    ${logoHTML}
+  </div>
+
+  <div class="doc-title">הזמנת עבודה חיצונית</div>
+
+  <div class="info-bar">
+    <div class="ibc serial"><span class="lbl">מס׳ הזמנה:</span><span class="val">${woNum}</span></div>
+    <div class="ibc"><span class="lbl">תאריך:</span><span class="val">${dateStr}</span></div>
+    <div class="ibc"><span class="lbl">מס׳ רכב:</span><span class="val">${job.plate}</span></div>
+  </div>
+
+  <div class="sup-box">
+    <span class="lbl">שם הספק / מוסך:</span>
+    <span class="val">${job.external_supplier || ''}</span>
+  </div>
+
+  <div class="two-col">
+    <div class="sec">
+      <h3>פרטי הלקוח</h3>
+      <div class="row"><span class="lbl">שם:</span><div class="line">${job.customer_name}</div></div>
+      <div class="row"><span class="lbl">טלפון:</span><div class="line">${job.customer_phone || ''}</div></div>
+    </div>
+    <div class="sec">
+      <h3>פרטי הרכב</h3>
+      <div class="row"><span class="lbl">יצרן / דגם:</span><div class="line">${makeModel}</div></div>
+      <div class="row"><span class="lbl">שנה:</span><div class="line">${job.year || ''}</div></div>
+      <div class="row"><span class="lbl">צבע:</span><div class="line">${job.color || ''}</div></div>
+    </div>
+  </div>
+
+  <div class="sec-full">
+    <h3>תיאור העבודה הנדרשת</h3>
+    <div class="eline" style="padding:2px 4px;font-size:12px">${job.job_type}</div>
+    <div class="eline"></div>
+    <div class="eline"></div>
+  </div>
+
+  <div class="sec-full">
+    <h3>הערות</h3>
+    <div class="notes-box">${job.notes || ''}</div>
+  </div>
+
+  <div class="sigs">
+    <div class="sig-item"><div class="sig-line"></div><div class="sig-label">חתימת הלקוח</div></div>
+    <div class="sig-item"><div class="sig-line"></div><div class="sig-label">שם הספק המבצע</div></div>
+    <div class="sig-item"><div class="sig-line"></div><div class="sig-label">חתימת המוסך המזמין</div></div>
+  </div>
+
+  <div class="pagenum">הופק ממערכת AutoFlow</div>
+</div>
+<script>window.onload=function(){window.print()}<\/script>
+</body></html>`
+
+  const w = window.open('', '_blank')
+  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
+  w.document.write(html)
+  w.document.close()
 }
 
 // ── Shared styles ──────────────────────────────────────────────────────────────
@@ -69,7 +205,7 @@ const areaSt: React.CSSProperties = {
 // ── Job Card ───────────────────────────────────────────────────────────────────
 
 function JobCard({
-  job, onEdit, onDelete, onWhatsApp, onStatusChange, onCopyLink,
+  job, onEdit, onDelete, onWhatsApp, onStatusChange, onCopyLink, onPrint,
 }: {
   job: AlignmentJob
   onEdit: (job: AlignmentJob) => void
@@ -77,6 +213,7 @@ function JobCard({
   onWhatsApp: (job: AlignmentJob) => void
   onStatusChange: (id: string, status: JobStatus) => void
   onCopyLink: (job: AlignmentJob) => void
+  onPrint: (job: AlignmentJob) => void
 }) {
   const carInfo   = [job.make, job.model, job.year].filter(Boolean).join(' ')
   const curStatus = STATUSES.find(s => s.key === job.status)!
@@ -124,6 +261,16 @@ function JobCard({
           </div>
         )}
 
+        {/* Supplier */}
+        {job.external_supplier && (
+          <div style={{
+            fontSize: '12px', color: '#6d28d9', fontWeight: 600,
+            paddingTop: '4px',
+          }}>
+            🏪 {job.external_supplier}
+          </div>
+        )}
+
         {/* Notes */}
         {job.notes && (
           <div style={{
@@ -155,6 +302,7 @@ function JobCard({
             ? <Button size="sm" variant="secondary" style={{ flex: 1 }} onClick={() => onWhatsApp(job)}>📲 וואטסאפ</Button>
             : <Button size="sm" variant="secondary" style={{ flex: 1 }} onClick={() => onCopyLink(job)}>📋 העתק לינק</Button>
           }
+          <Button size="sm" variant="secondary" onClick={() => onPrint(job)}>🖨️</Button>
           <Button size="sm" variant="secondary" onClick={() => onEdit(job)}>✏️</Button>
           <Button size="sm" variant="danger" onClick={() => onDelete(job.id)}>🗑️</Button>
         </div>
@@ -218,6 +366,13 @@ function JobForm({
 
       <Input label="טכנאי" value={form.technician} onChange={e => onChange('technician', e.target.value)} />
 
+      <Input
+        label="ספק חיצוני (למילוי אם העבודה נשלחת החוצה)"
+        value={form.external_supplier}
+        onChange={e => onChange('external_supplier', e.target.value)}
+        placeholder="שם מוסך / ספק..."
+      />
+
       <div>
         <label style={labelSt}>הערות</label>
         <textarea
@@ -236,6 +391,7 @@ function JobForm({
 export default function AlignmentClient() {
   const supabase      = useRef(createClient()).current
   const tenantId      = useRef<string | null>(null)
+  const bizInfo       = useRef<BizInfo>({ name: 'AutoFlow', sub_title: null, logo: null, phone: null, address: null, license_number: null })
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
 
@@ -268,6 +424,23 @@ export default function AlignmentClient() {
         .from('profiles').select('tenant_id').eq('id', user.id).single()
       if (profile) {
         tenantId.current = profile.tenant_id
+
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('name, sub_title, logo_base64, phone, address, license_number')
+          .eq('id', profile.tenant_id)
+          .maybeSingle()
+        if (tenant) {
+          bizInfo.current = {
+            name:           tenant.name ?? 'AutoFlow',
+            sub_title:      tenant.sub_title ?? null,
+            logo:           tenant.logo_base64 ?? null,
+            phone:          tenant.phone ?? null,
+            address:        tenant.address ?? null,
+            license_number: tenant.license_number ?? null,
+          }
+        }
+
         await loadJobs()
       }
       setLoading(false)
@@ -317,17 +490,18 @@ export default function AlignmentClient() {
   const openEdit = (job: AlignmentJob) => {
     setEditingJob(job)
     setForm({
-      plate:          job.plate,
-      customer_name:  job.customer_name,
-      customer_phone: job.customer_phone ?? '',
-      make:           job.make   ?? '',
-      model:          job.model  ?? '',
-      year:           job.year   ? String(job.year) : '',
-      color:          job.color  ?? '',
-      job_type:       job.job_type,
-      notes:          job.notes  ?? '',
-      technician:     job.technician ?? '',
-      price:          job.price != null ? String(job.price) : '',
+      plate:             job.plate,
+      customer_name:     job.customer_name,
+      customer_phone:    job.customer_phone ?? '',
+      make:              job.make   ?? '',
+      model:             job.model  ?? '',
+      year:              job.year   ? String(job.year) : '',
+      color:             job.color  ?? '',
+      job_type:          job.job_type,
+      notes:             job.notes  ?? '',
+      technician:        job.technician ?? '',
+      price:             job.price != null ? String(job.price) : '',
+      external_supplier: job.external_supplier ?? '',
     })
     setShowModal(true)
   }
@@ -341,19 +515,20 @@ export default function AlignmentClient() {
     }
     setSaving(true)
     const payload = {
-      tenant_id:      tenantId.current,
-      plate:          form.plate.trim(),
-      customer_name:  form.customer_name.trim(),
-      customer_phone: form.customer_phone.trim() || null,
-      make:           form.make.trim()  || null,
-      model:          form.model.trim() || null,
-      year:           form.year  ? Number(form.year)  : null,
-      color:          form.color.trim() || null,
-      job_type:       form.job_type,
-      notes:          form.notes.trim() || null,
-      technician:     form.technician.trim() || null,
-      price:          form.price ? Number(form.price) : null,
-      updated_at:     new Date().toISOString(),
+      tenant_id:         tenantId.current,
+      plate:             form.plate.trim(),
+      customer_name:     form.customer_name.trim(),
+      customer_phone:    form.customer_phone.trim() || null,
+      make:              form.make.trim()  || null,
+      model:             form.model.trim() || null,
+      year:              form.year  ? Number(form.year)  : null,
+      color:             form.color.trim() || null,
+      job_type:          form.job_type,
+      notes:             form.notes.trim() || null,
+      technician:        form.technician.trim() || null,
+      price:             form.price ? Number(form.price) : null,
+      external_supplier: form.external_supplier.trim() || null,
+      updated_at:        new Date().toISOString(),
     }
     if (editingJob) {
       const { error } = await supabase.from('alignment_jobs').update(payload).eq('id', editingJob.id)
@@ -481,6 +656,7 @@ export default function AlignmentClient() {
               onWhatsApp={handleWhatsApp}
               onStatusChange={updateStatus}
               onCopyLink={handleCopyLink}
+              onPrint={j => printWorkOrder(j, bizInfo.current)}
             />
           ))}
         </div>
