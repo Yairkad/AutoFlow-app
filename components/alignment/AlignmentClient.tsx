@@ -55,12 +55,20 @@ const STATUSES: { key: JobStatus; label: string; color: string; bg: string }[] =
   { key: 'delivered',   label: '🚗 נמסר',   color: '#6b7280', bg: '#f3f4f6' },
 ]
 
-const JOB_TYPES = ['כיוון צירים', 'איזון גלגלים', 'כיוון + איזון', 'אחר']
+const FRONT_OPTS = ['כיוון פרונט קדמי', 'כיוון פרונט אחורי'] as const
+const OTHER_JOB_TYPES = ['איזון גלגלים', 'אחר']
+
+function jobTypeFromFront(kadmi: boolean, achori: boolean): string {
+  if (kadmi && achori) return 'כיוון פרונט קדמי + אחורי'
+  if (kadmi)           return 'כיוון פרונט קדמי'
+  if (achori)          return 'כיוון פרונט אחורי'
+  return ''
+}
 
 const emptyForm = {
   plate: '', customer_name: '', customer_phone: '',
   make: '', model: '', year: '', color: '',
-  job_type: 'כיוון צירים', notes: '', technician: '', price: '',
+  job_type: 'כיוון פרונט קדמי', notes: '', technician: '', price: '',
   external_supplier: '',
 }
 
@@ -74,8 +82,8 @@ function printWorkOrder(job: AlignmentJob, biz: BizInfo) {
   const dateStr = todayStr()
   const makeModel = [job.make, job.model].filter(Boolean).join(' ')
   const logoHTML  = biz.logo
-    ? `<img src="${biz.logo}" style="max-height:16mm;max-width:38mm;object-fit:contain;display:block;mix-blend-mode:multiply">`
-    : `<div style="width:38mm;height:16mm;border:1.5px dashed #bbb;display:flex;align-items:center;justify-content:center;font-size:10px;color:#bbb">לוגו</div>`
+    ? `<img src="${biz.logo}" style="max-height:28mm;max-width:60mm;object-fit:contain;display:block;mix-blend-mode:multiply">`
+    : `<div style="width:60mm;height:28mm;border:1.5px dashed #bbb;display:flex;align-items:center;justify-content:center;font-size:10px;color:#bbb">לוגו</div>`
 
   const html = `<!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -172,7 +180,6 @@ function printWorkOrder(job: AlignmentJob, biz: BizInfo) {
   </div>
 
   <div class="sigs">
-    <div class="sig-item"><div class="sig-line"></div><div class="sig-label">חתימת הלקוח</div></div>
     <div class="sig-item"><div class="sig-line"></div><div class="sig-label">שם הספק המבצע</div></div>
     <div class="sig-item"><div class="sig-line"></div><div class="sig-label">חתימת המוסך המזמין</div></div>
   </div>
@@ -353,16 +360,62 @@ function JobForm({
         <Input label="טלפון"       value={form.customer_phone} onChange={e => onChange('customer_phone', e.target.value)} />
       </div>
 
-      {/* Job */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-        <div>
-          <label style={labelSt}>סוג עבודה *</label>
-          <select style={selSt} value={form.job_type} onChange={e => onChange('job_type', e.target.value)}>
-            {JOB_TYPES.map(t => <option key={t}>{t}</option>)}
-          </select>
+      {/* Job type */}
+      <div>
+        <label style={labelSt}>סוג עבודה *</label>
+        {/* Front alignment – two independent toggles */}
+        <div style={{ marginBottom: '6px' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>כיוון פרונט:</span>
+          {(['קדמי', 'אחורי'] as const).map(side => {
+            const val    = `כיוון פרונט ${side}`
+            const active = form.job_type.includes(val) || form.job_type === `כיוון פרונט קדמי + אחורי`
+            const isKadmi = side === 'קדמי'
+            const toggle  = () => {
+              const curKadmi  = form.job_type.includes('קדמי')
+              const curAchori = form.job_type.includes('אחורי')
+              const nextKadmi  = isKadmi  ? !curKadmi  : curKadmi
+              const nextAchori = !isKadmi ? !curAchori : curAchori
+              const next = jobTypeFromFront(nextKadmi, nextAchori)
+              onChange('job_type', next || OTHER_JOB_TYPES[0])
+            }
+            return (
+              <button key={side} type="button" onClick={toggle} style={{
+                padding: '5px 14px', marginLeft: '6px', borderRadius: '20px',
+                border: '1.5px solid ' + (active ? 'var(--primary)' : 'var(--border)'),
+                background: active ? 'var(--primary)' : 'var(--bg)',
+                color: active ? '#fff' : 'var(--text-muted)',
+                fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all .15s',
+              }}>
+                {side}
+              </button>
+            )
+          })}
         </div>
-        <Input label="מחיר (₪)" value={form.price} onChange={e => onChange('price', e.target.value)} type="number" />
+        {/* Other types */}
+        <div>
+          {OTHER_JOB_TYPES.map(t => {
+            const active = form.job_type === t
+            return (
+              <button key={t} type="button" onClick={() => onChange('job_type', t)} style={{
+                padding: '5px 14px', marginLeft: '6px', borderRadius: '20px',
+                border: '1.5px solid ' + (active ? 'var(--accent)' : 'var(--border)'),
+                background: active ? 'var(--accent)' : 'var(--bg)',
+                color: active ? '#fff' : 'var(--text-muted)',
+                fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all .15s',
+              }}>
+                {t}
+              </button>
+            )
+          })}
+        </div>
+        {form.job_type && (
+          <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+            נבחר: <strong style={{ color: 'var(--text)' }}>{form.job_type}</strong>
+          </div>
+        )}
       </div>
+
+      <Input label="מחיר (₪)" value={form.price} onChange={e => onChange('price', e.target.value)} type="number" />
 
       <Input label="טכנאי" value={form.technician} onChange={e => onChange('technician', e.target.value)} />
 
@@ -609,7 +662,7 @@ export default function AlignmentClient() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#6366f1,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #6366f144' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg></div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>פרונט / כיוון צירים</h1>
+            <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>כיוון פרונט</h1>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{activeCount} עבודות פעילות</div>
           </div>
         </div>
