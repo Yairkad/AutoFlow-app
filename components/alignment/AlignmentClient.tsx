@@ -13,7 +13,7 @@ import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type JobStatus = 'waiting' | 'in_progress' | 'done' | 'delivered'
+type JobStatus = 'waiting' | 'in_progress' | 'done' | 'delivered' | 'cancelled'
 
 interface AlignmentJob {
   id: string
@@ -53,16 +53,28 @@ const STATUSES: { key: JobStatus; label: string; color: string; bg: string }[] =
   { key: 'in_progress', label: '🔧 בטיפול', color: '#1e40af', bg: '#dbeafe' },
   { key: 'done',        label: '✅ הושלם',  color: '#065f46', bg: '#d1fae5' },
   { key: 'delivered',   label: '🚗 נמסר',   color: '#6b7280', bg: '#f3f4f6' },
+  { key: 'cancelled',   label: '🚫 בוטל',   color: '#991b1b', bg: '#fee2e2' },
 ]
 
-const FRONT_OPTS = ['כיוון פרונט קדמי', 'כיוון פרונט אחורי'] as const
-const OTHER_JOB_TYPES = ['איזון גלגלים', 'אחר']
+// ── Job type tags (independent toggles) ───────────────────────────────────────
 
-function jobTypeFromFront(kadmi: boolean, achori: boolean): string {
-  if (kadmi && achori) return 'כיוון פרונט קדמי + אחורי'
-  if (kadmi)           return 'כיוון פרונט קדמי'
-  if (achori)          return 'כיוון פרונט אחורי'
-  return ''
+function parseJobTags(jt: string) {
+  return {
+    kadmi:  jt.includes('קדמי'),
+    achori: jt.includes('אחורי'),
+    izun:   jt.includes('איזון'),
+    acher:  jt === 'אחר',
+  }
+}
+
+function buildJobType(t: ReturnType<typeof parseJobTags>): string {
+  if (t.acher) return 'אחר'
+  const parts: string[] = []
+  if (t.kadmi && t.achori) parts.push('כיוון פרונט קדמי + אחורי')
+  else if (t.kadmi)        parts.push('כיוון פרונט קדמי')
+  else if (t.achori)       parts.push('כיוון פרונט אחורי')
+  if (t.izun)              parts.push('איזון גלגלים')
+  return parts.join(' + ') || 'כיוון פרונט קדמי'
 }
 
 const emptyForm = {
@@ -360,50 +372,38 @@ function JobForm({
         <Input label="טלפון"       value={form.customer_phone} onChange={e => onChange('customer_phone', e.target.value)} />
       </div>
 
-      {/* Job type */}
+      {/* Job type – all independent toggles */}
       <div>
         <label style={labelSt}>סוג עבודה *</label>
-        {/* Front alignment – two independent toggles */}
-        <div style={{ marginBottom: '6px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>כיוון פרונט:</span>
-          {(['קדמי', 'אחורי'] as const).map(side => {
-            const val    = `כיוון פרונט ${side}`
-            const active = form.job_type.includes(val) || form.job_type === `כיוון פרונט קדמי + אחורי`
-            const isKadmi = side === 'קדמי'
-            const toggle  = () => {
-              const curKadmi  = form.job_type.includes('קדמי')
-              const curAchori = form.job_type.includes('אחורי')
-              const nextKadmi  = isKadmi  ? !curKadmi  : curKadmi
-              const nextAchori = !isKadmi ? !curAchori : curAchori
-              const next = jobTypeFromFront(nextKadmi, nextAchori)
-              onChange('job_type', next || OTHER_JOB_TYPES[0])
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+          {([
+            { label: 'פרונט קדמי',    tag: 'kadmi',  color: 'var(--primary)' },
+            { label: 'פרונט אחורי',   tag: 'achori', color: 'var(--primary)' },
+            { label: 'איזון גלגלים',  tag: 'izun',   color: 'var(--accent)'  },
+            { label: 'אחר',           tag: 'acher',  color: 'var(--warning)' },
+          ] as const).map(({ label, tag, color }) => {
+            const tags   = parseJobTags(form.job_type)
+            const active = tags[tag]
+            const toggle = () => {
+              const next = { ...parseJobTags(form.job_type) }
+              if (tag === 'acher') {
+                // "אחר" is standalone
+                Object.assign(next, { kadmi: false, achori: false, izun: false, acher: !next.acher })
+              } else {
+                next[tag] = !next[tag]
+                next.acher = false
+              }
+              onChange('job_type', buildJobType(next))
             }
             return (
-              <button key={side} type="button" onClick={toggle} style={{
-                padding: '5px 14px', marginLeft: '6px', borderRadius: '20px',
-                border: '1.5px solid ' + (active ? 'var(--primary)' : 'var(--border)'),
-                background: active ? 'var(--primary)' : 'var(--bg)',
+              <button key={tag} type="button" onClick={toggle} style={{
+                padding: '5px 14px', borderRadius: '20px',
+                border: `1.5px solid ${active ? color : 'var(--border)'}`,
+                background: active ? color : 'var(--bg)',
                 color: active ? '#fff' : 'var(--text-muted)',
                 fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all .15s',
               }}>
-                {side}
-              </button>
-            )
-          })}
-        </div>
-        {/* Other types */}
-        <div>
-          {OTHER_JOB_TYPES.map(t => {
-            const active = form.job_type === t
-            return (
-              <button key={t} type="button" onClick={() => onChange('job_type', t)} style={{
-                padding: '5px 14px', marginLeft: '6px', borderRadius: '20px',
-                border: '1.5px solid ' + (active ? 'var(--accent)' : 'var(--border)'),
-                background: active ? 'var(--accent)' : 'var(--bg)',
-                color: active ? '#fff' : 'var(--text-muted)',
-                fontSize: '13px', fontWeight: 600, cursor: 'pointer', transition: 'all .15s',
-              }}>
-                {t}
+                {label}
               </button>
             )
           })}
