@@ -59,6 +59,22 @@ const ICONS: Record<string, React.ReactNode> = {
   '/my-profile':  <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
 }
 
+// ─── Merge helper: adds any new hrefs (from SECTIONS) missing in saved layout ──
+function mergeMissingSections(saved: SectionConfig[]): SectionConfig[] {
+  const allSavedHrefs = new Set(saved.flatMap(s => s.hrefs))
+  let result = saved.map(s => ({ ...s, hrefs: [...s.hrefs] }))
+  for (const defaultSection of SECTIONS) {
+    for (const href of defaultSection.hrefs) {
+      if (!allSavedHrefs.has(href)) {
+        // Find matching section by label, or append to last section
+        const target = result.find(s => s.label === defaultSection.label) ?? result[result.length - 1]
+        target.hrefs.push(href)
+      }
+    }
+  }
+  return result
+}
+
 // ─── Skeleton (מחוץ לקומפוננטה — לא יתמאונט מחדש בכל render) ─────────────────
 function SkeletonNav() {
   return (
@@ -173,7 +189,7 @@ export default function Sidebar({
     if (typeof window === 'undefined') return SECTIONS
     try {
       const saved = localStorage.getItem(SIDEBAR_LAYOUT_KEY)
-      return saved ? JSON.parse(saved) : SECTIONS
+      return saved ? mergeMissingSections(JSON.parse(saved)) : SECTIONS
     } catch { return SECTIONS }
   })
 
@@ -195,8 +211,9 @@ export default function Sidebar({
                     setTenantLogo(t.logo_base64 || null)
                     const remote = (t.ui_settings as any)?.sidebar_layout
                     if (remote) {
-                      setActiveSections(remote)
-                      localStorage.setItem(SIDEBAR_LAYOUT_KEY, JSON.stringify(remote))
+                      const merged = mergeMissingSections(remote)
+                      setActiveSections(merged)
+                      localStorage.setItem(SIDEBAR_LAYOUT_KEY, JSON.stringify(merged))
                     }
                   }
                 })
