@@ -56,7 +56,8 @@ const INITIAL_GROUPS: Group[] = [
       { id: 'tires',       href: '/tires',       label: 'צמיגים',      icon: '🔘', color: '#0891b2', description: 'מלאי צמיגים לפי מידה ועונה' },
       { id: 'alignment',   href: '/alignment',   label: 'פרונט',       icon: '🔩', color: '#ea580c', description: 'עבודות כיוון גלגלים ופרונט' },
       { id: 'cars',        href: '/cars',        label: 'רכבים',       icon: '🚗', color: '#059669', description: 'קניה ומכירה של רכבים' },
-      { id: 'inspections', href: '/inspections', label: 'בדיקות קניה', icon: '📝', color: '#0369a1', description: 'דוח בדיקת רכב לפני קניה' },
+      { id: 'inspections',   href: '/inspections',   label: 'בדיקות קניה',  icon: '📝', color: '#0369a1', description: 'דוח בדיקת רכב לפני קניה' },
+      { id: 'test-transfer', href: '/test-transfer', label: 'שינוע לטסטים', icon: '🚐', color: '#d97706', description: 'שינוע רכבים לבדיקת רישוי, תיקונים וחיובים' },
     ],
   },
   {
