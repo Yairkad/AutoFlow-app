@@ -30,6 +30,7 @@ interface TestTransfer {
   notes: string | null
   status: TransferStatus
   extra_charges: ExtraCharge[]
+  track_token: string | null
   created_at: string
 }
 
@@ -392,6 +393,31 @@ export default function TestTransferClient() {
   const updateStatus = async (id: string, status: TransferStatus) => {
     await supabase.from('test_transfers').update({ status }).eq('id', id)
     setTransfers(prev => prev.map(t => t.id === id ? { ...t, status } : t))
+  }
+
+  // ── WhatsApp / copy link ─────────────────────────────────────────────────────
+
+  const handleCopyLink = (t: TestTransfer) => {
+    if (!t.track_token) { showToast('אין לינק מעקב', 'error'); return }
+    const url = `${window.location.origin}/track/${t.track_token}`
+    navigator.clipboard.writeText(url)
+      .then(() => showToast('לינק הועתק ללוח', 'success'))
+      .catch(() => showToast('שגיאה בהעתקה', 'error'))
+  }
+
+  const handleWhatsApp = (t: TestTransfer) => {
+    if (!t.track_token || !t.customer_phone) {
+      showToast('אין טלפון ללקוח', 'error')
+      return
+    }
+    const url     = `${window.location.origin}/track/${t.track_token}`
+    const carInfo = [t.make, t.model].filter(Boolean).join(' ')
+    const dateStr = t.transfer_date
+      ? `\nתאריך טסט: ${new Date(t.transfer_date).toLocaleDateString('he-IL')}`
+      : ''
+    const msg = `שלום ${t.customer_name},\nרכבך ${carInfo ? `(${carInfo}) ` : ''}לוחית ${t.plate} בתהליך שינוע לטסט.${dateStr}\nלמעקב סטטוס בזמן אמת: ${url}`
+    const phone = t.customer_phone.replace(/\D/g, '')
+    window.open(`https://wa.me/972${phone.replace(/^0/, '')}?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────────
@@ -785,13 +811,23 @@ export default function TestTransferClient() {
                       </div>
                     )}
 
-                    {/* Footer: actions */}
-                    {showActions && (
-                      <div style={{ display: 'flex', gap: 2, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
-                        <ActionBtn onClick={() => openEdit(t)} title="עריכה">✏️</ActionBtn>
-                        <ActionBtn onClick={() => handleDelete(t.id)} title="מחיקה">🗑️</ActionBtn>
-                      </div>
-                    )}
+                    {/* Footer: track link + actions */}
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+                      {/* WhatsApp + copy link – always visible */}
+                      {t.track_token && (
+                        <>
+                          <ActionBtn onClick={() => handleWhatsApp(t)} title="שלח לינק מעקב בוואטסאפ">📲</ActionBtn>
+                          <ActionBtn onClick={() => handleCopyLink(t)} title="העתק לינק מעקב">🔗</ActionBtn>
+                        </>
+                      )}
+                      <div style={{ flex: 1 }} />
+                      {showActions && (
+                        <>
+                          <ActionBtn onClick={() => openEdit(t)} title="עריכה">✏️</ActionBtn>
+                          <ActionBtn onClick={() => handleDelete(t.id)} title="מחיקה">🗑️</ActionBtn>
+                        </>
+                      )}
+                    </div>
                   </div>
                 )
               })}
