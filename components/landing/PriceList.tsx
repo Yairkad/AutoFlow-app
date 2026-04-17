@@ -51,10 +51,10 @@ export default function PriceList({ items }: Props) {
             >
               <span>{cat}</span>
               <span style={{
-                flexShrink: 0, width: '28px', height: '28px',
-                borderRadius: '50%', background: isOpen ? '#F5C800' : 'rgba(255,255,255,0.15)',
+                flexShrink: 0, width: '26px', height: '26px',
+                borderRadius: '50%', background: isOpen ? '#F5C800' : '#f1f5f9',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '15px', color: isOpen ? '#1a2a6c' : '#fff',
+                fontSize: '14px', color: isOpen ? '#1a2a6c' : '#64748b',
                 transition: 'background 0.2s, transform 0.25s',
                 transform: isOpen ? 'rotate(180deg)' : 'none',
               }}>
