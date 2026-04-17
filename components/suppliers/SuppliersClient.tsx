@@ -349,7 +349,7 @@ export default function SuppliersClient() {
       <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
 
         {/* ── Suppliers list ── */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, maxHeight: 'calc(100dvh - 240px)', overflowY: 'auto', paddingLeft: '4px' }}>
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
               <div style={{ fontSize: '52px', marginBottom: '12px' }}>🏭</div>

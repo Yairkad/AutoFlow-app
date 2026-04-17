@@ -7,6 +7,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Button from '@/components/ui/Button'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
+import InspectionChecklistModal, { ChecklistBadge } from './InspectionChecklistModal'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -351,6 +352,7 @@ export default function InspectionsClient() {
   const [uploadingId,    setUploadingId]    = useState<string | null>(null)
   const [scanningInsId,  setScanningInsId]  = useState<string | null>(null)
   const [editModalOpen,  setEditModalOpen]  = useState(false)
+  const [checklistIns,   setChecklistIns]  = useState<Inspection | null>(null)
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -554,6 +556,14 @@ export default function InspectionsClient() {
     showToast('נשמר בהצלחה', 'success')
     loadInspections()
     clearForm()
+  }
+
+  // ── Save checklist ───────────────────────────────────────────────────────────
+
+  const saveChecklist = async (insId: string, findings: string) => {
+    await supabase.from('car_inspections').update({ findings }).eq('id', insId)
+    setInspections(prev => prev.map(i => i.id === insId ? { ...i, findings } : i))
+    showToast('ממצאים נשמרו ✓', 'success')
   }
 
   // ── Delete ───────────────────────────────────────────────────────────────────
@@ -882,6 +892,19 @@ export default function InspectionsClient() {
                     </div>
                   )}
 
+                  {/* Checklist badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <ChecklistBadge findings={ins.findings} />
+                    <button
+                      onClick={() => setChecklistIns(ins)}
+                      style={{
+                        padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                        border: '1px solid var(--border)', background: 'var(--bg)',
+                        color: 'var(--text)', cursor: 'pointer',
+                      }}
+                    >📋 ממצאי בדיקה</button>
+                  </div>
+
                   {/* Footer: drive + actions */}
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
                     {ins.drive_file_id ? (
@@ -935,6 +958,16 @@ export default function InspectionsClient() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ── Checklist Modal ── */}
+      {checklistIns && (
+        <InspectionChecklistModal
+          inspection={checklistIns}
+          business={bizInfo.current}
+          onClose={() => setChecklistIns(null)}
+          onSave={saveChecklist}
+        />
       )}
 
       {/* ── Edit Modal ── */}

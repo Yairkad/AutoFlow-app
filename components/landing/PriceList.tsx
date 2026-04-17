@@ -50,8 +50,15 @@ export default function PriceList({ items }: Props) {
               }}
             >
               <span>{cat}</span>
-              <span style={{ fontSize: '20px', fontWeight: 400, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.25s' }}>
-                &#8744;
+              <span style={{
+                flexShrink: 0, width: '28px', height: '28px',
+                borderRadius: '50%', background: isOpen ? '#F5C800' : 'rgba(255,255,255,0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '15px', color: isOpen ? '#1a2a6c' : '#fff',
+                transition: 'background 0.2s, transform 0.25s',
+                transform: isOpen ? 'rotate(180deg)' : 'none',
+              }}>
+                ▾
               </span>
             </button>
 

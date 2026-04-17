@@ -216,6 +216,7 @@ export default function TiresClient() {
         <td>${tireSize(t)}</td>
         <td>${t.brand || '—'}</td>
         <td style="text-align:center">${t.load_idx || '—'}${t.speed_idx ? ' ' + t.speed_idx : ''}</td>
+        <td style="text-align:center">${t.location || '—'}</td>
         <td style="text-align:center;font-weight:700;color:#1a9e5c">₪${t.sell_price!.toLocaleString('he-IL',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
       </tr>`).join('')
     const html = `<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8">
@@ -235,7 +236,7 @@ export default function TiresClient() {
 <h1>🔘 מחירון צמיגים</h1>
 <p>${new Date().toLocaleDateString('he-IL')} · ${rows.length} פריטים</p>
 <table>
-  <thead><tr><th>מידה</th><th>יצרן</th><th style="text-align:center">מדדים</th><th style="text-align:center">מחיר מכירה</th></tr></thead>
+  <thead><tr><th>מידה</th><th>יצרן</th><th style="text-align:center">מדדים</th><th style="text-align:center">מיקום</th><th style="text-align:center">מחיר מכירה</th></tr></thead>
   <tbody>${rowsHTML}</tbody>
 </table>
 <script>window.onload=function(){window.print()}<\/script>
@@ -638,8 +639,8 @@ export default function TiresClient() {
           )}
 
           {/* Table */}
-          <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-            <div style={{ overflowX: 'auto' }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <div style={{ overflowX: 'auto', borderRadius: '12px' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
@@ -896,7 +897,7 @@ export default function TiresClient() {
           </div>
 
           {/* Movements table */}
-          <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
             <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '14px' }}>
               היסטוריית תנועות ({movements.length})
             </div>
