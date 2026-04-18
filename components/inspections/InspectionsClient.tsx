@@ -7,7 +7,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Button from '@/components/ui/Button'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
-import InspectionChecklistModal, { ChecklistBadge } from './InspectionChecklistModal'
+import InspectionChecklistModal, { ChecklistBadge, parseFindings, printChecklist } from './InspectionChecklistModal'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -353,6 +353,7 @@ export default function InspectionsClient() {
   const [scanningInsId,  setScanningInsId]  = useState<string | null>(null)
   const [editModalOpen,  setEditModalOpen]  = useState(false)
   const [checklistIns,   setChecklistIns]  = useState<Inspection | null>(null)
+  const [findingsMenuId, setFindingsMenuId] = useState<string | null>(null)
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -581,6 +582,23 @@ export default function InspectionsClient() {
   const handlePrint = (ins: Inspection) => {
     setPrintData({ inspection: ins, business: bizInfo.current })
     setTimeout(() => window.print(), 100)
+  }
+
+  // ── Print checklist (direct from list) ──────────────────────────────────────
+
+  const printChecklistFromList = (ins: Inspection) => {
+    const { items, notes } = parseFindings(ins.findings)
+    printChecklist(ins, bizInfo.current, items, notes)
+  }
+
+  // ── Clear findings ───────────────────────────────────────────────────────────
+
+  const clearFindings = async (id: string) => {
+    const ok = await confirm({ msg: 'לאפס את כל ממצאי הבדיקה?', variant: 'danger' })
+    if (!ok) return
+    await supabase.from('car_inspections').update({ findings: null }).eq('id', id)
+    setInspections(prev => prev.map(i => i.id === id ? { ...i, findings: null } : i))
+    showToast('הממצאים אופסו', 'success')
   }
 
   // ── Drive upload ─────────────────────────────────────────────────────────────
@@ -892,17 +910,35 @@ export default function InspectionsClient() {
                     </div>
                   )}
 
-                  {/* Checklist badge */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {/* Checklist badge + action menu */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <ChecklistBadge findings={ins.findings} />
-                    <button
-                      onClick={() => setChecklistIns(ins)}
-                      style={{
-                        padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                        border: '1px solid var(--border)', background: 'var(--bg)',
-                        color: 'var(--text)', cursor: 'pointer',
-                      }}
-                    >📋 ממצאי בדיקה</button>
+                    {findingsMenuId === ins.id ? (
+                      <>
+                        <button onClick={() => { setChecklistIns(ins); setFindingsMenuId(null) }}
+                          style={{ padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1.5px solid var(--primary)', background: 'var(--primary)', color: '#fff', cursor: 'pointer' }}>
+                          ✏️ ערוך
+                        </button>
+                        <button onClick={() => { printChecklistFromList(ins); setFindingsMenuId(null) }}
+                          style={{ padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', cursor: 'pointer' }}>
+                          🖨️ הדפס
+                        </button>
+                        <button onClick={() => { clearFindings(ins.id); setFindingsMenuId(null) }}
+                          style={{ padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1px solid var(--danger)', background: '#fef2f2', color: 'var(--danger)', cursor: 'pointer' }}>
+                          🗑️ מחק ממצאים
+                        </button>
+                        <button onClick={() => setFindingsMenuId(null)}
+                          style={{ padding: '4px 8px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                          ✕
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setFindingsMenuId(ins.id)}
+                        style={{ padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', cursor: 'pointer' }}>
+                        📋 ממצאי בדיקה
+                      </button>
+                    )}
                   </div>
 
                   {/* Footer: drive + actions */}

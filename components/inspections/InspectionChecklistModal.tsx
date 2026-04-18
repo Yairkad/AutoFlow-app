@@ -29,30 +29,167 @@ export const INSPECTION_SYSTEMS = [
   'מחוונים',
 ]
 
-// ── Common faults per system (for quick-pick dropdown) ────────────────────────
+// ── Common faults per system — official MOT list (נספח 5) ─────────────────────
 
 const COMMON_FAULTS: Record<string, string[]> = {
-  'מנוע':               ['דליפת שמן', 'רעשים חריגים', 'עשן שחור', 'עשן לבן', 'חוסר כוח', 'רטט חריג', 'לחץ שמן נמוך'],
-  'מערכת קירור':        ['דליפת נוזל קירור', 'תרמוסטט פגום', 'מאוורר אינו פועל', 'צינורות סדוקים', 'רדיאטור פגוע'],
-  'מערכת דלק':          ['דליפת דלק', 'שאיבת דלק לקויה', 'מסנן סתום', 'חיישן רמת דלק תקול'],
-  'מערכת הצתה':         ['נרות הצתה בלויים', 'כבלי הצתה פגומים', 'קופסת הצתה תקולה', 'עמדת הצתה שגויה'],
-  'מערכת פליטה':        ['דליפת גזים', 'מחלב סדוק', 'שפופרת חלודה', 'קטליזטור פגום', 'רעש חריג'],
-  'מערכת היגוי':        ['ריפוף בהגה', 'דליפת נוזל הגה', 'רעשים בפנייה', 'חוסר ישרות', 'ג׳וינטים בלויים'],
-  'תיבת הילוכים':       ['חלקה בהילוכים', 'רעשים', 'דליפת שמן', 'קושי בכניסה להילוך', 'הילוך אחורי תקול'],
-  'מערכת העברת כוח':   ['דליפת שמן גיר', 'ג׳וינט CV בלוי', 'רטט בנסיעה', 'ציר פגום'],
-  'קפיצים':             ['קפיץ שבור', 'שקיעת קפיץ', 'רעש חריג', 'ריפוף'],
-  'בולמי זעזועים':      ['בולם דולף', 'בולם חלוד', 'בולם בלוי', 'רעש מדרגות'],
-  'מתלה קדמי':          ['בושינג בלוי', 'ג׳וינט כדורי בלוי', 'זרוע מתלה עקומה', 'מוט סטביליזציה תקול'],
-  'מתלה אחורי':         ['בושינג בלוי', 'מוט סטביליזציה תקול', 'נקודות חיבור חלודות', 'זרוע עקומה'],
-  'מערכת בלמים':        ['בלאי רפידות', 'דיסק פגוע', 'דליפת נוזל בלמים', 'בולם בלמים תקול', 'עיכוב בלימה'],
-  'בלם עזר':            ['בלם יד רפוי', 'כבל בלם יד מתוח', 'מנגנון בלם יד תקול'],
-  'צמיגים':             ['בלאי לא אחיד', 'צמיג עם חתך', 'לחץ אוויר נמוך', 'בולטת צד', 'גיל מתקדם'],
-  'חישוקים':            ['חישוק פגוע', 'חישוק עקום', 'חישוק חלוד', 'אגוזים חסרים'],
-  'שלדת מרכב':          ['חלודה', 'נזק מתאונה', 'ריתוך לא מקורי', 'עיוות מבנה'],
-  'מרכב (פחחות)':       ['נזק פח', 'חלודה', 'צבע לא מקורי', 'פאנל מוחלף', 'שריטות עמוקות'],
-  'אביזרי בטיחות':      ['חגורת בטיחות תקולה', 'כרית אוויר מחוסרת', 'נעילות ילדים', 'ראי לא תקין'],
-  'מערכת תאורה':        ['פנס שבור', 'נורה לא פועלת', 'אורות ערפל תקולים', 'תאורה אחורית פגומה'],
-  'מחוונים':            ['מד מהירות תקול', 'מד דלק תקול', 'נורת אזהרה דולקת', 'מד טמפרטורה תקול'],
+  'מנוע': [
+    'בלאי פנימי גבוה', 'שריפות שמן ממובילי שסתומים', 'פולי מנוע זורק', 'מנוע שורף שמן',
+    'לחץ שמן נמוך', 'לחץ עוקה גבוה (מבלאי)', 'מנוע נכבה באיחור', 'צינור נשם מנותק',
+    'מנוע לפני שיפוץ', 'רטיבות שמן במסנן אויר', 'דליפות לחץ גבוהות בצילינדרים',
+    'מצתים רטובים בשמן', 'דליפות לחץ בינוניות בצילינדרים', 'הברגות פגומות בראש מנוע',
+    'לחץ דחיסה נמוך', 'מעבר לחץ למערכת קירור', 'לחץ דחיסה גבוה', 'הספק מנוע ירוד',
+    'לחץ דחיסה לא זהה', 'סימני דליפה בין ראש מנוע והבלוק', 'מנוע מצלצל',
+    'נוזל קירור בשמן', 'רעש מערכת שסתומים', 'סימני מים בנשם מנוע',
+    'רעש מערכת תזמון', 'סדק בגוף המנוע', 'רעש מערכת תזמון ושסתומים', 'פקקי מים פגומים',
+    'רעשים במנוע', 'נזילת מים מפקקי מים', 'רעשים ונקישות פנימיים', 'תושבות מנוע פגומות',
+    'רעש פנימי ממסבים', 'מדיד שמן פגום', 'נקישות גל זיזים', 'מעיכות אגן שמן',
+    'חוסר שמן במנוע', 'הלחמות בבלוק המנוע', 'נזילות שמן', 'חופש גל ארכובה',
+  ],
+  'מערכת קירור': [
+    'נזילות מים ממצנן', 'ריקבון במצנן', 'רשת מצנן פגומה', 'מסגרת מצנן שבורה',
+    'מכסה מצנן פגום', 'מיכל עיבוי פגום', 'ניקוי מערכת הקירור', 'התחממות יתר במנוע',
+    'קורוזיה וסימני נזילה בחיבורים', 'נזילות מים', 'צינורות מים פגומים', 'פקקי מים נוזלים',
+    'נזילה ממשאבת מים', 'רעש ממשאבת מים', 'קורוזיה בית תרמוסטט', 'מערכת חימום לקויה',
+    'ברז מערכת חימום פגום', 'מאוורר פגום', 'מצמד מאוורר פגום', 'כונס אויר פגום',
+    'רצועה פגומה', 'שמן במים', 'קיים אויר במערכת הקירור', 'מערכת קירור לקויה',
+  ],
+  'מערכת דלק': [
+    'תצרוכת דלק גבוהה', 'מאייד לא תקין', 'דוושת דלק נתפסת', 'כבל גז פגום',
+    'צינורות דלק פגומים', 'מעיכות במיכל הדלק', 'תיקונים במיכל הדלק', 'נזילה במיכל הדלק',
+    'מסנן אויר לקוי', 'ריח דלק בתא נוסעים', 'משנק לא תקין', 'משאבת דלק פגומה',
+    'סיבובי מנוע לא יציבים', 'חסר צינורות לחימום תערובת', 'מחשב מערכת דלק לא נבדק',
+    'מדגש טורבו לא תקין', 'הזרקת דלק לקויה', 'מערכת הזרקת דלק לא נבדקה', 'מגדש טורבו לא נבדק',
+  ],
+  'מערכת הצתה': [
+    'לתאם מנוע', 'מנוע מזייף', 'מצתים לא תקינים', 'חוטי הצתה פגומים',
+    'מצתים שונים', 'קיימים מאריכי מצתים', 'התנעה קשה', 'מנוע מצלצל',
+    'מנוע נכבה באיחור', 'מפלג רועש', 'מתג התנעה פגום', 'מערכת הצתה פגומה',
+  ],
+  'מערכת פליטה': [
+    'דוד עמעם אחורי פגום', 'דוד עמעם מרכזי פגום', 'דוד עמעם קדמי פגום',
+    'קצה צינור רקוב', 'דליפה בחיבורי צינורות', 'מעיכות במערכת', 'מתלים פגומים',
+    'צנרת פגומה', 'ריקבון כללי במערכת', 'סעפת סדוקה', 'דליפות מהסעפת',
+    'חסרים ברגים', 'מערכת פליטה רועשת', 'ממיר קטליטי לא תקין',
+  ],
+  'מערכת היגוי': [
+    'זוויות היגוי (כיוון)', 'שחיקת צמיגים', 'סטיות הגה (בנסיעה)', 'רעידות בגלגלים',
+    'נקישה בתיבת הגה', 'חופש ונקישה בתיבת הגה', 'גומיות מגן להגה פגומות',
+    'משולש עקום', 'קופלונג הגה פגום', 'מעיכה במשולש', 'משאבת הגה פגומה',
+    'נזילת שמן במערכת הידראולית', 'בולם זעזועים להגה פגום',
+    'חופש מוט הגה בתא נהג', 'חופש במערכת היגוי', 'חופש זרוע עזר',
+    'תיבת הגה פגומה', 'הגה קשה ולא חוזר', 'גלגל הגה אינו ממורכז',
+    'חוסר יציבות', 'סטיות במקביליות ומרחקי צירים', 'חופש חיבורי ציר קדמי',
+    'חופש במסרק הגה', 'מידות מרכב אינם עפ"י הוראת יצרן', 'גומיות מגן קרועות',
+  ],
+  'תיבת הילוכים': [
+    'שמן כהה בלאי דסקיות הילוכים', 'החלפת הילוכים לקויה', 'נקישה בשילוב הילוכים',
+    'החלקה בתאוצה', 'רעידות בתאוצה', 'כבל הילוך חוזר פגום', 'מנגנון חניה לקוי',
+    'חדירת מים לשמן בתיבת ההילוכים', 'נזילת שמן תיבת הילוכים', 'רעש מתיבת הילוכים',
+    'חופשים במנגנוני הילוכים', 'חריקות בשילוב הילוכים', 'שילוב הילוכים קשה',
+    'הילוך קופץ', 'תיבת הילוכים פגומה', 'תושבת תיבת הילוכים פגומה',
+  ],
+  'מערכת העברת כוח': [
+    'מצמד מפריד גבוה (בלאי)', 'מצמד מחליק', 'מצמד קשה', 'רעידות במצמד',
+    'כבל מצמד פגום', 'נזילת משאבת מצמד', 'מסב לחץ רועש', 'חסר מכסה בית מצמד',
+    'בית מצמד שבור ומתוקן', 'גומיות מגן לציריות פגומות', 'חופש ונקישות בציריות',
+    'חופש ונקישות ציריה שמאלית', 'חופש ונקישות ציריה ימנית', 'חופש צלבים',
+    'קופלונג גל-הינע פגום', 'חופש תושבת גל-הינע', 'חופש דיפרנציאל',
+    'נזילת שמן בדיפרנציאל', 'דיפרנציאל רועש', 'נקישה בדיפרנציאל',
+    'נזילות שמן מערכת הנעה', 'רעידות בנסיעה', 'מערכת 4X4 אינה פועלת',
+    'נזילת שמן ציריות', 'רעש מסבי גלגלים',
+  ],
+  'קפיצים': [
+    'קפיצים קדמיים נמוכים', 'קפיצים אחוריים נמוכים',
+    'קפיצים קדמיים אינם זהים', 'קפיצים אחוריים אינם זהים',
+    'קפיץ קדמי ימני שבור', 'קפיץ קדמי שמאלי שבור',
+    'קפיץ אחורי ימני שבור', 'קפיץ אחורי שמאלי שבור',
+    'תותבים לקפיצים', 'תותבים לקפיצים קדמיים', 'תותבים לקפיצים אחוריים',
+    'קיימות טבעות הגבהה בקפיצים', 'פין מרכזי לקפיצים שבור',
+  ],
+  'בולמי זעזועים': [
+    'בולמי זעזועים קדמיים חלשים', 'בולמי זעזועים אחוריים חלשים',
+    'תותבים לבולמי זעזועים', 'אוגר לחץ פגום', 'אוגר לחץ רועש', 'בומבות קשות',
+    'נזילת שמן במערכת הידראולית',
+  ],
+  'מתלה קדמי': [
+    'חופש מייצב קדמי', 'נקישות במתלה', 'חריקות במתלה', 'גשר קדמי עקום', 'גשר קדמי סדוק',
+    'מעיכות בגשר', 'מעיכה במשולש', 'חופש תותבים ציר קדמי', 'חופש חיבורי ציר קדמי',
+    'חופש משולשים במתלה', 'בושינג בלוי',
+  ],
+  'מתלה אחורי': [
+    'גשר אחורי עקום', 'מוט מייצב אחורי עקום', 'חופש תותבים ציר אחורי',
+    'מסבי גלגלים רועשים', 'תומך סרן אחורי עקום', 'זווית ציר אחורי פגומה',
+    'בושינג בלוי', 'נקודות חיבור חלודות', 'זרוע עקומה',
+  ],
+  'מערכת בלמים': [
+    'רפידות שחוקות', 'צלחות שחוקות', 'בלימה לקויה', 'מתקן בקורת בלמים לקוי',
+    'רעידות בבלימה', 'סטיות בבלימה', 'חריקות בבלימה', 'נקישות בבלימה',
+    'דוושת בלם נמוכה', 'דוושת בלם יורדת', 'רעידות בלחיצת דוושת בלם',
+    'חופש דוושת בלם', 'נזילה במשאבת וויסות', 'משאבת וויסות פגומה',
+    'לפרק גלגלים לבדיקה', 'נזילה משאבת אופן קדמית ימין', 'נזילה משאבת אופן קדמית שמאל',
+    'נזילה משאבת אופן אחורית ימין', 'נזילה משאבת אופן אחורית שמאל',
+    'צינורות גמישים קדמיים פגומים', 'צינורות גמישים אחוריים פגומים',
+    'צינורות מתכת פגומים', 'מגבר בלם פגום', 'חסר ביטחונית לרפידות בלם',
+    'מערכת בלמים לקויה', 'ABS אינה פועלת', 'חסר נוזל בלמים',
+  ],
+  'בלם עזר': [
+    'בלם יד אינו תקין', 'מנגנון בלם עזר פגום', 'כבל בלם עזר פגום',
+    'בלם יד רפוי', 'כבל בלם יד מתוח', 'מנגנון בלם יד תקול',
+  ],
+  'צמיגים': [
+    'צמיג חילוף פגום', 'צמיגים קדמיים פגומים', 'צמיגים אחוריים פגומים',
+    'שחיקת צמיגים בינונית', 'צמיג קדמי ימני פגום', 'צמיג קדמי שמאלי פגום',
+    'צמיג אחורי ימני פגום', 'צמיג אחורי שמאלי פגום', 'צמיגים יבשים',
+    'צמיגים לא זהים', 'צמיגים מחודשים', 'מידת צמידים לא חוקית',
+    'חסר גלגל חילוף', 'רעידה בצמיגים', 'בלאי לא אחיד',
+  ],
+  'חישוקים': [
+    'כיפוף בחישוק', 'חישוק לא מתאים לגודל הצמיגים',
+    'חישוק פגוע', 'חישוק עקום', 'חישוק חלוד', 'אגוזים חסרים',
+  ],
+  'שלדת מרכב': [
+    'פגיעה בריצפה אחורית', 'תיקון בריצפה אחורית', 'איכול בריצפה אחורית',
+    'בקורה אורכית אחורית פגועה', 'כנף פנימית אחורית פגועה',
+    'עמוד אמצעי פגוע', 'עמוד קדמי פגוע', 'עמוד אחורי פגוע',
+    'ריצפת תא נוסעים פגועה', 'דופן פנימית פגועה', 'גג פגוע / כולל חיזוקים',
+    'פח חזית פגוע', 'כנף קדמית מולחמת פגועה', 'דופן פנימית בתא מנוע פגועה',
+    'קורה אורכית מעבר לתושבת מנוע פגועה', 'קיר אש פגוע', 'בית גלגל קדמי פגוע',
+    'פח דופן אחורי פגוע', 'כנף אחורי מולחמת פגועה', 'הפרש במקביליות מעוות בשלדה',
+    'פח סף פנימי פגוע', 'חיבורים לא מקוריים לרוחב הרכב',
+  ],
+  'מרכב (פחחות)': [
+    'מכסה מנוע פגוע', 'כנף קדמי ימין (ברגים) פגועה', 'כנף קדמי שמאלי (ברגים) פגועה',
+    'דלת קדמית ימין פגועה', 'דלת קדמית שמאל פגועה',
+    'דלת אחורית ימין פגועה', 'דלת אחורית שמאל פגועה', 'מכסה תא מטען פגוע',
+    'צבע ופחחות כללית במצב ירוד', 'תיקונים כלליים בגוף המרכב',
+    'חסר פינות לפגוש', 'כיפוף בפגוש', 'שמשה פגומה',
+    'חדירת מים לתא הנוסעים', 'דלתות אינם מכוונות',
+    'חופש צירים בדלתות', 'עצר ביטחון לדלת', 'גומיות לדלתות וחלונות פגומות',
+    'מנעול לדלת פגום', 'ריפוד פגום', 'מנגנוני שמשות אינם תקינים',
+    'פתיחת מכסה מנוע לקויה', 'פתיחת תא מטען לקויה', 'תומך מכסה מנוע פגום',
+    'הפרש מקביליות מבעיה טכנית',
+  ],
+  'אביזרי בטיחות': [
+    'חגורת בטיחות פגומה', 'כרית אוויר מחוסרת', 'נעילת דלתות אינה תקינה',
+  ],
+  'מערכת תאורה': [
+    'פנסי חזית פגומים', 'פנס חזית משוחרר', 'פנסים אחוריים פגומים',
+    'לתקן אור בלם', 'לתקן מערכת איתות', 'אור חניה אינו פועל',
+    'החלפת אורות אינה פועלת', 'פנס אחורי שבור', 'פנס חזית שבור', 'פנס סדוק',
+    'מערכת מגבים אינה פועלת', 'צופר אינו פועל', 'חוטי חשמל גלויים',
+    'קצרים במערכת חשמל', 'הפעלת חלונות חשמל לקויה',
+    'מצבר חלש', 'מצבר פגום', 'מצבר אינו מטופל', 'תושבת מצבר שבורה',
+    'חופש קוטבי מצבר', 'מתנע פגום-רועש', 'אלטרנטור רועש', 'תומך אלטרנטור פגום',
+    'אין טעינה', 'מזגן אוויר אינו פועל', 'מזגן אוויר מנותק', 'חסר גז במזגן',
+    'מערכת אוורור פנימית אינה פועלת',
+  ],
+  'מחוונים': [
+    'מד חום פגום', 'מד דלק פגום', 'מד לחץ שמן פגום', 'מד טעינה פגום',
+    'מד מהירות פגום', 'מונה ק"מ פגום', 'מד תת-לחץ פגום', 'מד סיבובי מנוע פגום',
+    'ביקורת לחץ שמן לקויה', 'ביקורת בלמים לקויה', 'ביקורת טעינה לקויה',
+    'לוח מחוונים פגום', 'הבקרה בלוח שעונים פגומה', 'ריפוד לוח שעונים קרוע / סדוק',
+    'רעשים בלוח שעונים', 'טכוגרף פגום',
+  ],
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -97,27 +234,38 @@ interface Props {
 
 // ── Parse / default ────────────────────────────────────────────────────────────
 
-function parseFindings(raw: string | null): ChecklistItem[] {
+export function parseFindings(raw: string | null): { items: ChecklistItem[], notes: string } {
   const blank = INSPECTION_SYSTEMS.map(() => ({ status: '' as const, faults: [] }))
-  if (!raw) return blank
+  if (!raw) return { items: blank, notes: '' }
   try {
     const parsed = JSON.parse(raw)
+    // New format: { items: [...], notes: string }
+    if (parsed && !Array.isArray(parsed) && Array.isArray(parsed.items)) {
+      const items = parsed.items.length === INSPECTION_SYSTEMS.length
+        ? parsed.items.map((p: ChecklistItem & { notes?: string }) => ({
+            status: p.status ?? '',
+            faults: Array.isArray(p.faults) && p.faults.length > 0 ? p.faults : p.notes ? [p.notes] : [],
+          }))
+        : blank
+      return { items, notes: parsed.notes ?? '' }
+    }
+    // Old format: plain array
     if (Array.isArray(parsed) && parsed.length === INSPECTION_SYSTEMS.length) {
-      // support both old format (notes:string) and new (faults:string[])
-      return parsed.map((p: ChecklistItem & { notes?: string }) => ({
-        status: p.status ?? '',
-        faults: Array.isArray(p.faults) && p.faults.length > 0
-          ? p.faults
-          : p.notes ? [p.notes] : [],
-      }))
+      return {
+        items: parsed.map((p: ChecklistItem & { notes?: string }) => ({
+          status: p.status ?? '',
+          faults: Array.isArray(p.faults) && p.faults.length > 0 ? p.faults : p.notes ? [p.notes] : [],
+        })),
+        notes: '',
+      }
     }
   } catch {}
-  return blank
+  return { items: blank, notes: '' }
 }
 
 // ── Print ──────────────────────────────────────────────────────────────────────
 
-function printChecklist(inspection: InspectionBasic, business: BusinessBasic, items: ChecklistItem[]) {
+export function printChecklist(inspection: InspectionBasic, business: BusinessBasic, items: ChecklistItem[], inspectorNotes = '') {
   const date = inspection.date || new Date().toLocaleDateString('he-IL')
 
   const rowsHTML = INSPECTION_SYSTEMS.map((name, i) => {
@@ -139,9 +287,9 @@ function printChecklist(inspection: InspectionBasic, business: BusinessBasic, it
     .map((name, i) => ({ name, item: items[i] }))
     .filter(x => x.item.status === 'fail')
 
-  const summaryHTML = failItems.length === 0
-    ? '<p style="color:#16a34a;font-weight:700;font-size:11px">✓ לא נמצאו ליקויים — הרכב תקין בכל המערכות שנבדקו</p>'
-    : failItems.map(x => `<div style="font-size:10.5px;margin-bottom:3px"><strong>✗ ${x.name}</strong>${x.item.faults.filter(Boolean).length ? ': ' + x.item.faults.filter(Boolean).join(', ') : ''}</div>`).join('')
+  const notesForPrint = inspectorNotes
+    ? `<p style="font-size:10.5px;white-space:pre-wrap">${inspectorNotes}</p>`
+    : '<p style="font-size:10px;color:#888;font-style:italic">ללא הערות בוחן</p>'
 
   const html = `<!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -191,6 +339,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
     <h1>טופס סיכום אחיד של בדיקה כללית</h1>
     <h1>ללא מערכות אלקטרוניות וממוחשבות</h1>
     <p>(ע"פ הוראות משרד התחבורה)</p>
+    <p style="font-family:monospace;font-size:10px;margin-top:4px;color:#555">מס׳ בדיקה: ${inspection.id.slice(0, 8).toUpperCase()}</p>
   </div>
   <div class="car-grid">
     <div class="car-cell"><b>מס׳ רכב:</b> ${inspection.plate}</div>
@@ -214,8 +363,8 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
     <tbody>${rowsHTML}</tbody>
   </table>
   <div class="summary">
-    <div class="summary-title">${failItems.length === 0 ? '✓ סיכום: הרכב תקין' : `⚠️ סיכום ליקויים (${failItems.length}):`}</div>
-    ${summaryHTML}
+    <div class="summary-title">${failItems.length === 0 ? '✓ סיכום: הרכב תקין' : `⚠️ נמצאו ליקויים ב-${failItems.length} מערכות`} — הערות בוחן:</div>
+    ${notesForPrint}
   </div>
   <div class="notes">
     <strong>הערות:</strong>
@@ -246,27 +395,15 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function InspectionChecklistModal({ inspection, business, onClose, onSave }: Props) {
-  const [items,   setItems]   = useState<ChecklistItem[]>(() => parseFindings(inspection.findings))
-  const [step,    setStep]    = useState(0)          // 0..20 = systems, 21 = summary
-  const [saving,  setSaving]  = useState(false)
+  const [items,          setItems]          = useState<ChecklistItem[]>(() => parseFindings(inspection.findings).items)
+  const [inspectorNotes, setInspectorNotes] = useState(() => parseFindings(inspection.findings).notes)
+  const [step,           setStep]           = useState(0)
+  const [saving,         setSaving]         = useState(false)
 
   const TOTAL = INSPECTION_SYSTEMS.length
   const isSummary = step === TOTAL
 
   // ── Item mutations ────────────────────────────────────────────────────────────
-
-  function setStatus(status: 'ok' | 'fail' | '') {
-    setItems(prev => prev.map((item, i) => i === step ? { ...item, status } : item))
-  }
-
-  function setFault(faultIdx: number, text: string) {
-    setItems(prev => prev.map((item, i) => {
-      if (i !== step) return item
-      const faults = [...item.faults]
-      faults[faultIdx] = text
-      return { ...item, faults }
-    }))
-  }
 
   function addFault() {
     setItems(prev => prev.map((item, i) =>
@@ -285,10 +422,11 @@ export default function InspectionChecklistModal({ inspection, business, onClose
   // ── Navigation ─────────────────────────────────────────────────────────────────
 
   function goNext() {
-    // Auto-mark as ok if no status set and no faults when moving forward
-    const cur = items[step]
-    if (step < TOTAL && cur.status === '' && cur.faults.filter(Boolean).length === 0) {
-      setItems(prev => prev.map((item, i) => i === step ? { ...item, status: 'ok' } : item))
+    if (step < TOTAL) {
+      const cur = items[step]
+      const hasFaults = cur.faults.filter(Boolean).length > 0
+      const newStatus = hasFaults ? 'fail' : 'ok'
+      setItems(prev => prev.map((item, i) => i === step ? { ...item, status: newStatus } : item))
     }
     setStep(s => Math.min(s + 1, TOTAL))
   }
@@ -301,9 +439,9 @@ export default function InspectionChecklistModal({ inspection, business, onClose
 
   async function handleSave(andPrint: boolean) {
     setSaving(true)
-    await onSave(inspection.id, JSON.stringify(items))
+    await onSave(inspection.id, JSON.stringify({ items, notes: inspectorNotes }))
     setSaving(false)
-    if (andPrint) printChecklist(inspection, business, items)
+    if (andPrint) printChecklist(inspection, business, items, inspectorNotes)
     onClose()
   }
 
@@ -351,6 +489,7 @@ export default function InspectionChecklistModal({ inspection, business, onClose
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
               {[inspection.make, inspection.model, inspection.year].filter(Boolean).join(' ')}
               {inspection.owner_name ? ` · ${inspection.owner_name}` : ''}
+              <span style={{ marginRight: 6, fontFamily: 'monospace', opacity: 0.7 }}>#{inspection.id.slice(0, 8).toUpperCase()}</span>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
@@ -421,137 +560,76 @@ export default function InspectionChecklistModal({ inspection, business, onClose
             <div>
               {/* System title */}
               <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                marginBottom: 20,
+                marginBottom: 20, padding: '14px 18px', borderRadius: 12,
+                background: 'linear-gradient(135deg, var(--primary-light,#e8f7f0), #f0f9ff)',
+                border: '2px solid var(--primary)',
               }}>
-                <div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 2 }}>
-                    מערכת {step + 1} מתוך {TOTAL}
-                  </div>
-                  <h2 style={{ fontSize: 22, fontWeight: 900, color: 'var(--text)', margin: 0 }}>{sysName}</h2>
+                <div style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  מערכת {step + 1} מתוך {TOTAL}
                 </div>
-                {/* Quick status toggle */}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => setStatus(cur.status === 'ok' ? '' : 'ok')}
-                    style={{
-                      width: 52, height: 52, borderRadius: '50%',
-                      border: `2.5px solid ${cur.status === 'ok' ? 'var(--primary)' : '#bbf7d0'}`,
-                      background: cur.status === 'ok' ? 'var(--primary)' : '#f0fdf4',
-                      color: cur.status === 'ok' ? '#fff' : 'var(--primary)',
-                      cursor: 'pointer', fontSize: 22, fontWeight: 900,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all .2s', flexShrink: 0,
-                    }}
-                    title="תקין"
-                  >✓</button>
-                  <button
-                    onClick={() => setStatus(cur.status === 'fail' ? '' : 'fail')}
-                    style={{
-                      width: 52, height: 52, borderRadius: '50%',
-                      border: `2.5px solid ${cur.status === 'fail' ? 'var(--danger)' : '#fecaca'}`,
-                      background: cur.status === 'fail' ? 'var(--danger)' : '#fef2f2',
-                      color: cur.status === 'fail' ? '#fff' : 'var(--danger)',
-                      cursor: 'pointer', fontSize: 22, fontWeight: 900,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all .2s', flexShrink: 0,
-                    }}
-                    title="לא תקין"
-                  >✗</button>
+                <h2 style={{ fontSize: 28, fontWeight: 900, color: 'var(--text)', margin: 0, lineHeight: 1.1 }}>{sysName}</h2>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+                  השאר ריק אם תקין — מלא ליקויים אם נמצאו בעיות
                 </div>
               </div>
 
-              {/* Status label */}
-              {cur.status !== '' && (
-                <div style={{
-                  textAlign: 'center', fontSize: 13, fontWeight: 700,
-                  color: cur.status === 'ok' ? 'var(--primary)' : 'var(--danger)',
-                  marginBottom: 16,
-                }}>
-                  {cur.status === 'ok' ? '✓ תקין' : '✗ לא תקין — פרט ליקויים:'}
-                </div>
-              )}
-
-              {/* Fault lines — shown when fail */}
-              {cur.status === 'fail' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {cur.faults.length === 0 && (
-                    <div
-                      style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', padding: '12px 0' }}
-                    >
-                      לחץ &ldquo;+ הוסף ליקוי&rdquo; כדי לפרט
+              {/* Fault lines — always visible */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {/* Show existing faults OR one empty row */}
+                {(cur.faults.length > 0 ? cur.faults : ['']).map((_fault, fi) => (
+                  <div key={fi} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ flex: 1, position: 'relative' }}>
+                      <input
+                        style={inp}
+                        list={`faults-${step}`}
+                        placeholder="תאר ליקוי או השאר ריק אם תקין..."
+                        value={cur.faults[fi] ?? ''}
+                        onChange={e => {
+                          // sync back into real items array
+                          setItems(prev => prev.map((item, i) => {
+                            if (i !== step) return item
+                            const faults = item.faults.length > 0 ? [...item.faults] : ['']
+                            faults[fi] = e.target.value
+                            return { ...item, faults }
+                          }))
+                        }}
+                        autoFocus={fi === 0 && cur.faults.length === 0}
+                      />
+                      <datalist id={`faults-${step}`}>
+                        {suggestions.map(s => <option key={s} value={s} />)}
+                      </datalist>
                     </div>
-                  )}
-
-                  {cur.faults.map((fault, fi) => (
-                    <div key={fi} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <div style={{ flex: 1, position: 'relative' }}>
-                        <input
-                          style={inp}
-                          list={`faults-${step}`}
-                          placeholder="תאר את הליקוי..."
-                          value={fault}
-                          onChange={e => setFault(fi, e.target.value)}
-                          autoFocus={fi === cur.faults.length - 1}
-                        />
-                        <datalist id={`faults-${step}`}>
-                          {suggestions.map(s => <option key={s} value={s} />)}
-                        </datalist>
-                      </div>
+                    {/* Remove only if there's more than one row */}
+                    {cur.faults.length > 1 && (
                       <button
                         onClick={() => removeFault(fi)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--danger)', flexShrink: 0, padding: '4px 6px' }}
                       >✕</button>
-                    </div>
-                  ))}
+                    )}
+                  </div>
+                ))}
 
-                  {/* Common faults quick-pick */}
-                  {suggestions.length > 0 && (
-                    <div style={{ marginTop: 6 }}>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>ליקויים נפוצים — לחץ להוסיף:</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                        {suggestions
-                          .filter(s => !cur.faults.includes(s))
-                          .map(s => (
-                            <button
-                              key={s}
-                              onClick={() => setItems(prev => prev.map((item, i) =>
-                                i === step ? { ...item, faults: [...item.faults, s], status: 'fail' } : item
-                              ))}
-                              style={{
-                                padding: '4px 10px', borderRadius: 20,
-                                border: '1px solid #fecaca', background: '#fef2f2',
-                                color: '#991b1b', fontSize: 12, fontWeight: 600,
-                                cursor: 'pointer', transition: 'all .1s',
-                              }}
-                            >
-                              + {s}
-                            </button>
-                          ))}
-                      </div>
-                    </div>
-                  )}
+                {/* Add row button */}
+                <button
+                  onClick={addFault}
+                  style={{
+                    alignSelf: 'flex-start', marginTop: 4,
+                    padding: '6px 14px', borderRadius: 8,
+                    border: '1px dashed var(--border)', background: 'transparent',
+                    color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                  }}
+                >
+                  + הוסף שורה
+                </button>
 
-                  <button
-                    onClick={addFault}
-                    style={{
-                      alignSelf: 'flex-start', marginTop: 4,
-                      padding: '7px 14px', borderRadius: 8,
-                      border: '1px dashed var(--border)', background: 'transparent',
-                      color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-                    }}
-                  >
-                    + הוסף ליקוי
-                  </button>
-                </div>
-              )}
-
-              {/* Quick-pick when no status yet */}
-              {cur.status === '' && (
-                <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: 13 }}>
-                  בחר תקין ✓ או לא תקין ✗ למעלה
-                </div>
-              )}
+                {/* Status indicator */}
+                {cur.faults.filter(Boolean).length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, fontSize: 12, color: 'var(--danger)', fontWeight: 700 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--danger)', display: 'inline-block' }} />
+                    {cur.faults.filter(Boolean).length} ליקוי{cur.faults.filter(Boolean).length !== 1 ? 'ים' : ''} יירשמו
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -574,6 +652,22 @@ export default function InspectionChecklistModal({ inspection, business, onClose
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{s.label}</div>
                   </div>
                 ))}
+              </div>
+
+              {/* Inspector notes */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>הערות בוחן</div>
+                <textarea
+                  value={inspectorNotes}
+                  onChange={e => setInspectorNotes(e.target.value)}
+                  placeholder="הכנס הערות כלליות לבדיקה..."
+                  rows={4}
+                  style={{
+                    width: '100%', border: '1.5px solid var(--border)', borderRadius: 8,
+                    padding: '10px 12px', fontSize: 13, fontFamily: 'inherit',
+                    background: 'var(--bg)', color: 'var(--text)', resize: 'vertical', outline: 'none',
+                  }}
+                />
               </div>
 
               {/* Full table preview */}
@@ -627,10 +721,10 @@ export default function InspectionChecklistModal({ inspection, business, onClose
                 onClick={goPrev}
                 disabled={step === 0}
                 style={{
-                  flexShrink: 0, width: 44, height: 44, borderRadius: '50%',
+                  flexShrink: 0, padding: '0 20px', height: 52, borderRadius: 12,
                   border: '1.5px solid var(--border)', background: 'var(--bg-card)',
                   cursor: step === 0 ? 'not-allowed' : 'pointer',
-                  opacity: step === 0 ? 0.35 : 1, fontSize: 18,
+                  opacity: step === 0 ? 0.35 : 1, fontSize: 22,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
                 title="קודם"
@@ -646,15 +740,17 @@ export default function InspectionChecklistModal({ inspection, business, onClose
               <button
                 onClick={goNext}
                 style={{
-                  flexShrink: 0, width: 44, height: 44, borderRadius: '50%',
+                  flexShrink: 0, padding: '0 20px', height: 52, borderRadius: 12,
                   border: '1.5px solid var(--primary)', background: 'var(--primary)',
-                  color: '#fff', cursor: 'pointer', fontSize: step === TOTAL - 1 ? 14 : 18,
+                  color: '#fff', cursor: 'pointer',
+                  fontSize: step === TOTAL - 1 ? 14 : 22,
                   fontWeight: step === TOTAL - 1 ? 700 : 400,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  minWidth: step === TOTAL - 1 ? 110 : 64,
                 }}
                 title={step === TOTAL - 1 ? 'לסיכום' : 'הבא'}
               >
-                {step === TOTAL - 1 ? '✓' : '›'}
+                {step === TOTAL - 1 ? '✓ לסיכום' : '›'}
               </button>
             </div>
           ) : (
@@ -697,10 +793,10 @@ export default function InspectionChecklistModal({ inspection, business, onClose
 export function ChecklistBadge({ findings }: { findings: string | null }) {
   if (!findings) return null
   try {
-    const items: ChecklistItem[] = JSON.parse(findings)
-    if (!Array.isArray(items)) return null
-    const failCount = items.filter(i => i.status === 'fail').length
-    const okCount   = items.filter(i => i.status === 'ok').length
+    const parsed = JSON.parse(findings)
+    const raw: ChecklistItem[] = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.items) ? parsed.items : [])
+    const failCount = raw.filter(i => i.status === 'fail').length
+    const okCount   = raw.filter(i => i.status === 'ok').length
     if (failCount === 0 && okCount === 0) return null
     return failCount > 0 ? (
       <span style={{ background: '#fef2f2', color: 'var(--danger)', fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20 }}>
