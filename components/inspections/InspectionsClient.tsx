@@ -622,13 +622,19 @@ export default function InspectionsClient() {
       fd.append('sub_folder', 'בדיקות קניה')
       fd.append('item_name', `${ins.plate}_${ins.date ?? ins.created_at?.slice(0, 10) ?? 'scan'}`)
       const res = await fetch('/api/drive/upload', { method: 'POST', body: fd })
-      if (!res.ok) throw new Error(await res.text())
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error ?? `HTTP ${res.status}`)
+      }
       const { id: fileId } = await res.json()
+      if (!fileId) throw new Error('לא התקבל מזהה קובץ מדרייב')
       await supabase.from('car_inspections').update({ drive_file_id: fileId }).eq('id', ins.id)
-      showToast('הקובץ הועלה לדרייב', 'success')
+      showToast('הקובץ הועלה לדרייב ✓', 'success')
       loadInspections()
-    } catch {
-      showToast('שגיאה בהעלאה לדרייב', 'error')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'שגיאה לא ידועה'
+      console.error('Drive upload failed:', msg)
+      showToast(`שגיאה בהעלאה: ${msg}`, 'error')
     } finally {
       setUploadingId(null)
     }

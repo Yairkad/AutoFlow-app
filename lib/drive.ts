@@ -101,9 +101,11 @@ export async function uploadFile(
   fileBuffer: Buffer,
   mimeType: string,
   fileName: string,
-  folderId: string,
+  folderId?: string | null,
 ): Promise<DriveFile> {
-  const meta = JSON.stringify({ name: fileName, parents: [folderId] })
+  const metaObj: Record<string, unknown> = { name: fileName }
+  if (folderId) metaObj.parents = [folderId]
+  const meta = JSON.stringify(metaObj)
   const boundary = 'autoflow_boundary'
   const body = Buffer.concat([
     Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`),
