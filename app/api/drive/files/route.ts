@@ -22,10 +22,15 @@ export async function GET(req: Request) {
     .single()
 
   if (!tenant?.drive_refresh_token || !tenant?.drive_root_folder_id) {
-    return NextResponse.json({ files: [] })
+    return NextResponse.json({ files: [], error: 'not_connected' })
   }
 
-  const accessToken = await getAccessToken(tenant.drive_refresh_token)
+  let accessToken: string
+  try {
+    accessToken = await getAccessToken(tenant.drive_refresh_token)
+  } catch {
+    return NextResponse.json({ files: [], error: 'token_expired' })
+  }
 
   async function resolveFolderId(rootId: string): Promise<string> {
     if (folderId2) return folderId2

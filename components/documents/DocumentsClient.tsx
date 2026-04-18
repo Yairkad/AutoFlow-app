@@ -568,9 +568,15 @@ export default function DocumentsClient() {
       const id = folderId ?? (folderStack.length > 0 ? folderStack[folderStack.length - 1].id : '')
       const url = id
         ? `/api/drive/files?tenant_id=${tenantId.current}&folder_id=${id}`
-        : `/api/drive/files?tenant_id=${tenantId.current}&sub_folder=מסמכים`
+        : `/api/drive/files?tenant_id=${tenantId.current}`
       const res  = await fetch(url)
       const data = await res.json()
+      if (data.error === 'token_expired') {
+        showToast('חיבור Drive פג — חבר מחדש בהגדרות', 'error')
+        setDriveItems([])
+        setDriveLoading(false)
+        return
+      }
       if (data.error === 'rebuild_failed') {
         showToast('שגיאה בשחזור Drive — נא לנתק ולחבר מחדש מההגדרות', 'error')
         setDriveItems([])
