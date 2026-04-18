@@ -1765,12 +1765,18 @@ export default function SettingsClient() {
               {driveConnected ? 'תמונות ומסמכים מועלים ישירות לדרייב של העסק' : 'חבר כדי להעלות תמונות ומסמכים ישירות מהמערכת'}
             </div>
           </div>
-          {!driveConnected && tenantId && (
+          {tenantId && (
             <a
               href={`/api/drive/auth?tenant_id=${tenantId}`}
-              style={{ padding: '8px 16px', background: 'var(--primary)', color: '#fff', borderRadius: '8px', fontSize: '13px', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}
+              style={{
+                padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
+                textDecoration: 'none', flexShrink: 0,
+                background: driveConnected ? 'transparent' : 'var(--primary)',
+                color: driveConnected ? 'var(--text-muted)' : '#fff',
+                border: driveConnected ? '1px solid var(--border)' : 'none',
+              }}
             >
-              חבר Drive →
+              {driveConnected ? '🔄 חבר מחדש' : 'חבר Drive →'}
             </a>
           )}
         </div>

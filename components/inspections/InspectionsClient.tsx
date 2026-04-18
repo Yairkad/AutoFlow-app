@@ -634,7 +634,8 @@ export default function InspectionsClient() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'שגיאה לא ידועה'
       console.error('Drive upload failed:', msg)
-      showToast(`שגיאה בהעלאה: ${msg}`, 'error')
+      const isTokenError = msg.toLowerCase().includes('refresh token') || msg.toLowerCase().includes('token')
+      showToast(isTokenError ? 'חיבור Drive פג — חבר מחדש בהגדרות' : `שגיאה בהעלאה: ${msg}`, 'error')
     } finally {
       setUploadingId(null)
     }
