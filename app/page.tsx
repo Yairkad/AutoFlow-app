@@ -5,6 +5,7 @@ import CustomerSearch from '@/components/landing/CustomerSearch'
 import PromotionsCarousel from '@/components/landing/PromotionsCarousel'
 import PriceList from '@/components/landing/PriceList'
 import FaqAccordion from '@/components/landing/FaqAccordion'
+import CarsForSale from '@/components/landing/CarsForSale'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,12 +35,13 @@ export default async function LandingPage() {
   const today = new Date().toISOString().slice(0, 10)
 
   // Fetch tenant info + landing data in parallel (all via service client – public page, no auth required)
-  const [{ data: tenant }, { data: services }, { data: promotions }, { data: priceItems }, { data: faqItems }] = await Promise.all([
+  const [{ data: tenant }, { data: services }, { data: promotions }, { data: priceItems }, { data: faqItems }, { data: carsForSale }] = await Promise.all([
     service.from('tenants').select('name,sub_title,phone,address,logo_base64,public_info').eq('id', TENANT_ID).single(),
     service.from('services').select('id,name,description,icon,image_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('sort_order'),
     service.from('promotions').select('id,title,description,fine_print,image_url,link_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).lte('start_date', today).or('end_date.is.null,end_date.gte.' + today).order('sort_order'),
     service.from('price_list').select('id,category,service_name,price,price_note,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('category').order('sort_order'),
     service.from('faq').select('id,question,answer,image_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('sort_order'),
+    service.from('cars').select('id,make,model,year,km,fuel_type,color,ask_price,photos,status').eq('tenant_id', TENANT_ID).in('status', ['available', 'reserved']).order('created_at', { ascending: false }),
   ])
 
   const pi = (tenant?.public_info ?? {}) as PublicInfo
@@ -64,6 +66,10 @@ export default async function LandingPage() {
   const displayPromotions = promotions ?? []
   const displayPrices = priceItems ?? []
   const displayFaq = faqItems ?? []
+  const displayCars = (carsForSale ?? []).map(c => ({
+    ...c,
+    photos: Array.isArray(c.photos) ? c.photos : [],
+  }))
 
   return (
     <div dir="rtl" style={{ fontFamily: 'var(--font-heebo, Heebo), sans-serif', color: '#1e293b' }}>
@@ -254,6 +260,11 @@ export default async function LandingPage() {
             <a href="#services" className="hero-btn hero-btn-primary">
               השירותים שלנו
             </a>
+            {displayCars.length > 0 && (
+              <a href="#cars-for-sale" className="hero-btn hero-btn-primary">
+                🚗 רכבים למכירה
+              </a>
+            )}
             <a href="#customer-area" className="hero-btn hero-btn-secondary">
               מעקב סטטוס טיפול
             </a>
@@ -267,7 +278,7 @@ export default async function LandingPage() {
       <section id="services" style={{ background: '#fffde7', padding: '80px 40px' }} aria-labelledby="services-title">
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <SectionHeader id="services-title" title="השירותים שלנו" sub="כל מה שהרכב שלך צריך – במקום אחד" />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginTop: '40px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '40px' }}>
             {displayServices.map((s) => (
               <div key={s.id} style={cardSt}>
                 {s.image_url ? (
@@ -286,6 +297,11 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ══════════════════════════════════════════════════════
+          CARS FOR SALE
+      ══════════════════════════════════════════════════════ */}
+      <CarsForSale cars={displayCars} waHref={waHref} />
 
       {/* ══════════════════════════════════════════════════════
           PROMOTIONS
