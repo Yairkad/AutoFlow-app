@@ -54,9 +54,12 @@ interface BusinessInfo {
 const emptyForm = {
   plate: '',
   make: '', model: '', year: '', km: '', engine_cc: '', chassis: '',
+  color: '', ownership_type: '',
   owner_name: '', owner_id: '', owner_phone: '', owner_address: '',
   car_code: '',
 }
+
+const VEHICLE_TYPES = ['מרכב אחיד', 'מרכב על שלדה', 'קבינה', 'מיני-בוס', 'אחר']
 
 function todayStr() {
   const d = new Date()
@@ -412,11 +415,11 @@ export default function InspectionsClient() {
     if (data) {
       setForm(f => ({
         ...f,
-        make:      data.make    ?? f.make,
-        model:     data.model   ?? f.model,
-        year:      data.year    ? String(data.year)   : f.year,
-        engine_cc: data.engine  ? String(data.engine) : f.engine_cc,
-        chassis:   data.chassis ?? f.chassis,
+        make:    data.make    ?? f.make,
+        model:   data.model   ?? f.model,
+        year:    data.year    ? String(data.year) : f.year,
+        chassis: data.chassis ?? f.chassis,
+        color:   data.color   ?? f.color,
       }))
       showToast('פרטי רכב נטענו מהמאגר הממשלתי', 'success')
     } else {
@@ -437,18 +440,20 @@ export default function InspectionsClient() {
   const openEdit = (ins: Inspection) => {
     setEditingId(ins.id)
     setForm({
-      plate:        ins.plate,
-      make:         ins.make        ?? '',
-      model:        ins.model       ?? '',
-      year:         ins.year        ? String(ins.year)       : '',
-      km:           ins.km          ?? '',
-      engine_cc:    ins.engine_cc   ? String(ins.engine_cc)  : '',
-      chassis:      ins.chassis     ?? '',
-      owner_name:   ins.owner_name,
-      owner_id:     ins.owner_id    ?? '',
-      owner_phone:  ins.owner_phone ?? '',
-      owner_address: ins.owner_address ?? '',
-      car_code:     ins.car_code    ?? '',
+      plate:          ins.plate,
+      make:           ins.make           ?? '',
+      model:          ins.model          ?? '',
+      year:           ins.year           ? String(ins.year) : '',
+      km:             ins.km             ?? '',
+      engine_cc:      ins.engine_cc      ? String(ins.engine_cc) : '',
+      chassis:        ins.chassis        ?? '',
+      color:          ins.color          ?? '',
+      ownership_type: ins.ownership_type ?? '',
+      owner_name:     ins.owner_name,
+      owner_id:       ins.owner_id       ?? '',
+      owner_phone:    ins.owner_phone    ?? '',
+      owner_address:  ins.owner_address  ?? '',
+      car_code:       ins.car_code       ?? '',
     })
     setEditModalOpen(true)
   }
@@ -476,8 +481,10 @@ export default function InspectionsClient() {
       year:         form.year             ? Number(form.year)       : null,
       km:           form.km.trim()        || null,
       engine_cc:    form.engine_cc        ? Number(form.engine_cc)  : null,
-      chassis:      form.chassis.trim()   || null,
-      owner_name:   form.owner_name.trim(),
+      chassis:        form.chassis.trim()        || null,
+      color:          form.color.trim()          || null,
+      ownership_type: form.ownership_type.trim() || null,
+      owner_name:     form.owner_name.trim(),
       owner_id:     form.owner_id.trim()       || null,
       owner_phone:  form.owner_phone.trim()    || null,
       owner_address: form.owner_address.trim() || null,
@@ -533,8 +540,10 @@ export default function InspectionsClient() {
       year:         form.year             ? Number(form.year)       : null,
       km:           form.km.trim()        || null,
       engine_cc:    form.engine_cc        ? Number(form.engine_cc)  : null,
-      chassis:      form.chassis.trim()   || null,
-      owner_name:   form.owner_name.trim(),
+      chassis:        form.chassis.trim()        || null,
+      color:          form.color.trim()          || null,
+      ownership_type: form.ownership_type.trim() || null,
+      owner_name:     form.owner_name.trim(),
       owner_id:     form.owner_id.trim()       || null,
       owner_phone:  form.owner_phone.trim()    || null,
       owner_address: form.owner_address.trim() || null,
@@ -746,13 +755,14 @@ export default function InspectionsClient() {
               {/* Vehicle fields grid */}
               <div className="inspections-vehicle-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
                 {[
-                  { key: 'make',      label: 'תוצר',      placeholder: 'טויוטה' },
-                  { key: 'model',     label: 'דגם',        placeholder: 'קורולה' },
-                  { key: 'year',      label: 'שנת ייצור',  placeholder: '2020' },
-                  { key: 'km',        label: "ק\"מ",       placeholder: '100000' },
-                  { key: 'engine_cc', label: 'מספר מנוע',  placeholder: '' },
-                  { key: 'chassis',   label: 'מספר שלדה',  placeholder: '' },
-                  { key: 'car_code',  label: 'קוד רכב',    placeholder: '' },
+                  { key: 'make',      label: 'תוצר',       placeholder: 'טויוטה' },
+                  { key: 'model',     label: 'דגם',         placeholder: 'קורולה' },
+                  { key: 'year',      label: 'שנת ייצור',   placeholder: '2020' },
+                  { key: 'km',        label: 'ק"מ',         placeholder: '100000' },
+                  { key: 'color',     label: 'צבע',         placeholder: '' },
+                  { key: 'engine_cc', label: 'מספר מנוע',   placeholder: '' },
+                  { key: 'chassis',   label: 'מספר שלדה',   placeholder: '' },
+                  { key: 'car_code',  label: 'קוד רכב',     placeholder: '' },
                 ].map(({ key, label, placeholder }) => (
                   <div key={key}>
                     <FL>{label}</FL>
@@ -764,6 +774,17 @@ export default function InspectionsClient() {
                     />
                   </div>
                 ))}
+                <div>
+                  <FL>סוג רכב</FL>
+                  <select
+                    value={form.ownership_type}
+                    onChange={e => onChange('ownership_type', e.target.value)}
+                    className="form-input"
+                  >
+                    <option value="">— בחר —</option>
+                    {VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
               </div>
             </Section>
           </div>
@@ -1089,6 +1110,7 @@ export default function InspectionsClient() {
                       { key: 'model',     label: 'דגם',        placeholder: 'קורולה' },
                       { key: 'year',      label: 'שנת ייצור',  placeholder: '2020' },
                       { key: 'km',        label: 'ק"מ',        placeholder: '100000' },
+                      { key: 'color',     label: 'צבע',        placeholder: '' },
                       { key: 'engine_cc', label: 'מספר מנוע',  placeholder: '' },
                       { key: 'chassis',   label: 'מספר שלדה',  placeholder: '' },
                       { key: 'car_code',  label: 'קוד רכב',    placeholder: '' },
@@ -1103,6 +1125,17 @@ export default function InspectionsClient() {
                         />
                       </div>
                     ))}
+                    <div>
+                      <FL>סוג רכב</FL>
+                      <select
+                        value={form.ownership_type}
+                        onChange={e => onChange('ownership_type', e.target.value)}
+                        className="form-input"
+                      >
+                        <option value="">— בחר —</option>
+                        {VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
                   </div>
                 </Section>
               </div>
