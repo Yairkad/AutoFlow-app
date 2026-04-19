@@ -272,28 +272,50 @@ export function parseFindings(raw: string | null): { items: ChecklistItem[], not
 export function printChecklist(inspection: InspectionBasic, business: BusinessBasic, items: ChecklistItem[], inspectorNotes = '', inspectorName = '') {
   const date = inspection.date || new Date().toLocaleDateString('he-IL')
 
-  const rowsHTML = INSPECTION_SYSTEMS.map((name, i) => {
-    const item   = items[i]
+  const makeRow = (name: string, i: number) => {
+    const item = items[i]
     const isOk   = item.status === 'ok'
     const isFail = item.status === 'fail'
     const notesText = item.faults.filter(Boolean).join(' | ')
-    return `
-      <tr style="${isFail ? 'background:#fff0f0' : isOk ? 'background:#f0fff4' : ''}">
-        <td style="text-align:center;width:26px">${i + 1}</td>
-        <td style="text-align:right;padding-right:8px;font-weight:700;width:160px">${name}</td>
-        <td style="text-align:center;font-size:15px;color:#16a34a;font-weight:700">${isOk ? '✓' : ''}</td>
-        <td style="text-align:center;font-size:15px;color:#dc2626;font-weight:700">${isFail ? '✗' : ''}</td>
-        <td style="text-align:right;padding:2px 6px;font-size:10.5px">${notesText}</td>
-      </tr>`
-  }).join('')
+    return `<tr style="${isFail ? 'background:#fff0f0' : isOk ? 'background:#f0fff4' : ''}">
+      <td style="text-align:center;width:26px">${i + 1}</td>
+      <td style="text-align:right;padding-right:8px;font-weight:700;width:165px">${name}</td>
+      <td style="text-align:center;font-size:15px;color:#16a34a;font-weight:700">${isOk ? '✓' : ''}</td>
+      <td style="text-align:center;font-size:15px;color:#dc2626;font-weight:700">${isFail ? '✗' : ''}</td>
+      <td style="text-align:right;padding:2px 6px;font-size:10.5px">${notesText}</td>
+    </tr>`
+  }
 
-  const failItems = INSPECTION_SYSTEMS
-    .map((name, i) => ({ name, item: items[i] }))
-    .filter(x => x.item.status === 'fail')
+  // Split 21 systems: first 11 on page 1, remaining 10 on page 2
+  const rows1 = INSPECTION_SYSTEMS.slice(0, 11).map((n, i) => makeRow(n, i)).join('')
+  const rows2 = INSPECTION_SYSTEMS.slice(11).map((n, i) => makeRow(n, i + 11)).join('')
 
   const notesForPrint = inspectorNotes
     ? `<p style="font-size:10.5px;white-space:pre-wrap">${inspectorNotes}</p>`
-    : '<p style="font-size:10px;color:#888;font-style:italic">ללא הערות בוחן</p>'
+    : ''
+
+  const banner = `
+  <div class="bsd">בס"ד</div>
+  <div class="hdr">
+    <div class="biz">
+      <div class="biz-name">${business.name}</div>
+      ${business.sub_title ? `<div class="biz-info">${business.sub_title}</div>` : ''}
+      ${business.address    ? `<div class="biz-info">${business.address}</div>` : ''}
+      ${business.phone      ? `<div class="biz-info">טל׳: ${business.phone}</div>` : ''}
+      ${business.license_number ? `<div class="biz-info">מס׳ רישיון מוסך: ${business.license_number}</div>` : ''}
+    </div>
+    <div class="logo-wrap">
+      ${business.logo ? `<img class="logo-img" src="${business.logo}" alt="לוגו">` : ''}
+      <div class="logo-svc">מוסך מורשה | פנצ׳רייה | פחחות | מכון בדיקת רכב | כיוון פרונט</div>
+    </div>
+  </div>`
+
+  const tableHead = `<table>
+    <thead><tr>
+      <th>מס"ד</th><th>המערכת</th>
+      <th style="width:38px">תקין</th><th style="width:38px">לא תקין</th>
+      <th>אבחנה</th>
+    </tr></thead>`
 
   const html = `<!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -302,25 +324,30 @@ export function printChecklist(inspection: InspectionBasic, business: BusinessBa
 <title>ממצאי בדיקה – ${inspection.plate}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
-@page { size: A4; margin: 10mm; }
+@page { size: A4; margin: 0; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; font-size: 11px; line-height: 1.35; }
-.page { width: 190mm; }
-.hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:5mm; padding-bottom:4mm; border-bottom:2.5px solid #000; }
+.page { width:210mm; min-height:296mm; padding:10mm 15mm; position:relative; }
+.page + .page { page-break-before: always; }
+.bsd { text-align:right; font-weight:bold; font-size:11px; margin-bottom:3px; }
+.hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:4mm; padding-bottom:4mm; border-bottom:2px solid #000; }
+.biz { font-weight:bold; font-size:13px; line-height:1.5; }
 .biz-name { font-size:16px; font-weight:900; }
-.biz-info { font-size:10px; line-height:1.5; margin-top:3px; }
-.logo-img { max-height:70px; max-width:180px; object-fit:contain; mix-blend-mode:multiply; }
-.title-box { text-align:center; border:2.5px solid #000; padding:5px 8px; margin-bottom:5mm; }
+.biz-info { font-size:11px; }
+.logo-wrap { text-align:center; }
+.logo-img { max-height:110px; max-width:240px; object-fit:contain; mix-blend-mode:multiply; filter:contrast(1.1); display:block; margin:0 auto; }
+.logo-svc { font-size:9px; text-align:center; font-weight:bold; margin-top:4px; letter-spacing:0.5px; color:#333; }
+.title-box { text-align:center; border:2.5px solid #000; padding:5px 8px; margin-bottom:4mm; }
 .title-box h1 { font-size:13.5px; font-weight:900; text-decoration:underline; margin:0; }
 .title-box p  { font-size:10px; margin:3px 0 0; }
-.info-panels { display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin-bottom:5mm; }
+.info-panels { display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin-bottom:4mm; }
 .info-panel { border:1px solid #ccc; border-radius:4px; padding:5px 8px; }
 .info-panel-title { font-size:11px; font-weight:900; border-bottom:1.5px solid #000; margin-bottom:4px; padding-bottom:2px; }
 .car-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:2px 6px; }
 .car-cell { font-size:11px; padding:1px 0; }
 .car-cell b { font-weight:700; }
 .insp-num { font-size:11px; font-weight:700; border:1px solid #ccc; border-radius:4px; padding:4px 8px; margin-bottom:3mm; display:inline-block; }
-table { width:100%; border-collapse:collapse; margin-bottom:5mm; font-size:10.5px; }
+table { width:100%; border-collapse:collapse; margin-bottom:4mm; font-size:10.5px; }
 th { background:#eee !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; border:1px solid #000; padding:3px 4px; text-align:center; font-size:10px; font-weight:700; }
 td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 .summary { border:1.5px solid #000; padding:6px 10px; margin-bottom:4mm; border-radius:3px; }
@@ -330,27 +357,21 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 .legal-box { border:2px solid #000; padding:5px 8px; font-size:9.5px; font-weight:700; line-height:1.5; margin-bottom:5mm; }
 .sigs { display:flex; justify-content:space-around; padding-top:4mm; font-weight:700; font-size:11px; }
 .sig-line { border-bottom:1.5px solid #000; width:130px; display:inline-block; min-height:1.3em; margin-right:4px; }
-@media screen { body{background:#e5e5e5} .page{background:#fff;margin:10mm auto;padding:10mm;box-shadow:0 2px 10px rgba(0,0,0,.15)} }
+.pagenum { position:absolute; bottom:8mm; left:15mm; font-size:10px; color:#999; }
+@media screen { body{background:#e5e5e5} .page{background:#fff;margin:10mm auto;box-shadow:0 2px 10px rgba(0,0,0,.15)} }
 </style>
 </head>
 <body>
+
+<!-- ══ עמוד 1 ══ -->
 <div class="page">
-  <div class="hdr">
-    <div>
-      <div class="biz-name">${business.name}</div>
-      ${business.sub_title ? `<div class="biz-info">${business.sub_title}</div>` : ''}
-      ${business.address ? `<div class="biz-info">${business.address}</div>` : ''}
-      ${business.phone ? `<div class="biz-info">טל׳: ${business.phone}</div>` : ''}
-      ${business.license_number ? `<div class="biz-info">מס׳ רישיון מוסך: ${business.license_number}</div>` : ''}
-    </div>
-    ${business.logo ? `<img class="logo-img" src="${business.logo}" alt="לוגו">` : ''}
-  </div>
+  ${banner}
   <div class="title-box">
     <h1>טופס סיכום אחיד של בדיקה כללית</h1>
     <h1>ללא מערכות אלקטרוניות וממוחשבות</h1>
     <p>(ע"פ הוראות משרד התחבורה)</p>
   </div>
-  <div class="insp-num">מס׳ בדיקה: <b>${inspection.id.slice(0, 8).toUpperCase()}</b>${inspectorName ? ` &nbsp;|&nbsp; בוחן: <b>${inspectorName}</b>` : ''}</div>
+  <div class="insp-num">מס׳ בדיקה: <b>${inspection.id.slice(0, 8).toUpperCase()}</b>${inspectorName ? ` &nbsp;|&nbsp; בוחן: <b>${inspectorName}</b>` : ''} &nbsp;|&nbsp; תאריך: <b>${date}</b></div>
   <div class="info-panels">
     <div class="info-panel">
       <div class="info-panel-title">פרטי לקוח</div>
@@ -373,16 +394,14 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
       </div>
     </div>
   </div>
-  <table>
-    <thead>
-      <tr>
-        <th>מס"ד</th><th>המערכת</th>
-        <th style="width:38px">תקין</th><th style="width:38px">לא תקין</th>
-        <th>אבחנה</th>
-      </tr>
-    </thead>
-    <tbody>${rowsHTML}</tbody>
-  </table>
+  ${tableHead}<tbody>${rows1}</tbody></table>
+  <div class="pagenum">עמוד 1 מתוך 2</div>
+</div>
+
+<!-- ══ עמוד 2 ══ -->
+<div class="page">
+  ${banner}
+  ${tableHead}<tbody>${rows2}</tbody></table>
   <div class="summary">
     <div class="summary-title">הערות נוספות:</div>
     ${notesForPrint}
@@ -399,11 +418,13 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
   </div>
   <div class="legal-box">להסרת ספק מובהר כי בדיקת הרכב המבוצעת על ידי מכון הבדיקה הינה בדיקה מכנית בדבר מצבו המכני של הרכב ומערכותיו בלבד, בכפוף להצהרה חתומה על ידי מזמין הבדיקה.</div>
   <div class="sigs">
-    <div>חתימת הבוחן: <span class="sig-line"></span></div>
+    <div>חתימת הבוחן: <span class="sig-line">${inspectorName}</span></div>
     <div>תאריך: <span class="sig-line">${date}</span></div>
     <div>חתימת המזמין: <span class="sig-line"></span></div>
   </div>
+  <div class="pagenum">עמוד 2 מתוך 2</div>
 </div>
+
 <script>window.onload=function(){window.print()}<\/script>
 </body></html>`
 
@@ -418,7 +439,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 export default function InspectionChecklistModal({ inspection, business, inspectors, onClose, onSave }: Props) {
   const [items,          setItems]          = useState<ChecklistItem[]>(() => parseFindings(inspection.findings).items)
   const [inspectorNotes, setInspectorNotes] = useState(() => parseFindings(inspection.findings).notes)
-  const [inspector,      setInspector]      = useState(inspection.inspector ?? '')
+  const [inspector,      setInspector]      = useState(inspection.inspector ?? (inspectors[0] ?? ''))
   const [step,           setStep]           = useState(0)
   const [saving,         setSaving]         = useState(false)
 

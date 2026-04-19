@@ -57,7 +57,7 @@ const emptyForm = {
   make: '', model: '', year: '', km: '', engine_cc: '', chassis: '',
   color: '', ownership_type: '',
   owner_name: '', owner_id: '', owner_phone: '', owner_address: '',
-  car_code: '', inspector: '', time: '',
+  car_code: '', inspector: 'שרון מועלם',
 }
 
 const VEHICLE_TYPES = ['מרכב אחיד', 'מרכב על שלדה', 'קבינה', 'מיני-בוס', 'אחר']
@@ -65,6 +65,10 @@ const VEHICLE_TYPES = ['מרכב אחיד', 'מרכב על שלדה', 'קבינ�
 function todayStr() {
   const d = new Date()
   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
+}
+function nowTimeStr() {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
 
 // ── Field label helper ─────────────────────────────────────────────────────────
@@ -358,7 +362,7 @@ export default function InspectionsClient() {
   const [editModalOpen,  setEditModalOpen]  = useState(false)
   const [checklistIns,   setChecklistIns]  = useState<Inspection | null>(null)
   const [findingsMenuId, setFindingsMenuId] = useState<string | null>(null)
-  const [inspectorNames, setInspectorNames] = useState<string[]>([])
+  const inspectorNames = ['שרון מועלם']
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -401,10 +405,6 @@ export default function InspectionsClient() {
           tax_id:         tenant.tax_id ?? null,
         }
       }
-
-      const { data: emps } = await supabase
-        .from('employees').select('full_name').eq('tenant_id', profile.tenant_id).order('full_name')
-      setInspectorNames((emps ?? []).map((e: { full_name: string }) => e.full_name).filter(Boolean))
 
       await loadInspections()
       setLoading(false)
@@ -461,7 +461,6 @@ export default function InspectionsClient() {
       owner_address:  ins.owner_address  ?? '',
       car_code:       ins.car_code       ?? '',
       inspector:      ins.inspector      ?? '',
-      time:           ins.time           ?? '',
     })
     setEditModalOpen(true)
   }
@@ -498,7 +497,7 @@ export default function InspectionsClient() {
       owner_address: form.owner_address.trim() || null,
       car_code:     form.car_code.trim()       || null,
       inspector:    form.inspector.trim()      || null,
-      time:         form.time.trim()           || null,
+      time:         nowTimeStr(),
       date:         todayStr(),
       status:       'completed' as const,
     }
@@ -559,7 +558,7 @@ export default function InspectionsClient() {
       owner_address: form.owner_address.trim() || null,
       car_code:     form.car_code.trim()       || null,
       inspector:    form.inspector.trim()      || null,
-      time:         form.time.trim()           || null,
+      time:         nowTimeStr(),
       date:         todayStr(),
       status:       'completed' as const,
     }
@@ -763,15 +762,6 @@ export default function InspectionsClient() {
                       <option value={form.inspector}>{form.inspector}</option>
                     )}
                   </select>
-                </div>
-                <div>
-                  <FL>שעה</FL>
-                  <input
-                    type="time"
-                    value={form.time}
-                    onChange={e => onChange('time', e.target.value)}
-                    className="form-input"
-                  />
                 </div>
               </div>
             </Section>
@@ -1144,15 +1134,6 @@ export default function InspectionsClient() {
                           <option value={form.inspector}>{form.inspector}</option>
                         )}
                       </select>
-                    </div>
-                    <div>
-                      <FL>שעה</FL>
-                      <input
-                        type="time"
-                        value={form.time}
-                        onChange={e => onChange('time', e.target.value)}
-                        className="form-input"
-                      />
                     </div>
                   </div>
                 </Section>
