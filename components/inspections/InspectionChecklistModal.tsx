@@ -324,11 +324,12 @@ export function printChecklist(inspection: InspectionBasic, business: BusinessBa
 <title>ממצאי בדיקה – ${inspection.plate}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
-@page { size: A4; margin: 0; }
+@page { size: A4; margin: 10mm 15mm; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; font-size: 11px; line-height: 1.35; }
-.page { width:210mm; min-height:296mm; padding:10mm 15mm; position:relative; }
-.page + .page { page-break-before: always; }
+.page { width:100%; page-break-after: always; break-after: page; position:relative; }
+.page:last-child { page-break-after: auto; break-after: auto; }
+tr { page-break-inside: avoid; break-inside: avoid; }
 .bsd { text-align:right; font-weight:bold; font-size:11px; margin-bottom:3px; }
 .hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:4mm; padding-bottom:4mm; border-bottom:2px solid #000; }
 .biz { font-weight:bold; font-size:13px; line-height:1.5; }
@@ -358,7 +359,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 .sigs { display:flex; justify-content:space-around; padding-top:4mm; font-weight:700; font-size:11px; }
 .sig-line { border-bottom:1.5px solid #000; width:130px; display:inline-block; min-height:1.3em; margin-right:4px; }
 .pagenum { position:absolute; bottom:8mm; left:15mm; font-size:10px; color:#999; }
-@media screen { body{background:#e5e5e5} .page{background:#fff;margin:10mm auto;box-shadow:0 2px 10px rgba(0,0,0,.15)} }
+@media screen { body{background:#e5e5e5} .page{background:#fff;margin:10mm auto;padding:10mm 15mm;max-width:210mm;box-shadow:0 2px 10px rgba(0,0,0,.15)} }
 </style>
 </head>
 <body>
