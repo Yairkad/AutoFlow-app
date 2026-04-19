@@ -216,6 +216,7 @@ interface InspectionBasic {
   owner_address: string | null
   inspector: string | null
   date: string | null
+  time: string | null
   findings: string | null
 }
 
@@ -271,6 +272,8 @@ export function parseFindings(raw: string | null): { items: ChecklistItem[], not
 
 export function printChecklist(inspection: InspectionBasic, business: BusinessBasic, items: ChecklistItem[], inspectorNotes = '', inspectorName = '') {
   const date = inspection.date || new Date().toLocaleDateString('he-IL')
+  const time = inspection.time || ''
+  const dateTime = time ? `${date} ${time}` : date
 
   const makeRow = (name: string, i: number) => {
     const item = items[i]
@@ -356,7 +359,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 .notes { font-size:9px; line-height:1.5; margin-bottom:4mm; }
 .notes p { margin:1px 0; }
 .legal-box { border:2px solid #000; padding:5px 8px; font-size:9.5px; font-weight:700; line-height:1.5; margin-bottom:5mm; }
-.sigs { display:flex; justify-content:space-around; padding-top:4mm; font-weight:700; font-size:11px; }
+.sigs { position:absolute; bottom:18mm; left:15mm; right:15mm; display:flex; justify-content:space-around; padding-top:4mm; border-top:1.5px solid #000; font-weight:700; font-size:11px; }
 .sig-line { border-bottom:1.5px solid #000; width:130px; display:inline-block; min-height:1.3em; margin-right:4px; }
 .pagenum { position:absolute; bottom:3mm; left:0; right:0; text-align:center; font-size:10px; color:#999; }
 @media screen { body{background:#e5e5e5} .page{background:#fff;margin:10mm auto;padding:10mm 15mm;max-width:210mm;width:210mm;box-shadow:0 2px 10px rgba(0,0,0,.15)} }
@@ -372,7 +375,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
     <h1>ללא מערכות אלקטרוניות וממוחשבות</h1>
     <p>(ע"פ הוראות משרד התחבורה)</p>
   </div>
-  <div class="insp-num">מס׳ בדיקה: <b>${inspection.id.slice(0, 8).toUpperCase()}</b>${inspectorName ? ` &nbsp;|&nbsp; בוחן: <b>${inspectorName}</b>` : ''} &nbsp;|&nbsp; תאריך: <b>${date}</b></div>
+  <div class="insp-num">מס׳ בדיקה: <b>${inspection.id.slice(0, 8).toUpperCase()}</b>${inspectorName ? ` &nbsp;|&nbsp; בוחן: <b>${inspectorName}</b>` : ''} &nbsp;|&nbsp; תאריך: <b>${dateTime}</b></div>
   <div class="info-panels">
     <div class="info-panel">
       <div class="info-panel-title">פרטי לקוח</div>
