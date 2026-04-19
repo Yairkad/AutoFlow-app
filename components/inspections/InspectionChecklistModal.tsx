@@ -206,7 +206,7 @@ interface InspectionBasic {
   model: string | null
   year: number | null
   km: string | null
-  engine_cc: number | null
+  engine_cc: string | null
   chassis: string | null
   color: string | null
   ownership_type: string | null
