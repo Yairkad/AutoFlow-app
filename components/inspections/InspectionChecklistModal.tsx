@@ -287,8 +287,8 @@ export function printChecklist(inspection: InspectionBasic, business: BusinessBa
   }
 
   // Split 21 systems: first 11 on page 1, remaining 10 on page 2
-  const rows1 = INSPECTION_SYSTEMS.slice(0, 9).map((n, i) => makeRow(n, i)).join('')
-  const rows2 = INSPECTION_SYSTEMS.slice(9).map((n, i) => makeRow(n, i + 9)).join('')
+  const rows1 = INSPECTION_SYSTEMS.slice(0, 13).map((n, i) => makeRow(n, i)).join('')
+  const rows2 = INSPECTION_SYSTEMS.slice(13).map((n, i) => makeRow(n, i + 13)).join('')
 
   const notesForPrint = inspectorNotes
     ? `<p style="font-size:10.5px;white-space:pre-wrap">${inspectorNotes}</p>`
