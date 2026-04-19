@@ -144,11 +144,14 @@ function PrintReport({ data }: { data: PrintData }) {
           .pp-info-row { display:flex; align-items:baseline; margin-bottom:6px; font-size:14px; }
           .pp-info-row span { white-space:nowrap; font-weight:600; }
           .pp-line { border-bottom:1px solid #000; flex-grow:1; margin-right:6px; min-height:1.3em; font-weight:bold; padding:0 4px; }
-          .pp-legal { font-size:13.5px; line-height:1.5; text-align:justify; flex-grow:1; }
-          .pp-bullets { margin:8px 0; list-style-type:"❖ "; padding-right:20px; font-weight:bold; font-size:13px; }
-          .pp-bullets li { margin-bottom:3px; }
-          .pp-warn { border:2.5px solid #000; padding:8px 12px; margin:8px 0; background:#f5f5f5 !important; -webkit-print-color-adjust:exact; }
-          .pp-warn h4 { margin:0 0 4px 0; text-decoration:underline; font-size:15px; }
+          .pp-legal { font-size:13px; line-height:1.7; text-align:justify; flex-grow:1; }
+          .pp-legal-list { padding-right:20px; margin:0 0 6px; }
+          .pp-legal-list li { margin-bottom:8px; }
+          .pp-fill { font-weight:bold; border-bottom:1.5px solid #000; padding:0 8px; display:inline-block; min-width:120px; }
+          .pp-bullets { margin:6px 0; list-style-type:"❖ "; padding-right:20px; font-weight:bold; font-size:12px; }
+          .pp-bullets li { margin-bottom:2px; }
+          .pp-warn { border:2.5px solid #000; padding:6px 10px; margin:6px 0; background:#f5f5f5 !important; -webkit-print-color-adjust:exact; font-size:12px; }
+          .pp-warn h4 { margin:0 0 3px 0; text-decoration:underline; font-size:13px; }
           .pp-sig { margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end; padding-top:8px; border-top:1px dashed #ccc; }
           .pp-sig-item { width:30%; text-align:center; font-size:13px; }
           .pp-sig-line { border-bottom:1.5px solid #000; margin-bottom:4px; min-height:1.5em; font-weight:bold; font-size:14px; }
@@ -206,18 +209,22 @@ function PrintReport({ data }: { data: PrintData }) {
         </div>
 
         <div className="pp-legal">
-          אני{' '}
-          <span style={{ fontWeight: 'bold', borderBottom: '1px solid #000', padding: '0 12px', display: 'inline-block', minWidth: 130 }}>
-            {ins.owner_name}
-          </span>
-          {' '}ת.ז.{' '}
-          <span style={{ fontWeight: 'bold', borderBottom: '1px solid #000', padding: '0 12px', display: 'inline-block', minWidth: 100 }}>
-            {ins.owner_id || ''}
-          </span>
-          <br /><br />
-          מזמין בזאת את בדיקת הרכב אשר פרטיו מפורטים ברישיון הרכב. ידוע לי, כי הבדיקה הינה מכנית בלבד ותפקידה לבדוק את מצבו המכני של הרכב ומערכותיו.
-          <br /><br />
-          ידוע לי, כי מכון הבדיקה אינו אחראי בכל דרך שהיא לזיופים או שינויים כלשהם בנתונים ו/או במספרים כלשהם ברכב ו/או במסמכיו, לרבות ברישיון הרכב ולתוצאותיהם של הללו, וכי מכון הבדיקה מבצע הבדיקה בכפוף ובהסתמך על הצהרתי זו.
+          <ol className="pp-legal-list">
+            <li>
+              אני{' '}
+              <span className="pp-fill">{ins.owner_name}</span>
+              {' '}בעל ת.ז.{' '}
+              <span className="pp-fill">{ins.owner_id || ''}</span>
+              {' '}אשר צילומו לוטה, מזמין בזאת את בדיקת הרכב אשר פרטיו מפורטים ברישיון הרכב, אשר צילומו לוטה. ידוע לי, כי הבדיקה הינה בדיקה כללית הכוללת בדיקה{' '}
+              <strong>מכנית וממוחשבת / מכנית בלבד ללא בדיקת מערכות אלקטרוניות וממוחשבות</strong>
+            </li>
+            <li>
+              ידוע לי, כי אחריות על הבדיקה הינה לתקופה של שלושה חודשים או 6,000 ק&quot;מ, לפי המוקדם מבניהם.
+            </li>
+            <li>
+              ידוע לי, כי מכון הבדיקה אינו אחראי בכל דרך שהיא לזיופים או שינויים כלשהם בנתונים ו/או במספרים כלשהם ברכב ו/או במסמכיו, לרבות ברישיון הרכב ולתוצאותיהם של הללו, וכי מכון הבדיקה מבצע הבדיקה בכפוף ובהסתמך על הצהרתי זו.
+            </li>
+          </ol>
           <ul className="pp-bullets">
             <li>יש לבדוק תצרוכת שמן בנסיעה !!</li>
             <li>אין אחריות על מערכות אלקטרוניות, מחשבי הרכב וכריות אויר !</li>
