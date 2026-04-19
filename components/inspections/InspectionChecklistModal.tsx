@@ -287,8 +287,8 @@ export function printChecklist(inspection: InspectionBasic, business: BusinessBa
   }
 
   // Split 21 systems: first 11 on page 1, remaining 10 on page 2
-  const rows1 = INSPECTION_SYSTEMS.slice(0, 11).map((n, i) => makeRow(n, i)).join('')
-  const rows2 = INSPECTION_SYSTEMS.slice(11).map((n, i) => makeRow(n, i + 11)).join('')
+  const rows1 = INSPECTION_SYSTEMS.slice(0, 9).map((n, i) => makeRow(n, i)).join('')
+  const rows2 = INSPECTION_SYSTEMS.slice(9).map((n, i) => makeRow(n, i + 9)).join('')
 
   const notesForPrint = inspectorNotes
     ? `<p style="font-size:10.5px;white-space:pre-wrap">${inspectorNotes}</p>`
@@ -324,10 +324,10 @@ export function printChecklist(inspection: InspectionBasic, business: BusinessBa
 <title>ממצאי בדיקה – ${inspection.plate}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
-@page { size: A4; margin: 10mm 15mm; }
+@page { size: A4 portrait; margin: 10mm 15mm; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; font-size: 11px; line-height: 1.35; }
-.page { width:100%; page-break-after: always; break-after: page; position:relative; }
+.page { width:180mm; height:277mm; overflow:hidden; page-break-after: always; break-after: page; position:relative; }
 .page:last-child { page-break-after: auto; break-after: auto; }
 tr { page-break-inside: avoid; break-inside: avoid; }
 .bsd { text-align:right; font-weight:bold; font-size:11px; margin-bottom:3px; }
@@ -358,8 +358,8 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 .legal-box { border:2px solid #000; padding:5px 8px; font-size:9.5px; font-weight:700; line-height:1.5; margin-bottom:5mm; }
 .sigs { display:flex; justify-content:space-around; padding-top:4mm; font-weight:700; font-size:11px; }
 .sig-line { border-bottom:1.5px solid #000; width:130px; display:inline-block; min-height:1.3em; margin-right:4px; }
-.pagenum { position:absolute; bottom:8mm; left:15mm; font-size:10px; color:#999; }
-@media screen { body{background:#e5e5e5} .page{background:#fff;margin:10mm auto;padding:10mm 15mm;max-width:210mm;box-shadow:0 2px 10px rgba(0,0,0,.15)} }
+.pagenum { position:absolute; bottom:3mm; left:0; right:0; text-align:center; font-size:10px; color:#999; }
+@media screen { body{background:#e5e5e5} .page{background:#fff;margin:10mm auto;padding:10mm 15mm;max-width:210mm;width:210mm;box-shadow:0 2px 10px rgba(0,0,0,.15)} }
 </style>
 </head>
 <body>
