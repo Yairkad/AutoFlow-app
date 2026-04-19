@@ -20,7 +20,7 @@ interface Inspection {
   year: number | null
   color: string | null
   fuel: string | null
-  engine_cc: number | null
+  engine_cc: string | null
   chassis: string | null
   seats: number | null
   test_date: string | null
@@ -118,12 +118,13 @@ function PrintReport({ data }: { data: PrintData }) {
   const makeModel = [ins.make, ins.model].filter(Boolean).join(' ')
 
   return (
-    <div id="print-inspection" style={{ visibility: 'hidden', position: 'absolute', top: 0, left: 0 }}>
+    <div id="print-inspection" style={{ visibility: 'hidden', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
       <style>{`
         @media print {
-          body * { visibility: hidden !important; }
-          #print-inspection, #print-inspection * { visibility: visible !important; }
-          #print-inspection { position: absolute; top: 0; left: 0; width: 100%; }
+          body > * { display: none !important; }
+          body > *:has(#print-inspection) { display: block !important; }
+          #print-inspection { display: block !important; visibility: visible !important; position: absolute; top: 0; left: 0; width: 100%; }
+          #print-inspection * { visibility: visible !important; }
           @page { size: A4; margin: 0; }
 
           .pp { width:210mm; height:296mm; padding:10mm 15mm; box-sizing:border-box; font-family:'Heebo',Arial,sans-serif; direction:rtl; display:flex !important; flex-direction:column; position:relative; }
@@ -487,7 +488,7 @@ export default function InspectionsClient() {
       model:        form.model.trim()     || null,
       year:         form.year             ? Number(form.year)       : null,
       km:           form.km.trim()        || null,
-      engine_cc:    form.engine_cc        ? Number(form.engine_cc)  : null,
+      engine_cc:    form.engine_cc.trim()  || null,
       chassis:        form.chassis.trim()        || null,
       color:          form.color.trim()          || null,
       ownership_type: form.ownership_type.trim() || null,
@@ -548,7 +549,7 @@ export default function InspectionsClient() {
       model:        form.model.trim()     || null,
       year:         form.year             ? Number(form.year)       : null,
       km:           form.km.trim()        || null,
-      engine_cc:    form.engine_cc        ? Number(form.engine_cc)  : null,
+      engine_cc:    form.engine_cc.trim()  || null,
       chassis:        form.chassis.trim()        || null,
       color:          form.color.trim()          || null,
       ownership_type: form.ownership_type.trim() || null,
