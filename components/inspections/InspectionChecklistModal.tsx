@@ -236,6 +236,7 @@ interface Props {
   inspectors: string[]
   onClose: () => void
   onSave: (insId: string, findings: string, inspector?: string) => Promise<void>
+  onClearFindings?: () => Promise<void>
 }
 
 // ── Parse / default ────────────────────────────────────────────────────────────
@@ -441,7 +442,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export default function InspectionChecklistModal({ inspection, business, inspectors, onClose, onSave }: Props) {
+export default function InspectionChecklistModal({ inspection, business, inspectors, onClose, onSave, onClearFindings }: Props) {
   const [items,          setItems]          = useState<ChecklistItem[]>(() => parseFindings(inspection.findings).items)
   const [inspectorNotes, setInspectorNotes] = useState(() => parseFindings(inspection.findings).notes)
   const [inspector,      setInspector]      = useState(inspection.inspector ?? (inspectors[0] ?? ''))
@@ -739,6 +740,18 @@ export default function InspectionChecklistModal({ inspection, business, inspect
                   }}
                 />
               </div>
+
+              {/* Clear findings */}
+              {onClearFindings && (
+                <div style={{ marginBottom: 16, textAlign: 'left' }}>
+                  <button
+                    onClick={async () => { await onClearFindings(); onClose() }}
+                    style={{ fontSize: 11, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                  >
+                    אפס את כל הממצאים
+                  </button>
+                </div>
+              )}
 
               {/* Full table preview */}
               <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>

@@ -941,10 +941,6 @@ export default function InspectionsClient() {
                           style={{ padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', cursor: 'pointer' }}>
                           🖨️ הדפס
                         </button>
-                        <button onClick={() => { clearFindings(ins.id); setFindingsMenuId(null) }}
-                          style={{ padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1px solid var(--danger)', background: '#fef2f2', color: 'var(--danger)', cursor: 'pointer' }}>
-                          🗑️ מחק ממצאים
-                        </button>
                         <button onClick={() => setFindingsMenuId(null)}
                           style={{ padding: '4px 8px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
                           ✕
@@ -1022,6 +1018,7 @@ export default function InspectionsClient() {
           inspectors={inspectorNames}
           onClose={() => setChecklistIns(null)}
           onSave={saveChecklist}
+          onClearFindings={() => clearFindings(checklistIns.id)}
         />
       )}
 
