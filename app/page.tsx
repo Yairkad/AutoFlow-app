@@ -41,7 +41,7 @@ export default async function LandingPage() {
     service.from('promotions').select('id,title,description,fine_print,image_url,link_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).lte('start_date', today).or('end_date.is.null,end_date.gte.' + today).order('sort_order'),
     service.from('price_list').select('id,category,service_name,price,price_note,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('category').order('sort_order'),
     service.from('faq').select('id,question,answer,image_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('sort_order'),
-    service.from('cars').select('id,make,model,year,km,fuel_type,color,ask_price,photos,status').eq('tenant_id', TENANT_ID).in('status', ['available', 'reserved']).order('created_at', { ascending: false }),
+    service.from('cars').select('id,make,model,year,km,fuel_type,color,ask_price,photos,status,seats,condition,notes').eq('tenant_id', TENANT_ID).in('status', ['available', 'reserved']).order('created_at', { ascending: false }),
   ])
 
   const pi = (tenant?.public_info ?? {}) as PublicInfo
@@ -68,7 +68,10 @@ export default async function LandingPage() {
   const displayFaq = faqItems ?? []
   const displayCars = (carsForSale ?? []).map(c => ({
     ...c,
-    photos: Array.isArray(c.photos) ? c.photos : [],
+    photos:   Array.isArray(c.photos) ? c.photos : [],
+    seats:    c.seats    ?? null,
+    condition: c.condition ?? null,
+    notes:    c.notes    ?? null,
   }))
 
   return (
