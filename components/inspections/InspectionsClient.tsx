@@ -32,6 +32,7 @@ interface Inspection {
   owner_address: string | null
   car_code: string | null
   date: string | null
+  time: string | null
   inspector: string | null
   findings: string | null
   status: 'draft' | 'completed'
@@ -56,7 +57,7 @@ const emptyForm = {
   make: '', model: '', year: '', km: '', engine_cc: '', chassis: '',
   color: '', ownership_type: '',
   owner_name: '', owner_id: '', owner_phone: '', owner_address: '',
-  car_code: '',
+  car_code: '', inspector: '', time: '',
 }
 
 const VEHICLE_TYPES = ['מרכב אחיד', 'מרכב על שלדה', 'קבינה', 'מיני-בוס', 'אחר']
@@ -232,9 +233,9 @@ function PrintReport({ data }: { data: PrintData }) {
         </div>
 
         <div className="pp-sig">
-          <div className="pp-sig-item"><div className="pp-sig-line">{dateStr}</div><span>תאריך</span></div>
+          <div className="pp-sig-item"><div className="pp-sig-line">{dateStr}{ins.time ? ` ${ins.time}` : ''}</div><span>תאריך ושעה</span></div>
           <div className="pp-sig-item"><div className="pp-sig-line" /><span>חתימת מזמין הבדיקה</span></div>
-          <div className="pp-sig-item"><div className="pp-sig-line" /><span>חתימת הבודק</span></div>
+          <div className="pp-sig-item"><div className="pp-sig-line">{ins.inspector || ''}</div><span>שם הבוחן וחתימה</span></div>
         </div>
         <div className="pp-pagenum">עמוד 1 מתוך 2</div>
       </div>
@@ -357,6 +358,7 @@ export default function InspectionsClient() {
   const [editModalOpen,  setEditModalOpen]  = useState(false)
   const [checklistIns,   setChecklistIns]  = useState<Inspection | null>(null)
   const [findingsMenuId, setFindingsMenuId] = useState<string | null>(null)
+  const [inspectorNames, setInspectorNames] = useState<string[]>([])
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -399,6 +401,10 @@ export default function InspectionsClient() {
           tax_id:         tenant.tax_id ?? null,
         }
       }
+
+      const { data: emps } = await supabase
+        .from('employees').select('full_name').eq('tenant_id', profile.tenant_id).order('full_name')
+      setInspectorNames((emps ?? []).map((e: { full_name: string }) => e.full_name).filter(Boolean))
 
       await loadInspections()
       setLoading(false)
@@ -454,6 +460,8 @@ export default function InspectionsClient() {
       owner_phone:    ins.owner_phone    ?? '',
       owner_address:  ins.owner_address  ?? '',
       car_code:       ins.car_code       ?? '',
+      inspector:      ins.inspector      ?? '',
+      time:           ins.time           ?? '',
     })
     setEditModalOpen(true)
   }
@@ -489,6 +497,8 @@ export default function InspectionsClient() {
       owner_phone:  form.owner_phone.trim()    || null,
       owner_address: form.owner_address.trim() || null,
       car_code:     form.car_code.trim()       || null,
+      inspector:    form.inspector.trim()      || null,
+      time:         form.time.trim()           || null,
       date:         todayStr(),
       status:       'completed' as const,
     }
@@ -548,6 +558,8 @@ export default function InspectionsClient() {
       owner_phone:  form.owner_phone.trim()    || null,
       owner_address: form.owner_address.trim() || null,
       car_code:     form.car_code.trim()       || null,
+      inspector:    form.inspector.trim()      || null,
+      time:         form.time.trim()           || null,
       date:         todayStr(),
       status:       'completed' as const,
     }
@@ -570,9 +582,11 @@ export default function InspectionsClient() {
 
   // ── Save checklist ───────────────────────────────────────────────────────────
 
-  const saveChecklist = async (insId: string, findings: string) => {
-    await supabase.from('car_inspections').update({ findings }).eq('id', insId)
-    setInspections(prev => prev.map(i => i.id === insId ? { ...i, findings } : i))
+  const saveChecklist = async (insId: string, findings: string, inspector?: string) => {
+    const update: Record<string, unknown> = { findings }
+    if (inspector !== undefined) update.inspector = inspector
+    await supabase.from('car_inspections').update(update).eq('id', insId)
+    setInspections(prev => prev.map(i => i.id === insId ? { ...i, findings, ...(inspector !== undefined ? { inspector } : {}) } : i))
     showToast('ממצאים נשמרו ✓', 'success')
   }
 
@@ -597,7 +611,7 @@ export default function InspectionsClient() {
 
   const printChecklistFromList = (ins: Inspection) => {
     const { items, notes } = parseFindings(ins.findings)
-    printChecklist(ins, bizInfo.current, items, notes)
+    printChecklist(ins, bizInfo.current, items, notes, ins.inspector ?? '')
   }
 
   // ── Clear findings ───────────────────────────────────────────────────────────
@@ -734,6 +748,31 @@ export default function InspectionsClient() {
                     />
                   </div>
                 ))}
+                <div>
+                  <FL>שם הבוחן</FL>
+                  <select
+                    value={form.inspector}
+                    onChange={e => onChange('inspector', e.target.value)}
+                    className="form-input"
+                  >
+                    <option value="">— בחר בוחן —</option>
+                    {inspectorNames.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                    {form.inspector && !inspectorNames.includes(form.inspector) && (
+                      <option value={form.inspector}>{form.inspector}</option>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <FL>שעה</FL>
+                  <input
+                    type="time"
+                    value={form.time}
+                    onChange={e => onChange('time', e.target.value)}
+                    className="form-input"
+                  />
+                </div>
               </div>
             </Section>
 
@@ -1029,6 +1068,7 @@ export default function InspectionsClient() {
         <InspectionChecklistModal
           inspection={checklistIns}
           business={bizInfo.current}
+          inspectors={inspectorNames}
           onClose={() => setChecklistIns(null)}
           onSave={saveChecklist}
         />
@@ -1089,6 +1129,31 @@ export default function InspectionsClient() {
                         />
                       </div>
                     ))}
+                    <div>
+                      <FL>שם הבוחן</FL>
+                      <select
+                        value={form.inspector}
+                        onChange={e => onChange('inspector', e.target.value)}
+                        className="form-input"
+                      >
+                        <option value="">— בחר בוחן —</option>
+                        {inspectorNames.map(name => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                        {form.inspector && !inspectorNames.includes(form.inspector) && (
+                          <option value={form.inspector}>{form.inspector}</option>
+                        )}
+                      </select>
+                    </div>
+                    <div>
+                      <FL>שעה</FL>
+                      <input
+                        type="time"
+                        value={form.time}
+                        onChange={e => onChange('time', e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
                   </div>
                 </Section>
 

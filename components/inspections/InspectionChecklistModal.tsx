@@ -11,21 +11,21 @@ export const INSPECTION_SYSTEMS = [
   'מערכת דלק',
   'מערכת הצתה',
   'מערכת פליטה',
-  'מערכת היגוי',
+  'סרן קדמי ומערכת היגוי',
   'תיבת הילוכים',
   'מערכת העברת כוח',
   'קפיצים',
   'בולמי זעזועים',
   'מתלה קדמי',
   'מתלה אחורי',
-  'מערכת בלמים',
+  'מערכת בלמים (ללא פירוק גלגלים)',
   'בלם עזר',
   'צמיגים',
   'חישוקים',
   'שלדת מרכב',
   'מרכב (פחחות)',
   'אביזרי בטיחות',
-  'מערכת תאורה',
+  'מערכת תאורה (כולל מצבר)',
   'מחוונים',
 ]
 
@@ -71,7 +71,7 @@ const COMMON_FAULTS: Record<string, string[]> = {
     'צנרת פגומה', 'ריקבון כללי במערכת', 'סעפת סדוקה', 'דליפות מהסעפת',
     'חסרים ברגים', 'מערכת פליטה רועשת', 'ממיר קטליטי לא תקין',
   ],
-  'מערכת היגוי': [
+  'סרן קדמי ומערכת היגוי': [
     'זוויות היגוי (כיוון)', 'שחיקת צמיגים', 'סטיות הגה (בנסיעה)', 'רעידות בגלגלים',
     'נקישה בתיבת הגה', 'חופש ונקישה בתיבת הגה', 'גומיות מגן להגה פגומות',
     'משולש עקום', 'קופלונג הגה פגום', 'מעיכה במשולש', 'משאבת הגה פגומה',
@@ -121,7 +121,7 @@ const COMMON_FAULTS: Record<string, string[]> = {
     'מסבי גלגלים רועשים', 'תומך סרן אחורי עקום', 'זווית ציר אחורי פגומה',
     'בושינג בלוי', 'נקודות חיבור חלודות', 'זרוע עקומה',
   ],
-  'מערכת בלמים': [
+  'מערכת בלמים (ללא פירוק גלגלים)': [
     'רפידות שחוקות', 'צלחות שחוקות', 'בלימה לקויה', 'מתקן בקורת בלמים לקוי',
     'רעידות בבלימה', 'סטיות בבלימה', 'חריקות בבלימה', 'נקישות בבלימה',
     'דוושת בלם נמוכה', 'דוושת בלם יורדת', 'רעידות בלחיצת דוושת בלם',
@@ -172,7 +172,7 @@ const COMMON_FAULTS: Record<string, string[]> = {
   'אביזרי בטיחות': [
     'חגורת בטיחות פגומה', 'כרית אוויר מחוסרת', 'נעילת דלתות אינה תקינה',
   ],
-  'מערכת תאורה': [
+  'מערכת תאורה (כולל מצבר)': [
     'פנסי חזית פגומים', 'פנס חזית משוחרר', 'פנסים אחוריים פגומים',
     'לתקן אור בלם', 'לתקן מערכת איתות', 'אור חניה אינו פועל',
     'החלפת אורות אינה פועלת', 'פנס אחורי שבור', 'פנס חזית שבור', 'פנס סדוק',
@@ -211,7 +211,10 @@ interface InspectionBasic {
   color: string | null
   ownership_type: string | null
   owner_name: string
+  owner_id: string | null
   owner_phone: string | null
+  owner_address: string | null
+  inspector: string | null
   date: string | null
   findings: string | null
 }
@@ -228,8 +231,9 @@ interface BusinessBasic {
 interface Props {
   inspection: InspectionBasic
   business: BusinessBasic
+  inspectors: string[]
   onClose: () => void
-  onSave: (insId: string, findings: string) => Promise<void>
+  onSave: (insId: string, findings: string, inspector?: string) => Promise<void>
 }
 
 // ── Parse / default ────────────────────────────────────────────────────────────
@@ -265,7 +269,7 @@ export function parseFindings(raw: string | null): { items: ChecklistItem[], not
 
 // ── Print ──────────────────────────────────────────────────────────────────────
 
-export function printChecklist(inspection: InspectionBasic, business: BusinessBasic, items: ChecklistItem[], inspectorNotes = '') {
+export function printChecklist(inspection: InspectionBasic, business: BusinessBasic, items: ChecklistItem[], inspectorNotes = '', inspectorName = '') {
   const date = inspection.date || new Date().toLocaleDateString('he-IL')
 
   const rowsHTML = INSPECTION_SYSTEMS.map((name, i) => {
@@ -309,9 +313,13 @@ body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; font-size: 11px;
 .title-box { text-align:center; border:2.5px solid #000; padding:5px 8px; margin-bottom:5mm; }
 .title-box h1 { font-size:13.5px; font-weight:900; text-decoration:underline; margin:0; }
 .title-box p  { font-size:10px; margin:3px 0 0; }
-.car-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3px 8px; margin-bottom:5mm; border:1px solid #ccc; padding:5px 8px; border-radius:4px; }
+.info-panels { display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin-bottom:5mm; }
+.info-panel { border:1px solid #ccc; border-radius:4px; padding:5px 8px; }
+.info-panel-title { font-size:11px; font-weight:900; border-bottom:1.5px solid #000; margin-bottom:4px; padding-bottom:2px; }
+.car-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:2px 6px; }
 .car-cell { font-size:11px; padding:1px 0; }
 .car-cell b { font-weight:700; }
+.insp-num { font-size:11px; font-weight:700; border:1px solid #ccc; border-radius:4px; padding:4px 8px; margin-bottom:3mm; display:inline-block; }
 table { width:100%; border-collapse:collapse; margin-bottom:5mm; font-size:10.5px; }
 th { background:#eee !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; border:1px solid #000; padding:3px 4px; text-align:center; font-size:10px; font-weight:700; }
 td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
@@ -331,7 +339,9 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
     <div>
       <div class="biz-name">${business.name}</div>
       ${business.sub_title ? `<div class="biz-info">${business.sub_title}</div>` : ''}
-      <div class="biz-info">${[business.address, business.phone ? 'טל׳: ' + business.phone : '', business.license_number ? 'רישיון: ' + business.license_number : ''].filter(Boolean).join(' | ')}</div>
+      ${business.address ? `<div class="biz-info">${business.address}</div>` : ''}
+      ${business.phone ? `<div class="biz-info">טל׳: ${business.phone}</div>` : ''}
+      ${business.license_number ? `<div class="biz-info">מס׳ רישיון מוסך: ${business.license_number}</div>` : ''}
     </div>
     ${business.logo ? `<img class="logo-img" src="${business.logo}" alt="לוגו">` : ''}
   </div>
@@ -339,31 +349,42 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
     <h1>טופס סיכום אחיד של בדיקה כללית</h1>
     <h1>ללא מערכות אלקטרוניות וממוחשבות</h1>
     <p>(ע"פ הוראות משרד התחבורה)</p>
-    <p style="font-family:monospace;font-size:10px;margin-top:4px;color:#555">מס׳ בדיקה: ${inspection.id.slice(0, 8).toUpperCase()}</p>
   </div>
-  <div class="car-grid">
-    <div class="car-cell"><b>מס׳ רכב:</b> ${inspection.plate}</div>
-    <div class="car-cell"><b>דגם:</b> ${inspection.model || ''}</div>
-    <div class="car-cell"><b>תוצר:</b> ${inspection.make || ''}</div>
-    <div class="car-cell"><b>מס׳ מנוע:</b> ${inspection.engine_cc || ''}</div>
-    <div class="car-cell"><b>מס׳ שלדה:</b> ${inspection.chassis || ''}</div>
-    <div class="car-cell"><b>שנת ייצור:</b> ${inspection.year || ''}</div>
-    <div class="car-cell"><b>ק"מ:</b> ${inspection.km || ''}</div>
-    <div class="car-cell"><b>סוג רכב:</b> ${inspection.ownership_type || ''}</div>
-    <div class="car-cell"><b>צבע:</b> ${inspection.color || ''}</div>
+  <div class="insp-num">מס׳ בדיקה: <b>${inspection.id.slice(0, 8).toUpperCase()}</b>${inspectorName ? ` &nbsp;|&nbsp; בוחן: <b>${inspectorName}</b>` : ''}</div>
+  <div class="info-panels">
+    <div class="info-panel">
+      <div class="info-panel-title">פרטי לקוח</div>
+      <div class="car-cell"><b>שם לקוח:</b> ${inspection.owner_name}</div>
+      <div class="car-cell"><b>ת.ז.:</b> ${inspection.owner_id || ''}</div>
+      <div class="car-cell"><b>טלפון:</b> ${inspection.owner_phone || ''}</div>
+      <div class="car-cell"><b>כתובת:</b> ${inspection.owner_address || ''}</div>
+    </div>
+    <div class="info-panel">
+      <div class="info-panel-title">פרטי רכב</div>
+      <div class="car-grid">
+        <div class="car-cell"><b>מס׳ רכב:</b> ${inspection.plate}</div>
+        <div class="car-cell"><b>שנת ייצור:</b> ${inspection.year || ''}</div>
+        <div class="car-cell"><b>תוצר:</b> ${inspection.make || ''}</div>
+        <div class="car-cell"><b>דגם:</b> ${inspection.model || ''}</div>
+        <div class="car-cell"><b>מס׳ מנוע:</b> ${inspection.engine_cc || ''}</div>
+        <div class="car-cell"><b>מס׳ שלדה:</b> ${inspection.chassis || ''}</div>
+        <div class="car-cell"><b>ק"מ:</b> ${inspection.km || ''}</div>
+        <div class="car-cell"><b>סוג רכב:</b> ${inspection.ownership_type || ''}</div>
+      </div>
+    </div>
   </div>
   <table>
     <thead>
       <tr>
         <th>מס"ד</th><th>המערכת</th>
         <th style="width:38px">תקין</th><th style="width:38px">לא תקין</th>
-        <th>הערות / תוצאות בדיקה</th>
+        <th>אבחנה</th>
       </tr>
     </thead>
     <tbody>${rowsHTML}</tbody>
   </table>
   <div class="summary">
-    <div class="summary-title">${failItems.length === 0 ? '✓ סיכום: הרכב תקין' : `⚠️ נמצאו ליקויים ב-${failItems.length} מערכות`} — הערות בוחן:</div>
+    <div class="summary-title">הערות נוספות:</div>
     ${notesForPrint}
   </div>
   <div class="notes">
@@ -394,9 +415,10 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export default function InspectionChecklistModal({ inspection, business, onClose, onSave }: Props) {
+export default function InspectionChecklistModal({ inspection, business, inspectors, onClose, onSave }: Props) {
   const [items,          setItems]          = useState<ChecklistItem[]>(() => parseFindings(inspection.findings).items)
   const [inspectorNotes, setInspectorNotes] = useState(() => parseFindings(inspection.findings).notes)
+  const [inspector,      setInspector]      = useState(inspection.inspector ?? '')
   const [step,           setStep]           = useState(0)
   const [saving,         setSaving]         = useState(false)
 
@@ -439,9 +461,9 @@ export default function InspectionChecklistModal({ inspection, business, onClose
 
   async function handleSave(andPrint: boolean) {
     setSaving(true)
-    await onSave(inspection.id, JSON.stringify({ items, notes: inspectorNotes }))
+    await onSave(inspection.id, JSON.stringify({ items, notes: inspectorNotes }), inspector || undefined)
     setSaving(false)
-    if (andPrint) printChecklist(inspection, business, items, inspectorNotes)
+    if (andPrint) printChecklist(inspection, business, items, inspectorNotes, inspector)
     onClose()
   }
 
@@ -654,9 +676,31 @@ export default function InspectionChecklistModal({ inspection, business, onClose
                 ))}
               </div>
 
+              {/* Inspector selection */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>שם הבוחן</div>
+                <select
+                  value={inspector}
+                  onChange={e => setInspector(e.target.value)}
+                  style={{
+                    width: '100%', border: '1.5px solid var(--border)', borderRadius: 8,
+                    padding: '9px 12px', fontSize: 13, fontFamily: 'inherit',
+                    background: 'var(--bg)', color: 'var(--text)', outline: 'none',
+                  }}
+                >
+                  <option value="">— בחר בוחן —</option>
+                  {inspectors.map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                  {inspector && !inspectors.includes(inspector) && (
+                    <option value={inspector}>{inspector}</option>
+                  )}
+                </select>
+              </div>
+
               {/* Inspector notes */}
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>הערות בוחן</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>הערות נוספות</div>
                 <textarea
                   value={inspectorNotes}
                   onChange={e => setInspectorNotes(e.target.value)}
