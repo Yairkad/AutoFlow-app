@@ -108,194 +108,155 @@ function Section({ icon, title, children }: { icon: string; title: string; child
   )
 }
 
-// ── Print Component ────────────────────────────────────────────────────────────
+// ── Print Report (new window, same pattern as printChecklist) ─────────────────
 
-interface PrintData { inspection: Inspection; business: BusinessInfo }
-
-function PrintReport({ data }: { data: PrintData }) {
-  const { inspection: ins, business: biz } = data
+function printReport(ins: Inspection, biz: BusinessInfo) {
   const dateStr = ins.date || todayStr()
   const makeModel = [ins.make, ins.model].filter(Boolean).join(' ')
+  const emptyLines = Array.from({ length: 18 }).map(() => '<div class="pp-empty-line"></div>').join('')
 
-  return (
-    <div id="print-inspection" style={{ visibility: 'hidden', position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}>
-      <style>{`
-        @media print {
-          body > * { display: none !important; }
-          body > *:has(#print-inspection) { display: block !important; }
-          #print-inspection { display: block !important; visibility: visible !important; position: absolute; top: 0; left: 0; width: 100%; }
-          #print-inspection * { visibility: visible !important; }
-          @page { size: A4; margin: 0; }
-
-          .pp { width:210mm; height:296mm; padding:10mm 15mm; box-sizing:border-box; font-family:'Heebo',Arial,sans-serif; direction:rtl; display:flex !important; flex-direction:column; position:relative; }
-          .pp + .pp { page-break-before: always; }
-          .pp-bsd { text-align:right; font-weight:bold; font-size:11px; margin-bottom:3px; }
-          .pp-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:4mm; padding-bottom:4mm; border-bottom:2px solid #000; }
-          .pp-biz { font-weight:bold; font-size:13px; line-height:1.4; }
-          .pp-biz-name { font-size:16px; font-weight:900; }
-          .pp-logo-wrap { text-align:center; }
-          .pp-logo-wrap img { max-height:110px; max-width:240px; object-fit:contain; mix-blend-mode:multiply; filter:contrast(1.1); border:none; display:block; margin:0 auto; }
-          .pp-logo-svc { font-size:9px; text-align:center; font-weight:bold; margin-top:4px; letter-spacing:0.5px; color:#333; }
-          .pp-doc-titles { text-align:center; margin-bottom:4mm; }
-          .pp-doc-titles h2 { font-size:12px; border-top:1px solid #000; border-bottom:1px solid #000; padding:3px 0; margin:4px 0; font-weight:bold; }
-          .pp-doc-titles h1 { font-size:22px; margin:5px 0; text-decoration:underline; font-weight:900; }
-          .pp-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-bottom:4mm; }
-          .pp-info-section h3 { font-size:16px; border-bottom:2px solid #000; margin-bottom:5px; font-weight:900; }
-          .pp-info-row { display:flex; align-items:baseline; margin-bottom:6px; font-size:14px; }
-          .pp-info-row span { white-space:nowrap; font-weight:600; }
-          .pp-line { border-bottom:1px solid #000; flex-grow:1; margin-right:6px; min-height:1.3em; font-weight:bold; padding:0 4px; }
-          .pp-legal { font-size:13px; line-height:1.7; text-align:justify; flex-grow:1; }
-          .pp-legal-list { padding-right:20px; margin:0 0 6px; }
-          .pp-legal-list li { margin-bottom:8px; }
-          .pp-fill { font-weight:bold; border-bottom:1.5px solid #000; padding:0 8px; display:inline-block; min-width:120px; }
-          .pp-bullets { margin:6px 0; list-style-type:"❖ "; padding-right:20px; font-weight:bold; font-size:12px; }
-          .pp-bullets li { margin-bottom:2px; }
-          .pp-warn { border:2.5px solid #000; padding:6px 10px; margin:6px 0; background:#f5f5f5 !important; -webkit-print-color-adjust:exact; font-size:12px; }
-          .pp-warn h4 { margin:0 0 3px 0; text-decoration:underline; font-size:13px; }
-          .pp-sig { margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end; padding-top:8px; border-top:1px dashed #ccc; }
-          .pp-sig-item { width:30%; text-align:center; font-size:13px; }
-          .pp-sig-line { border-bottom:1.5px solid #000; margin-bottom:4px; min-height:1.5em; font-weight:bold; font-size:14px; }
-          .pp-pagenum { position:absolute; bottom:8mm; left:15mm; font-size:10px; color:#999; }
-          .pp-findings-title { font-size:16px; font-weight:900; margin:10px 0 6px; border-bottom:2px solid #000; padding-bottom:3px; }
-          .pp-empty-line { border-bottom:1.5px solid #000; height:38px; margin-bottom:2px; }
-          .pp-info-bar { display:flex; gap:0; border:2px solid #000; font-size:12px; margin-bottom:5mm; }
-          .pp-info-bar-lbl { padding:5px 10px; border-left:1px solid #000; background:#eee !important; font-weight:700; white-space:nowrap; -webkit-print-color-adjust:exact; }
-          .pp-info-bar-val { padding:5px 10px; border-left:2px solid #000; font-weight:900; font-size:13px; }
-          .pp-info-bar-val-flex { padding:5px 10px; border-left:2px solid #000; font-weight:700; flex:1; }
-          .pp-info-bar-val-phone { padding:5px 10px; border-left:2px solid #000; flex:1; }
-          .pp-info-bar-code { padding:5px 10px; min-width:50px; }
-        }
-      `}</style>
-
-      {/* ── PAGE 1 ── */}
-      <div className="pp">
-        <div className="pp-bsd">בס&quot;ד</div>
-
-        <div className="pp-hdr">
-          <div className="pp-biz">
-            <div className="pp-biz-name">{biz.name}</div>
-            {biz.sub_title && <div style={{ fontSize: 12 }}>{biz.sub_title}</div>}
-            {biz.address && <div>{biz.address}</div>}
-            {biz.phone && <div>טל׳: {biz.phone}</div>}
-            {biz.license_number && <div>מס׳ רישיון מוסך: {biz.license_number}</div>}
-          </div>
-          <div className="pp-logo-wrap">
-            {biz.logo && <img src={biz.logo} alt="לוגו" />}
-            <div className="pp-logo-svc">מוסך מורשה | פנצ׳רייה | פחחות | מכון בדיקת רכב | כיוון פרונט</div>
-          </div>
-        </div>
-
-        <div className="pp-doc-titles">
-          <h2>הצהרה על-פי הוראת נוהל מחייבת (2/98) של משרד התחבורה למדדים לבדיקת רכב לצרכי קניה ומכירה</h2>
-          <h1>דו&quot;ח קליטה – בדיקת רכב</h1>
-        </div>
-
-        <div className="pp-info-grid">
-          <div className="pp-info-section">
-            <h3>פרטי הלקוח</h3>
-            <div className="pp-info-row"><span>מס׳ רכב:</span><div className="pp-line">{ins.plate}</div></div>
-            <div className="pp-info-row"><span>שם הלקוח:</span><div className="pp-line">{ins.owner_name}</div></div>
-            <div className="pp-info-row"><span>כתובת:</span><div className="pp-line">{ins.owner_address || ''}</div></div>
-            <div className="pp-info-row"><span>טלפון:</span><div className="pp-line">{ins.owner_phone || ''}</div></div>
-          </div>
-          <div className="pp-info-section">
-            <h3>פרטי הרכב</h3>
-            <div className="pp-info-row"><span>שנת ייצור:</span><div className="pp-line">{ins.year || ''}</div></div>
-            <div className="pp-info-row"><span>תוצר הרכב:</span><div className="pp-line">{makeModel}</div></div>
-            <div className="pp-info-row"><span>ק&quot;מ:</span><div className="pp-line">{ins.km || ''}</div></div>
-            <div className="pp-info-row"><span>מס׳ מנוע:</span><div className="pp-line">{ins.engine_cc || ''}</div></div>
-            <div className="pp-info-row"><span>מס׳ שילדה:</span><div className="pp-line">{ins.chassis || ''}</div></div>
-          </div>
-        </div>
-
-        <div className="pp-legal">
-          <ol className="pp-legal-list">
-            <li>
-              אני{' '}
-              <span className="pp-fill">{ins.owner_name}</span>
-              {' '}בעל ת.ז.{' '}
-              <span className="pp-fill">{ins.owner_id || ''}</span>
-              {' '}אשר צילומו לוטה, מזמין בזאת את בדיקת הרכב אשר פרטיו מפורטים ברישיון הרכב, אשר צילומו לוטה. ידוע לי, כי הבדיקה הינה בדיקה כללית הכוללת בדיקה{' '}
-              <strong>מכנית וממוחשבת / מכנית בלבד ללא בדיקת מערכות אלקטרוניות וממוחשבות</strong>
-            </li>
-            <li>
-              ידוע לי, כי אחריות על הבדיקה הינה לתקופה של שלושה חודשים או 6,000 ק&quot;מ, לפי המוקדם מבניהם.
-            </li>
-            <li>
-              ידוע לי, כי מכון הבדיקה אינו אחראי בכל דרך שהיא לזיופים או שינויים כלשהם בנתונים ו/או במספרים כלשהם ברכב ו/או במסמכיו, לרבות ברישיון הרכב ולתוצאותיהם של הללו, וכי מכון הבדיקה מבצע הבדיקה בכפוף ובהסתמך על הצהרתי זו.
-            </li>
-          </ol>
-          <ul className="pp-bullets">
-            <li>יש לבדוק תצרוכת שמן בנסיעה !!</li>
-            <li>אין אחריות על מערכות אלקטרוניות, מחשבי הרכב וכריות אויר !</li>
-            <li>מומלץ לבדוק את רציפות הטיפול לק&quot;מ.</li>
-            <li>מומלץ לבדוק את מקוריות הרכב במשרד הרישוי.</li>
-          </ul>
-          <div className="pp-warn">
-            <h4>⚠️ חשוב ביותר!!!</h4>
-            עם גילוי ליקויים שלא נתגלו בבדיקה – אין אנו אחראים אם התיקון ו/או הבדיקה בוצעו במקום אחר לפני שהרכב נבדק על ידינו שנית.<br />
-            החברה אינה אחראית על ליקויים או מגרעות אשר לא נתגלו בבדיקה זו כתוצאה מהעלמת ליקויים במתכוון.<br />
-            דו&quot;ח זה יפה כוחו לגבי מזמין הבדיקה בלבד.
-          </div>
-          <p style={{ marginTop: 8, fontSize: 13 }}>
-            אני{' '}
-            <span style={{ display: 'inline-block', width: 160, borderBottom: '1px solid #000' }} />
-            {' '}מצהיר/ה בזאת כי הוסברו לי כל הליקויים המתייחסים לדו&quot;ח זה על כל חלקיו.
-          </p>
-        </div>
-
-        <div className="pp-sig">
-          <div className="pp-sig-item"><div className="pp-sig-line">{dateStr}{ins.time ? ` ${ins.time}` : ''}</div><span>תאריך ושעה</span></div>
-          <div className="pp-sig-item"><div className="pp-sig-line" /><span>חתימת מזמין הבדיקה</span></div>
-          <div className="pp-sig-item"><div className="pp-sig-line">{ins.inspector || ''}</div><span>שם הבוחן וחתימה</span></div>
-        </div>
-        <div className="pp-pagenum">עמוד 1 מתוך 2</div>
+  const banner = `
+    <div class="pp-bsd">בס"ד</div>
+    <div class="pp-hdr">
+      <div class="pp-biz">
+        <div class="pp-biz-name">${biz.name}</div>
+        ${biz.sub_title ? `<div style="font-size:12px">${biz.sub_title}</div>` : ''}
+        ${biz.address    ? `<div>${biz.address}</div>` : ''}
+        ${biz.phone      ? `<div>טל׳: ${biz.phone}</div>` : ''}
+        ${biz.license_number ? `<div>מס׳ רישיון מוסך: ${biz.license_number}</div>` : ''}
       </div>
-
-      {/* ── PAGE 2 ── */}
-      <div className="pp">
-        <div className="pp-bsd">בס&quot;ד</div>
-
-        <div className="pp-hdr">
-          <div className="pp-biz">
-            <div className="pp-biz-name">{biz.name}</div>
-            {biz.sub_title && <div style={{ fontSize: 12 }}>{biz.sub_title}</div>}
-            {biz.address && <div>{biz.address}</div>}
-            {biz.phone && <div>טל׳: {biz.phone}</div>}
-            {biz.license_number && <div>מס׳ רישיון מוסך: {biz.license_number}</div>}
-          </div>
-          <div className="pp-logo-wrap">
-            {biz.logo && <img src={biz.logo} alt="לוגו" />}
-            <div className="pp-logo-svc">מוסך מורשה | פנצ׳רייה | פחחות | מכון בדיקת רכב | כיוון פרונט</div>
-          </div>
-        </div>
-
-        <h1 style={{ textAlign: 'center', textDecoration: 'underline', fontSize: 22, margin: '0 0 4mm', fontWeight: 900 }}>
-          טופס ממצאי בדיקה
-        </h1>
-
-        <div className="pp-info-bar">
-          <div className="pp-info-bar-lbl">מס׳ רכב</div>
-          <div className="pp-info-bar-val">{ins.plate}</div>
-          <div className="pp-info-bar-lbl">שם לקוח</div>
-          <div className="pp-info-bar-val-flex">{ins.owner_name}</div>
-          <div className="pp-info-bar-lbl">טלפון</div>
-          <div className="pp-info-bar-val-phone">{ins.owner_phone || ''}</div>
-          <div className="pp-info-bar-lbl" style={{ borderLeft: 'none' }}>קוד</div>
-          <div className="pp-info-bar-code">{ins.car_code || ''}</div>
-        </div>
-
-        <div className="pp-findings-title">פירוט ליקויים והערות:</div>
-        <div>
-          {Array.from({ length: 18 }).map((_, i) => (
-            <div key={i} className="pp-empty-line" />
-          ))}
-        </div>
-
-        <div className="pp-pagenum">עמוד 2 מתוך 2</div>
+      <div class="pp-logo-wrap">
+        ${biz.logo ? `<img src="${biz.logo}" alt="לוגו">` : ''}
+        <div class="pp-logo-svc">מוסך מורשה | פנצ׳רייה | פחחות | מכון בדיקת רכב | כיוון פרונט</div>
       </div>
+    </div>`
+
+  const html = `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>דו"ח קליטה – ${ins.plate}</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap');
+@page { size: A4 portrait; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #fff; }
+.pp { width:210mm; height:297mm; padding:10mm 15mm; display:flex; flex-direction:column; position:relative; page-break-after:always; break-after:page; overflow:hidden; }
+.pp:last-child { page-break-after:auto; break-after:auto; }
+.pp-bsd { text-align:right; font-weight:bold; font-size:11px; margin-bottom:3px; }
+.pp-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:4mm; padding-bottom:4mm; border-bottom:2px solid #000; }
+.pp-biz { font-weight:bold; font-size:13px; line-height:1.4; }
+.pp-biz-name { font-size:16px; font-weight:900; }
+.pp-logo-wrap { text-align:center; }
+.pp-logo-wrap img { max-height:110px; max-width:240px; object-fit:contain; mix-blend-mode:multiply; filter:contrast(1.1); display:block; margin:0 auto; }
+.pp-logo-svc { font-size:9px; text-align:center; font-weight:bold; margin-top:4px; letter-spacing:0.5px; color:#333; }
+.pp-doc-titles { text-align:center; margin-bottom:4mm; }
+.pp-doc-titles h2 { font-size:12px; border-top:1px solid #000; border-bottom:1px solid #000; padding:3px 0; margin:4px 0; font-weight:bold; }
+.pp-doc-titles h1 { font-size:22px; margin:5px 0; text-decoration:underline; font-weight:900; }
+.pp-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-bottom:4mm; }
+.pp-info-section h3 { font-size:16px; border-bottom:2px solid #000; margin-bottom:5px; font-weight:900; }
+.pp-info-row { display:flex; align-items:baseline; margin-bottom:6px; font-size:14px; }
+.pp-info-row span { white-space:nowrap; font-weight:600; }
+.pp-line { border-bottom:1px solid #000; flex-grow:1; margin-right:6px; min-height:1.3em; font-weight:bold; padding:0 4px; }
+.pp-legal { font-size:13px; line-height:1.7; text-align:justify; flex-grow:1; }
+.pp-legal-list { padding-right:20px; margin:0 0 6px; }
+.pp-legal-list li { margin-bottom:8px; }
+.pp-fill { font-weight:bold; border-bottom:1.5px solid #000; padding:0 8px; display:inline-block; min-width:120px; }
+.pp-bullets { margin:6px 0; list-style-type:"❖ "; padding-right:20px; font-weight:bold; font-size:12px; }
+.pp-bullets li { margin-bottom:2px; }
+.pp-warn { border:2.5px solid #000; padding:6px 10px; margin:6px 0; background:#f5f5f5; -webkit-print-color-adjust:exact; print-color-adjust:exact; font-size:12px; }
+.pp-warn h4 { margin:0 0 3px 0; text-decoration:underline; font-size:13px; }
+.pp-sig { margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end; padding-top:8px; border-top:1px dashed #ccc; }
+.pp-sig-item { width:30%; text-align:center; font-size:13px; }
+.pp-sig-line { border-bottom:1.5px solid #000; margin-bottom:4px; min-height:1.5em; font-weight:bold; font-size:14px; }
+.pp-pagenum { position:absolute; bottom:8mm; left:15mm; font-size:10px; color:#999; }
+.pp-findings-title { font-size:16px; font-weight:900; margin:10px 0 6px; border-bottom:2px solid #000; padding-bottom:3px; }
+.pp-empty-line { border-bottom:1.5px solid #000; height:38px; margin-bottom:2px; }
+.pp-info-bar { display:flex; border:2px solid #000; font-size:12px; margin-bottom:5mm; }
+.pp-info-bar-lbl { padding:5px 10px; border-left:1px solid #000; background:#eee; -webkit-print-color-adjust:exact; print-color-adjust:exact; font-weight:700; white-space:nowrap; }
+.pp-info-bar-val { padding:5px 10px; border-left:2px solid #000; font-weight:900; font-size:13px; }
+.pp-info-bar-val-flex { padding:5px 10px; border-left:2px solid #000; font-weight:700; flex:1; }
+.pp-info-bar-val-phone { padding:5px 10px; border-left:2px solid #000; flex:1; }
+.pp-info-bar-code { padding:5px 10px; min-width:50px; }
+@media screen { body{background:#e5e5e5} .pp{background:#fff;margin:10mm auto;box-shadow:0 2px 10px rgba(0,0,0,.15)} }
+</style>
+</head>
+<body>
+
+<!-- עמוד 1 -->
+<div class="pp">
+  ${banner}
+  <div class="pp-doc-titles">
+    <h2>הצהרה על-פי הוראת נוהל מחייבת (2/98) של משרד התחבורה למדדים לבדיקת רכב לצרכי קניה ומכירה</h2>
+    <h1>דו"ח קליטה – בדיקת רכב</h1>
+  </div>
+  <div class="pp-info-grid">
+    <div class="pp-info-section">
+      <h3>פרטי הלקוח</h3>
+      <div class="pp-info-row"><span>מס׳ רכב:</span><div class="pp-line">${ins.plate}</div></div>
+      <div class="pp-info-row"><span>שם הלקוח:</span><div class="pp-line">${ins.owner_name}</div></div>
+      <div class="pp-info-row"><span>כתובת:</span><div class="pp-line">${ins.owner_address || ''}</div></div>
+      <div class="pp-info-row"><span>טלפון:</span><div class="pp-line">${ins.owner_phone || ''}</div></div>
     </div>
-  )
+    <div class="pp-info-section">
+      <h3>פרטי הרכב</h3>
+      <div class="pp-info-row"><span>שנת ייצור:</span><div class="pp-line">${ins.year || ''}</div></div>
+      <div class="pp-info-row"><span>תוצר הרכב:</span><div class="pp-line">${makeModel}</div></div>
+      <div class="pp-info-row"><span>ק"מ:</span><div class="pp-line">${ins.km || ''}</div></div>
+      <div class="pp-info-row"><span>מס׳ מנוע:</span><div class="pp-line">${ins.engine_cc || ''}</div></div>
+      <div class="pp-info-row"><span>מס׳ שילדה:</span><div class="pp-line">${ins.chassis || ''}</div></div>
+    </div>
+  </div>
+  <div class="pp-legal">
+    <ol class="pp-legal-list">
+      <li>אני <span class="pp-fill">${ins.owner_name}</span> בעל ת.ז. <span class="pp-fill">${ins.owner_id || ''}</span> אשר צילומו לוטה, מזמין בזאת את בדיקת הרכב אשר פרטיו מפורטים ברישיון הרכב, אשר צילומו לוטה. ידוע לי, כי הבדיקה הינה בדיקה כללית הכוללת בדיקה <strong>מכנית וממוחשבת / מכנית בלבד ללא בדיקת מערכות אלקטרוניות וממוחשבות</strong></li>
+      <li>ידוע לי, כי אחריות על הבדיקה הינה לתקופה של שלושה חודשים או 6,000 ק"מ, לפי המוקדם מבניהם.</li>
+      <li>ידוע לי, כי מכון הבדיקה אינו אחראי בכל דרך שהיא לזיופים או שינויים כלשהם בנתונים ו/או במספרים כלשהם ברכב ו/או במסמכיו, לרבות ברישיון הרכב ולתוצאותיהם של הללו, וכי מכון הבדיקה מבצע הבדיקה בכפוף ובהסתמך על הצהרתי זו.</li>
+    </ol>
+    <ul class="pp-bullets">
+      <li>יש לבדוק תצרוכת שמן בנסיעה !!</li>
+      <li>אין אחריות על מערכות אלקטרוניות, מחשבי הרכב וכריות אויר !</li>
+      <li>מומלץ לבדוק את רציפות הטיפול לק"מ.</li>
+      <li>מומלץ לבדוק את מקוריות הרכב במשרד הרישוי.</li>
+    </ul>
+    <div class="pp-warn">
+      <h4>⚠️ חשוב ביותר!!!</h4>
+      עם גילוי ליקויים שלא נתגלו בבדיקה – אין אנו אחראים אם התיקון ו/או הבדיקה בוצעו במקום אחר לפני שהרכב נבדק על ידינו שנית.<br>
+      החברה אינה אחראית על ליקויים או מגרעות אשר לא נתגלו בבדיקה זו כתוצאה מהעלמת ליקויים במתכוון.<br>
+      דו"ח זה יפה כוחו לגבי מזמין הבדיקה בלבד.
+    </div>
+    <p style="margin-top:8px;font-size:13px">אני <span style="display:inline-block;width:160px;border-bottom:1px solid #000"></span> מצהיר/ה בזאת כי הוסברו לי כל הליקויים המתייחסים לדו"ח זה על כל חלקיו.</p>
+  </div>
+  <div class="pp-sig">
+    <div class="pp-sig-item"><div class="pp-sig-line">${dateStr}${ins.time ? ` ${ins.time}` : ''}</div><span>תאריך ושעה</span></div>
+    <div class="pp-sig-item"><div class="pp-sig-line"></div><span>חתימת מזמין הבדיקה</span></div>
+    <div class="pp-sig-item"><div class="pp-sig-line">${ins.inspector || ''}</div><span>שם הבוחן וחתימה</span></div>
+  </div>
+  <div class="pp-pagenum">עמוד 1 מתוך 2</div>
+</div>
+
+<!-- עמוד 2 -->
+<div class="pp">
+  ${banner}
+  <h1 style="text-align:center;text-decoration:underline;font-size:22px;margin:0 0 4mm;font-weight:900">טופס ממצאי בדיקה</h1>
+  <div class="pp-info-bar">
+    <div class="pp-info-bar-lbl">מס׳ רכב</div><div class="pp-info-bar-val">${ins.plate}</div>
+    <div class="pp-info-bar-lbl">שם לקוח</div><div class="pp-info-bar-val-flex">${ins.owner_name}</div>
+    <div class="pp-info-bar-lbl">טלפון</div><div class="pp-info-bar-val-phone">${ins.owner_phone || ''}</div>
+    <div class="pp-info-bar-lbl" style="border-left:none">קוד</div><div class="pp-info-bar-code">${ins.car_code || ''}</div>
+  </div>
+  <div class="pp-findings-title">פירוט ליקויים והערות:</div>
+  ${emptyLines}
+  <div class="pp-pagenum">עמוד 2 מתוך 2</div>
+</div>
+
+</body></html>`
+
+  const w = window.open('', '_blank', 'width=900,height=700')
+  if (!w) return
+  w.document.write(html)
+  w.document.close()
+  w.onload = () => { w.focus(); w.print() }
 }
 
 // ── Copy cell helper ──────────────────────────────────────────────────────────
@@ -359,7 +320,6 @@ export default function InspectionsClient() {
   const [form, setForm]               = useState({ ...emptyForm })
   const [saving, setSaving]           = useState(false)
   const [plateLoading, setPlateLoading] = useState(false)
-  const [printData, setPrintData]     = useState<PrintData | null>(null)
   const [search, setSearch]           = useState('')
   const [showActions, setShowActions] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set())
@@ -528,10 +488,7 @@ export default function InspectionsClient() {
     loadInspections()
     clearForm()
 
-    if (saved) {
-      setPrintData({ inspection: saved, business: bizInfo.current })
-      setTimeout(() => window.print(), 150)
-    }
+    if (saved) printReport(saved, bizInfo.current)
   }
 
   // ── Save only (no print) ─────────────────────────────────────────────────────
@@ -609,10 +566,7 @@ export default function InspectionsClient() {
 
   // ── Print existing ───────────────────────────────────────────────────────────
 
-  const handlePrint = (ins: Inspection) => {
-    setPrintData({ inspection: ins, business: bizInfo.current })
-    setTimeout(() => window.print(), 100)
-  }
+  const handlePrint = (ins: Inspection) => printReport(ins, bizInfo.current)
 
   // ── Print checklist (direct from list) ──────────────────────────────────────
 
@@ -691,8 +645,6 @@ export default function InspectionsClient() {
   return (
     <div style={{ padding: '20px 24px' }}>
 
-      {/* Print area */}
-      {printData && <PrintReport data={printData} />}
 
       {/* Page title */}
       <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
