@@ -217,6 +217,7 @@ interface InspectionBasic {
   inspector: string | null
   date: string | null
   time: string | null
+  inspection_number: number | null
   findings: string | null
 }
 
@@ -375,7 +376,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
     <h1>ללא מערכות אלקטרוניות וממוחשבות</h1>
     <p>(ע"פ הוראות משרד התחבורה)</p>
   </div>
-  <div class="insp-num">מס׳ בדיקה: <b>${inspection.id.slice(0, 8).toUpperCase()}</b>${inspectorName ? ` &nbsp;|&nbsp; בוחן: <b>${inspectorName}</b>` : ''} &nbsp;|&nbsp; תאריך: <b>${dateTime}</b></div>
+  <div class="insp-num">מס׳ בדיקה: <b>${inspection.inspection_number ?? inspection.id.slice(0, 8).toUpperCase()}</b>${inspectorName ? ` &nbsp;|&nbsp; בוחן: <b>${inspectorName}</b>` : ''} &nbsp;|&nbsp; תאריך: <b>${dateTime}</b></div>
   <div class="info-panels">
     <div class="info-panel">
       <div class="info-panel-title">פרטי לקוח</div>
@@ -399,7 +400,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
     </div>
   </div>
   ${tableHead}<tbody>${rows1}</tbody></table>
-  <div class="pagenum">עמוד 1 מתוך 2</div>
+  <div class="pagenum">עמוד 1 מתוך 2 &nbsp;|&nbsp; מס׳ רכב: ${inspection.plate}${inspection.inspection_number ? ` &nbsp;|&nbsp; מס׳ בדיקה: ${inspection.inspection_number}` : ''}</div>
 </div>
 
 <!-- ══ עמוד 2 ══ -->
@@ -426,7 +427,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
     <div>תאריך: <span class="sig-line">${date}</span></div>
     <div>חתימת המזמין: <span class="sig-line"></span></div>
   </div>
-  <div class="pagenum">עמוד 2 מתוך 2</div>
+  <div class="pagenum">עמוד 2 מתוך 2 &nbsp;|&nbsp; מס׳ רכב: ${inspection.plate}${inspection.inspection_number ? ` &nbsp;|&nbsp; מס׳ בדיקה: ${inspection.inspection_number}` : ''}</div>
 </div>
 
 <script>window.onload=function(){window.print()}<\/script>
@@ -536,7 +537,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
               {[inspection.make, inspection.model, inspection.year].filter(Boolean).join(' ')}
               {inspection.owner_name ? ` · ${inspection.owner_name}` : ''}
-              <span style={{ marginRight: 6, fontFamily: 'monospace', opacity: 0.7 }}>#{inspection.id.slice(0, 8).toUpperCase()}</span>
+              {inspection.inspection_number && <span style={{ marginRight: 6, fontFamily: 'monospace', opacity: 0.7 }}>#{inspection.inspection_number}</span>}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>

@@ -38,6 +38,7 @@ interface Inspection {
   status: 'draft' | 'completed'
   created_at: string
   drive_file_id: string | null
+  inspection_number: number | null
 }
 
 interface BusinessInfo {
@@ -232,7 +233,7 @@ body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #fff
     <div class="pp-sig-item"><div class="pp-sig-line"></div><span>חתימת מזמין הבדיקה</span></div>
     <div class="pp-sig-item"><div class="pp-sig-line">${ins.inspector || ''}</div><span>שם הבוחן וחתימה</span></div>
   </div>
-  <div class="pp-pagenum">עמוד 1 מתוך 2</div>
+  <div class="pp-pagenum">עמוד 1 מתוך 2 &nbsp;|&nbsp; מס׳ רכב: ${ins.plate}${ins.inspection_number ? ` &nbsp;|&nbsp; מס׳ בדיקה: ${ins.inspection_number}` : ''}</div>
 </div>
 
 <!-- עמוד 2 -->
@@ -247,7 +248,7 @@ body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #fff
   </div>
   <div class="pp-findings-title">פירוט ליקויים והערות:</div>
   ${emptyLines}
-  <div class="pp-pagenum">עמוד 2 מתוך 2</div>
+  <div class="pp-pagenum">עמוד 2 מתוך 2 &nbsp;|&nbsp; מס׳ רכב: ${ins.plate}${ins.inspection_number ? ` &nbsp;|&nbsp; מס׳ בדיקה: ${ins.inspection_number}` : ''}</div>
 </div>
 
 </body></html>`
