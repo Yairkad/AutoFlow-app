@@ -25,7 +25,9 @@ export default function AppShell({ children, noFooter }: { children: React.React
         marginTop: 'var(--header-h)',
         marginRight: 'var(--sidebar-w)',
         padding: '24px',
-        minHeight: 'calc(100vh - var(--header-h))',
+        height: 'calc(100vh - var(--header-h))',
+        overflowY: 'auto',
+        overflowX: 'hidden',
       }}>
         {children}
       </main>
