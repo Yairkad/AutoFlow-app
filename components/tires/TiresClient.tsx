@@ -185,8 +185,9 @@ export default function TiresClient() {
       return true
     })
     .sort((a, b) => {
-      const sa = tireSize(a), sb2 = tireSize(b)
-      if (sa !== sb2) return sa.localeCompare(sb2)
+      if (a.width   !== b.width)   return a.width   - b.width
+      if (a.profile !== b.profile) return a.profile - b.profile
+      if (a.rim     !== b.rim)     return a.rim     - b.rim
       return (a.brand || '').localeCompare(b.brand || '')
     })
 
@@ -209,7 +210,14 @@ export default function TiresClient() {
   }
 
   function printPriceList() {
-    const rows = tires.filter(t => (t.sell_price ?? 0) > 0)
+    const rows = tires
+      .filter(t => (t.sell_price ?? 0) > 0)
+      .sort((a, b) => {
+        if (a.width   !== b.width)   return a.width   - b.width
+        if (a.profile !== b.profile) return a.profile - b.profile
+        if (a.rim     !== b.rim)     return a.rim     - b.rim
+        return (a.brand || '').localeCompare(b.brand || '')
+      })
     if (rows.length === 0) return showToast('אין צמיגים עם מחיר מכירה לייצוא', 'error')
     const rowsHTML = rows.map(t => `
       <tr>
@@ -640,7 +648,7 @@ export default function TiresClient() {
 
           {/* Table */}
           <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <div style={{ overflowX: 'auto', borderRadius: '12px' }}>
+            <div style={{ overflowX: 'auto', borderRadius: '12px', scrollbarWidth: 'thin' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
@@ -901,7 +909,7 @@ export default function TiresClient() {
             <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '14px' }}>
               היסטוריית תנועות ({movements.length})
             </div>
-            <div style={{ overflowX: 'auto' }}>
+            <div style={{ overflowX: 'auto', scrollbarWidth: 'thin' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
