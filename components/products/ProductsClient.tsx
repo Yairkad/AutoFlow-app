@@ -886,8 +886,9 @@ function PriceListOverlay({ products, onClose }: { products: Product[]; onClose:
           #pricelist-overlay, #pricelist-overlay * { visibility: visible; }
           #pricelist-overlay {
             position: fixed !important;
-            top: 0 !important; left: 0 !important;
-            width: 100% !important; max-height: none !important;
+            top: 0 !important; left: 0 !important; right: 0 !important;
+            width: 100% !important; max-width: 100% !important; max-height: none !important;
+            transform: none !important;
             border-radius: 0 !important; box-shadow: none !important;
             overflow: visible !important; background: #fff !important;
           }

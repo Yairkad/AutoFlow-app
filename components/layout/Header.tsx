@@ -178,6 +178,11 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const [tenantName,   setTenantName]   = useState<string | null>(null)
   const [tenantLogo,   setTenantLogo]   = useState<string | null>(null)
 
+  // Notification bell
+  const [pendingQuotes,    setPendingQuotes]    = useState(0)
+  const [pendingAlignment, setPendingAlignment] = useState(0)
+  const [showBell,         setShowBell]         = useState(false)
+
   // Mobile search overlay
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const mobileInputRef = useRef<HTMLInputElement>(null)
@@ -191,7 +196,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchRef   = useRef<HTMLDivElement>(null)
 
-  // Load user profile + tenant branding
+  // Load user profile + tenant branding + pending counts
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) return
@@ -200,13 +205,21 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
         .then(({ data: p }) => {
           if (p?.full_name) setUserName(p.full_name)
           if (p?.tenant_id) {
-            supabase.from('tenants').select('name, logo_base64').eq('id', p.tenant_id).single()
+            const tid = p.tenant_id
+            supabase.from('tenants').select('name, logo_base64').eq('id', tid).single()
               .then(({ data: t }) => {
                 if (t) {
                   setTenantName(t.name || null)
                   setTenantLogo(t.logo_base64 || null)
                 }
               })
+            Promise.all([
+              supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'open'),
+              supabase.from('alignment_jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'waiting'),
+            ]).then(([pq, pa]) => {
+              setPendingQuotes(pq.count ?? 0)
+              setPendingAlignment(pa.count ?? 0)
+            })
           }
         })
     })
@@ -264,9 +277,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   }
 
   function go(r: SearchResult) {
-    const q2 = q.trim()
-    const url = q2 ? `${r.href}?q=${encodeURIComponent(q2)}` : r.href
-    router.push(url)
+    router.push(`${r.href}?open=${r.id}`)
     setQ('')
     setResults([])
     setFocused(false)
@@ -519,6 +530,82 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
             </div>
           )}
         </div>
+
+        {/* Bell */}
+        {(() => {
+          const total = pendingQuotes + pendingAlignment
+          return (
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                onClick={() => setShowBell(v => !v)}
+                aria-label="התראות"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  padding: '4px', lineHeight: 1, position: 'relative',
+                  fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                🔔
+                {total > 0 && (
+                  <span style={{
+                    position: 'absolute', top: 0, right: 0,
+                    background: 'var(--danger)', color: '#fff', borderRadius: '50%',
+                    fontSize: '9px', fontWeight: 700, lineHeight: 1,
+                    width: 15, height: 15, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    pointerEvents: 'none',
+                  }}>{total > 9 ? '9+' : total}</span>
+                )}
+              </button>
+
+              {showBell && (
+                <>
+                  <div onClick={() => setShowBell(false)} style={{ position: 'fixed', inset: 0, zIndex: 199 }} />
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
+                    background: 'var(--bg-card)', border: '1px solid var(--border)',
+                    borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,.15)',
+                    minWidth: '230px', zIndex: 200, overflow: 'hidden', direction: 'rtl',
+                  }}>
+                    <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '13px', color: 'var(--text-muted)' }}>
+                      ממתינים לטיפול
+                    </div>
+                    {total === 0 && (
+                      <div style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
+                        הכל מטופל ✓
+                      </div>
+                    )}
+                    {pendingQuotes > 0 && (
+                      <Link
+                        href="/quotes"
+                        onClick={() => setShowBell(false)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px', textDecoration: 'none', color: 'var(--text)', borderBottom: pendingAlignment > 0 ? '1px solid var(--border)' : 'none' }}
+                      >
+                        <span style={{ fontSize: '18px', flexShrink: 0 }}>💬</span>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600 }}>{pendingQuotes} הצעות מחיר</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ממתינות לטיפול</div>
+                        </div>
+                      </Link>
+                    )}
+                    {pendingAlignment > 0 && (
+                      <Link
+                        href="/alignment"
+                        onClick={() => setShowBell(false)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px', textDecoration: 'none', color: 'var(--text)' }}
+                      >
+                        <span style={{ fontSize: '18px', flexShrink: 0 }}>🔩</span>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600 }}>{pendingAlignment} עבודות פרונט</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ממתינות להתחלה</div>
+                        </div>
+                      </Link>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )
+        })()}
 
         {/* Avatar */}
         <div style={{ position: 'relative' }}>

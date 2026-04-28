@@ -336,6 +336,7 @@ export default function QuotesClient() {
   const tenantId = useRef<string>('')
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
+  const pendingOpenRef = useRef<string | null>(null)
 
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [tab, setTab]       = useState<'tires' | 'parts'>('tires')
@@ -378,6 +379,10 @@ export default function QuotesClient() {
   }, [sb])
 
   useEffect(() => {
+    pendingOpenRef.current = new URLSearchParams(window.location.search).get('open')
+  }, [])
+
+  useEffect(() => {
     ;(async () => {
       const { data: { user } } = await sb.auth.getUser()
       if (!user) return
@@ -386,6 +391,15 @@ export default function QuotesClient() {
       await load()
     })()
   }, [sb, load])
+
+  // Auto-open quote from ?open=<id> URL param
+  useEffect(() => {
+    const id = pendingOpenRef.current
+    if (!id || quotes.length === 0) return
+    pendingOpenRef.current = null
+    const q = quotes.find(q => q.id === id)
+    if (q) openEdit(q)
+  }, [quotes]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Stats ──────────────────────────────────────────────────────────────────
 

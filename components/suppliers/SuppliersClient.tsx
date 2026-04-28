@@ -120,6 +120,7 @@ export default function SuppliersClient() {
   const supabase = useRef(createClient()).current
   const tenantIdRef = useRef<string | null>(null)
   const { showToast } = useToast()
+  const didAutoOpen = useRef(false)
 
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
@@ -176,7 +177,17 @@ export default function SuppliersClient() {
       supabase.from('supplier_categories').select('name').eq('tenant_id', tid).order('name'),
     ])
 
-    if (suppRes.data) setSuppliers(suppRes.data)
+    if (suppRes.data) {
+      setSuppliers(suppRes.data)
+      if (!didAutoOpen.current) {
+        didAutoOpen.current = true
+        const openId = new URLSearchParams(window.location.search).get('open')
+        if (openId) {
+          const target = suppRes.data.find(s => s.id === openId)
+          if (target) setSelected(target)
+        }
+      }
+    }
     if (debtRes.data) setDebts(debtRes.data)
     if (catRes.data)  setCategories(catRes.data.map(r => r.name))
     setLoading(false)
