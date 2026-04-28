@@ -89,6 +89,21 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 }
 .search-input-global:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,158,92,.1); }
 
+/* NProgress top loading bar */
+#nprogress { pointer-events: none; }
+#nprogress .bar {
+  background: var(--primary);
+  position: fixed; z-index: 9999;
+  top: 0; left: 0;
+  width: 100%; height: 3px;
+}
+#nprogress .peg {
+  display: block; position: absolute;
+  right: 0; width: 100px; height: 100%;
+  box-shadow: 0 0 10px var(--primary), 0 0 5px var(--primary);
+  opacity: 1; transform: rotate(3deg) translate(0, -4px);
+}
+
 /* Spinners — single shared keyframe */
 @keyframes spin { to { transform: rotate(360deg); } }
 /* Legacy aliases kept for compatibility */

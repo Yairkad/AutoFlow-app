@@ -8,6 +8,7 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import * as XLSX from 'xlsx'
 import ExcelMenu from '@/components/ui/ExcelMenu'
+import { progressStart, progressDone } from '@/components/ui/RouteProgress'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -105,18 +106,26 @@ export default function ProductsClient() {
   const [mvDate, setMvDate] = useState(todayISO())
   const [mvSaving, setMvSaving] = useState(false)
 
+  const [isLoading,    setIsLoading]    = useState(true)
+  const [deletingMvId, setDeletingMvId] = useState<string | null>(null)
+
   // ── Load ────────────────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
+    progressStart()
     const [{ data: prods }, { data: sups }, { data: mvs }] = await Promise.all([
-      sb.from('products').select('*').eq('tenant_id', tenantId.current).order('created_at', { ascending: false }),
-      sb.from('suppliers').select('id, name').eq('tenant_id', tenantId.current).order('name'),
-      sb.from('product_sales').select('*').eq('tenant_id', tenantId.current)
-        .order('sold_date', { ascending: false }).limit(200),
+      sb.from('products')
+        .select('id,tenant_id,name,sku,category,unit,unit_qty,qty,buy_price,sell_price,margin,min_qty,supplier_id,notes,created_at')
+        .eq('tenant_id', tenantId.current).order('created_at', { ascending: false }),
+      sb.from('suppliers').select('id,name').eq('tenant_id', tenantId.current).order('name'),
+      sb.from('product_sales')
+        .select('id,product_id,qty,sold_date,movement_type')
+        .eq('tenant_id', tenantId.current).order('sold_date', { ascending: false }).limit(200),
     ])
     setProducts(prods || [])
     setSuppliers(sups || [])
     setMovements(mvs || [])
+    progressDone()
   }, [sb])
 
   useEffect(() => {
@@ -133,6 +142,7 @@ export default function ProductsClient() {
         setViewOnly(!admin && !hasFull && hasView)
       }
       await load()
+      setIsLoading(false)
     })()
   }, [sb, load])
 
@@ -216,15 +226,23 @@ export default function ProductsClient() {
       supplier_id: form.supplier_id || null, notes: form.notes.trim() || null,
     }
     if (editId) {
+      const prevProducts = products
+      setProducts(prev => prev.map(p => p.id === editId ? { ...p, ...payload } : p))
+      setFormOpen(false); setEditId(null)
       const { error } = await sb.from('products').update(payload).eq('id', editId)
-      if (error) return showToast('שגיאה בעדכון', 'error')
-      showToast('המוצר עודכן ✓', 'success')
+      if (error) {
+        setProducts(prevProducts)
+        setEditId(editId); setFormOpen(true)
+        showToast('שגיאה בעדכון', 'error')
+      } else {
+        showToast('המוצר עודכן ✓', 'success')
+      }
     } else {
       const { error } = await sb.from('products').insert({ tenant_id: tenantId.current, ...payload })
       if (error) return showToast('שגיאה בשמירה', 'error')
       showToast('המוצר נשמר ✓', 'success')
+      setFormOpen(false); setEditId(null); await load()
     }
-    setFormOpen(false); setEditId(null); await load()
   }
 
   // ── Inline edit mode ────────────────────────────────────────────────────────
@@ -250,7 +268,17 @@ export default function ProductsClient() {
     })
     if (updates.length === 0) { setEditMode(false); return }
 
-    await Promise.all(updates.map(p => {
+    const prevProducts = products
+    setProducts(prev => prev.map(p => {
+      const e = editMap[p.id]
+      if (!e || !updates.find(u => u.id === p.id)) return p
+      return { ...p, name: String(e.name ?? p.name), sku: (e.sku as string) || null,
+        category: (e.category as string) || null, unit: String(e.unit ?? p.unit),
+        buy_price: (e.buy_price as number) || null, sell_price: (e.sell_price as number) || null,
+        supplier_id: (e.supplier_id as string) || null, notes: (e.notes as string) || null }
+    }))
+
+    const results = await Promise.all(updates.map(p => {
       const e = editMap[p.id]
       return sb.from('products').update({
         name: e.name, sku: e.sku || null, category: e.category || null,
@@ -260,9 +288,13 @@ export default function ProductsClient() {
       }).eq('id', p.id)
     }))
 
-    showToast(`עודכנו ${updates.length} מוצרים ✓`, 'success')
-    setEditMode(false)
-    await load()
+    if (results.some(r => r.error)) {
+      setProducts(prevProducts)
+      showToast('שגיאה בעדכון', 'error')
+    } else {
+      setEditMode(false)
+      showToast(`עודכנו ${updates.length} מוצרים ✓`, 'success')
+    }
   }
 
   // ── Delete ──────────────────────────────────────────────────────────────────
@@ -270,9 +302,14 @@ export default function ProductsClient() {
   async function deleteProduct(p: Product) {
     const ok = await confirm({ msg: `למחוק את "${p.name}"?` })
     if (!ok) return
-    await sb.from('products').delete().eq('id', p.id)
-    showToast('נמחק ✓', 'success')
-    await load()
+    setProducts(prev => prev.filter(x => x.id !== p.id))
+    const { error } = await sb.from('products').delete().eq('id', p.id)
+    if (error) {
+      setProducts(prev => [p, ...prev])
+      showToast('שגיאה במחיקה', 'error')
+    } else {
+      showToast('נמחק ✓', 'success')
+    }
   }
 
   // ── Stock movement ──────────────────────────────────────────────────────────
@@ -282,50 +319,56 @@ export default function ProductsClient() {
     const qty = parseFloat(mvQty)
     if (!qty || qty <= 0) return showToast('יש להזין כמות', 'error')
 
-    setMvSaving(true)
     const prod = products.find(p => p.id === mvProductId)
     if (!prod) return
 
-    const newQty = mvType === 'order'
-      ? prod.qty + qty
-      : Math.max(0, prod.qty - qty)
+    const newQty = mvType === 'order' ? prod.qty + qty : Math.max(0, prod.qty - qty)
+    const tempId = `temp-${Date.now()}`
+    const optimisticMv: Movement = { id: tempId, product_id: mvProductId, qty, sold_date: mvDate, movement_type: mvType }
 
+    setProducts(prev => prev.map(p => p.id === mvProductId ? { ...p, qty: newQty } : p))
+    setMovements(prev => [optimisticMv, ...prev])
+    setMvQty(''); setMvProductId(''); setMvProductSearch('')
+
+    setMvSaving(true)
     const [{ error: mvErr }, { error: qtyErr }] = await Promise.all([
-      sb.from('product_sales').insert({
-        tenant_id: tenantId.current,
-        product_id: mvProductId,
-        qty,
-        sold_date: mvDate,
-        movement_type: mvType,
-      }),
+      sb.from('product_sales').insert({ tenant_id: tenantId.current, product_id: mvProductId, qty, sold_date: mvDate, movement_type: mvType }),
       sb.from('products').update({ qty: newQty }).eq('id', mvProductId),
     ])
-
-    if (mvErr || qtyErr) { showToast('שגיאה בשמירה', 'error') }
-    else {
-      showToast(mvType === 'sale' ? `נרשמה מכירה של ${qty} יח׳ ✓` : `נרשמה הזמנה של ${qty} יח׳ ✓`, 'success')
-      setMvQty('')
-      setMvProductId('')
-      setMvProductSearch('')
-    }
     setMvSaving(false)
-    await load()
+
+    if (mvErr || qtyErr) {
+      setProducts(prev => prev.map(p => p.id === mvProductId ? { ...p, qty: prod.qty } : p))
+      setMovements(prev => prev.filter(m => m.id !== tempId))
+      showToast('שגיאה בשמירה', 'error')
+    } else {
+      showToast(mvType === 'sale' ? `נרשמה מכירה של ${qty} יח׳ ✓` : `נרשמה הזמנה של ${qty} יח׳ ✓`, 'success')
+      load()
+    }
   }
 
   async function deleteMovement(mv: Movement) {
     const prod = products.find(p => p.id === mv.product_id)
     if (!prod) return
-    // Reverse the effect
-    const revertedQty = mv.movement_type === 'order'
-      ? Math.max(0, prod.qty - mv.qty)
-      : prod.qty + mv.qty
+    const revertedQty = mv.movement_type === 'order' ? Math.max(0, prod.qty - mv.qty) : prod.qty + mv.qty
 
-    await Promise.all([
+    setDeletingMvId(mv.id)
+    setMovements(prev => prev.filter(m => m.id !== mv.id))
+    setProducts(prev => prev.map(p => p.id === mv.product_id ? { ...p, qty: revertedQty } : p))
+
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
       sb.from('product_sales').delete().eq('id', mv.id),
       sb.from('products').update({ qty: revertedQty }).eq('id', mv.product_id),
     ])
-    showToast('נמחק ✓', 'success')
-    await load()
+    setDeletingMvId(null)
+
+    if (e1 || e2) {
+      setMovements(prev => [mv, ...prev])
+      setProducts(prev => prev.map(p => p.id === mv.product_id ? { ...p, qty: prod.qty } : p))
+      showToast('שגיאה במחיקה', 'error')
+    } else {
+      showToast('נמחק ✓', 'success')
+    }
   }
 
   // ── Excel ────────────────────────────────────────────────────────────────────
@@ -496,7 +539,19 @@ export default function ProductsClient() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.length === 0 ? (
+                  {isLoading ? (
+                    <>
+                      {[...Array(6)].map((_, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                          {[58, 150, 100, 52, 76, 76, 48, 72, 96, 110].map((w, j) => (
+                            <td key={j} style={{ padding: '11px 8px' }}>
+                              <div className="shimmer" style={{ height: 13, width: w }} />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </>
+                  ) : filtered.length === 0 ? (
                     <tr><td colSpan={11} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
                       <div style={{ fontSize: '36px', marginBottom: '8px' }}>📦</div>
                       <div>אין מוצרים</div>
@@ -754,9 +809,15 @@ export default function ProductsClient() {
                           </span>
                         </td>
                         <td style={{ padding: '10px 12px' }}>
-                          <button title="מחק תנועה" onClick={() => deleteMovement(mv)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', color: 'var(--danger)' }}>
-                            🗑️
+                          <button
+                            title="מחק תנועה"
+                            disabled={deletingMvId === mv.id}
+                            onClick={() => deleteMovement(mv)}
+                            style={{ background: 'none', border: 'none', cursor: deletingMvId === mv.id ? 'not-allowed' : 'pointer', fontSize: '15px', color: 'var(--danger)', opacity: deletingMvId === mv.id ? 0.4 : 1, display: 'inline-flex', alignItems: 'center' }}
+                          >
+                            {deletingMvId === mv.id
+                              ? <span style={{ width: 14, height: 14, border: '2px solid #fca5a5', borderTopColor: 'var(--danger)', borderRadius: '50%', display: 'inline-block', animation: 'spin .6s linear infinite' }} />
+                              : '🗑️'}
                           </button>
                         </td>
                       </tr>

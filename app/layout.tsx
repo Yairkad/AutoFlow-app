@@ -3,6 +3,7 @@ import { Heebo } from 'next/font/google'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import { createServiceClient } from '@/lib/supabase/service'
+import RouteProgress from '@/components/ui/RouteProgress'
 import './globals.css'
 
 const heebo = Heebo({
@@ -59,6 +60,7 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl" className={heebo.variable}>
       <body>
+        <RouteProgress />
         <ToastProvider>
           <ConfirmProvider>
             {children}
