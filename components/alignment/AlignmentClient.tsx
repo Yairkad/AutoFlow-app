@@ -221,9 +221,9 @@ const areaSt: React.CSSProperties = {
   fontSize: '14px', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', background: '#f8fafc',
 }
 
-// ── Job Card ───────────────────────────────────────────────────────────────────
+// ── Job Row ────────────────────────────────────────────────────────────────────
 
-function JobCard({
+function JobRow({
   job, onEdit, onDelete, onWhatsApp, onStatusChange, onCopyLink, onPrint,
 }: {
   job: AlignmentJob
@@ -238,96 +238,87 @@ function JobCard({
   const curStatus = STATUSES.find(s => s.key === job.status)!
 
   return (
-    <div style={{
-      background: 'var(--bg-card)', border: '1px solid var(--border)',
-      borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)',
-      overflow: 'hidden', display: 'flex', flexDirection: 'column',
-    }}>
-      {/* Color strip */}
-      <div style={{ height: '4px', background: curStatus.color }} />
+    <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-card)' }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
+    >
+      {/* Plate */}
+      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+        <span style={{
+          fontWeight: 700, fontSize: '14px', fontFamily: 'monospace',
+          background: '#eff6ff', color: '#2563eb', padding: '2px 8px', borderRadius: '6px',
+          display: 'inline-block',
+        }}>
+          {job.plate}
+        </span>
+      </td>
 
-      <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      {/* Car */}
+      <td style={{ padding: '10px 12px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{carInfo || '—'}</div>
+        {job.color && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{job.color}</div>}
+      </td>
 
-        {/* Plate + job type */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{
-            fontWeight: 700, fontSize: '15px', fontFamily: 'monospace',
-            background: '#eff6ff', color: '#2563eb', padding: '2px 8px', borderRadius: '6px',
-          }}>
-            {job.plate}
-          </span>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{job.job_type}</span>
-        </div>
+      {/* Customer */}
+      <td style={{ padding: '10px 12px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 600 }}>{job.customer_name}</div>
+        {job.customer_phone && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{job.customer_phone}</div>}
+      </td>
 
-        {/* Car info */}
-        {carInfo && (
-          <div style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)' }}>{carInfo}</div>
-        )}
+      {/* Job type */}
+      <td style={{ padding: '10px 12px', fontSize: '12px', color: 'var(--text-muted)', maxWidth: '160px' }}>
+        <div>{job.job_type}</div>
+        {job.external_supplier && <div style={{ color: '#6d28d9', fontWeight: 600, marginTop: '2px' }}>🏪 {job.external_supplier}</div>}
+        {job.technician && <div style={{ marginTop: '2px' }}>👷 {job.technician}</div>}
+        {job.notes && <div style={{ marginTop: '2px', fontStyle: 'italic' }}>{job.notes}</div>}
+      </td>
 
-        {/* Customer */}
-        <div style={{ fontSize: '13px', color: 'var(--text)' }}>{job.customer_name}</div>
-        {job.customer_phone && (
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{job.customer_phone}</div>
-        )}
+      {/* Price */}
+      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', fontWeight: 700, color: 'var(--primary)', fontSize: '13px' }}>
+        {job.price != null ? `₪${job.price.toLocaleString()}` : '—'}
+      </td>
 
-        {/* Details */}
-        {(job.technician || job.price != null) && (
-          <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
-            {job.technician && <span>👷 {job.technician}</span>}
-            {job.price != null && (
-              <span style={{ color: 'var(--primary)', fontWeight: 600 }}>₪{job.price.toLocaleString()}</span>
-            )}
-          </div>
-        )}
-
-        {/* Supplier */}
-        {job.external_supplier && (
-          <div style={{
-            fontSize: '12px', color: '#6d28d9', fontWeight: 600,
-            paddingTop: '4px',
-          }}>
-            🏪 {job.external_supplier}
-          </div>
-        )}
-
-        {/* Notes */}
-        {job.notes && (
-          <div style={{
-            fontSize: '12px', color: 'var(--text-muted)',
-            paddingTop: '6px', borderTop: '1px solid var(--border)',
-          }}>
-            {job.notes}
-          </div>
-        )}
-
-        {/* Status tabs */}
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
+      {/* Status */}
+      <td style={{ padding: '10px 12px' }}>
+        <select
+          value={job.status}
+          onChange={e => onStatusChange(job.id, e.target.value as JobStatus)}
+          style={{
+            padding: '4px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 700,
+            border: 'none', cursor: 'pointer', background: curStatus.bg, color: curStatus.color,
+            fontFamily: 'inherit',
+          }}
+        >
           {STATUSES.map(s => (
-            <button key={s.key} onClick={() => onStatusChange(job.id, s.key)} style={{
-              padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600,
-              border: 'none', cursor: s.key === job.status ? 'default' : 'pointer',
-              background: s.key === job.status ? s.color : 'var(--bg)',
-              color: s.key === job.status ? '#fff' : 'var(--text-muted)',
-              transition: 'all .15s',
-            }}>
-              {s.label}
-            </button>
+            <option key={s.key} value={s.key}>{s.label}</option>
           ))}
-        </div>
+        </select>
+      </td>
 
-        {/* Actions */}
-        <div style={{ display: 'flex', gap: '6px', paddingTop: '8px', borderTop: '1px solid var(--border)', marginTop: 'auto' }}>
+      {/* Actions */}
+      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+        <div style={{ display: 'flex', gap: '4px' }}>
           {job.customer_phone
-            ? <Button size="sm" variant="secondary" style={{ flex: 1 }} onClick={() => onWhatsApp(job)}>📲 וואטסאפ</Button>
-            : <Button size="sm" variant="secondary" style={{ flex: 1 }} onClick={() => onCopyLink(job)}>📋 העתק לינק</Button>
+            ? <button title="WhatsApp" onClick={() => onWhatsApp(job)} style={actionBtn}>📲</button>
+            : <button title="העתק לינק" onClick={() => onCopyLink(job)} style={actionBtn}>📋</button>
           }
-          <Button size="sm" variant="secondary" onClick={() => onPrint(job)}>🖨️</Button>
-          <Button size="sm" variant="secondary" onClick={() => onEdit(job)}>✏️</Button>
-          <Button size="sm" variant="danger" onClick={() => onDelete(job.id)}>🗑️</Button>
+          <button title="הדפס הזמנה" onClick={() => onPrint(job)} style={actionBtn}>🖨️</button>
+          <button title="ערוך" onClick={() => onEdit(job)} style={actionBtn}>✏️</button>
+          <button title="מחק" onClick={() => onDelete(job.id)} style={{ ...actionBtn, color: 'var(--danger)' }}>🗑️</button>
         </div>
-      </div>
-    </div>
+      </td>
+    </tr>
   )
+}
+
+const actionBtn: React.CSSProperties = {
+  background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '6px',
+  padding: '4px 7px', cursor: 'pointer', fontSize: '14px', lineHeight: 1,
+}
+
+const thSt: React.CSSProperties = {
+  padding: '9px 12px', textAlign: 'right', fontWeight: 700,
+  fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap',
 }
 
 // ── Job Form ───────────────────────────────────────────────────────────────────
@@ -691,7 +682,7 @@ export default function AlignmentClient() {
         ))}
       </div>
 
-      {/* Cards */}
+      {/* Table */}
       {visibleJobs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)', fontSize: '14px' }}>
           <div style={{ fontSize: '36px', marginBottom: '8px' }}>🔧</div>
@@ -699,19 +690,34 @@ export default function AlignmentClient() {
           <span style={{ fontSize: '12px' }}>לחץ &quot;+ עבודה חדשה&quot; להוספה</span>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '12px' }}>
-          {visibleJobs.map(job => (
-            <JobCard
-              key={job.id}
-              job={job}
-              onEdit={openEdit}
-              onDelete={handleDelete}
-              onWhatsApp={handleWhatsApp}
-              onStatusChange={updateStatus}
-              onCopyLink={handleCopyLink}
-              onPrint={j => printWorkOrder(j, bizInfo.current)}
-            />
-          ))}
+        <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid var(--border)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', direction: 'rtl' }}>
+            <thead>
+              <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
+                <th style={thSt}>לוחית</th>
+                <th style={thSt}>רכב</th>
+                <th style={thSt}>לקוח</th>
+                <th style={thSt}>עבודה / הערות</th>
+                <th style={thSt}>מחיר</th>
+                <th style={thSt}>סטטוס</th>
+                <th style={thSt}>פעולות</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleJobs.map(job => (
+                <JobRow
+                  key={job.id}
+                  job={job}
+                  onEdit={openEdit}
+                  onDelete={handleDelete}
+                  onWhatsApp={handleWhatsApp}
+                  onStatusChange={updateStatus}
+                  onCopyLink={handleCopyLink}
+                  onPrint={j => printWorkOrder(j, bizInfo.current)}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

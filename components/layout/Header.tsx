@@ -179,9 +179,10 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const [tenantLogo,   setTenantLogo]   = useState<string | null>(null)
 
   // Notification bell
-  const [pendingQuotes,    setPendingQuotes]    = useState(0)
-  const [pendingAlignment, setPendingAlignment] = useState(0)
-  const [showBell,         setShowBell]         = useState(false)
+  const [pendingQuotes,       setPendingQuotes]       = useState(0)
+  const [pendingAlignment,    setPendingAlignment]    = useState(0)
+  const [pendingTestTransfer, setPendingTestTransfer] = useState(0)
+  const [showBell,            setShowBell]            = useState(false)
 
   // Mobile search overlay
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
@@ -216,9 +217,11 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
             Promise.all([
               supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'open'),
               supabase.from('alignment_jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'waiting'),
-            ]).then(([pq, pa]) => {
+              supabase.from('test_transfers').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'ממתין'),
+            ]).then(([pq, pa, pt]) => {
               setPendingQuotes(pq.count ?? 0)
               setPendingAlignment(pa.count ?? 0)
+              setPendingTestTransfer(pt.count ?? 0)
             })
           }
         })
@@ -533,7 +536,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
         {/* Bell */}
         {(() => {
-          const total = pendingQuotes + pendingAlignment
+          const total = pendingQuotes + pendingAlignment + pendingTestTransfer
           return (
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <button
@@ -591,12 +594,25 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                       <Link
                         href="/alignment"
                         onClick={() => setShowBell(false)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px', textDecoration: 'none', color: 'var(--text)' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px', textDecoration: 'none', color: 'var(--text)', borderBottom: pendingTestTransfer > 0 ? '1px solid var(--border)' : 'none' }}
                       >
                         <span style={{ fontSize: '18px', flexShrink: 0 }}>🔩</span>
                         <div>
                           <div style={{ fontSize: '13px', fontWeight: 600 }}>{pendingAlignment} עבודות פרונט</div>
                           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ממתינות להתחלה</div>
+                        </div>
+                      </Link>
+                    )}
+                    {pendingTestTransfer > 0 && (
+                      <Link
+                        href="/test-transfer"
+                        onClick={() => setShowBell(false)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px', textDecoration: 'none', color: 'var(--text)' }}
+                      >
+                        <span style={{ fontSize: '18px', flexShrink: 0 }}>🚗</span>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600 }}>{pendingTestTransfer} שינועים לטסטים</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ממתינים לטיפול</div>
                         </div>
                       </Link>
                     )}
