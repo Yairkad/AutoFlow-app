@@ -539,16 +539,24 @@ export default function BillingClient() {
     if (entry) {
       setEditEntry(entry)
       setEName(entry.name); setEContact(entry.contact_id ?? ''); setEDir(entry.direction)
-      setEType(entry.meter_prev != null ? 'meter' : 'fixed')
+      // detect meter type: either readings already set, or the linked billing item is meter type
+      const linkedItem = entry.billing_item_id ? items.find(i => i.id === entry.billing_item_id) : null
+      const isMeter = entry.meter_prev != null || linkedItem?.type === 'meter'
+      setEType(isMeter ? 'meter' : 'fixed')
       setEAmt(String(entry.amount))
       setEPrev(entry.meter_prev != null ? String(entry.meter_prev) : '')
       setECurr(entry.meter_curr != null ? String(entry.meter_curr) : '')
-      setEPpu(entry.price_per_unit != null ? String(entry.price_per_unit) : '')
+      // pre-fill price_per_unit from the linked billing item if not on entry
+      const ppu = entry.price_per_unit ?? linkedItem?.price_per_unit ?? null
+      setEPpu(ppu != null ? String(ppu) : '')
       setENotes(entry.notes ?? ''); setEVat('after')
+      // pre-fill unit: if ppu < 1 assume agorot
+      setEPpuUnit(ppu != null && ppu < 1 ? 'ils' : 'agorot')
     } else {
       setEditEntry(null)
       setEName(''); setEContact(''); setEDir('income'); setEType('fixed')
       setEAmt(''); setEPrev(''); setECurr(''); setEPpu(''); setENotes(''); setEVat('after')
+      setEPpuUnit('agorot')
     }
     setShowEntryModal(true)
   }
@@ -754,11 +762,22 @@ export default function BillingClient() {
                         style={{ borderBottom: '1px solid var(--border)', cursor: editMode ? 'default' : 'pointer' }}
                       >
                         <td style={tdSt}>
-                          <div style={{ fontWeight: 500 }}>{e.name}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontWeight: 500 }}>{e.name}</span>
+                            {(() => {
+                              const linkedItem = e.billing_item_id ? items.find(i => i.id === e.billing_item_id) : null
+                              const needsReading = linkedItem?.type === 'meter' && e.meter_prev == null
+                              return needsReading ? (
+                                <span style={{ fontSize: '10px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '4px', padding: '1px 5px', fontWeight: 600 }}>
+                                  🔌 הזן קריאות
+                                </span>
+                              ) : null
+                            })()}
+                          </div>
                           {e.notes && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{e.notes}</div>}
                           {e.meter_prev != null && (
                             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                              {e.meter_prev} → {e.meter_curr} ({((e.meter_curr ?? 0) - (e.meter_prev ?? 0)).toFixed(0)} יח&apos;)
+                              🔌 {e.meter_prev} → {e.meter_curr} ({((e.meter_curr ?? 0) - (e.meter_prev ?? 0)).toFixed(0)} יח&apos;)
                             </div>
                           )}
                         </td>
