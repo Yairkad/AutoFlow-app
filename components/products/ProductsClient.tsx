@@ -922,10 +922,8 @@ export default function ProductsClient() {
 
 // ── Price List ──────────────────────────────────────────────────────────────────
 
-function PriceListOverlay({ products, onClose }: { products: Product[]; onClose: () => void }) {
+function buildPricelistHtml(products: Product[]): string {
   const today = new Date().toLocaleDateString('he-IL', { year: 'numeric', month: 'long', day: 'numeric' })
-
-  // Group by category, sorted; no-category last
   const grouped = products
     .filter(p => (p.sell_price ?? 0) > 0)
     .reduce<Record<string, Product[]>>((acc, p) => {
@@ -934,62 +932,102 @@ function PriceListOverlay({ products, onClose }: { products: Product[]; onClose:
       acc[cat].push(p)
       return acc
     }, {})
+  const cats = Object.keys(grouped).sort((a, b) =>
+    a === 'כללי' ? 1 : b === 'כללי' ? -1 : a.localeCompare(b, 'he')
+  )
+  const total = products.filter(p => (p.sell_price ?? 0) > 0).length
 
+  const catsHtml = cats.map(cat => {
+    const rows = grouped[cat].map((p, i) => `
+      <tr style="background:${i % 2 === 0 ? '#fff' : '#f8fafc'}">
+        <td style="padding:7px 10px;border-bottom:1px solid #f1f5f9">${p.name}</td>
+        <td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;color:#64748b;font-family:monospace">${p.sku || '—'}</td>
+        <td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;font-weight:700;color:#1a2a6c;text-align:left">
+          ₪${Number(p.sell_price).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </td>
+      </tr>`).join('')
+    return `
+      <div style="margin-bottom:20px;break-inside:avoid;page-break-inside:avoid">
+        <div style="background:#1a2a6c;color:#fff;padding:6px 12px;border-radius:6px;font-weight:700;font-size:13px;margin-bottom:8px">${cat}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#f8fafc">
+              <th style="padding:7px 10px;text-align:right;font-weight:700;border-bottom:2px solid #e2e8f0;font-size:12px;color:#475569">שם המוצר</th>
+              <th style="padding:7px 10px;text-align:right;font-weight:700;border-bottom:2px solid #e2e8f0;font-size:12px;color:#475569;width:130px">מקט</th>
+              <th style="padding:7px 10px;text-align:left;font-weight:700;border-bottom:2px solid #e2e8f0;font-size:12px;color:#475569;width:110px">מחיר מכירה</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`
+  }).join('')
+
+  return `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  @page{size:A4 portrait;margin:15mm}
+  body{font-family:Arial,'Heebo',sans-serif;direction:rtl;background:#fff;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  table{break-inside:auto}
+  thead{display:table-header-group}
+  tr{break-inside:avoid;page-break-inside:avoid}
+</style>
+</head>
+<body>
+<div style="text-align:center;margin-bottom:24px;border-bottom:2px solid #1a2a6c;padding-bottom:14px">
+  <h1 style="font-size:22px;font-weight:800;color:#1a2a6c;margin:0 0 4px">מחירון מוצרים</h1>
+  <div style="font-size:12px;color:#64748b">תאריך הפקה: ${today}</div>
+</div>
+${catsHtml}
+<div style="margin-top:24px;border-top:1px solid #e2e8f0;padding-top:12px;text-align:center;font-size:11px;color:#94a3b8">
+  ${total} מוצרים · המחירים כוללים מע"מ
+</div>
+<script>window.onload=function(){window.print()}<\/script>
+</body></html>`
+}
+
+function PriceListOverlay({ products, onClose }: { products: Product[]; onClose: () => void }) {
+  const today = new Date().toLocaleDateString('he-IL', { year: 'numeric', month: 'long', day: 'numeric' })
+
+  const grouped = products
+    .filter(p => (p.sell_price ?? 0) > 0)
+    .reduce<Record<string, Product[]>>((acc, p) => {
+      const cat = p.category || 'כללי'
+      if (!acc[cat]) acc[cat] = []
+      acc[cat].push(p)
+      return acc
+    }, {})
   const cats = Object.keys(grouped).sort((a, b) =>
     a === 'כללי' ? 1 : b === 'כללי' ? -1 : a.localeCompare(b, 'he')
   )
 
+  function doPrint() {
+    const w = window.open('', '_blank')
+    if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
+    w.document.write(buildPricelistHtml(products))
+    w.document.close()
+  }
+
   return (
     <>
-      <style>{`
-        @media print {
-          body, body * { visibility: hidden; }
-          #pricelist-overlay, #pricelist-overlay * { visibility: visible; }
-          #pricelist-overlay {
-            position: fixed !important;
-            top: 0 !important; left: 0 !important; right: 0 !important;
-            width: 100% !important; max-width: 100% !important; max-height: none !important;
-            transform: none !important;
-            border-radius: 0 !important; box-shadow: none !important;
-            overflow: visible !important; background: #fff !important;
-          }
-          #pricelist-overlay .no-print { display: none !important; }
-          /* Keep each category block together on the same page */
-          #pricelist-overlay .price-cat-block {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-          /* Keep table header with its first row */
-          #pricelist-overlay table { break-inside: auto; }
-          #pricelist-overlay thead { display: table-header-group; }
-          #pricelist-overlay tr { break-inside: avoid; page-break-inside: avoid; }
-          @page { margin: 15mm; size: A4 portrait; }
-        }
-      `}</style>
-
       {/* Backdrop */}
-      <div
-        className="no-print"
-        onClick={onClose}
-        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 400 }}
-      />
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 400 }} />
 
       {/* Panel */}
-      <div
-        id="pricelist-overlay"
-        style={{
-          position: 'fixed', top: '40px', left: '50%', transform: 'translateX(-50%)',
-          width: 'min(800px, 95vw)', maxHeight: 'calc(100vh - 80px)',
-          background: '#fff', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.25)',
-          zIndex: 401, overflowY: 'auto', direction: 'rtl',
-        }}
-      >
+      <div style={{
+        position: 'fixed', top: '40px', left: '50%', transform: 'translateX(-50%)',
+        width: 'min(800px, 95vw)', maxHeight: 'calc(100vh - 80px)',
+        background: '#fff', borderRadius: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.25)',
+        zIndex: 401, overflowY: 'auto', direction: 'rtl',
+      }}>
         {/* Toolbar */}
-        <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
           <span style={{ fontWeight: 700, fontSize: '16px' }}>🖨️ מחירון מוצרים</span>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
-              onClick={() => window.print()}
+              onClick={doPrint}
               style={{ padding: '8px 20px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}
             >
               הדפס / שמור PDF
@@ -998,17 +1036,15 @@ function PriceListOverlay({ products, onClose }: { products: Product[]; onClose:
           </div>
         </div>
 
-        {/* Print content */}
+        {/* Preview content */}
         <div style={{ padding: '24px 28px' }}>
-          {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '24px', borderBottom: '2px solid #1a2a6c', paddingBottom: '14px' }}>
             <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#1a2a6c', margin: '0 0 4px' }}>מחירון מוצרים</h1>
             <div style={{ fontSize: '12px', color: '#64748b' }}>תאריך הפקה: {today}</div>
           </div>
 
-          {/* Categories */}
           {cats.map(cat => (
-            <div key={cat} className="price-cat-block" style={{ marginBottom: '24px' }}>
+            <div key={cat} style={{ marginBottom: '24px' }}>
               <div style={{ background: '#1a2a6c', color: '#fff', padding: '6px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '13px', marginBottom: '8px' }}>
                 {cat}
               </div>
@@ -1025,7 +1061,7 @@ function PriceListOverlay({ products, onClose }: { products: Product[]; onClose:
                     <tr key={p.id} style={{ background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
                       <td style={tdSt}>{p.name}</td>
                       <td style={{ ...tdSt, color: '#64748b', fontFamily: 'monospace' }}>{p.sku || '—'}</td>
-                      <td style={{ ...tdSt, fontWeight: 700, color: 'var(--primary)', textAlign: 'left' }}>
+                      <td style={{ ...tdSt, fontWeight: 700, color: '#1a2a6c', textAlign: 'left' }}>
                         ₪{Number(p.sell_price).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
