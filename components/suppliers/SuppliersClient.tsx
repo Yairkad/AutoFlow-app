@@ -669,7 +669,7 @@ export default function SuppliersClient() {
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   טלפון
-                  <input value={fPhone} onChange={e => setFPhone(e.target.value)} placeholder="050-0000000" style={inputSt} />
+                  <input type="tel" value={fPhone} onChange={e => setFPhone(e.target.value)} placeholder="050-0000000" style={inputSt} />
                 </label>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

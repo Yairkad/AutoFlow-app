@@ -44,6 +44,7 @@ export default function PlateInput({ module, onFill }: Props) {
             onChange={e => setPlate(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSearch()}
             placeholder="מספר רכב..."
+            inputMode="numeric"
             maxLength={8}
             style={{
               width: '100%',

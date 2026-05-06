@@ -470,6 +470,7 @@ export default function TestTransferClient() {
                   onChange={e => onChange(key, e.target.value)}
                   className="form-input"
                   placeholder={placeholder}
+                  type={key === 'customer_phone' ? 'tel' : undefined}
                   style={fieldErrors.has(key) ? { borderColor: 'var(--danger)', boxShadow: '0 0 0 2px rgba(220,38,38,.15)' } : undefined}
                 />
               </div>
@@ -489,6 +490,7 @@ export default function TestTransferClient() {
                 style={{ fontSize: 15, letterSpacing: 1, ...(fieldErrors.has('plate') ? { borderColor: 'var(--danger)', boxShadow: '0 0 0 2px rgba(220,38,38,.15)' } : {}) }}
                 placeholder="12-345-67"
                 dir="ltr"
+                inputMode="numeric"
               />
             </div>
             <div style={{ paddingTop: 20 }}>

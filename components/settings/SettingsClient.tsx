@@ -252,7 +252,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
               <div className="settings-grid-3">
                 {field('שם עסק *', <input style={inputSt} value={tenant.name} onChange={e => setTenant(t => t ? { ...t, name: e.target.value } : t)} placeholder="שם העסק" />)}
                 {field('כותרת משנה', <input style={inputSt} value={tenant.sub_title ?? ''} onChange={e => setTenant(t => t ? { ...t, sub_title: e.target.value } : t)} placeholder="מוסך ופנצריה" />)}
-                {field('טלפון', <input style={inputSt} value={tenant.phone ?? ''} onChange={e => setTenant(t => t ? { ...t, phone: e.target.value } : t)} placeholder="050-0000000" dir="ltr" />)}
+                {field('טלפון', <input type="tel" style={inputSt} value={tenant.phone ?? ''} onChange={e => setTenant(t => t ? { ...t, phone: e.target.value } : t)} placeholder="050-0000000" dir="ltr" />)}
                 {field('כתובת', <input style={inputSt} value={tenant.address ?? ''} onChange={e => setTenant(t => t ? { ...t, address: e.target.value } : t)} placeholder="רחוב, עיר" />)}
                 {field('ח.פ / ע.מ', <input style={inputSt} value={tenant.tax_id ?? ''} onChange={e => setTenant(t => t ? { ...t, tax_id: e.target.value } : t)} placeholder="מספר עוסק" dir="ltr" />)}
                 {field('מספר רישיון', <input style={inputSt} value={tenant.license_number ?? ''} onChange={e => setTenant(t => t ? { ...t, license_number: e.target.value } : t)} placeholder="הכנס מספר בלבד" />)}
@@ -397,7 +397,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             {field('שם מלא', <input style={inputSt} value={createForm.full_name} onChange={e => setCreateForm(f => ({ ...f, full_name: e.target.value }))} placeholder="ישראל ישראלי" />)}
-            {field('טלפון', <input style={inputSt} value={createForm.phone} onChange={e => setCreateForm(f => ({ ...f, phone: e.target.value }))} dir="ltr" placeholder="050-0000000" />)}
+            {field('טלפון', <input type="tel" style={inputSt} value={createForm.phone} onChange={e => setCreateForm(f => ({ ...f, phone: e.target.value }))} dir="ltr" placeholder="050-0000000" />)}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             {field('אימייל *', <input style={inputSt} type="email" value={createForm.email} onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))} dir="ltr" placeholder="user@example.com" />)}
@@ -449,7 +449,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
                   <input style={inputSt} value={editData.full_name ?? ''} onChange={e => setEditData(d => ({ ...d, full_name: e.target.value }))} />
                 ))}
                 {field('טלפון', (
-                  <input style={inputSt} value={editData.phone ?? ''} onChange={e => setEditData(d => ({ ...d, phone: e.target.value }))} dir="ltr" />
+                  <input type="tel" style={inputSt} value={editData.phone ?? ''} onChange={e => setEditData(d => ({ ...d, phone: e.target.value }))} dir="ltr" />
                 ))}
               </div>
 

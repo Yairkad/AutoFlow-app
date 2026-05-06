@@ -1294,7 +1294,7 @@ export default function CarsClient() {
               <Field label="דגם"><input value={carForm.model} onChange={e => setCarForm(f=>({...f,model:e.target.value}))} style={inp()} /></Field>
             </Grid>
             <Grid cols={4}>
-              <Field label="לוחית" required error={carErrors.plate}><input value={carForm.plate} onChange={e => { setCarForm(f=>({...f,plate:e.target.value})); setCarErrors(e=>({...e,plate:false})) }} style={{...inp(carErrors.plate),direction:'ltr'}} placeholder="12-345-67" /></Field>
+              <Field label="לוחית" required error={carErrors.plate}><input inputMode="numeric" value={carForm.plate} onChange={e => { setCarForm(f=>({...f,plate:e.target.value})); setCarErrors(e=>({...e,plate:false})) }} style={{...inp(carErrors.plate),direction:'ltr'}} placeholder="12-345-67" /></Field>
               <Field label="שנה"><input type="number" value={carForm.year} onChange={e => setCarForm(f=>({...f,year:e.target.value}))} style={inp()} placeholder="2020" /></Field>
               <Field label="ק״מ"><input type="number" value={carForm.km} onChange={e => setCarForm(f=>({...f,km:e.target.value}))} style={inp()} /></Field>
               <Field label="צבע"><input value={carForm.color} onChange={e => setCarForm(f=>({...f,color:e.target.value}))} style={inp()} /></Field>
@@ -1554,7 +1554,7 @@ export default function CarsClient() {
               <Field label="קוד רכב"><input value={saleReqForm.car_code} onChange={e => setSaleReqForm(f=>({...f,car_code:e.target.value}))} style={inp()} placeholder="אם יש" /></Field>
             </Grid>
             <Grid cols={2}>
-              <Field label="לוחית רישוי"><input value={saleReqForm.plate} onChange={e => setSaleReqForm(f=>({...f,plate:e.target.value}))} style={inp()} /></Field>
+              <Field label="לוחית רישוי"><input inputMode="numeric" value={saleReqForm.plate} onChange={e => setSaleReqForm(f=>({...f,plate:e.target.value}))} style={inp()} /></Field>
               <Field label="מספר מתלה / מפתח"><input value={saleReqForm.key_hanger} onChange={e => setSaleReqForm(f=>({...f,key_hanger:e.target.value}))} style={inp()} placeholder="לדוגמה: A12" /></Field>
             </Grid>
           </div>

@@ -957,7 +957,7 @@ export default function QuotesClient() {
           </div>
           <div style={fieldStyle}>
             <label style={labelStyle}>טלפון *</label>
-            <input placeholder="050-0000000" value={f.phone} onChange={e => setF('phone', e.target.value)} style={inpStyle} />
+            <input type="tel" placeholder="050-0000000" value={f.phone} onChange={e => setF('phone', e.target.value)} style={inpStyle} />
           </div>
 
           {/* ── Tire-specific */}

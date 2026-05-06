@@ -768,7 +768,9 @@ export default function BillingClient() {
                               const linkedItem = e.billing_item_id ? items.find(i => i.id === e.billing_item_id) : null
                               const needsReading = linkedItem?.type === 'meter' && e.meter_prev == null
                               return needsReading ? (
-                                <span style={{ fontSize: '10px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '4px', padding: '1px 5px', fontWeight: 600 }}>
+                                <span
+                                  onClick={ev => { ev.stopPropagation(); openEntryModal(e) }}
+                                  style={{ fontSize: '10px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '4px', padding: '1px 5px', fontWeight: 600, cursor: 'pointer' }}>
                                   🔌 הזן קריאות
                                 </span>
                               ) : null
@@ -814,10 +816,7 @@ export default function BillingClient() {
                         </td>
                         {editMode && (
                           <td style={{ ...tdSt, display: 'flex', gap: '6px' }}>
-                            <Button variant="secondary" size="sm"
-                              onClick={() => { setPayEntry(e); setPayAmount(String(Math.max(0, balance(e)).toFixed(2))); setPayDate(todayISO()); setPayNotes('') }}>
-                              ✏️
-                            </Button>
+                            <Button variant="secondary" size="sm" onClick={() => openEntryModal(e)}>✏️</Button>
                             <Button variant="danger" size="sm" onClick={() => deleteEntry(e.id)}>🗑️</Button>
                           </td>
                         )}

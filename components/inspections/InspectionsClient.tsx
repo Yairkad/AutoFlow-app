@@ -1073,6 +1073,7 @@ export default function InspectionsClient() {
                           onChange={e => onChange(key, e.target.value)}
                           className="form-input"
                           placeholder={placeholder}
+                          type={key === 'owner_phone' ? 'tel' : undefined}
                           style={fieldErrors.has(key) ? { borderColor: 'var(--danger)', boxShadow: '0 0 0 2px rgba(220,38,38,.15)' } : undefined}
                         />
                       </div>

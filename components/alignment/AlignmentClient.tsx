@@ -342,6 +342,7 @@ function JobForm({
             value={form.plate}
             onChange={e => onChange('plate', e.target.value)}
             dir="ltr"
+            inputMode="numeric"
             placeholder="12-345-67"
             style={{ ...areaSt, fontFamily: 'monospace', resize: 'none', flex: 1, padding: '8px 12px' }}
           />
@@ -360,7 +361,7 @@ function JobForm({
       {/* Customer */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
         <Input label="שם לקוח *"  value={form.customer_name}  onChange={e => onChange('customer_name',  e.target.value)} />
-        <Input label="טלפון"       value={form.customer_phone} onChange={e => onChange('customer_phone', e.target.value)} />
+        <Input label="טלפון"       type="tel" value={form.customer_phone} onChange={e => onChange('customer_phone', e.target.value)} />
       </div>
 
       {/* Job type – all independent toggles */}
