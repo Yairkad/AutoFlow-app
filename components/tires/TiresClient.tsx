@@ -27,6 +27,7 @@ interface Tire {
   location: string | null
   notes: string | null
   supplier_id: string | null
+  condition: 'new' | 'used'
   created_at: string
 }
 
@@ -53,6 +54,7 @@ const emptyForm = {
   load_idx: '', speed_idx: '',
   cost_price: '', margin: '', sell_price: '',
   qty: '0', location: '', notes: '', supplier_id: '',
+  condition: 'new' as 'new' | 'used',
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -98,11 +100,12 @@ export default function TiresClient() {
   const [recvSaving,  setRecvSaving]  = useState(false)
 
   // Filters
-  const [search,      setSearch]      = useState('')
-  const [filterWidth, setFilterWidth] = useState('')
-  const [filterProf,  setFilterProf]  = useState('')
-  const [filterRim,   setFilterRim]   = useState('')
-  const [filterStock, setFilterStock] = useState('')
+  const [search,           setSearch]           = useState('')
+  const [filterWidth,      setFilterWidth]      = useState('')
+  const [filterProf,       setFilterProf]       = useState('')
+  const [filterRim,        setFilterRim]        = useState('')
+  const [filterStock,      setFilterStock]      = useState('')
+  const [filterCondition,  setFilterCondition]  = useState('')
 
   // Add/Edit modal
   const [formOpen, setFormOpen] = useState(false)
@@ -177,6 +180,7 @@ export default function TiresClient() {
       if (filterRim   && t.rim     !== parseInt(filterRim))   return false
       if (filterStock === 'out'     && t.qty !== 0) return false
       if (filterStock === 'instock' && t.qty === 0) return false
+      if (filterCondition && t.condition !== filterCondition) return false
       if (search) {
         const hay = [t.brand, tireSize(t), t.location, t.notes, t.load_idx, t.speed_idx]
           .join(' ').toLowerCase()
@@ -272,6 +276,7 @@ export default function TiresClient() {
       sell_price: t.sell_price != null ? String(t.sell_price) : '',
       qty: String(t.qty), location: t.location || '', notes: t.notes || '',
       supplier_id: t.supplier_id || '',
+      condition: t.condition ?? 'new',
     })
     setFormErrs({ width: false, profile: false, rim: false })
     setFormOpen(true)
@@ -286,6 +291,7 @@ export default function TiresClient() {
       margin: t.margin ? String(t.margin) : '',
       sell_price: t.sell_price != null ? String(t.sell_price) : '',
       qty: '0', location: t.location || '', notes: t.notes || '', supplier_id: t.supplier_id || '',
+      condition: t.condition ?? 'new',
     })
     setFormErrs({ width: false, profile: false, rim: false })
     setFormOpen(true)
@@ -316,6 +322,7 @@ export default function TiresClient() {
       location:    form.location.trim() || null,
       notes:       form.notes.trim() || null,
       supplier_id: form.supplier_id || null,
+      condition:   form.condition,
     }
 
     if (editId) {
@@ -377,7 +384,8 @@ export default function TiresClient() {
         e.cost_price !== t.cost_price || e.margin !== t.margin ||
         e.load_idx !== t.load_idx || e.speed_idx !== t.speed_idx ||
         e.location !== t.location || e.notes !== t.notes ||
-        e.width !== t.width || e.profile !== t.profile || e.rim !== t.rim
+        e.width !== t.width || e.profile !== t.profile || e.rim !== t.rim ||
+        e.condition !== t.condition
     })
     if (updates.length === 0) { setEditMode(false); return }
 
@@ -395,6 +403,7 @@ export default function TiresClient() {
         sell_price: e.sell_price || null,
         location:   e.location || null,
         notes:      e.notes || null,
+        condition:  e.condition ?? 'new',
       }).eq('id', t.id)
     }))
 
@@ -468,9 +477,10 @@ export default function TiresClient() {
 
   function exportExcel() {
     if (tires.length === 0) return showToast('אין נתונים לייצוא', 'error')
-    const headers = ['מותג','רוחב','פרופיל','קוטר','מידה','אינדקס עומס','אינדקס מהירות','מחיר קנייה','% רווח','מחיר מכירה','כמות','מיקום','הערות']
+    const headers = ['מותג','מצב','רוחב','פרופיל','קוטר','מידה','אינדקס עומס','אינדקס מהירות','מחיר קנייה','% רווח','מחיר מכירה','כמות','מיקום','הערות']
     const rows = tires.map(t => [
-      t.brand || '', t.width, t.profile, t.rim, tireSize(t),
+      t.brand || '', t.condition === 'used' ? 'משומש' : 'חדש',
+      t.width, t.profile, t.rim, tireSize(t),
       t.load_idx || '', t.speed_idx || '',
       t.cost_price ?? '', t.margin || '', t.sell_price ?? '',
       t.qty, t.location || '', t.notes || '',
@@ -622,8 +632,13 @@ export default function TiresClient() {
               <option value='instock'>במלאי</option>
               <option value='out'>אזל</option>
             </select>
-            {(search || filterWidth || filterProf || filterRim || filterStock) && (
-              <button onClick={() => { setSearch(''); setFilterWidth(''); setFilterProf(''); setFilterRim(''); setFilterStock('') }}
+            <select style={{ ...inp, flex: '1 1 90px', minWidth: 0 }} value={filterCondition} onChange={e => setFilterCondition(e.target.value)}>
+              <option value=''>חדש + משומש</option>
+              <option value='new'>חדש בלבד</option>
+              <option value='used'>משומש בלבד</option>
+            </select>
+            {(search || filterWidth || filterProf || filterRim || filterStock || filterCondition) && (
+              <button onClick={() => { setSearch(''); setFilterWidth(''); setFilterProf(''); setFilterRim(''); setFilterStock(''); setFilterCondition('') }}
                 style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--danger)', background: '#fef2f2', color: 'var(--danger)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
                 ✕ נקה
               </button>
@@ -679,9 +694,27 @@ export default function TiresClient() {
 
                         {/* מותג */}
                         <td style={{ padding: '8px 12px', fontWeight: 700, minWidth: editMode ? '110px' : undefined }}>
-                          {editMode
-                            ? <input style={cellInp} value={String(e.brand ?? '')} onChange={ev => setCell(t.id, 'brand', ev.target.value)} list="brand-list-inline" />
-                            : t.brand || <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                          {editMode ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <input style={cellInp} value={String(e.brand ?? '')} onChange={ev => setCell(t.id, 'brand', ev.target.value)} list="brand-list-inline" />
+                              <button
+                                onClick={() => setCell(t.id, 'condition', (e.condition ?? t.condition) === 'used' ? 'new' : 'used')}
+                                style={{
+                                  fontSize: '11px', fontWeight: 700, border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px 6px',
+                                  background: (e.condition ?? t.condition) === 'used' ? '#fef3c7' : '#f0fdf4',
+                                  color:      (e.condition ?? t.condition) === 'used' ? '#92400e' : 'var(--primary)',
+                                }}>
+                                {(e.condition ?? t.condition) === 'used' ? '♻ משומש' : '✓ חדש'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              {t.brand || <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                              {t.condition === 'used' && (
+                                <span style={{ fontSize: '10px', fontWeight: 700, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '4px', padding: '1px 5px' }}>♻ מ</span>
+                              )}
+                            </div>
+                          )}
                         </td>
 
                         {/* מידה */}
@@ -1088,6 +1121,22 @@ export default function TiresClient() {
               <label style={lbl}>הערות</label>
               <input id="f-notes" style={inp} value={form.notes}
                 onChange={e => setF('notes', e.target.value)} />
+            </div>
+            <div>
+              <label style={lbl}>מצב הצמיג</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {(['new', 'used'] as const).map(c => (
+                  <button key={c} type="button" onClick={() => setF('condition', c)} style={{
+                    flex: 1, padding: '8px', border: `2px solid ${form.condition === c ? (c === 'used' ? '#f59e0b' : 'var(--primary)') : 'var(--border)'}`,
+                    borderRadius: '8px', cursor: 'pointer', fontWeight: form.condition === c ? 700 : 400, fontSize: '13px',
+                    background: form.condition === c ? (c === 'used' ? '#fef3c7' : '#f0fdf4') : 'var(--bg)',
+                    color: form.condition === c ? (c === 'used' ? '#92400e' : 'var(--primary)') : 'var(--text-muted)',
+                    fontFamily: 'inherit',
+                  }}>
+                    {c === 'new' ? '✓ חדש' : '♻ משומש'}
+                  </button>
+                ))}
+              </div>
             </div>
             {suppliers.length > 0 && (
               <div>
