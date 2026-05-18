@@ -1,0 +1,58 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth/require'
+import { createClient } from '@/lib/supabase/server'
+
+// DELETE /api/yard/sessions/[id]/items/[itemId]
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string; itemId: string }> }
+) {
+  const auth = await requireAuth()
+  if ('error' in auth) return auth.error
+  const { profile } = auth
+  const { id: sessionId, itemId } = await params
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('yard_session_items')
+    .delete()
+    .eq('id', itemId)
+    .eq('session_id', sessionId)
+    .eq('tenant_id', profile.tenant_id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
+// PATCH /api/yard/sessions/[id]/items/[itemId] — update price or quantity
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string; itemId: string }> }
+) {
+  const auth = await requireAuth()
+  if ('error' in auth) return auth.error
+  const { profile } = auth
+  const { id: sessionId, itemId } = await params
+
+  const body = await req.json()
+  const update: Record<string, unknown> = {}
+
+  if (body.unit_price !== undefined) {
+    update.unit_price     = body.unit_price
+    update.price_modified = true
+  }
+  if (body.quantity !== undefined) update.quantity = body.quantity
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('yard_session_items')
+    .update(update)
+    .eq('id', itemId)
+    .eq('session_id', sessionId)
+    .eq('tenant_id', profile.tenant_id)
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data)
+}

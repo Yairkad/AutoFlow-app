@@ -106,6 +106,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 /* Spinners — single shared keyframe */
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Yard timer — flash animation for critical (>45 min) sessions */
+@keyframes flash {
+  0%, 100% { border-color: rgb(239 68 68); }
+  50%       { border-color: transparent; }
+}
 /* Legacy aliases kept for compatibility */
 @keyframes btn-spin     { to { transform: rotate(360deg); } }
 @keyframes sidebar-spin { to { transform: rotate(360deg); } }

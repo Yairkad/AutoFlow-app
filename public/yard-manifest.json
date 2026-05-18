@@ -1,0 +1,17 @@
+{
+  "name": "מסוף רחבה",
+  "short_name": "רחבה",
+  "description": "מסוף עובד רחבה — קליטת רכבים וסריקת מוצרים",
+  "start_url": "/yard",
+  "scope": "/yard",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#1e293b",
+  "theme_color": "#1e293b",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
