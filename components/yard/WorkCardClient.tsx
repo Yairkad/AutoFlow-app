@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { YardSession, YardSessionItem, YardService } from '@/lib/yard/types'
-import { sessionDisplayName, sessionTotal, formatPlate } from '@/lib/yard/types'
+import { sessionTotal, formatPlate } from '@/lib/yard/types'
 
 interface Props {
   session:  YardSession
@@ -75,8 +75,8 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     router.push('/yard')
   }
 
-  const total   = sessionTotal(items)
-  const display = sessionDisplayName(session)
+  const total = sessionTotal(items)
+  const hasMakeModel = session.make || session.model
 
   const actions = [
     { label: '🏁 צמיג חדש',       onClick: () => router.push(`/yard/${session.id}/tire`) },
@@ -90,23 +90,30 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   return (
     <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
 
-      {/* ── Plate header card — margin from edges, red border ── */}
-      <div className="mx-3 mt-3 bg-white border-[3px] border-red-500 rounded-xl px-4 py-3.5 flex items-center gap-3 flex-shrink-0">
-        <div>
-          <div className="text-lg font-bold text-slate-800">
-            {display}{session.year ? ` ${session.year}` : ''}
-          </div>
-          <div className="text-[22px] font-extrabold tracking-[2px] text-slate-900 leading-tight">
+      {/* ── Plate header card ── */}
+      <div className="mx-4 mt-4 bg-white border-[3px] border-red-500 rounded-xl px-5 py-4 flex-shrink-0">
+        {hasMakeModel ? (
+          <>
+            <div className="text-lg font-bold text-slate-700 leading-tight">
+              {[session.make, session.model].filter(Boolean).join(' ')}
+              {session.year && <span className="text-slate-400 font-normal mr-1">· {session.year}</span>}
+            </div>
+            <div className="text-2xl font-black tracking-[2px] text-slate-900 mt-0.5">
+              {formatPlate(session.plate)}
+            </div>
+          </>
+        ) : (
+          <div className="text-2xl font-black tracking-[2px] text-slate-900">
             {formatPlate(session.plate)}
           </div>
-        </div>
+        )}
       </div>
 
-      {/* ── Nav row ── */}
-      <div className="flex gap-2 mx-3 mt-2.5 flex-shrink-0">
+      {/* ── Back button ── */}
+      <div className="mx-4 mt-3 flex-shrink-0">
         <button
           onClick={() => router.push('/yard')}
-          className="flex-1 flex items-center justify-center gap-2 bg-slate-800 text-white rounded-xl px-3 text-base font-bold border-2 border-slate-800 transition-all active:scale-[.97] hover:bg-slate-700"
+          className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 active:scale-[.97] text-white rounded-xl px-4 text-base font-bold border-2 border-slate-800 transition-all"
           style={{ minHeight: '52px' }}
         >
           🏠 חזור לרחבה הראשית
@@ -114,15 +121,15 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       </div>
 
       {/* ── Work body ── */}
-      <div className="flex flex-1 gap-3 p-3 min-h-0">
+      <div className="flex flex-1 gap-4 mx-4 mt-3 mb-4 min-h-0">
 
         {/* Action buttons — 2 columns, fixed min-height */}
-        <div className="flex-1 grid grid-cols-2 gap-2.5" style={{ alignContent: 'start' }}>
+        <div className="flex-1 grid grid-cols-2 gap-3" style={{ alignContent: 'start' }}>
           {actions.map(a => (
             <button
               key={a.label}
               onClick={a.onClick}
-              className="bg-green-700 hover:bg-green-600 active:scale-95 text-white rounded-2xl text-[19px] font-bold flex items-center justify-center text-center px-3 transition-all shadow-sm"
+              className="bg-green-700 hover:bg-green-600 active:scale-95 text-white rounded-2xl text-lg font-bold flex items-center justify-center text-center px-3 transition-all shadow-sm"
               style={{ minHeight: '88px' }}
             >
               {a.label}

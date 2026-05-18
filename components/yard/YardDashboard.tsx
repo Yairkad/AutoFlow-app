@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { YardSession } from '@/lib/yard/types'
-import { sessionDisplayName, minutesSince, sessionTotal, formatPlate } from '@/lib/yard/types'
+import { minutesSince, sessionTotal, formatPlate } from '@/lib/yard/types'
 
 interface Props { initialSessions: YardSession[] }
 
@@ -14,25 +14,19 @@ export default function YardDashboard({ initialSessions }: Props) {
   const [, setTick] = useState(0)
   const supabase = createClient()
 
-  // Re-render every 30 s to update timers
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 30_000)
     return () => clearInterval(id)
   }, [])
 
-  // Realtime subscription
   useEffect(() => {
     const channel = supabase
       .channel('yard-dashboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_sessions' }, () => {
-        router.refresh()
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_session_items' }, () => {
-        router.refresh()
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_sessions' }, () => router.refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_session_items' }, () => router.refresh())
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [])  // eslint-disable-line
+  }, []) // eslint-disable-line
 
   function timerState(openedAt: string): 'ok' | 'warn' | 'critical' {
     const m = minutesSince(openedAt)
@@ -41,75 +35,88 @@ export default function YardDashboard({ initialSessions }: Props) {
     return 'ok'
   }
 
-  const borderClass = {
-    ok:       'border-transparent',
+  const cardBorder: Record<string, string> = {
+    ok:       'border-slate-200',
     warn:     'border-red-500',
     critical: 'border-red-500 animate-[flash_1.1s_ease-in-out_infinite]',
   }
 
-  const timerBadge = (openedAt: string) => {
-    const m = minutesSince(openedAt)
-    const state = timerState(openedAt)
-    const cls = state === 'critical'
-      ? 'bg-red-600 text-white'
-      : state === 'warn'
-      ? 'bg-red-100 text-red-800'
-      : 'bg-green-100 text-green-800'
-    return <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${cls}`}>⏱ {m} דק׳</span>
-  }
-
-  const fmtTime = (dateStr: string) =>
-    new Date(dateStr).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+  const fmtTime = (d: string) =>
+    new Date(d).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
 
   return (
     <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
+
       {/* Top bar */}
-      <div className="bg-slate-800 text-white px-4 py-3.5 flex items-center justify-between flex-shrink-0">
+      <div className="bg-slate-800 text-white flex items-center justify-between flex-shrink-0" style={{ padding: '14px 18px' }}>
         <h1 className="text-xl font-bold">🔧 מסוף רחבה</h1>
-        <span className="bg-slate-700 px-4 py-1.5 rounded-full text-sm font-semibold text-slate-200">
+        <div className="bg-slate-700 rounded-full text-sm font-semibold text-slate-200" style={{ padding: '6px 14px' }}>
           {sessions.length} רכב{sessions.length !== 1 ? 'ים' : ''} פעיל{sessions.length !== 1 ? 'ים' : ''}
-        </span>
+        </div>
       </div>
 
       {/* Car grid */}
-      <div className="flex-1 overflow-y-auto px-6 py-5">
+      <div className="flex-1 overflow-y-auto" style={{ padding: '14px' }}>
         {sessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
             <span className="text-5xl">🏁</span>
             <p className="text-lg font-medium">אין רכבים פעילים ברחבה</p>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
             {sessions.map(s => {
-              const state   = timerState(s.opened_at)
-              const items   = s.yard_session_items ?? []
-              const total   = sessionTotal(items)
-              const display = sessionDisplayName(s)
+              const state = timerState(s.opened_at)
+              const items = s.yard_session_items ?? []
+              const total = sessionTotal(items)
+              const m     = minutesSince(s.opened_at)
+
+              const timerCls = state === 'critical'
+                ? 'bg-red-600 text-white'
+                : state === 'warn'
+                ? 'bg-red-100 text-red-800'
+                : 'bg-green-100 text-green-800'
+
               return (
                 <button
                   key={s.id}
                   onClick={() => router.push(`/yard/${s.id}`)}
-                  className={`
-                    relative bg-white rounded-2xl p-5 text-right border-2 shadow-sm
-                    transition-all active:scale-95 hover:shadow-md
-                    ${borderClass[state]}
-                    ${state === 'critical' ? 'shadow-red-200' : ''}
-                  `}
+                  className={`relative bg-white rounded-2xl text-right border-2 transition-all active:scale-95 hover:shadow-md ${cardBorder[state]}`}
+                  style={{ padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,.10)' }}
                 >
+                  {/* Item count badge */}
                   {items.length > 0 && (
-                    <span className="absolute top-3 left-3 bg-blue-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+                    <span className="absolute top-2.5 left-2.5 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                       {items.length}
                     </span>
                   )}
-                  <div className="text-lg font-bold text-slate-800 mb-0.5">{display}</div>
-                  <div className="text-xl font-black text-slate-700 tracking-widest mb-3">
+
+                  {/* Make + model */}
+                  {(s.make || s.model) && (
+                    <div className="text-lg font-bold text-slate-800 leading-tight mb-0.5">
+                      {[s.make, s.model].filter(Boolean).join(' ')}
+                    </div>
+                  )}
+
+                  {/* Plate */}
+                  <div className="font-extrabold text-slate-900 leading-tight" style={{ fontSize: '20px', letterSpacing: '1px' }}>
                     {formatPlate(s.plate)}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-slate-400">קליטה: {fmtTime(s.opened_at)}</div>
-                    {total > 0 && <div className="text-sm font-bold text-blue-600">{total.toLocaleString()}₪</div>}
+
+                  {/* Year */}
+                  {s.year && (
+                    <div className="text-sm text-slate-400 mt-0.5">{s.year}</div>
+                  )}
+
+                  {/* Time + timer */}
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-slate-400">קליטה: {fmtTime(s.opened_at)}</span>
+                    {total > 0 && <span className="text-sm font-bold text-blue-600">{total.toLocaleString()}₪</span>}
                   </div>
-                  <div className="mt-2">{timerBadge(s.opened_at)}</div>
+                  <div className="mt-1.5">
+                    <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full ${timerCls}`}>
+                      ⏱ {m} דק׳
+                    </span>
+                  </div>
                 </button>
               )
             })}
@@ -118,12 +125,13 @@ export default function YardDashboard({ initialSessions }: Props) {
       </div>
 
       {/* New car button */}
-      <div className="p-3.5 flex-shrink-0">
+      <div className="flex-shrink-0" style={{ padding: '14px' }}>
         <button
           onClick={() => router.push('/yard/new')}
-          className="w-full bg-green-700 hover:bg-green-600 active:scale-[.98] text-white rounded-xl py-5 text-xl font-bold flex items-center justify-center gap-2.5 shadow transition-all"
+          className="w-full bg-green-700 hover:bg-green-600 active:scale-[.98] text-white font-bold flex items-center justify-center gap-2.5 transition-all"
+          style={{ borderRadius: '12px', padding: '20px', fontSize: '20px' }}
         >
-          <span className="text-2xl font-black">+</span> קליטת רכב חדש
+          <span style={{ fontSize: '24px' }}>+</span> קליטת רכב חדש
         </button>
       </div>
     </div>
