@@ -134,40 +134,41 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
         {/* ── Cart panel ── */}
         <div
           className="flex flex-col bg-white rounded-2xl overflow-hidden flex-shrink-0"
-          style={{ width: '270px', boxShadow: '0 2px 10px rgba(0,0,0,.12)' }}
+          style={{ width: '310px', boxShadow: '0 2px 10px rgba(0,0,0,.12)' }}
         >
-          <div className="bg-blue-700 text-white px-4 py-3.5 text-[15px] font-bold flex-shrink-0">
-            🛒 סל נוכחי
+          <div className="bg-blue-700 text-white font-bold text-center flex-shrink-0" style={{ padding: '14px 16px', fontSize: '15px' }}>
+            שירותים שהתקבלו
           </div>
 
-          <div className="flex-1 overflow-y-auto" style={{ maxHeight: '280px' }}>
+          <div className="flex-1 overflow-y-auto" style={{ paddingTop: '4px' }}>
             {items.length === 0 ? (
-              <div className="p-5 text-center text-slate-400 text-sm">הסל ריק</div>
+              <div className="p-5 text-center text-slate-400">הסל ריק</div>
             ) : (
               items.map(item => (
-                <div key={item.id} className="flex items-start gap-1.5 px-3 py-2.5 border-b border-slate-100 last:border-0">
+                <div key={item.id} className="flex items-start border-b border-slate-100 last:border-0" style={{ gap: '8px', padding: '10px 14px' }}>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-slate-900">{item.name}</div>
-                    <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                    <div className="font-semibold text-slate-900" style={{ fontSize: '14px' }}>{item.name}</div>
+                    <div className="text-slate-500 flex items-center" style={{ fontSize: '12px', gap: '4px', marginTop: '2px' }}>
                       <span>כמות: {item.quantity}</span>
                       {item.price_modified && (
-                        <span className="bg-amber-100 text-amber-700 text-[11px] px-1.5 rounded font-bold">שונה</span>
+                        <span className="bg-amber-100 text-amber-700 rounded font-bold" style={{ fontSize: '11px', padding: '1px 5px' }}>שונה</span>
                       )}
                     </div>
                   </div>
-                  <div className="text-sm font-bold text-blue-600 whitespace-nowrap">
+                  <div className="font-bold text-blue-600 whitespace-nowrap" style={{ fontSize: '15px' }}>
                     {(item.unit_price * item.quantity).toLocaleString()}₪
                   </div>
                   <button
                     onClick={() => deleteItem(item)}
-                    className="text-slate-300 hover:text-red-500 text-base leading-none flex-shrink-0 transition-colors"
+                    className="text-slate-300 hover:text-red-500 leading-none flex-shrink-0 transition-colors"
+                    style={{ fontSize: '18px' }}
                   >🗑</button>
                 </div>
               ))
             )}
           </div>
 
-          <div className="px-4 py-3 border-t-2 border-slate-200 flex justify-between items-center text-base font-black flex-shrink-0">
+          <div className="border-t-2 border-slate-200 flex justify-between items-center font-black flex-shrink-0" style={{ padding: '12px 16px', fontSize: '16px' }}>
             <span>סה״כ</span>
             <span>{total.toLocaleString()}₪</span>
           </div>
@@ -175,8 +176,8 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
           <button
             onClick={sendToOffice}
             disabled={items.length === 0 || sending}
-            className="text-white py-4 text-base font-bold transition-colors flex-shrink-0 disabled:opacity-40"
-            style={{ background: '#b45309' }}
+            className="text-white font-bold transition-colors flex-shrink-0 disabled:opacity-40"
+            style={{ background: '#b45309', padding: '20px 16px', fontSize: '17px' }}
           >
             {sending ? 'שולח...' : 'סיים ושלח לתשלום'}
           </button>

@@ -114,9 +114,10 @@ export default function TireSearchClient({ session }: Props) {
 
       {/* Scan active bar */}
       {scanMode && (
-        <div className="mx-3 mt-2 bg-blue-600 text-white rounded-xl px-4 py-3 flex items-center justify-between flex-shrink-0">
+        <div className="bg-blue-600 text-white rounded-xl flex items-center justify-between flex-shrink-0"
+          style={{ margin: '10px 14px 0', padding: '12px 16px' }}>
           <span className="font-semibold">📡 ממתין לסריקה...</span>
-          <button onClick={() => setScanMode(false)} className="bg-white/20 border border-white/40 rounded-lg px-3 py-1.5 text-sm font-bold">ביטול</button>
+          <button onClick={() => setScanMode(false)} className="bg-white/20 border border-white/40 rounded-lg text-sm font-bold" style={{ padding: '6px 12px' }}>ביטול</button>
         </div>
       )}
 
@@ -129,20 +130,27 @@ export default function TireSearchClient({ session }: Props) {
         onKeyDown={e => { if (e.key === 'Enter' && scanBuffer) handleBarcode(scanBuffer) }}
       />
 
-      {/* Search field + scanner button */}
-      <div className="flex gap-2 px-3 pt-2 flex-shrink-0">
+      {/* Search + Quantity + Scanner row */}
+      <div className="flex items-center flex-shrink-0" style={{ gap: '10px', padding: '10px 14px 0' }}>
         <input
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="מידת צמיג (לדוג׳ 195/55/16)"
-          className="flex-1 border-2 border-blue-500 rounded-xl px-4 py-3 text-base font-medium outline-none"
+          className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium outline-none"
+          style={{ padding: '10px 14px' }}
         />
+        <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
+          <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">−</button>
+          <span className="w-9 text-center font-bold border-x-2 border-slate-200 h-10 flex items-center justify-center">{qty}</span>
+          <button onClick={() => setQty(q => q + 1)} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">+</button>
+        </div>
         <button
           onClick={() => setScanMode(m => !m)}
-          className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${scanMode ? 'bg-blue-600' : 'bg-slate-800'}`}
+          className={`rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${scanMode ? 'bg-blue-600' : 'bg-slate-800'}`}
+          style={{ width: '44px', height: '44px' }}
         >
-          <svg viewBox="0 0 28 22" width="26" height="20" fill="white">
+          <svg viewBox="0 0 28 22" width="22" height="17" fill="white">
             <rect x="0"  y="0" width="2" height="22"/><rect x="4"  y="0" width="1" height="22"/>
             <rect x="7"  y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/>
             <rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/>
@@ -151,18 +159,8 @@ export default function TireSearchClient({ session }: Props) {
         </button>
       </div>
 
-      {/* Quantity */}
-      <div className="flex items-center gap-3 px-3 pt-2 flex-shrink-0">
-        <span className="text-sm font-semibold text-slate-500">כמות:</span>
-        <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden bg-white">
-          <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-11 h-11 text-xl font-bold text-blue-600 hover:bg-slate-50">−</button>
-          <span className="w-11 text-center text-lg font-bold border-x-2 border-slate-200 h-11 flex items-center justify-center">{qty}</span>
-          <button onClick={() => setQty(q => q + 1)} className="w-11 h-11 text-xl font-bold text-blue-600 hover:bg-slate-50">+</button>
-        </div>
-      </div>
-
       {/* Results */}
-      <div className="flex-1 overflow-y-auto mx-3 mt-2 bg-white rounded-xl border border-slate-200">
+      <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-slate-200" style={{ margin: '10px 14px 0' }}>
         {results.length === 0 ? (
           <div className="p-6 text-center text-slate-400">
             {query ? 'לא נמצאו תוצאות' : 'הקלד מידת צמיג לחיפוש'}
@@ -195,11 +193,12 @@ export default function TireSearchClient({ session }: Props) {
       </div>
 
       {/* Confirm button */}
-      <div className="px-3 py-3 flex-shrink-0">
+      <div className="flex-shrink-0" style={{ padding: '10px 14px 14px' }}>
         <button
           onClick={addToCart}
           disabled={!selected || saving}
-          className="w-full bg-green-700 hover:bg-green-800 disabled:opacity-40 text-white rounded-xl py-4 text-lg font-bold transition-colors"
+          className="w-full bg-green-700 hover:bg-green-800 disabled:opacity-40 text-white rounded-xl text-lg font-bold transition-colors"
+          style={{ padding: '16px' }}
         >
           {saving ? '...' : selected ? `הוסף לסל — ${(( price ?? selected.price) * qty).toLocaleString()}₪` : 'בחר צמיג'}
         </button>

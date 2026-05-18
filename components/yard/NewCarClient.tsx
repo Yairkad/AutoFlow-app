@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import { formatPlate } from '@/lib/yard/types'
 
 type VehicleInfo = { make?: string; model?: string; year?: number } | null
@@ -20,9 +19,15 @@ export default function NewCarClient() {
   const lookup = useCallback(async (d: string) => {
     if (d.length < 7) { setVehicle(null); return }
     setLoading(true)
-    const data = await fetchVehicleByPlate(d)
-    setLoading(false)
-    setVehicle(data ? { make: data.make, model: data.model, year: data.year } : null)
+    try {
+      const res  = await fetch(`/api/public/plate?plate=${encodeURIComponent(d)}`)
+      const data = await res.json()
+      setVehicle(data ? { make: data.make, model: data.model, year: data.year } : null)
+    } catch {
+      setVehicle(null)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   function press(k: string) {
@@ -101,7 +106,7 @@ export default function NewCarClient() {
           <button onPointerDown={() => press('0')}
             className="bg-white border-2 border-slate-200 rounded-2xl font-bold text-slate-800 shadow-sm active:scale-95 active:bg-slate-100 transition-all"
             style={{ fontSize: '28px' }}>0</button>
-          <button onPointerDown={confirm} disabled={digits.length < 7 || saving}
+          <button onPointerDown={confirm} disabled={digits.length < 7 || saving || loading}
             className="bg-green-700 border-2 border-green-700 rounded-2xl font-bold text-white shadow-sm active:scale-95 disabled:opacity-40 transition-all"
             style={{ fontSize: '20px' }}>{saving ? '...' : '✓ אישור'}</button>
         </div>

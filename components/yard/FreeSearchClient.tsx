@@ -116,30 +116,26 @@ export default function FreeSearchClient({ session, filterType }: Props) {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="px-3 pt-2 flex-shrink-0">
+      {/* Search + Quantity row */}
+      <div className="flex items-center flex-shrink-0" style={{ gap: '10px', padding: '10px 14px 0' }}>
         <input
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="חפש מוצר, צמיג, שירות..."
           autoFocus
-          className="w-full border-2 border-blue-500 rounded-xl px-4 py-3 text-base font-medium outline-none"
+          className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium outline-none"
+          style={{ padding: '10px 14px' }}
         />
-      </div>
-
-      {/* Quantity */}
-      <div className="flex items-center gap-3 px-3 pt-2 flex-shrink-0">
-        <span className="text-sm font-semibold text-slate-500">כמות:</span>
-        <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden bg-white">
-          <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-11 h-11 text-xl font-bold text-blue-600 hover:bg-slate-50">−</button>
-          <span className="w-11 text-center text-lg font-bold border-x-2 border-slate-200 h-11 flex items-center justify-center">{qty}</span>
-          <button onClick={() => setQty(q => q + 1)} className="w-11 h-11 text-xl font-bold text-blue-600 hover:bg-slate-50">+</button>
+        <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
+          <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">−</button>
+          <span className="w-9 text-center font-bold border-x-2 border-slate-200 h-10 flex items-center justify-center">{qty}</span>
+          <button onClick={() => setQty(q => q + 1)} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">+</button>
         </div>
       </div>
 
       {/* Results */}
-      <div className="flex-1 overflow-y-auto mx-3 mt-2 bg-white rounded-xl border border-slate-200">
+      <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-slate-200" style={{ margin: '10px 14px 0' }}>
         {results.length === 0 ? (
           <div className="p-6 text-center text-slate-400">{query ? 'לא נמצאו תוצאות' : 'הקלד לחיפוש'}</div>
         ) : (
@@ -172,11 +168,12 @@ export default function FreeSearchClient({ session, filterType }: Props) {
       </div>
 
       {/* Add button */}
-      <div className="px-3 py-3 flex-shrink-0">
+      <div className="flex-shrink-0" style={{ padding: '10px 14px 14px' }}>
         <button
           onClick={addToCart}
           disabled={!selected || saving}
-          className="w-full bg-green-700 hover:bg-green-800 disabled:opacity-40 text-white rounded-xl py-4 text-lg font-bold transition-colors"
+          className="w-full bg-green-700 hover:bg-green-800 disabled:opacity-40 text-white rounded-xl text-lg font-bold transition-colors"
+          style={{ padding: '16px' }}
         >
           {saving ? '...' : selected ? `הוסף לסל — ${((price ?? selected.price) * qty).toLocaleString()}₪` : 'בחר פריט'}
         </button>
