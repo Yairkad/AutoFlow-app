@@ -203,17 +203,19 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
 
       {/* Empty cart confirm */}
       {confirmEmpty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-7 w-[90%] max-w-[360px] text-center shadow-xl">
-            <div className="text-lg font-bold mb-2 text-slate-900">סגירת כרטיס</div>
-            <div className="text-slate-500 mb-6">הסל ריק — האם אין חיוב לרכב זה?</div>
-            <div className="flex gap-2.5">
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.55)' }}>
+          <div className="bg-white rounded-2xl text-center shadow-xl" style={{ width: '90%', maxWidth: '360px', padding: '32px 28px' }}>
+            <div className="font-bold text-slate-900" style={{ fontSize: '18px', marginBottom: '10px' }}>סגירת כרטיס</div>
+            <div className="text-slate-500" style={{ fontSize: '15px', marginBottom: '28px' }}>הסל ריק — האם אין חיוב לרכב זה?</div>
+            <div className="flex" style={{ gap: '12px' }}>
               <button onClick={() => setConfirmEmpty(false)}
-                className="flex-1 py-3.5 border-2 border-slate-200 rounded-xl font-semibold text-slate-500 text-base">
+                className="flex-1 border-2 border-slate-200 rounded-xl font-semibold text-slate-500"
+                style={{ padding: '14px', fontSize: '15px' }}>
                 ביטול
               </button>
               <button onClick={closeEmpty}
-                className="flex-1 py-3.5 bg-slate-700 text-white rounded-xl font-bold text-base">
+                className="flex-1 bg-slate-700 text-white rounded-xl font-bold"
+                style={{ padding: '14px', fontSize: '15px' }}>
                 כן, סגור כרטיס
               </button>
             </div>
@@ -223,17 +225,19 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
 
       {/* Duplicate confirm */}
       {confirmItem && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-7 w-[90%] max-w-[360px] text-center shadow-xl">
-            <div className="text-lg font-bold mb-2 text-slate-900">{confirmItem.name}</div>
-            <div className="text-slate-500 mb-6">כבר קיים בסל — להוסיף עוד?</div>
-            <div className="flex gap-2.5">
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.55)' }}>
+          <div className="bg-white rounded-2xl text-center shadow-xl" style={{ width: '90%', maxWidth: '360px', padding: '32px 28px' }}>
+            <div className="font-bold text-slate-900" style={{ fontSize: '18px', marginBottom: '10px' }}>{confirmItem.name}</div>
+            <div className="text-slate-500" style={{ fontSize: '15px', marginBottom: '28px' }}>כבר קיים בסל — להוסיף עוד?</div>
+            <div className="flex" style={{ gap: '12px' }}>
               <button onClick={() => setConfirmItem(null)}
-                className="flex-1 py-3.5 border-2 border-slate-200 rounded-xl font-semibold text-slate-500 text-base">
+                className="flex-1 border-2 border-slate-200 rounded-xl font-semibold text-slate-500"
+                style={{ padding: '14px', fontSize: '15px' }}>
                 ביטול
               </button>
               <button onClick={confirmItem.onConfirm}
-                className="flex-1 py-3.5 bg-green-700 text-white rounded-xl font-bold text-base">
+                className="flex-1 bg-green-700 text-white rounded-xl font-bold"
+                style={{ padding: '14px', fontSize: '15px' }}>
                 כן, הוסף
               </button>
             </div>

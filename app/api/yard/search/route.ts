@@ -29,24 +29,39 @@ export async function GET(req: NextRequest) {
 
   // Tires
   if (type === 'all' || type === 'tire') {
-    const { data: tires } = await supabase
+    let tireQuery = supabase
       .from('tires')
-      .select('id, brand, width, profile, rim, speed_index, load_index, sell_price, quantity, sku')
+      .select('id, brand, width, profile, rim, speed_idx, load_idx, sell_price, qty, sku')
       .eq('tenant_id', profile.tenant_id)
-      .gt('quantity', 0)
-      .or(`brand.ilike.${search},sku.ilike.${search},width.ilike.${search}`)
-      .order('brand')
-      .limit(30)
+      .gt('qty', 0)
+
+    if (q) {
+      // Try to parse as size: 195/55/16 or 195 55 16
+      const sizeParts = q.match(/^(\d+)[\/\s\-](\d+)[\/\s\-](\d+)$/)
+      const singleNum = q.match(/^(\d+)$/)
+      if (sizeParts) {
+        tireQuery = tireQuery
+          .eq('width', Number(sizeParts[1]))
+          .eq('profile', Number(sizeParts[2]))
+          .eq('rim', Number(sizeParts[3]))
+      } else if (singleNum) {
+        tireQuery = tireQuery.eq('width', Number(singleNum[1]))
+      } else {
+        tireQuery = tireQuery.or(`brand.ilike.${search},sku.ilike.${search}`)
+      }
+    }
+
+    const { data: tires } = await tireQuery.order('brand').limit(40)
 
     for (const t of tires ?? []) {
       const size = `${t.width}/${t.profile}/${t.rim}`
       results.push({
         id:    t.id,
         type:  'tire',
-        name:  `${t.brand ?? ''} ${size} ${t.speed_index ?? ''}${t.load_index ?? ''}`.trim(),
+        name:  `${t.brand ?? ''} ${size} ${t.speed_idx ?? ''}${t.load_idx ?? ''}`.trim(),
         sku:   t.sku ?? null,
         price: t.sell_price ?? 0,
-        stock: t.quantity,
+        stock: t.qty,
         size,
         brand: t.brand ?? undefined,
       })
@@ -55,14 +70,17 @@ export async function GET(req: NextRequest) {
 
   // Products
   if (type === 'all' || type === 'product') {
-    const { data: products } = await supabase
+    let prodQuery = supabase
       .from('products')
-      .select('id, name, sku, sell_price, quantity')
+      .select('id, name, sku, sell_price, qty')
       .eq('tenant_id', profile.tenant_id)
-      .gt('quantity', 0)
-      .or(`name.ilike.${search},sku.ilike.${search}`)
-      .order('name')
-      .limit(30)
+      .gt('qty', 0)
+
+    if (q) {
+      prodQuery = prodQuery.or(`name.ilike.${search},sku.ilike.${search}`)
+    }
+
+    const { data: products } = await prodQuery.order('name').limit(30)
 
     for (const p of products ?? []) {
       results.push({
@@ -71,7 +89,7 @@ export async function GET(req: NextRequest) {
         name:  p.name,
         sku:   p.sku ?? null,
         price: p.sell_price ?? 0,
-        stock: p.quantity,
+        stock: p.qty,
       })
     }
   }
