@@ -62,11 +62,11 @@ export default function YardDashboard({ initialSessions }: Props) {
     new Date(dateStr).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
       {/* Top bar */}
-      <div className="bg-slate-800 text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
-        <h1 className="text-lg font-bold">🔧 מסוף רחבה</h1>
-        <span className="text-sm text-slate-300">
+      <div className="bg-slate-800 text-white px-4 py-3.5 flex items-center justify-between flex-shrink-0">
+        <h1 className="text-xl font-bold">🔧 מסוף רחבה</h1>
+        <span className="bg-slate-700 px-4 py-1.5 rounded-full text-sm font-semibold text-slate-200">
           {sessions.length} רכב{sessions.length !== 1 ? 'ים' : ''} פעיל{sessions.length !== 1 ? 'ים' : ''}
         </span>
       </div>
@@ -118,12 +118,12 @@ export default function YardDashboard({ initialSessions }: Props) {
       </div>
 
       {/* New car button */}
-      <div className="px-6 py-4 flex-shrink-0 flex justify-center">
+      <div className="p-3.5 flex-shrink-0">
         <button
           onClick={() => router.push('/yard/new')}
-          className="bg-green-700 hover:bg-green-600 active:bg-green-800 active:scale-98 text-white rounded-xl px-16 py-4 text-lg font-bold flex items-center gap-3 shadow transition-all"
+          className="w-full bg-green-700 hover:bg-green-600 active:scale-[.98] text-white rounded-xl py-5 text-xl font-bold flex items-center justify-center gap-2.5 shadow transition-all"
         >
-          <span className="text-xl font-black">+</span> קליטת רכב חדש
+          <span className="text-2xl font-black">+</span> קליטת רכב חדש
         </button>
       </div>
     </div>

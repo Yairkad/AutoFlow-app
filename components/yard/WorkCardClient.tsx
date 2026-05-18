@@ -79,123 +79,122 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const display = sessionDisplayName(session)
 
   const actions = [
-    { label: 'צמיג חדש',       icon: '🏁', onClick: () => router.push(`/yard/${session.id}/tire`) },
-    { label: 'תיקון תקר',       icon: '🔧', onClick: () => addQuickItem('תיקון תקר', 50) },
-    { label: 'חיישנים / איזון', icon: '⚙️', onClick: () => router.push(`/yard/${session.id}/service`) },
-    { label: 'כיוון פרונט',     icon: '🚗', onClick: () => addQuickItem('כיוון פרונט', 120) },
-    { label: 'אביזרים לרכב',   icon: '🛒', onClick: () => router.push(`/yard/${session.id}/search?type=product`) },
-    { label: 'כל המלאי',        icon: '🔍', onClick: () => router.push(`/yard/${session.id}/search?type=all`) },
+    { label: '🏁 צמיג חדש',       onClick: () => router.push(`/yard/${session.id}/tire`) },
+    { label: '🔧 תיקון תקר',       onClick: () => addQuickItem('תיקון תקר', 50) },
+    { label: '⚙️ חיישנים / איזון', onClick: () => router.push(`/yard/${session.id}/service`) },
+    { label: '🚗 כיוון פרונט',     onClick: () => addQuickItem('כיוון פרונט', 120) },
+    { label: '🛒 אביזרים לרכב',   onClick: () => router.push(`/yard/${session.id}/search?type=product`) },
+    { label: '🔍 כל המלאי',        onClick: () => router.push(`/yard/${session.id}/search?type=all`) },
   ]
 
   return (
-    <div className="flex flex-col h-full bg-slate-100">
+    <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
 
-      {/* ── Header ── */}
-      <div className="bg-white border-b-2 border-slate-200 flex-shrink-0 flex items-stretch">
-        <button
-          onClick={() => router.push('/yard')}
-          className="flex flex-col items-center justify-center px-6 py-4 gap-1 bg-slate-800 text-white hover:bg-slate-700 active:bg-slate-900 transition-colors flex-shrink-0"
-        >
-          <span className="text-2xl leading-none">🏠</span>
-          <span className="text-xs font-semibold">רחבה</span>
-        </button>
-        <div className="flex-1 px-6 py-4">
-          <div className="text-2xl font-black tracking-widest text-slate-900 leading-tight">
-            {formatPlate(session.plate)}
+      {/* ── Plate header card — margin from edges, red border ── */}
+      <div className="mx-3 mt-3 bg-white border-[3px] border-red-500 rounded-xl px-4 py-3.5 flex items-center gap-3 flex-shrink-0">
+        <div>
+          <div className="text-lg font-bold text-slate-800">
+            {display}{session.year ? ` ${session.year}` : ''}
           </div>
-          <div className="text-sm font-semibold text-slate-500 mt-0.5">
-            {display}{session.year ? ` · ${session.year}` : ''}
+          <div className="text-[22px] font-extrabold tracking-[2px] text-slate-900 leading-tight">
+            {formatPlate(session.plate)}
           </div>
         </div>
       </div>
 
-      {/* ── Body ── */}
-      <div className="flex flex-1 min-h-0">
+      {/* ── Nav row ── */}
+      <div className="flex gap-2 mx-3 mt-2.5 flex-shrink-0">
+        <button
+          onClick={() => router.push('/yard')}
+          className="flex-1 flex items-center justify-center gap-2 bg-slate-800 text-white rounded-xl px-3 text-base font-bold border-2 border-slate-800 transition-all active:scale-[.97] hover:bg-slate-700"
+          style={{ minHeight: '52px' }}
+        >
+          🏠 חזור לרחבה הראשית
+        </button>
+      </div>
 
-        {/* ── Blue cart panel ── */}
-        <div className="w-72 bg-blue-700 flex flex-col flex-shrink-0 text-white">
-          <div className="px-5 pt-5 pb-3 border-b border-blue-600 flex-shrink-0">
-            <div className="text-base font-black">🛒 סל נוכחי</div>
-            <div className="text-xs text-blue-200 mt-0.5">{items.length} פריטים</div>
+      {/* ── Work body ── */}
+      <div className="flex flex-1 gap-3 p-3 min-h-0">
+
+        {/* Action buttons — 2 columns, fixed min-height */}
+        <div className="flex-1 grid grid-cols-2 gap-2.5" style={{ alignContent: 'start' }}>
+          {actions.map(a => (
+            <button
+              key={a.label}
+              onClick={a.onClick}
+              className="bg-green-700 hover:bg-green-600 active:scale-95 text-white rounded-2xl text-[19px] font-bold flex items-center justify-center text-center px-3 transition-all shadow-sm"
+              style={{ minHeight: '88px' }}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Cart panel ── */}
+        <div
+          className="flex flex-col bg-white rounded-2xl overflow-hidden flex-shrink-0"
+          style={{ width: '270px', boxShadow: '0 2px 10px rgba(0,0,0,.12)' }}
+        >
+          <div className="bg-blue-700 text-white px-4 py-3.5 text-[15px] font-bold flex-shrink-0">
+            🛒 סל נוכחי
           </div>
 
-          <div className="flex-1 overflow-y-auto py-2">
+          <div className="flex-1 overflow-y-auto" style={{ maxHeight: '280px' }}>
             {items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full gap-2 text-blue-300 py-8">
-                <span className="text-4xl">🛒</span>
-                <span className="text-sm font-medium">הסל ריק</span>
-              </div>
+              <div className="p-5 text-center text-slate-400 text-sm">הסל ריק</div>
             ) : (
               items.map(item => (
-                <div key={item.id} className="flex items-center gap-3 px-5 py-3 hover:bg-blue-600/40 transition-colors">
+                <div key={item.id} className="flex items-start gap-1.5 px-3 py-2.5 border-b border-slate-100 last:border-0">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold leading-tight">{item.name}</div>
-                    <div className="text-xs text-blue-200 mt-0.5 flex items-center gap-1.5">
+                    <div className="text-sm font-semibold text-slate-900">{item.name}</div>
+                    <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
                       <span>כמות: {item.quantity}</span>
                       {item.price_modified && (
-                        <span className="bg-amber-400/30 text-amber-200 px-1.5 rounded text-xs font-bold">שונה</span>
+                        <span className="bg-amber-100 text-amber-700 text-[11px] px-1.5 rounded font-bold">שונה</span>
                       )}
                     </div>
                   </div>
-                  <span className="text-sm font-bold whitespace-nowrap text-blue-100">
+                  <div className="text-sm font-bold text-blue-600 whitespace-nowrap">
                     {(item.unit_price * item.quantity).toLocaleString()}₪
-                  </span>
+                  </div>
                   <button
                     onClick={() => deleteItem(item)}
-                    className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-red-500 flex items-center justify-center text-xs text-blue-200 hover:text-white transition-colors flex-shrink-0"
-                  >✕</button>
+                    className="text-slate-300 hover:text-red-500 text-base leading-none flex-shrink-0 transition-colors"
+                  >🗑</button>
                 </div>
               ))
             )}
           </div>
 
-          <div className="border-t border-blue-600 px-5 py-4 flex items-center justify-between flex-shrink-0 bg-blue-800/50">
-            <span className="text-sm text-blue-200">סה״כ</span>
-            <span className="text-xl font-black">{total.toLocaleString()}₪</span>
+          <div className="px-4 py-3 border-t-2 border-slate-200 flex justify-between items-center text-base font-black flex-shrink-0">
+            <span>סה״כ</span>
+            <span>{total.toLocaleString()}₪</span>
           </div>
 
           <button
             onClick={sendToOffice}
             disabled={items.length === 0 || sending}
-            className="bg-amber-500 hover:bg-amber-400 disabled:bg-blue-800 disabled:text-blue-500 text-white py-5 text-base font-black transition-colors flex-shrink-0"
+            className="text-white py-4 text-base font-bold transition-colors flex-shrink-0 disabled:opacity-40"
+            style={{ background: '#b45309' }}
           >
-            {sending ? 'שולח...' : 'סיים ושלח לתשלום ✓'}
+            {sending ? 'שולח...' : 'סיים ושלח לתשלום'}
           </button>
-        </div>
-
-        {/* ── Action buttons ── */}
-        <div className="flex-1 p-6 flex items-start">
-          <div
-            className="w-full grid grid-cols-3 gap-4"
-            style={{ gridTemplateRows: 'repeat(2, minmax(0, 7rem))' }}
-          >
-            {actions.map(a => (
-              <button
-                key={a.label}
-                onClick={a.onClick}
-                className="bg-green-700 hover:bg-green-600 active:bg-green-800 active:scale-95 text-white rounded-xl font-semibold flex flex-col items-center justify-center gap-2 transition-all shadow-sm"
-              >
-                <span className="text-2xl leading-none">{a.icon}</span>
-                <span className="text-sm font-semibold leading-snug text-center">{a.label}</span>
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
       {/* Duplicate confirm */}
       {confirmItem && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-xs text-center shadow-xl">
-            <div className="text-lg font-bold mb-1 text-slate-800">{confirmItem.name}</div>
-            <div className="text-slate-500 mb-5 text-sm">כבר קיים בסל — להוסיף עוד?</div>
-            <div className="flex gap-3">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-7 w-[90%] max-w-[360px] text-center shadow-xl">
+            <div className="text-lg font-bold mb-2 text-slate-900">{confirmItem.name}</div>
+            <div className="text-slate-500 mb-6">כבר קיים בסל — להוסיף עוד?</div>
+            <div className="flex gap-2.5">
               <button onClick={() => setConfirmItem(null)}
-                className="flex-1 py-3 border border-slate-200 rounded-xl font-semibold text-slate-500 text-sm hover:bg-slate-50">
+                className="flex-1 py-3.5 border-2 border-slate-200 rounded-xl font-semibold text-slate-500 text-base">
                 ביטול
               </button>
               <button onClick={confirmItem.onConfirm}
-                className="flex-1 py-3 bg-green-700 text-white rounded-xl font-semibold text-sm hover:bg-green-600">
+                className="flex-1 py-3.5 bg-green-700 text-white rounded-xl font-bold text-base">
                 כן, הוסף
               </button>
             </div>
