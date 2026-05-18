@@ -90,27 +90,29 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   return (
     <div className="flex flex-col h-full">
 
-      {/* Header — car info + back button */}
-      <div className="bg-white border-b-4 border-red-500 px-4 py-3 flex-shrink-0 flex items-center gap-4">
+      {/* Header — car info */}
+      <div className="bg-white border-b-4 border-red-500 px-4 py-3 flex-shrink-0">
+        <div className="text-base font-bold text-slate-700">
+          {display}{session.year ? ` — ${session.year}` : ''}
+        </div>
+        <div className="text-2xl font-black tracking-widest text-slate-900 leading-tight">
+          {formatPlate(session.plate)}
+        </div>
+      </div>
+
+      {/* Back button */}
+      <div className="px-3 pt-2 flex-shrink-0">
         <button
           onClick={() => router.push('/yard')}
-          className="w-11 h-11 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xl font-bold flex items-center justify-center flex-shrink-0 transition-all"
-        >🏠</button>
-        <div className="flex-1 min-w-0">
-          <div className="text-base font-bold text-slate-700 truncate">
-            {display}{session.year ? ` — ${session.year}` : ''}
-          </div>
-          <div className="text-2xl font-black tracking-widest text-slate-900 leading-tight">
-            {formatPlate(session.plate)}
-          </div>
-        </div>
+          className="w-full bg-slate-800 hover:bg-slate-700 active:scale-98 text-white rounded-xl py-3 text-base font-bold flex items-center justify-center gap-2 transition-all"
+        >🏠 חזור לרחבה הראשית</button>
       </div>
 
       {/* Main body */}
       <div className="flex flex-1 gap-3 p-3 min-h-0">
 
-        {/* ── Action buttons: 3×2 grid ── */}
-        <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-3">
+        {/* ── Action buttons: 3×2 grid, fixed row height ── */}
+        <div className="flex-1 grid grid-cols-3 gap-3" style={{ gridTemplateRows: 'repeat(2, 8rem)' }}>
           {actions.map(a => (
             <button
               key={a.label}
