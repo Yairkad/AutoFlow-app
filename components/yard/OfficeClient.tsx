@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { YardSession, YardSessionItem } from '@/lib/yard/types'
+import type { YardSession, YardSessionItem, YardService } from '@/lib/yard/types'
 import { sessionDisplayName, sessionTotal, minutesSince, formatPlate } from '@/lib/yard/types'
 
 const VAT = 1.18
@@ -18,8 +18,14 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
   const [tab,     setTab]     = useState<'pending' | 'active'>('pending')
   const [active,  setActive]  = useState(initialActive)
   const [pending, setPending] = useState(initialPending)
-  const [closing, setClosing] = useState<string | null>(null)
+  const [closing,      setClosing]      = useState<string | null>(null)
   const [, setTick] = useState(0)
+  const [priceModal,   setPriceModal]   = useState(false)
+  const [services,     setServices]     = useState<YardService[]>([])
+  const [editPrices,   setEditPrices]   = useState<Record<string, string>>({})
+  const [savingPrice,  setSavingPrice]  = useState<string | null>(null)
+  const [newSvc,       setNewSvc]       = useState({ name: '', price: '' })
+  const [addingNew,    setAddingNew]    = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -35,6 +41,47 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, []) // eslint-disable-line
+
+  async function openPriceModal() {
+    const res  = await fetch('/api/yard/services')
+    const data: YardService[] = await res.json()
+    setServices(data)
+    setEditPrices(Object.fromEntries(data.map(s => [s.id, String(s.price)])))
+    setPriceModal(true)
+  }
+
+  async function savePrice(id: string) {
+    const price = Number(editPrices[id])
+    if (isNaN(price)) return
+    setSavingPrice(id)
+    await fetch(`/api/yard/services/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ price }),
+    })
+    setSavingPrice(null)
+    setServices(sv => sv.map(s => s.id === id ? { ...s, price } : s))
+  }
+
+  async function addService() {
+    if (!newSvc.name.trim()) return
+    setAddingNew(true)
+    const res = await fetch('/api/yard/services', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newSvc.name.trim(), price: Number(newSvc.price) || 0 }),
+    })
+    const svc: YardService = await res.json()
+    setServices(sv => [...sv, svc])
+    setEditPrices(ep => ({ ...ep, [svc.id]: String(svc.price) }))
+    setNewSvc({ name: '', price: '' })
+    setAddingNew(false)
+  }
+
+  async function deleteService(id: string) {
+    await fetch(`/api/yard/services/${id}`, { method: 'DELETE' })
+    setServices(sv => sv.filter(s => s.id !== id))
+  }
 
   async function closeSession(id: string) {
     setClosing(id)
@@ -115,9 +162,19 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
       {/* Top bar */}
       <div className="bg-slate-800 text-white flex items-center justify-between flex-shrink-0" style={{ padding: '14px 20px' }}>
         <h1 className="text-xl font-bold">🖥 לוח בקרה רחבה</h1>
-        <div className="flex items-center gap-2 bg-green-700 text-white rounded-full text-sm font-semibold" style={{ padding: '6px 14px' }}>
-          <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
-          בשידור חי
+        <div className="flex items-center" style={{ gap: '10px' }}>
+          <button
+            onClick={openPriceModal}
+            className="bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-semibold transition-colors"
+            style={{ padding: '7px 14px', fontSize: '13px' }}
+            title="עריכת מחירון שירותים"
+          >
+            ⚙️ מחירון
+          </button>
+          <div className="flex items-center gap-2 bg-green-700 text-white rounded-full text-sm font-semibold" style={{ padding: '6px 14px' }}>
+            <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
+            בשידור חי
+          </div>
         </div>
       </div>
 
@@ -281,6 +338,76 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
           </div>
         )}
       </div>
+
+      {/* ── Price editor modal ── */}
+      {priceModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.55)' }}>
+          <div className="bg-white rounded-2xl shadow-2xl flex flex-col" style={{ width: '480px', maxWidth: '95vw', maxHeight: '85vh', padding: '0' }}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between border-b" style={{ padding: '18px 24px' }}>
+              <h2 className="font-bold text-slate-900" style={{ fontSize: '18px' }}>⚙️ מחירון שירותים</h2>
+              <button onClick={() => setPriceModal(false)} className="text-slate-400 hover:text-slate-700 font-bold text-xl">✕</button>
+            </div>
+
+            {/* Service list */}
+            <div className="overflow-y-auto flex-1" style={{ padding: '8px 0' }}>
+              {services.length === 0 && (
+                <div className="text-center text-slate-400 py-8">אין שירותים — הוסף למטה</div>
+              )}
+              {services.map(svc => (
+                <div key={svc.id} className="flex items-center border-b border-slate-50" style={{ padding: '10px 24px', gap: '12px' }}>
+                  <span className="flex-1 font-medium text-slate-800" style={{ fontSize: '15px' }}>{svc.name}</span>
+                  <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden" style={{ height: '40px' }}>
+                    <input
+                      type="number"
+                      value={editPrices[svc.id] ?? ''}
+                      onChange={e => setEditPrices(ep => ({ ...ep, [svc.id]: e.target.value }))}
+                      onBlur={() => savePrice(svc.id)}
+                      className="outline-none font-bold text-blue-600 text-center"
+                      style={{ width: '80px', padding: '0 8px', fontSize: '15px', height: '100%' }}
+                    />
+                    <span className="text-slate-400 font-semibold" style={{ padding: '0 8px', fontSize: '13px' }}>₪</span>
+                  </div>
+                  {savingPrice === svc.id && <span className="text-green-600 text-xs font-bold">✓</span>}
+                  <button onClick={() => deleteService(svc.id)} className="text-slate-300 hover:text-red-500 transition-colors" style={{ fontSize: '16px' }}>🗑</button>
+                </div>
+              ))}
+            </div>
+
+            {/* Add new */}
+            <div className="border-t" style={{ padding: '16px 24px' }}>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wide" style={{ marginBottom: '10px' }}>הוסף שירות חדש</div>
+              <div className="flex" style={{ gap: '10px' }}>
+                <input
+                  type="text"
+                  placeholder="שם השירות"
+                  value={newSvc.name}
+                  onChange={e => setNewSvc(n => ({ ...n, name: e.target.value }))}
+                  className="flex-1 border-2 border-slate-200 rounded-xl outline-none font-medium"
+                  style={{ padding: '10px 14px', fontSize: '14px' }}
+                />
+                <input
+                  type="number"
+                  placeholder="מחיר"
+                  value={newSvc.price}
+                  onChange={e => setNewSvc(n => ({ ...n, price: e.target.value }))}
+                  className="border-2 border-slate-200 rounded-xl outline-none font-bold text-blue-600 text-center"
+                  style={{ width: '80px', padding: '10px 8px', fontSize: '14px' }}
+                />
+                <button
+                  onClick={addService}
+                  disabled={addingNew || !newSvc.name.trim()}
+                  className="bg-green-700 hover:bg-green-800 disabled:opacity-40 text-white rounded-xl font-bold transition-colors"
+                  style={{ padding: '10px 18px', fontSize: '14px' }}
+                >
+                  {addingNew ? '...' : '+ הוסף'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

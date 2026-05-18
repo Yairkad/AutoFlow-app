@@ -14,9 +14,10 @@ interface Props {
 export default function WorkCardClient({ session: initialSession, services }: Props) {
   const router = useRouter()
   const [session, setSession]         = useState<YardSession>(initialSession)
-  const [sending,      setSending]      = useState(false)
-  const [confirmItem,  setConfirmItem]  = useState<{ name: string; onConfirm: () => void } | null>(null)
-  const [confirmEmpty, setConfirmEmpty] = useState(false)
+  const [sending,       setSending]      = useState(false)
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
+  const [confirmItem,   setConfirmItem]  = useState<{ name: string; onConfirm: () => void } | null>(null)
+  const [confirmEmpty,  setConfirmEmpty] = useState(false)
   const supabase = createClient()
   const items    = session.yard_session_items ?? []
 
@@ -39,10 +40,12 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
 
   async function addQuickItem(name: string, price: number, serviceId?: string) {
     if (items.some(i => i.name === name)) {
+      setLoadingAction(null) // release button — user must confirm dialog
       setConfirmItem({ name, onConfirm: () => doAddQuick(name, price, serviceId) })
       return
     }
-    doAddQuick(name, price, serviceId)
+    await doAddQuick(name, price, serviceId)
+    setLoadingAction(null)
   }
 
   async function doAddQuick(name: string, price: number, serviceId?: string) {
@@ -95,13 +98,23 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const total = sessionTotal(items)
   const hasMakeModel = session.make || session.model
 
+  function svcPrice(name: string, fallback: number) {
+    return services.find(s => s.name === name)?.price ?? fallback
+  }
+
+  async function pressAction(key: string, fn: () => void | Promise<void>) {
+    if (loadingAction) return
+    setLoadingAction(key)
+    await Promise.resolve(fn())
+  }
+
   const actions = [
-    { label: '🏁 צמיג חדש',       onClick: () => router.push(`/yard/${session.id}/tire`) },
-    { label: '🔧 תיקון תקר',       onClick: () => addQuickItem('תיקון תקר', 50) },
-    { label: '⚙️ חיישנים / איזון', onClick: () => router.push(`/yard/${session.id}/service`) },
-    { label: '🚗 כיוון פרונט',     onClick: () => addQuickItem('כיוון פרונט', 120) },
-    { label: '🛒 אביזרים לרכב',   onClick: () => router.push(`/yard/${session.id}/search?type=product`) },
-    { label: '🔍 כל המלאי',        onClick: () => router.push(`/yard/${session.id}/search?type=all`) },
+    { key: 'tire',    label: '🏁 צמיג חדש',       fn: () => router.push(`/yard/${session.id}/tire`) },
+    { key: 'flat',    label: '🔧 תיקון תקר',       fn: () => addQuickItem('תיקון תקר',  svcPrice('תיקון תקר', 50)) },
+    { key: 'service', label: '⚙️ חיישנים / איזון', fn: () => router.push(`/yard/${session.id}/service`) },
+    { key: 'align',   label: '🚗 כיוון פרונט',     fn: () => addQuickItem('כיוון פרונט', svcPrice('כיוון פרונט', 120)) },
+    { key: 'accs',    label: '🛒 אביזרים לרכב',   fn: () => router.push(`/yard/${session.id}/search?type=product`) },
+    { key: 'all',     label: '🔍 כל המלאי',        fn: () => router.push(`/yard/${session.id}/search?type=all`) },
   ]
 
   return (
@@ -136,16 +149,26 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
 
         {/* Action buttons — 2 columns */}
         <div className="flex-1 grid grid-cols-2" style={{ gap: '12px', alignContent: 'start' }}>
-          {actions.map(a => (
-            <button
-              key={a.label}
-              onClick={a.onClick}
-              className="bg-green-700 hover:bg-green-600 active:scale-95 text-white rounded-2xl font-bold flex items-center justify-center text-center transition-all shadow-sm"
-              style={{ minHeight: '88px', fontSize: '17px', padding: '12px' }}
-            >
-              {a.label}
-            </button>
-          ))}
+          {actions.map(a => {
+            const isThis  = loadingAction === a.key
+            const anyBusy = loadingAction !== null
+            return (
+              <button
+                key={a.key}
+                onClick={() => pressAction(a.key, a.fn)}
+                disabled={anyBusy}
+                className="text-white rounded-2xl font-bold flex items-center justify-center text-center shadow-sm transition-colors"
+                style={{
+                  minHeight: '88px', fontSize: '17px', padding: '12px',
+                  background: isThis ? '#64748b' : '#15803d',
+                  opacity: anyBusy && !isThis ? 0.5 : 1,
+                  animation: isThis ? 'btn-loading 0.7s ease-in-out infinite' : 'none',
+                }}
+              >
+                {isThis ? '⏳' : a.label}
+              </button>
+            )
+          })}
         </div>
 
         {/* ── Cart panel ── */}

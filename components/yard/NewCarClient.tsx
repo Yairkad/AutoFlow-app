@@ -100,15 +100,15 @@ export default function NewCarClient() {
               className="bg-white border-2 border-slate-200 rounded-2xl font-bold text-slate-800 shadow-sm active:scale-95 active:bg-slate-100 transition-all"
               style={{ fontSize: '28px' }}>{k}</button>
           ))}
-          <button onPointerDown={() => press('del')}
-            className="bg-white border-2 border-slate-200 rounded-2xl font-bold text-red-500 shadow-sm active:scale-95 active:bg-slate-100 transition-all"
-            style={{ fontSize: '22px' }}>⌫</button>
-          <button onPointerDown={() => press('0')}
-            className="bg-white border-2 border-slate-200 rounded-2xl font-bold text-slate-800 shadow-sm active:scale-95 active:bg-slate-100 transition-all"
-            style={{ fontSize: '28px' }}>0</button>
           <button onPointerDown={confirm} disabled={digits.length < 7 || saving || loading}
             className="bg-green-700 border-2 border-green-700 rounded-2xl font-bold text-white shadow-sm active:scale-95 disabled:opacity-40 transition-all"
             style={{ fontSize: '20px' }}>{saving ? '...' : '✓ אישור'}</button>
+          <button onPointerDown={() => press('0')}
+            className="bg-white border-2 border-slate-200 rounded-2xl font-bold text-slate-800 shadow-sm active:scale-95 active:bg-slate-100 transition-all"
+            style={{ fontSize: '28px' }}>0</button>
+          <button onPointerDown={() => press('del')}
+            className="bg-white border-2 border-slate-200 rounded-2xl font-bold text-red-500 shadow-sm active:scale-95 active:bg-slate-100 transition-all"
+            style={{ fontSize: '22px' }}>⌫</button>
         </div>
       </div>
 

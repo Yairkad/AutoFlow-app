@@ -12,7 +12,10 @@
   --bg:         #f8fafc;
   --bg-card:    #ffffff;
   --border:     #e2e8f0;
-  --radius:     12px;
+  --radius:       12px;
+  --radius-sm:    6px;
+  --radius-md:    8px;
+  --radius-input: 9px;
   --shadow:     0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
   --sidebar-w:  240px;
   --header-h:   64px;
@@ -62,17 +65,31 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   width: 100%;
   padding: 8px 12px;
   border: 1.5px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-input);
   font-family: inherit;
   font-size: 14px;
   color: var(--text);
-  background: var(--bg-card);
-  transition: border-color 0.15s;
+  background: var(--bg);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   outline: none;
+  box-sizing: border-box;
 }
-.form-input:focus { border-color: var(--primary); }
-.form-input::placeholder { color: var(--text-light, #94a3b8); }
+.form-input:focus {
+  border-color: var(--primary);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 3px rgba(26,158,92,.12);
+}
+.form-input::placeholder { color: #94a3b8; }
 .form-input[disabled] { opacity: 0.55; cursor: not-allowed; }
+.form-input.error { border-color: var(--danger); background: #fff5f5; }
+
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
 
 /* Search input variant */
 .search-input-global {
@@ -108,13 +125,15 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Yard timer — flash animation for critical (>45 min) sessions */
+@keyframes btn-loading {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
 @keyframes flash {
   0%, 100% { border-color: rgb(239 68 68); }
   50%       { border-color: transparent; }
 }
-/* Legacy aliases kept for compatibility */
-@keyframes btn-spin     { to { transform: rotate(360deg); } }
-@keyframes sidebar-spin { to { transform: rotate(360deg); } }
 
 /* Table row hover — use className="tr-hover" instead of onMouseEnter DOM manipulation */
 .tr-hover {
@@ -834,11 +853,6 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   scrollbar-width: none;
 }
 .scroll-x::-webkit-scrollbar { display: none; }
-
-/* Global button hover lift */
-button:not(:disabled) { transition: transform .15s ease, box-shadow .15s ease; }
-button:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-button:not(:disabled):active { transform: scale(0.97) translateY(0); box-shadow: none; }
 
 /* ══════════════════════════════════════════════════════════════════════════
    Footer – center text
