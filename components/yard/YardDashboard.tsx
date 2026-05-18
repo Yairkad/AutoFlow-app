@@ -72,14 +72,14 @@ export default function YardDashboard({ initialSessions }: Props) {
       </div>
 
       {/* Car grid */}
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto px-6 py-5">
         {sessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
             <span className="text-5xl">🏁</span>
             <p className="text-lg font-medium">אין רכבים פעילים ברחבה</p>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-4">
             {sessions.map(s => {
               const state   = timerState(s.opened_at)
               const items   = s.yard_session_items ?? []
@@ -90,28 +90,26 @@ export default function YardDashboard({ initialSessions }: Props) {
                   key={s.id}
                   onClick={() => router.push(`/yard/${s.id}`)}
                   className={`
-                    relative bg-white rounded-2xl p-4 text-right border-2 shadow-sm
+                    relative bg-white rounded-2xl p-5 text-right border-2 shadow-sm
                     transition-all active:scale-95 hover:shadow-md
                     ${borderClass[state]}
                     ${state === 'critical' ? 'shadow-red-200' : ''}
                   `}
                 >
-                  {/* Item count badge */}
                   {items.length > 0 && (
-                    <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    <span className="absolute top-3 left-3 bg-blue-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
                       {items.length}
                     </span>
                   )}
                   <div className="text-lg font-bold text-slate-800 mb-0.5">{display}</div>
-                  <div className="text-base font-bold text-slate-500 tracking-wider mb-2">
+                  <div className="text-xl font-black text-slate-700 tracking-widest mb-3">
                     {formatPlate(s.plate)}
-                    {s.year && <span className="font-normal text-sm mr-1">({s.year})</span>}
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span>קליטה: {fmtTime(s.opened_at)}</span>
-                    {total > 0 && <span className="font-bold text-blue-600">{total.toLocaleString()}₪</span>}
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-slate-400">קליטה: {fmtTime(s.opened_at)}</div>
+                    {total > 0 && <div className="text-sm font-bold text-blue-600">{total.toLocaleString()}₪</div>}
                   </div>
-                  <div className="mt-1">{timerBadge(s.opened_at)}</div>
+                  <div className="mt-2">{timerBadge(s.opened_at)}</div>
                 </button>
               )
             })}
@@ -120,12 +118,12 @@ export default function YardDashboard({ initialSessions }: Props) {
       </div>
 
       {/* New car button */}
-      <div className="p-3 flex-shrink-0">
+      <div className="px-6 py-4 flex-shrink-0 flex justify-center">
         <button
           onClick={() => router.push('/yard/new')}
-          className="w-full bg-green-700 hover:bg-green-800 active:scale-98 text-white rounded-2xl py-5 text-xl font-bold flex items-center justify-center gap-3 shadow-md transition-all"
+          className="bg-green-700 hover:bg-green-600 active:bg-green-800 active:scale-98 text-white rounded-xl px-16 py-4 text-lg font-bold flex items-center gap-3 shadow transition-all"
         >
-          <span className="text-2xl">+</span> קליטת רכב חדש
+          <span className="text-xl font-black">+</span> קליטת רכב חדש
         </button>
       </div>
     </div>
