@@ -47,12 +47,12 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     setClosing(null)
   }
 
-  async function copySku(sku: string, btn: HTMLButtonElement) {
-    await navigator.clipboard.writeText(sku).catch(() => {})
+  async function copyText(text: string, btn: HTMLButtonElement) {
+    await navigator.clipboard.writeText(text).catch(() => {})
     const orig = btn.textContent
-    btn.textContent = '✓ הועתק'
-    btn.classList.add('bg-green-600', 'border-green-600', 'text-white')
-    setTimeout(() => { btn.textContent = orig; btn.classList.remove('bg-green-600', 'border-green-600', 'text-white') }, 2000)
+    btn.textContent = '✓'
+    btn.classList.add('!bg-green-600', '!border-green-600', '!text-white')
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('!bg-green-600', '!border-green-600', '!text-white') }, 2000)
   }
 
   function timerState(openedAt: string) {
@@ -95,12 +95,27 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     return 'border-slate-200'
   }
 
+  const CopyBtn = ({ text, label }: { text: string; label: string }) => (
+    <button
+      onClick={e => copyText(text, e.currentTarget)}
+      className="inline-flex items-center gap-1 border-[1.5px] border-slate-300 text-slate-500 rounded-lg text-xs font-semibold hover:bg-slate-600 hover:border-slate-600 hover:text-white transition-colors"
+      style={{ padding: '3px 8px' }}
+    >
+      <svg viewBox="0 0 14 16" width="10" height="12" fill="currentColor">
+        <rect x="3" y="0" width="9" height="12" rx="1.5"/>
+        <rect x="0" y="3" width="9" height="12" rx="1.5" fill="white" stroke="currentColor" strokeWidth="1.2"/>
+      </svg>
+      {label}
+    </button>
+  )
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
+
       {/* Top bar */}
-      <div className="bg-slate-800 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
-        <h1 className="text-xl font-bold">לוח בקרה רחבה</h1>
-        <div className="flex items-center gap-2 bg-green-700 text-white px-3 py-1.5 rounded-full text-sm font-semibold">
+      <div className="bg-slate-800 text-white flex items-center justify-between flex-shrink-0" style={{ padding: '14px 20px' }}>
+        <h1 className="text-xl font-bold">🖥 לוח בקרה רחבה</h1>
+        <div className="flex items-center gap-2 bg-green-700 text-white rounded-full text-sm font-semibold" style={{ padding: '6px 14px' }}>
           <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
           בשידור חי
         </div>
@@ -108,27 +123,30 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
 
       {/* Tabs */}
       <div className="flex bg-white border-b-2 border-slate-200 flex-shrink-0">
-        <button
-          onClick={() => setTab('pending')}
-          className={`px-6 py-4 text-base font-semibold border-b-[3px] -mb-0.5 transition-colors ${tab === 'pending' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-        >
-          ממתינים לאישור וסגירה
-          <span className="mr-2 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{pending.length}</span>
-        </button>
-        <button
-          onClick={() => setTab('active')}
-          className={`px-6 py-4 text-base font-semibold border-b-[3px] -mb-0.5 transition-colors ${tab === 'active' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-        >
-          בטיפול פעיל ברחבה
-          <span className="mr-2 bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{active.length}</span>
-        </button>
+        {(['pending', 'active'] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className="text-base font-semibold transition-colors"
+            style={{
+              padding: '14px 24px',
+              borderBottom: tab === t ? '3px solid #2563eb' : '3px solid transparent',
+              color: tab === t ? '#1d4ed8' : '#94a3b8',
+              marginBottom: '-2px',
+            }}
+          >
+            {t === 'pending' ? 'ממתינים לאישור וסגירה' : 'בטיפול פעיל ברחבה'}
+            <span className="font-bold text-white text-xs rounded-full"
+              style={{ marginRight: '8px', padding: '2px 8px', background: t === 'pending' ? '#f59e0b' : '#3b82f6' }}>
+              {t === 'pending' ? pending.length : active.length}
+            </span>
+          </button>
+        ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto" style={{ padding: '16px 20px' }}>
 
         {/* ── Tab: Pending ── */}
         {tab === 'pending' && (
-          <div className="space-y-5">
+          <div>
             {pending.length === 0 && (
               <div className="text-center text-slate-400 py-16 text-lg">אין רכבים ממתינים לאישור</div>
             )}
@@ -136,14 +154,26 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
               const grouped = groupItems(s.yard_session_items ?? [])
               const total   = sessionTotal(s.yard_session_items ?? [])
               return (
-                <div key={s.id} className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden ${cardBorder(s.opened_at)}`}>
+                <div key={s.id} className={`bg-white rounded-2xl border-2 overflow-hidden ${cardBorder(s.opened_at)}`}
+                  style={{ marginBottom: '16px', boxShadow: '0 1px 6px rgba(0,0,0,.08)' }}>
+
                   {/* Card header */}
-                  <div className="px-5 py-4 bg-slate-50 border-b flex items-center justify-between">
+                  <div className="flex items-center justify-between border-b" style={{ padding: '14px 20px', background: '#f8fafc' }}>
                     <div>
-                      <div className="text-lg font-bold text-slate-800">{sessionDisplayName(s)}</div>
-                      <div className="text-base font-black tracking-widest text-slate-600">{formatPlate(s.plate)}</div>
+                      {(s.make || s.model) && (
+                        <div className="font-bold text-slate-700" style={{ fontSize: '16px' }}>
+                          {[s.make, s.model].filter(Boolean).join(' ')}
+                          {s.year && <span className="text-slate-400 font-normal" style={{ marginRight: '6px' }}>· {s.year}</span>}
+                        </div>
+                      )}
+                      <div className="flex items-center" style={{ gap: '10px', marginTop: '2px' }}>
+                        <span className="font-black text-slate-900" style={{ fontSize: '20px', letterSpacing: '2px' }}>
+                          {formatPlate(s.plate)}
+                        </span>
+                        <CopyBtn text={s.plate} label={formatPlate(s.plate)} />
+                      </div>
                     </div>
-                    <div className="text-left text-sm text-slate-500 space-y-0.5">
+                    <div className="text-sm text-slate-500 text-left" style={{ lineHeight: '1.7' }}>
                       <div>קליטה: {fmtTime(s.opened_at)}</div>
                       <div><TimerTag openedAt={s.opened_at} /></div>
                     </div>
@@ -152,55 +182,56 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                   {/* Items table */}
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b text-xs text-slate-400 font-bold uppercase tracking-wide">
-                        <th className="px-5 py-2 text-right">מק״ט</th>
-                        <th className="px-4 py-2 text-right">תיאור</th>
-                        <th className="px-4 py-2 text-right">כמות</th>
-                        <th className="px-4 py-2 text-right">מחיר יח׳</th>
-                        <th className="px-4 py-2 text-right">סה״כ</th>
-                        <th className="px-4 py-2 text-right">יח׳ ללא מע״מ</th>
+                      <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        {['מק״ט','תיאור','כמות','מחיר יח׳','סה״כ','יח׳ ללא מע״מ'].map(h => (
+                          <th key={h} className="text-right text-slate-400 font-bold uppercase tracking-wide"
+                            style={{ padding: '8px 16px', fontSize: '11px' }}>{h}</th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
                       {grouped.map((item, i) => (
-                        <tr key={i} className="border-b border-slate-50 last:border-0">
-                          <td className="px-5 py-3">
+                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '12px 16px' }}>
                             {item.sku ? (
                               <button
-                                onClick={e => copySku(item.sku!, e.currentTarget)}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 border-[1.5px] border-blue-500 text-blue-600 rounded-lg text-xs font-semibold hover:bg-blue-500 hover:text-white transition-colors"
+                                onClick={e => copyText(item.sku!, e.currentTarget)}
+                                className="inline-flex items-center gap-1.5 border-[1.5px] border-blue-500 text-blue-600 rounded-lg font-semibold hover:bg-blue-500 hover:text-white transition-colors"
+                                style={{ padding: '3px 8px', fontSize: '12px' }}
                               >
-                                <svg viewBox="0 0 14 16" width="11" height="13" fill="currentColor"><rect x="3" y="0" width="9" height="12" rx="1.5" /><rect x="0" y="3" width="9" height="12" rx="1.5" fill="white" stroke="currentColor" strokeWidth="1.2" /></svg>
+                                <svg viewBox="0 0 14 16" width="10" height="12" fill="currentColor">
+                                  <rect x="3" y="0" width="9" height="12" rx="1.5"/>
+                                  <rect x="0" y="3" width="9" height="12" rx="1.5" fill="white" stroke="currentColor" strokeWidth="1.2"/>
+                                </svg>
                                 {item.sku}
                               </button>
-                            ) : (
-                              <span className="text-xs text-slate-300">—</span>
+                            ) : <span className="text-slate-300 text-xs">—</span>}
+                          </td>
+                          <td className="font-medium text-slate-800" style={{ padding: '12px 16px', fontSize: '14px' }}>{item.name}</td>
+                          <td className="font-bold" style={{ padding: '12px 16px', fontSize: '14px' }}>{item.totalQty}</td>
+                          <td style={{ padding: '12px 16px', fontSize: '14px' }}>
+                            {item.unit_price.toLocaleString()}₪
+                            {item.price_modified && (
+                              <span className="bg-amber-100 text-amber-700 rounded font-bold" style={{ marginRight: '6px', padding: '2px 6px', fontSize: '11px' }}>שונה</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-sm font-medium text-slate-800">{item.name}</td>
-                          <td className="px-4 py-3 text-sm font-bold">{item.totalQty}</td>
-                          <td className="px-4 py-3 text-sm">
-                            {item.unit_price.toLocaleString()}₪
-                            {item.price_modified && <span className="mr-1 bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded font-bold">שונה</span>}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-bold text-slate-800">{item.totalPrice.toLocaleString()}₪</td>
-                          <td className="px-4 py-3 text-sm text-slate-500">{noVat(item.unit_price)}₪</td>
+                          <td className="font-bold text-slate-800" style={{ padding: '12px 16px', fontSize: '14px' }}>{item.totalPrice.toLocaleString()}₪</td>
+                          <td className="text-slate-500" style={{ padding: '12px 16px', fontSize: '14px' }}>{noVat(item.unit_price)}₪</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
 
                   {/* Footer */}
-                  <div className="px-5 py-4 border-t-2 border-slate-100 bg-slate-50 flex items-center justify-between">
-                    <div>
-                      <div className="text-lg font-black">סה״כ: {total.toLocaleString()}₪</div>
-                    </div>
+                  <div className="flex items-center justify-between border-t-2 border-slate-100" style={{ padding: '14px 20px', background: '#f8fafc' }}>
+                    <div className="font-black" style={{ fontSize: '18px' }}>סה״כ: {total.toLocaleString()}₪</div>
                     <button
                       onClick={() => closeSession(s.id)}
                       disabled={closing === s.id}
-                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl px-6 py-3 text-sm font-bold transition-colors"
+                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors"
+                      style={{ padding: '10px 24px', fontSize: '14px' }}
                     >
-                      {closing === s.id ? '...' : 'סגור כרטיס ✓'}
+                      {closing === s.id ? '...' : '✓ סגור כרטיס'}
                     </button>
                   </div>
                 </div>
@@ -215,22 +246,32 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
             {active.length === 0 && (
               <div className="text-center text-slate-400 py-16 text-lg">אין רכבים פעילים ברחבה כרגע</div>
             )}
-            <div className="grid grid-cols-4 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
               {active.map(s => {
                 const items = s.yard_session_items ?? []
                 const total = sessionTotal(items)
                 return (
-                  <div key={s.id} className={`bg-white rounded-xl border-2 p-4 shadow-sm ${cardBorder(s.opened_at)}`}>
-                    <div className="font-bold text-base text-slate-800 mb-0.5">{sessionDisplayName(s)}</div>
-                    <div className="font-black text-slate-600 tracking-wider mb-2">{formatPlate(s.plate)}</div>
-                    <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                  <div key={s.id} className={`bg-white rounded-2xl border-2 ${cardBorder(s.opened_at)}`}
+                    style={{ padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,.08)' }}>
+                    {(s.make || s.model) && (
+                      <div className="font-bold text-slate-700" style={{ fontSize: '15px', marginBottom: '2px' }}>
+                        {[s.make, s.model].filter(Boolean).join(' ')}
+                      </div>
+                    )}
+                    <div className="flex items-center" style={{ gap: '8px', marginBottom: '8px' }}>
+                      <span className="font-black text-slate-900" style={{ fontSize: '18px', letterSpacing: '2px' }}>
+                        {formatPlate(s.plate)}
+                      </span>
+                      <CopyBtn text={s.plate} label="העתק" />
+                    </div>
+                    <div className="flex items-center justify-between text-slate-400" style={{ fontSize: '12px', marginBottom: '6px' }}>
                       <span>קליטה: {fmtTime(s.opened_at)}</span>
                       {total > 0 && <span className="font-bold text-blue-600">{total.toLocaleString()}₪</span>}
                     </div>
                     <div className="flex items-center justify-between">
                       <TimerTag openedAt={s.opened_at} />
                       {items.length > 0 && (
-                        <span className="text-xs text-slate-500 font-medium">{items.length} פריטים</span>
+                        <span className="text-slate-400 font-medium" style={{ fontSize: '12px' }}>{items.length} פריטים</span>
                       )}
                     </div>
                   </div>
