@@ -14,8 +14,9 @@ interface Props {
 export default function WorkCardClient({ session: initialSession, services }: Props) {
   const router = useRouter()
   const [session, setSession]         = useState<YardSession>(initialSession)
-  const [sending,  setSending]        = useState(false)
-  const [confirmItem, setConfirmItem] = useState<{ name: string; onConfirm: () => void } | null>(null)
+  const [sending,      setSending]      = useState(false)
+  const [confirmItem,  setConfirmItem]  = useState<{ name: string; onConfirm: () => void } | null>(null)
+  const [confirmEmpty, setConfirmEmpty] = useState(false)
   const supabase = createClient()
   const items    = session.yard_session_items ?? []
 
@@ -73,6 +74,22 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       body: JSON.stringify({ status: 'pending_office' }),
     })
     router.push('/yard')
+  }
+
+  async function closeEmpty() {
+    setConfirmEmpty(false)
+    setSending(true)
+    await fetch(`/api/yard/sessions/${session.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'archived' }),
+    })
+    router.push('/yard')
+  }
+
+  function handleFinish() {
+    if (items.length === 0) { setConfirmEmpty(true); return }
+    sendToOffice()
   }
 
   const total = sessionTotal(items)
@@ -174,15 +191,35 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
           </div>
 
           <button
-            onClick={sendToOffice}
-            disabled={items.length === 0 || sending}
+            onClick={handleFinish}
+            disabled={sending}
             className="text-white font-bold transition-colors flex-shrink-0 disabled:opacity-40"
-            style={{ background: '#b45309', padding: '20px 16px', fontSize: '17px' }}
+            style={{ background: items.length === 0 ? '#475569' : '#b45309', padding: '20px 16px', fontSize: '17px' }}
           >
-            {sending ? 'שולח...' : 'סיים ושלח לתשלום'}
+            {sending ? 'שולח...' : items.length === 0 ? 'סגור כרטיס' : 'סיים ושלח לתשלום'}
           </button>
         </div>
       </div>
+
+      {/* Empty cart confirm */}
+      {confirmEmpty && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-7 w-[90%] max-w-[360px] text-center shadow-xl">
+            <div className="text-lg font-bold mb-2 text-slate-900">סגירת כרטיס</div>
+            <div className="text-slate-500 mb-6">הסל ריק — האם אין חיוב לרכב זה?</div>
+            <div className="flex gap-2.5">
+              <button onClick={() => setConfirmEmpty(false)}
+                className="flex-1 py-3.5 border-2 border-slate-200 rounded-xl font-semibold text-slate-500 text-base">
+                ביטול
+              </button>
+              <button onClick={closeEmpty}
+                className="flex-1 py-3.5 bg-slate-700 text-white rounded-xl font-bold text-base">
+                כן, סגור כרטיס
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Duplicate confirm */}
       {confirmItem && (
