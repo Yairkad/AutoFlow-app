@@ -90,100 +90,100 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   return (
     <div className="flex flex-col h-full bg-slate-100">
 
-      {/* ── Top bar: plate + back ── */}
-      <div className="bg-slate-900 text-white flex items-center gap-0 flex-shrink-0">
-        {/* Back */}
-        <button
-          onClick={() => router.push('/yard')}
-          className="h-full px-5 py-4 text-slate-300 hover:text-white hover:bg-slate-700 active:bg-slate-600 transition-colors border-l border-slate-700 text-sm font-semibold flex flex-col items-center justify-center gap-0.5 flex-shrink-0"
-        >
-          <span className="text-xl leading-none">🏠</span>
-          <span className="text-xs">רחבה</span>
-        </button>
-        {/* Car info */}
-        <div className="flex-1 px-5 py-3">
-          <div className="text-sm text-slate-400 font-medium leading-none mb-1">
-            {display}{session.year ? ` · ${session.year}` : ''}
-          </div>
-          <div className="text-2xl font-black tracking-widest leading-none">
-            {formatPlate(session.plate)}
-          </div>
+      {/* ── Header: plate + make/model ── */}
+      <div className="bg-white border-b-4 border-red-500 px-6 py-5 flex-shrink-0 text-center">
+        <div className="text-3xl font-black tracking-widest text-slate-900 mb-1">
+          {formatPlate(session.plate)}
+        </div>
+        <div className="text-lg font-bold text-slate-600">
+          {display}{session.year ? ` · ${session.year}` : ''}
         </div>
       </div>
 
+      {/* ── Back button ── */}
+      <div className="px-4 py-3 flex-shrink-0">
+        <button
+          onClick={() => router.push('/yard')}
+          className="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white rounded-xl py-4 text-base font-bold flex items-center justify-center gap-2 transition-colors"
+        >
+          <span className="text-xl">🏠</span>
+          <span>חזור לרחבה הראשית</span>
+        </button>
+      </div>
+
       {/* ── Body ── */}
-      <div className="flex flex-1 gap-4 p-4 min-h-0">
+      <div className="flex flex-1 gap-4 px-4 pb-4 min-h-0">
 
         {/* Action buttons 3×2 */}
         <div
           className="flex-1 grid grid-cols-3 gap-3 content-start"
-          style={{ gridTemplateRows: 'repeat(2, minmax(0, 9rem))' }}
+          style={{ gridTemplateRows: 'repeat(2, minmax(0, 7.5rem))' }}
         >
           {actions.map(a => (
             <button
               key={a.label}
               onClick={a.onClick}
-              className="bg-green-700 hover:bg-green-600 active:bg-green-800 active:scale-95 text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-2.5 transition-all shadow"
+              className="bg-green-700 hover:bg-green-600 active:bg-green-800 active:scale-95 text-white rounded-2xl font-bold flex flex-col items-center justify-center gap-2 transition-all shadow"
             >
-              <span className="text-4xl leading-none">{a.icon}</span>
-              <span className="text-lg font-bold leading-snug text-center px-3">{a.label}</span>
+              <span className="text-3xl leading-none">{a.icon}</span>
+              <span className="text-base font-bold leading-snug text-center px-2">{a.label}</span>
             </button>
           ))}
         </div>
 
-        {/* Cart panel */}
-        <div className="w-72 flex flex-col rounded-2xl overflow-hidden shadow-lg flex-shrink-0 bg-white">
+        {/* ── Cart panel ── */}
+        <div className="w-80 flex flex-col rounded-2xl overflow-hidden shadow-lg flex-shrink-0 bg-white">
 
           {/* Cart title */}
           <div className="bg-blue-700 text-white px-5 py-4 flex-shrink-0">
-            <div className="text-base font-black">🛒 סל נוכחי</div>
-            <div className="text-xs text-blue-200 mt-0.5">{items.length} פריטים</div>
+            <div className="text-lg font-black">🛒 סל נוכחי</div>
+            <div className="text-sm text-blue-200 mt-0.5">{items.length} פריטים</div>
           </div>
 
-          {/* Items list */}
+          {/* Items */}
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
             {items.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full py-10 text-slate-300">
-                <span className="text-4xl mb-2">🛒</span>
-                <span className="text-sm font-medium">הסל ריק</span>
+                <span className="text-5xl mb-3">🛒</span>
+                <span className="text-base font-medium">הסל ריק</span>
               </div>
             ) : (
               items.map(item => (
-                <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                <div key={item.id} className="flex items-center gap-3 px-5 py-4">
                   <div className="flex-1 min-w-0">
-                    <div className="text-base font-semibold text-slate-800 leading-tight truncate">
+                    <div className="text-base font-semibold text-slate-800 leading-tight">
                       {item.name}
                     </div>
-                    <div className="text-sm text-slate-400 mt-0.5 flex items-center gap-1.5">
-                      <span>כמות: {item.quantity}</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-sm text-slate-400">כמות: {item.quantity}</span>
                       {item.price_modified && (
-                        <span className="bg-amber-100 text-amber-700 text-xs px-1.5 py-0.5 rounded font-bold">שונה</span>
+                        <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-bold">שונה</span>
                       )}
                     </div>
                   </div>
-                  <div className="text-base font-black text-blue-600 whitespace-nowrap">
+                  <div className="text-lg font-black text-blue-600 whitespace-nowrap">
                     {(item.unit_price * item.quantity).toLocaleString()}₪
                   </div>
                   <button
                     onClick={() => deleteItem(item)}
-                    className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-500 flex items-center justify-center text-base transition-colors flex-shrink-0"
+                    className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-red-100 text-slate-400 hover:text-red-500 flex items-center justify-center text-sm font-bold transition-colors flex-shrink-0"
                   >✕</button>
                 </div>
               ))
             )}
           </div>
 
-          {/* Total row */}
-          <div className="bg-slate-50 border-t-2 border-slate-200 px-5 py-3 flex items-center justify-between flex-shrink-0">
+          {/* Total */}
+          <div className="bg-slate-50 border-t-2 border-slate-200 px-5 py-4 flex items-center justify-between flex-shrink-0">
             <span className="text-sm font-semibold text-slate-500">סה״כ לתשלום</span>
-            <span className="text-xl font-black text-slate-900">{total.toLocaleString()}₪</span>
+            <span className="text-2xl font-black text-slate-900">{total.toLocaleString()}₪</span>
           </div>
 
-          {/* Send button */}
+          {/* Send */}
           <button
             onClick={sendToOffice}
             disabled={items.length === 0 || sending}
-            className="bg-amber-500 hover:bg-amber-400 disabled:bg-slate-200 disabled:text-slate-400 text-white py-5 text-lg font-black transition-colors flex-shrink-0 active:scale-98"
+            className="bg-amber-500 hover:bg-amber-400 disabled:bg-slate-200 disabled:text-slate-400 text-white py-5 text-lg font-black transition-colors flex-shrink-0"
           >
             {sending ? 'שולח...' : 'סיים ושלח לתשלום ✓'}
           </button>
@@ -194,17 +194,17 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       {confirmItem && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-7 w-full max-w-sm text-center shadow-2xl">
-            <div className="text-xl font-black mb-1 text-slate-800">{confirmItem.name}</div>
+            <div className="text-xl font-black mb-2 text-slate-800">{confirmItem.name}</div>
             <div className="text-slate-500 mb-6 text-base">כבר קיים בסל — להוסיף עוד?</div>
             <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmItem(null)}
-                className="flex-1 py-4 border-2 border-slate-200 rounded-xl font-bold text-slate-500 text-base hover:bg-slate-50"
-              >ביטול</button>
-              <button
-                onClick={confirmItem.onConfirm}
-                className="flex-1 py-4 bg-green-700 text-white rounded-xl font-bold text-base hover:bg-green-600"
-              >כן, הוסף</button>
+              <button onClick={() => setConfirmItem(null)}
+                className="flex-1 py-4 border-2 border-slate-200 rounded-xl font-bold text-slate-500 text-base hover:bg-slate-50">
+                ביטול
+              </button>
+              <button onClick={confirmItem.onConfirm}
+                className="flex-1 py-4 bg-green-700 text-white rounded-xl font-bold text-base hover:bg-green-600">
+                כן, הוסף
+              </button>
             </div>
           </div>
         </div>
