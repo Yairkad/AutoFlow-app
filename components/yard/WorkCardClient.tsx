@@ -91,46 +91,40 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
 
       {/* ── Plate header card ── */}
-      <div className="mx-4 mt-4 bg-white border-[3px] border-red-500 rounded-xl px-5 py-4 flex-shrink-0">
-        {hasMakeModel ? (
-          <>
-            <div className="text-lg font-bold text-slate-700 leading-tight">
-              {[session.make, session.model].filter(Boolean).join(' ')}
-              {session.year && <span className="text-slate-400 font-normal mr-1">· {session.year}</span>}
-            </div>
-            <div className="text-2xl font-black tracking-[2px] text-slate-900 mt-0.5">
-              {formatPlate(session.plate)}
-            </div>
-          </>
-        ) : (
-          <div className="text-2xl font-black tracking-[2px] text-slate-900">
-            {formatPlate(session.plate)}
+      <div className="bg-white border-[3px] border-red-500 rounded-xl flex-shrink-0" style={{ margin: '14px 14px 0', padding: '14px 18px' }}>
+        {hasMakeModel && (
+          <div className="text-lg font-bold text-slate-700 leading-tight">
+            {[session.make, session.model].filter(Boolean).join(' ')}
+            {session.year && <span className="text-slate-400 font-normal mr-1">· {session.year}</span>}
           </div>
         )}
+        <div className="font-black text-slate-900 leading-tight" style={{ fontSize: '22px', letterSpacing: '2px' }}>
+          {formatPlate(session.plate)}
+        </div>
       </div>
 
       {/* ── Back button ── */}
-      <div className="mx-4 mt-3 flex-shrink-0">
+      <div className="flex-shrink-0" style={{ margin: '10px 14px 0' }}>
         <button
           onClick={() => router.push('/yard')}
-          className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 active:scale-[.97] text-white rounded-xl px-4 text-base font-bold border-2 border-slate-800 transition-all"
-          style={{ minHeight: '52px' }}
+          className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 active:scale-[.97] text-white rounded-xl font-bold transition-all"
+          style={{ minHeight: '52px', fontSize: '16px' }}
         >
           🏠 חזור לרחבה הראשית
         </button>
       </div>
 
       {/* ── Work body ── */}
-      <div className="flex flex-1 gap-4 mx-4 mt-3 mb-4 min-h-0">
+      <div className="flex flex-1 min-h-0" style={{ gap: '14px', margin: '12px 14px 14px' }}>
 
-        {/* Action buttons — 2 columns, fixed min-height */}
-        <div className="flex-1 grid grid-cols-2 gap-3" style={{ alignContent: 'start' }}>
+        {/* Action buttons — 2 columns */}
+        <div className="flex-1 grid grid-cols-2" style={{ gap: '12px', alignContent: 'start' }}>
           {actions.map(a => (
             <button
               key={a.label}
               onClick={a.onClick}
-              className="bg-green-700 hover:bg-green-600 active:scale-95 text-white rounded-2xl text-lg font-bold flex items-center justify-center text-center px-3 transition-all shadow-sm"
-              style={{ minHeight: '88px' }}
+              className="bg-green-700 hover:bg-green-600 active:scale-95 text-white rounded-2xl font-bold flex items-center justify-center text-center transition-all shadow-sm"
+              style={{ minHeight: '88px', fontSize: '17px', padding: '12px' }}
             >
               {a.label}
             </button>
