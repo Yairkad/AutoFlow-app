@@ -87,21 +87,31 @@ export default function FreeSearchClient({ session, filterType }: Props) {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="bg-white border-b-4 border-red-500 px-4 py-3 flex-shrink-0">
-        <div className="text-lg font-bold text-slate-800">{display} — {title}</div>
-        <div className="text-xl font-black tracking-widest text-slate-900">{formatPlate(session.plate)}</div>
+    <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
+      {/* Plate header card */}
+      <div className="bg-white border-[3px] border-red-500 rounded-xl flex-shrink-0" style={{ margin: '14px 14px 0', padding: '14px 18px' }}>
+        {(session.make || session.model) && (
+          <div className="text-lg font-bold text-slate-700 leading-tight">
+            {[session.make, session.model].filter(Boolean).join(' ')}
+            {session.year && <span className="text-slate-400 font-normal mr-1">· {session.year}</span>}
+          </div>
+        )}
+        <div className="font-black text-slate-900 leading-tight" style={{ fontSize: '22px', letterSpacing: '2px' }}>
+          {formatPlate(session.plate)}
+        </div>
+        <div className="text-sm font-semibold text-slate-400 mt-0.5">{title}</div>
       </div>
 
       {/* Nav */}
-      <div className="flex gap-2 px-3 pt-2 flex-shrink-0">
+      <div className="flex gap-2 flex-shrink-0" style={{ margin: '10px 14px 0' }}>
         <button onClick={() => router.push(`/yard/${session.id}`)}
-          className="flex-1 bg-white border-2 border-slate-300 text-slate-700 rounded-xl py-3 text-sm font-bold active:scale-97">
+          className="flex-1 bg-white border-2 border-slate-300 text-slate-700 rounded-xl font-bold active:scale-[.97] hover:bg-slate-50 transition-all"
+          style={{ minHeight: '52px', fontSize: '15px' }}>
           ← חזור לכרטיס עבודה
         </button>
         <button onClick={() => router.push('/yard')}
-          className="flex-1 bg-slate-800 text-white rounded-xl py-3 text-sm font-bold active:scale-97">
+          className="flex-1 bg-slate-800 text-white rounded-xl font-bold active:scale-[.97] hover:bg-slate-700 transition-all"
+          style={{ minHeight: '52px', fontSize: '15px' }}>
           🏠 רחבה ראשית
         </button>
       </div>
