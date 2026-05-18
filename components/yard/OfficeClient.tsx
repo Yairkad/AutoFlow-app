@@ -33,6 +33,10 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     return () => clearInterval(id)
   }, [])
 
+  // Sync local state when server data refreshes via router.refresh()
+  useEffect(() => { setActive(initialActive) },   [initialActive])   // eslint-disable-line
+  useEffect(() => { setPending(initialPending) },  [initialPending])  // eslint-disable-line
+
   useEffect(() => {
     const ch = supabase
       .channel('office-yard')
@@ -42,9 +46,25 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     return () => { supabase.removeChannel(ch) }
   }, []) // eslint-disable-line
 
+  const DEFAULT_SERVICES = ['תיקון תקר', 'כיוון פרונט']
+
   async function openPriceModal() {
     const res  = await fetch('/api/yard/services')
-    const data: YardService[] = await res.json()
+    let data: YardService[] = await res.json()
+
+    // Auto-create any default services that don't exist yet (price = 0)
+    const existingNames = new Set(data.map(s => s.name))
+    for (const name of DEFAULT_SERVICES) {
+      if (!existingNames.has(name)) {
+        const r = await fetch('/api/yard/services', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, price: 0 }),
+        })
+        if (r.ok) data = [...data, await r.json()]
+      }
+    }
+
     setServices(data)
     setEditPrices(Object.fromEntries(data.map(s => [s.id, String(s.price)])))
     setPriceModal(true)
