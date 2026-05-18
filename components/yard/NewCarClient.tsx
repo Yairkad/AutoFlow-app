@@ -94,7 +94,7 @@ export default function NewCarClient() {
 
       {/* Numpad */}
       <div className="flex-1" style={{ padding: '10px 14px' }}>
-        <div className="grid grid-cols-3 h-full" style={{ gap: '10px' }}>
+        <div className="grid grid-cols-3 h-full" dir="ltr" style={{ gap: '10px' }}>
           {['1','2','3','4','5','6','7','8','9'].map(k => (
             <button key={k} onPointerDown={() => press(k)}
               className="bg-white border-2 border-slate-200 rounded-2xl font-bold text-slate-800 shadow-sm active:scale-95 active:bg-slate-100 transition-all"
