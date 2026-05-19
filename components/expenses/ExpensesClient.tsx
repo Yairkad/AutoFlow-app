@@ -990,6 +990,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
             {Array(5).fill(0).map((_, i) => <div key={i} style={{ height: 44, background: '#f1f5f9', borderRadius: '8px' }} />)}
           </div>
         ) : (
+          <>
           {selectedRowId && (() => {
             const selRow = filteredRows.find(r => r.id === selectedRowId)
             if (!selRow) return null
@@ -1075,6 +1076,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
             </table>
             </div>
           </div>
+          </>
         )
       )}
 
