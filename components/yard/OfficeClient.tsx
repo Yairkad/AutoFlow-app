@@ -23,7 +23,8 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
   const [priceModal,   setPriceModal]   = useState(false)
   const [services,     setServices]     = useState<YardService[]>([])
   const [editPrices,   setEditPrices]   = useState<Record<string, string>>({})
-  const [savingPrice,  setSavingPrice]  = useState<string | null>(null)
+  const [editNames,    setEditNames]    = useState<Record<string, string>>({})
+  const [saving,       setSaving]       = useState<string | null>(null)
   const [newSvc,       setNewSvc]       = useState({ name: '', price: '' })
   const [addingNew,    setAddingNew]    = useState(false)
   const supabase = createClient()
@@ -46,7 +47,14 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     return () => { supabase.removeChannel(ch) }
   }, []) // eslint-disable-line
 
-  const DEFAULT_SERVICES = ['תיקון תקר', 'כיוון פרונט']
+  const DEFAULT_SERVICES = [
+    'תיקון תקר',
+    'כיוון פרונט',
+    'איזון גלגלים',
+    'חיישן TPMS',
+    'פירוק והרכבה',
+    'כיוון 4 גלגלים',
+  ]
 
   async function openPriceModal() {
     const res  = await fetch('/api/yard/services')
@@ -67,20 +75,22 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
 
     setServices(data)
     setEditPrices(Object.fromEntries(data.map(s => [s.id, String(s.price)])))
+    setEditNames(Object.fromEntries(data.map(s => [s.id, s.name])))
     setPriceModal(true)
   }
 
-  async function savePrice(id: string) {
+  async function saveField(id: string) {
     const price = Number(editPrices[id])
-    if (isNaN(price)) return
-    setSavingPrice(id)
+    const name  = (editNames[id] ?? '').trim()
+    if (!name || isNaN(price)) return
+    setSaving(id)
     await fetch(`/api/yard/services/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ price }),
+      body: JSON.stringify({ name, price }),
     })
-    setSavingPrice(null)
-    setServices(sv => sv.map(s => s.id === id ? { ...s, price } : s))
+    setSaving(null)
+    setServices(sv => sv.map(s => s.id === id ? { ...s, name, price } : s))
   }
 
   async function addService() {
@@ -94,6 +104,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     const svc: YardService = await res.json()
     setServices(sv => [...sv, svc])
     setEditPrices(ep => ({ ...ep, [svc.id]: String(svc.price) }))
+    setEditNames(en => ({ ...en, [svc.id]: svc.name }))
     setNewSvc({ name: '', price: '' })
     setAddingNew(false)
   }
@@ -362,59 +373,84 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
       {/* ── Price editor modal ── */}
       {priceModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.55)' }}>
-          <div className="bg-white rounded-2xl shadow-2xl flex flex-col" style={{ width: '480px', maxWidth: '95vw', maxHeight: '85vh', padding: '0' }}>
+          <div className="bg-white rounded-2xl shadow-2xl flex flex-col" style={{ width: '540px', maxWidth: '95vw', maxHeight: '85vh' }}>
 
             {/* Header */}
-            <div className="flex items-center justify-between border-b" style={{ padding: '18px 24px' }}>
+            <div className="flex items-center justify-between border-b flex-shrink-0" style={{ padding: '18px 24px' }}>
               <h2 className="font-bold text-slate-900" style={{ fontSize: '18px' }}>⚙️ מחירון שירותים</h2>
               <button onClick={() => setPriceModal(false)} className="text-slate-400 hover:text-slate-700 font-bold text-xl">✕</button>
             </div>
 
-            {/* Service list */}
-            <div className="overflow-y-auto flex-1" style={{ padding: '8px 0' }}>
+            {/* Table header */}
+            <div className="flex items-center border-b bg-slate-50 flex-shrink-0" style={{ padding: '8px 24px', gap: '12px' }}>
+              <span className="flex-1 text-xs font-bold text-slate-400 uppercase tracking-wide">שם השירות</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wide" style={{ width: '100px', textAlign: 'center' }}>מחיר ₪</span>
+              <span style={{ width: '28px' }} />
+            </div>
+
+            {/* Service rows */}
+            <div className="overflow-y-auto flex-1">
               {services.length === 0 && (
                 <div className="text-center text-slate-400 py-8">אין שירותים — הוסף למטה</div>
               )}
               {services.map(svc => (
-                <div key={svc.id} className="flex items-center border-b border-slate-50" style={{ padding: '10px 24px', gap: '12px' }}>
-                  <span className="flex-1 font-medium text-slate-800" style={{ fontSize: '15px' }}>{svc.name}</span>
-                  <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden" style={{ height: '40px' }}>
+                <div key={svc.id} className="flex items-center border-b border-slate-50" style={{ padding: '8px 24px', gap: '12px' }}>
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={editNames[svc.id] ?? svc.name}
+                      onChange={e => setEditNames(en => ({ ...en, [svc.id]: e.target.value }))}
+                      onBlur={() => saveField(svc.id)}
+                      className="w-full border-2 border-transparent rounded-lg font-medium text-slate-800 outline-none hover:border-slate-200 focus:border-blue-400 transition-colors"
+                      style={{ padding: '6px 10px', fontSize: '14px', background: 'transparent' }}
+                    />
+                  </div>
+                  <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition-colors" style={{ width: '100px', height: '38px' }}>
                     <input
                       type="number"
                       value={editPrices[svc.id] ?? ''}
                       onChange={e => setEditPrices(ep => ({ ...ep, [svc.id]: e.target.value }))}
-                      onBlur={() => savePrice(svc.id)}
-                      className="outline-none font-bold text-blue-600 text-center"
-                      style={{ width: '80px', padding: '0 8px', fontSize: '15px', height: '100%' }}
+                      onBlur={() => saveField(svc.id)}
+                      className="flex-1 outline-none font-bold text-blue-600 text-center"
+                      style={{ padding: '0 6px', fontSize: '15px', height: '100%', minWidth: 0 }}
                     />
-                    <span className="text-slate-400 font-semibold" style={{ padding: '0 8px', fontSize: '13px' }}>₪</span>
+                    <span className="text-slate-400 font-semibold" style={{ padding: '0 6px', fontSize: '13px' }}>₪</span>
                   </div>
-                  {savingPrice === svc.id && <span className="text-green-600 text-xs font-bold">✓</span>}
-                  <button onClick={() => deleteService(svc.id)} className="text-slate-300 hover:text-red-500 transition-colors" style={{ fontSize: '16px' }}>🗑</button>
+                  <div style={{ width: '28px', textAlign: 'center' }}>
+                    {saving === svc.id
+                      ? <span className="text-green-500 font-bold text-sm">✓</span>
+                      : <button onClick={() => deleteService(svc.id)} className="text-slate-300 hover:text-red-500 transition-colors" style={{ fontSize: '16px' }}>🗑</button>
+                    }
+                  </div>
                 </div>
               ))}
             </div>
 
             {/* Add new */}
-            <div className="border-t" style={{ padding: '16px 24px' }}>
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wide" style={{ marginBottom: '10px' }}>הוסף שירות חדש</div>
+            <div className="border-t flex-shrink-0" style={{ padding: '14px 24px' }}>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-wide" style={{ marginBottom: '8px' }}>הוסף שירות חדש</div>
               <div className="flex" style={{ gap: '10px' }}>
                 <input
                   type="text"
                   placeholder="שם השירות"
                   value={newSvc.name}
                   onChange={e => setNewSvc(n => ({ ...n, name: e.target.value }))}
-                  className="flex-1 border-2 border-slate-200 rounded-xl outline-none font-medium"
+                  onKeyDown={e => e.key === 'Enter' && addService()}
+                  className="flex-1 border-2 border-slate-200 rounded-xl outline-none font-medium focus:border-blue-400 transition-colors"
                   style={{ padding: '10px 14px', fontSize: '14px' }}
                 />
-                <input
-                  type="number"
-                  placeholder="מחיר"
-                  value={newSvc.price}
-                  onChange={e => setNewSvc(n => ({ ...n, price: e.target.value }))}
-                  className="border-2 border-slate-200 rounded-xl outline-none font-bold text-blue-600 text-center"
-                  style={{ width: '80px', padding: '10px 8px', fontSize: '14px' }}
-                />
+                <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition-colors" style={{ width: '90px', height: '44px' }}>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={newSvc.price}
+                    onChange={e => setNewSvc(n => ({ ...n, price: e.target.value }))}
+                    onKeyDown={e => e.key === 'Enter' && addService()}
+                    className="flex-1 outline-none font-bold text-blue-600 text-center"
+                    style={{ padding: '0 6px', fontSize: '14px', height: '100%', minWidth: 0 }}
+                  />
+                  <span className="text-slate-400 font-semibold" style={{ padding: '0 6px', fontSize: '13px' }}>₪</span>
+                </div>
                 <button
                   onClick={addService}
                   disabled={addingNew || !newSvc.name.trim()}
