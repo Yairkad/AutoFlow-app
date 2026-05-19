@@ -94,8 +94,9 @@ export default function ProductsClient() {
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
 
-  // Inline edit mode (products table)
-  const [editMode, setEditMode] = useState(false)
+  // Selection + per-row inline edit
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
+  const [editingProductId,  setEditingProductId]  = useState<string | null>(null)
   const [editMap, setEditMap] = useState<Record<string, Partial<Product>>>({})
 
   // Movement form
@@ -246,56 +247,45 @@ export default function ProductsClient() {
     }
   }
 
-  // ── Inline edit mode ────────────────────────────────────────────────────────
+  // ── ESC + per-row inline edit ────────────────────────────────────────────────
 
-  function enterEditMode() {
-    const map: Record<string, Partial<Product>> = {}
-    products.forEach(p => { map[p.id] = { ...p } })
-    setEditMap(map)
-    setEditMode(true)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (editingProductId) { setEditingProductId(null); setEditMap({}) }
+      else setSelectedProductId(null)
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [editingProductId])
+
+  function enterEditForRow(id: string) {
+    const p = products.find(x => x.id === id)
+    if (!p) return
+    setEditMap({ [id]: { ...p } })
+    setEditingProductId(id)
   }
 
   function setCell(id: string, field: keyof Product, value: string | number) {
     setEditMap(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
   }
 
-  async function saveInlineEdit() {
-    const updates = products.filter(p => {
-      const e = editMap[p.id]
-      if (!e) return false
-      return e.name !== p.name || e.sell_price !== p.sell_price ||
-        e.buy_price !== p.buy_price || e.category !== p.category || e.sku !== p.sku ||
-        e.supplier_id !== p.supplier_id || e.notes !== p.notes || e.unit !== p.unit
-    })
-    if (updates.length === 0) { setEditMode(false); return }
-
-    const prevProducts = products
-    setProducts(prev => prev.map(p => {
-      const e = editMap[p.id]
-      if (!e || !updates.find(u => u.id === p.id)) return p
-      return { ...p, name: String(e.name ?? p.name), sku: (e.sku as string) || null,
-        category: (e.category as string) || null, unit: String(e.unit ?? p.unit),
-        buy_price: (e.buy_price as number) || null, sell_price: (e.sell_price as number) || null,
-        supplier_id: (e.supplier_id as string) || null, notes: (e.notes as string) || null }
-    }))
-
-    const results = await Promise.all(updates.map(p => {
-      const e = editMap[p.id]
-      return sb.from('products').update({
-        name: e.name, sku: e.sku || null, category: e.category || null,
-        unit: e.unit,
-        buy_price: e.buy_price || null, sell_price: e.sell_price || null,
-        supplier_id: e.supplier_id || null, notes: e.notes || null,
-      }).eq('id', p.id)
-    }))
-
-    if (results.some(r => r.error)) {
-      setProducts(prevProducts)
-      showToast('שגיאה בעדכון', 'error')
-    } else {
-      setEditMode(false)
-      showToast(`עודכנו ${updates.length} מוצרים ✓`, 'success')
+  async function saveRowEdit(id: string) {
+    const p = products.find(x => x.id === id)
+    const e = editMap[id]
+    if (!p || !e) { setEditingProductId(null); return }
+    const payload = {
+      name: e.name, sku: (e.sku as string) || null, category: (e.category as string) || null,
+      unit: e.unit, buy_price: (e.buy_price as number) || null,
+      sell_price: (e.sell_price as number) || null,
+      supplier_id: (e.supplier_id as string) || null, notes: (e.notes as string) || null,
     }
+    setProducts(prev => prev.map(x => x.id === id ? { ...x, ...payload } as Product : x))
+    const { error } = await sb.from('products').update(payload).eq('id', id)
+    if (error) { await load(); showToast('שגיאה בעדכון', 'error') }
+    else showToast('המוצר עודכן ✓', 'success')
+    setEditingProductId(null)
+    setEditMap({})
   }
 
   // ── Delete ──────────────────────────────────────────────────────────────────
@@ -429,6 +419,8 @@ export default function ProductsClient() {
 
   // ── Styles ──────────────────────────────────────────────────────────────────
 
+  const selProduct = selectedProductId ? products.find(p => p.id === selectedProductId) ?? null : null
+
   const cellInp: React.CSSProperties = {
     width: '100%', padding: '4px 6px', border: '1px solid var(--accent)',
     borderRadius: '6px', fontSize: '13px', background: '#eff6ff', color: 'var(--text)',
@@ -494,16 +486,30 @@ export default function ProductsClient() {
             </select>
             <div style={{ marginRight: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
               {!viewOnly && <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />}
-              {!viewOnly && (editMode ? (
-                <>
-                  <Button onClick={saveInlineEdit}>💾 שמור הכל</Button>
-                  <Button variant="secondary" onClick={() => setEditMode(false)}>ביטול</Button>
-                </>
-              ) : (
-                <Button variant="outline" onClick={enterEditMode}>✏️ עריכה</Button>
-              ))}
             </div>
           </div>
+
+          {/* SelectionBar */}
+          {selProduct && (
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {editingProductId === selProduct.id ? (
+                <>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✏️ עריכה מהירה: {selProduct.name}</span>
+                  <Button size="sm" onClick={() => saveRowEdit(selProduct.id)}>💾 שמור</Button>
+                  <Button size="sm" variant="secondary" onClick={() => { setEditingProductId(null); setEditMap({}) }}>ביטול</Button>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {selProduct.name}</span>
+                  {!viewOnly && <Button size="sm" variant="secondary" onClick={() => enterEditForRow(selProduct.id)}>⚡ עריכה מהירה</Button>}
+                  <Button size="sm" variant="secondary" onClick={() => openEdit(selProduct)}>✏️ ערוך</Button>
+                  <Button size="sm" variant="secondary" onClick={() => openDuplicate(selProduct)}>📋 שכפל</Button>
+                  <Button size="sm" variant="danger" onClick={() => deleteProduct(selProduct)}>🗑 מחק</Button>
+                </>
+              )}
+              <button onClick={() => { setSelectedProductId(null); setEditingProductId(null); setEditMap({}) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
+            </div>
+          )}
 
           {/* Products table */}
           <div className="products-table-wrap" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
@@ -521,7 +527,6 @@ export default function ProductsClient() {
                     <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>כמות</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>ספק</th>
                     <th className="hide-mobile" style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>הערות</th>
-                    {editMode && <th style={{ padding: '10px 12px' }}></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -553,41 +558,44 @@ export default function ProductsClient() {
                     const suppName = suppliers.find(s => s.id === p.supplier_id)?.name || '—'
                     const unitLabel = Number(p.unit_qty) > 1 ? `${p.unit_qty} ${p.unit}` : p.unit
 
+                    const isEditing = editingProductId === p.id
                     return (
-                      <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', background: editMode ? '#fafeff' : undefined }}>
+                      <tr key={p.id}
+                        onClick={() => { if (!isEditing) setSelectedProductId(selectedProductId === p.id ? null : p.id) }}
+                        style={{ borderBottom: '1px solid var(--border)', cursor: isEditing ? 'default' : 'pointer', background: selectedProductId === p.id ? '#eff6ff' : isEditing ? '#fafeff' : undefined }}>
                         <td style={{ padding: '8px 8px', color: 'var(--text-muted)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {editMode
+                          {isEditing
                             ? <input style={cellInp} value={String(e.sku ?? '')} onChange={ev => setCell(p.id, 'sku', ev.target.value)} />
                             : p.sku || '—'}
                         </td>
-                        <td style={{ padding: '8px 12px', fontWeight: 700, minWidth: editMode ? '150px' : '120px', maxWidth: editMode ? undefined : '220px', wordBreak: 'break-word', whiteSpace: editMode ? undefined : 'normal' }}>
-                          {editMode
+                        <td style={{ padding: '8px 12px', fontWeight: 700, minWidth: isEditing ? '150px' : '120px', maxWidth: isEditing ? undefined : '220px', wordBreak: 'break-word', whiteSpace: isEditing ? undefined : 'normal' }}>
+                          {isEditing
                             ? <input style={cellInp} value={String(e.name ?? '')} onChange={ev => setCell(p.id, 'name', ev.target.value)} />
                             : p.name}
                         </td>
-                        <td className="hide-mobile" style={{ padding: '8px 12px', minWidth: editMode ? '110px' : undefined, maxWidth: editMode ? undefined : '120px', overflow: editMode ? undefined : 'hidden', textOverflow: editMode ? undefined : 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap' }}
-                            title={editMode ? undefined : (p.category || undefined)}>
-                          {editMode
+                        <td className="hide-mobile" style={{ padding: '8px 12px', minWidth: isEditing ? '110px' : undefined, maxWidth: isEditing ? undefined : '120px', overflow: isEditing ? undefined : 'hidden', textOverflow: isEditing ? undefined : 'ellipsis', whiteSpace: isEditing ? undefined : 'nowrap' }}
+                            title={isEditing ? undefined : (p.category || undefined)}>
+                          {isEditing
                             ? <input style={cellInp} value={String(e.category ?? '')} onChange={ev => setCell(p.id, 'category', ev.target.value)} list="cat-list-inline" />
                             : <span style={{ color: 'var(--text-muted)' }}>{p.category || '—'}</span>}
                         </td>
                         <td style={{ padding: '8px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {editMode
+                          {isEditing
                             ? <select style={cellInp} value={String(e.unit ?? 'יח׳')} onChange={ev => setCell(p.id, 'unit', ev.target.value)}>
                                 {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                               </select>
                             : unitLabel}
                         </td>
                         {isAdmin && <td style={{ padding: '8px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {editMode
+                          {isEditing
                             ? <input style={cellInp} type="number" value={String(e.buy_price ?? '')} onChange={ev => setCell(p.id, 'buy_price', parseFloat(ev.target.value) || 0)} />
                             : p.buy_price ? (
                               <><div>{fmtPrice(p.buy_price)}</div>
                               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{(p.buy_price * 1.18).toFixed(2)} עם מע&quot;מ</div></>
                             ) : '—'}
                         </td>}
-                        <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--primary)', minWidth: editMode ? '90px' : undefined }}>
-                          {editMode
+                        <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--primary)', minWidth: isEditing ? '90px' : undefined }}>
+                          {isEditing
                             ? <input style={cellInp} type="number" value={String(e.sell_price ?? '')} onChange={ev => setCell(p.id, 'sell_price', parseFloat(ev.target.value) || 0)} />
                             : fmtPrice(p.sell_price)}
                         </td>
@@ -598,29 +606,19 @@ export default function ProductsClient() {
                           </span>
                         </td>
                         <td style={{ padding: '8px 8px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                            title={editMode ? undefined : (suppName !== '—' ? suppName : undefined)}>
-                          {editMode
+                            title={isEditing ? undefined : (suppName !== '—' ? suppName : undefined)}>
+                          {isEditing
                             ? <select style={cellInp} value={String(e.supplier_id ?? '')} onChange={ev => setCell(p.id, 'supplier_id', ev.target.value)}>
                                 <option value=''>—</option>
                                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                               </select>
                             : suppName}
                         </td>
-                        <td className="hide-mobile" style={{ padding: '8px 12px', color: 'var(--text-muted)', maxWidth: editMode ? undefined : '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap', minWidth: editMode ? '120px' : undefined }}>
-                          {editMode
+                        <td className="hide-mobile" style={{ padding: '8px 12px', color: 'var(--text-muted)', maxWidth: isEditing ? undefined : '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isEditing ? undefined : 'nowrap', minWidth: isEditing ? '120px' : undefined }}>
+                          {isEditing
                             ? <input style={cellInp} value={String(e.notes ?? '')} onChange={ev => setCell(p.id, 'notes', ev.target.value)} />
                             : p.notes || '—'}
                         </td>
-                        {editMode && !viewOnly && (
-                          <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'flex', gap: '4px' }}>
-                              <button title="שכפל" onClick={() => openDuplicate(p)}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', padding: '2px 4px' }}>📋</button>
-                              <button title="מחק" onClick={() => deleteProduct(p)}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', padding: '2px 4px' }}>🗑️</button>
-                            </div>
-                          </td>
-                        )}
                       </tr>
                     )
                   })}

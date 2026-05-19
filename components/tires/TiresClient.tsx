@@ -116,9 +116,10 @@ export default function TiresClient() {
   const [form,     setForm]     = useState(emptyForm)
   const [formErrs, setFormErrs] = useState({ width: false, profile: false, rim: false })
 
-  // Inline edit
-  const [editMode, setEditMode] = useState(false)
-  const [editMap,  setEditMap]  = useState<Record<string, Partial<Tire>>>({})
+  // Selection + per-row inline edit
+  const [selectedTireId, setSelectedTireId] = useState<string | null>(null)
+  const [editingTireId,  setEditingTireId]  = useState<string | null>(null)
+  const [editMap,        setEditMap]        = useState<Record<string, Partial<Tire>>>({})
 
   // Movement form
   const [mvTireId,     setMvTireId]     = useState('')
@@ -367,53 +368,53 @@ export default function TiresClient() {
     await load()
   }
 
-  // ── Inline edit ───────────────────────────────────────────────────────────────
+  // ── ESC handler ───────────────────────────────────────────────────────────────
 
-  function enterEditMode() {
-    const map: Record<string, Partial<Tire>> = {}
-    tires.forEach(t => { map[t.id] = { ...t } })
-    setEditMap(map)
-    setEditMode(true)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (editingTireId) { setEditingTireId(null); setEditMap({}) }
+      else setSelectedTireId(null)
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [editingTireId])
+
+  // ── Per-row inline edit ───────────────────────────────────────────────────────
+
+  function enterEditForRow(id: string) {
+    const t = tires.find(x => x.id === id)
+    if (!t) return
+    setEditMap({ [id]: { ...t } })
+    setEditingTireId(id)
   }
 
   function setCell(id: string, field: keyof Tire, value: string | number | null) {
     setEditMap(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
   }
 
-  async function saveInlineEdit() {
-    const updates = tires.filter(t => {
-      const e = editMap[t.id]
-      if (!e) return false
-      return e.brand !== t.brand || e.sell_price !== t.sell_price ||
-        e.cost_price !== t.cost_price || e.margin !== t.margin ||
-        e.load_idx !== t.load_idx || e.speed_idx !== t.speed_idx ||
-        e.location !== t.location || e.notes !== t.notes ||
-        e.width !== t.width || e.profile !== t.profile || e.rim !== t.rim ||
-        e.condition !== t.condition || e.sku !== t.sku
-    })
-    if (updates.length === 0) { setEditMode(false); return }
-
-    await Promise.all(updates.map(t => {
-      const e = editMap[t.id]
-      return sb.from('tires').update({
-        brand:      e.brand || null,
-        width:      Number(e.width) || t.width,
-        profile:    Number(e.profile) || t.profile,
-        rim:        Number(e.rim) || t.rim,
-        load_idx:   e.load_idx || null,
-        speed_idx:  e.speed_idx || null,
-        cost_price: e.cost_price || null,
-        margin:     Number(e.margin) || 0,
-        sell_price: e.sell_price || null,
-        location:   e.location || null,
-        notes:      e.notes || null,
-        sku:        e.sku || null,
-        condition:  e.condition ?? 'new',
-      }).eq('id', t.id)
-    }))
-
-    showToast(`עודכנו ${updates.length} צמיגים ✓`, 'success')
-    setEditMode(false)
+  async function saveRowEdit(id: string) {
+    const t = tires.find(x => x.id === id)
+    const e = editMap[id]
+    if (!t || !e) { setEditingTireId(null); return }
+    await sb.from('tires').update({
+      brand:      e.brand || null,
+      width:      Number(e.width) || t.width,
+      profile:    Number(e.profile) || t.profile,
+      rim:        Number(e.rim) || t.rim,
+      load_idx:   e.load_idx || null,
+      speed_idx:  e.speed_idx || null,
+      cost_price: e.cost_price || null,
+      margin:     Number(e.margin) || 0,
+      sell_price: e.sell_price || null,
+      location:   e.location || null,
+      notes:      e.notes || null,
+      sku:        e.sku || null,
+      condition:  e.condition ?? 'new',
+    }).eq('id', id)
+    showToast('הצמיג עודכן ✓', 'success')
+    setEditingTireId(null)
+    setEditMap({})
     await load()
   }
 
@@ -542,6 +543,8 @@ export default function TiresClient() {
 
   // ── Styles ────────────────────────────────────────────────────────────────────
 
+  const selTire = selectedTireId ? tires.find(t => t.id === selectedTireId) ?? null : null
+
   const cellInp: React.CSSProperties = {
     width: '100%', padding: '4px 6px', border: '1px solid var(--accent)',
     borderRadius: '6px', fontSize: '13px', background: '#eff6ff',
@@ -639,14 +642,28 @@ export default function TiresClient() {
                 <Button variant="outline" style={{ fontSize: '13px' }}>📦 ספירת מלאי</Button>
               </a>
               <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
-              {editMode ? (
+            </div>
+          )}
+
+          {/* SelectionBar */}
+          {selTire && (
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {editingTireId === selTire.id ? (
                 <>
-                  <Button onClick={saveInlineEdit}>💾 שמור הכל</Button>
-                  <Button variant="secondary" onClick={() => setEditMode(false)}>ביטול</Button>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✏️ עריכה מהירה: {selTire.brand ?? ''} {tireSize(selTire)}</span>
+                  <Button size="sm" onClick={() => saveRowEdit(selTire.id)}>💾 שמור</Button>
+                  <Button size="sm" variant="secondary" onClick={() => { setEditingTireId(null); setEditMap({}) }}>ביטול</Button>
                 </>
               ) : (
-                <Button variant="outline" onClick={enterEditMode}>✏️ עריכה</Button>
+                <>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {selTire.brand ?? ''} {tireSize(selTire)}</span>
+                  {!viewOnly && <Button size="sm" variant="secondary" onClick={() => enterEditForRow(selTire.id)}>⚡ עריכה מהירה</Button>}
+                  <Button size="sm" variant="secondary" onClick={() => openEdit(selTire)}>✏️ ערוך</Button>
+                  <Button size="sm" variant="secondary" onClick={() => openDuplicate(selTire)}>📋 שכפל</Button>
+                  <Button size="sm" variant="danger" onClick={() => deleteTire(selTire)}>🗑 מחק</Button>
+                </>
               )}
+              <button onClick={() => { setSelectedTireId(null); setEditingTireId(null); setEditMap({}) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
             </div>
           )}
 
@@ -656,7 +673,7 @@ export default function TiresClient() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                    {['מותג', 'מידה', 'מדדים', ...(isAdmin ? ['מחיר קנייה', '% רווח'] : []), 'מחיר מכירה', 'כמות', 'מיקום', 'הערות', ...(editMode ? [''] : [])].map((h, i) => (
+                    {['מותג', 'מידה', 'מדדים', ...(isAdmin ? ['מחיר קנייה', '% רווח'] : []), 'מחיר מכירה', 'כמות', 'מיקום', 'הערות'].map((h, i) => (
                       <th key={i} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>{h}</th>
                     ))}
                   </tr>
@@ -678,12 +695,15 @@ export default function TiresClient() {
                       : (t.cost_price && t.sell_price ? Math.round((t.sell_price / t.cost_price - 1) * 100) + '%' : '—')
                     const indices = [t.load_idx, t.speed_idx].filter(Boolean).join(' / ') || '—'
 
+                    const isEditing = editingTireId === t.id
                     return (
-                      <tr key={t.id} className={!editMode ? 'tr-hover' : undefined} style={{ borderBottom: '1px solid var(--border)', background: editMode ? '#fafeff' : undefined }}>
+                      <tr key={t.id} className="tr-hover"
+                        onClick={() => { if (!isEditing) setSelectedTireId(selectedTireId === t.id ? null : t.id) }}
+                        style={{ borderBottom: '1px solid var(--border)', background: selectedTireId === t.id ? '#eff6ff' : isEditing ? '#fafeff' : undefined, cursor: isEditing ? 'default' : 'pointer' }}>
 
                         {/* מותג */}
-                        <td style={{ padding: '10px 12px', fontWeight: 700, minWidth: editMode ? '110px' : undefined }}>
-                          {editMode ? (
+                        <td style={{ padding: '10px 12px', fontWeight: 700, minWidth: isEditing ? '110px' : undefined }}>
+                          {isEditing ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                               <input style={cellInp} value={String(e.brand ?? '')} onChange={ev => setCell(t.id, 'brand', ev.target.value)} list="brand-list-inline" />
                               <button
@@ -717,7 +737,7 @@ export default function TiresClient() {
 
                         {/* מידה */}
                         <td style={{ padding: '10px 12px' }}>
-                          {editMode ? (
+                          {isEditing ? (
                             <div style={{ display: 'flex', gap: '4px', minWidth: '180px' }}>
                               <input style={{ ...cellInp, width: '52px' }} type="number" value={String(e.width ?? '')} onChange={ev => setCell(t.id, 'width', parseInt(ev.target.value) || 0)} placeholder="רוחב" />
                               <span style={{ alignSelf: 'center', color: 'var(--text-muted)' }}>/</span>
@@ -733,8 +753,8 @@ export default function TiresClient() {
                         </td>
 
                         {/* מדדים */}
-                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: editMode ? '130px' : undefined }}>
-                          {editMode ? (
+                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: isEditing ? '130px' : undefined }}>
+                          {isEditing ? (
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <input style={{ ...cellInp, width: '54px' }} value={String(e.load_idx ?? '')} onChange={ev => setCell(t.id, 'load_idx', ev.target.value)} placeholder="עומס" />
                               <input style={{ ...cellInp, width: '44px' }} value={String(e.speed_idx ?? '')} onChange={ev => setCell(t.id, 'speed_idx', ev.target.value)} placeholder="מהיר'" />
@@ -743,8 +763,8 @@ export default function TiresClient() {
                         </td>
 
                         {/* מחיר קנייה */}
-                        {isAdmin && <td style={{ padding: '10px 12px', minWidth: editMode ? '90px' : undefined }}>
-                          {editMode
+                        {isAdmin && <td style={{ padding: '10px 12px', minWidth: isEditing ? '90px' : undefined }}>
+                          {isEditing
                             ? <input style={cellInp} type="number" value={String(e.cost_price ?? '')} onChange={ev => setCell(t.id, 'cost_price', parseFloat(ev.target.value) || 0)} />
                             : t.cost_price ? (
                               <>
@@ -755,15 +775,15 @@ export default function TiresClient() {
                         </td>}
 
                         {/* % רווח */}
-                        {isAdmin && <td style={{ padding: '10px 12px', color: 'var(--text-muted)', minWidth: editMode ? '70px' : undefined }}>
-                          {editMode
+                        {isAdmin && <td style={{ padding: '10px 12px', color: 'var(--text-muted)', minWidth: isEditing ? '70px' : undefined }}>
+                          {isEditing
                             ? <input style={cellInp} type="number" value={String(e.margin ?? '')} onChange={ev => setCell(t.id, 'margin', parseFloat(ev.target.value) || 0)} />
                             : marginPct}
                         </td>}
 
                         {/* מחיר מכירה */}
-                        <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--primary)', minWidth: editMode ? '90px' : undefined }}>
-                          {editMode
+                        <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--primary)', minWidth: isEditing ? '90px' : undefined }}>
+                          {isEditing
                             ? <input style={cellInp} type="number" value={String(e.sell_price ?? '')} onChange={ev => setCell(t.id, 'sell_price', parseFloat(ev.target.value) || 0)} />
                             : fmtPrice(t.sell_price)}
                         </td>
@@ -776,30 +796,19 @@ export default function TiresClient() {
                         </td>
 
                         {/* מיקום */}
-                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: editMode ? '100px' : undefined }}>
-                          {editMode
+                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: isEditing ? '100px' : undefined }}>
+                          {isEditing
                             ? <input style={cellInp} value={String(e.location ?? '')} onChange={ev => setCell(t.id, 'location', ev.target.value)} />
                             : t.location || '—'}
                         </td>
 
                         {/* הערות */}
-                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '12px', maxWidth: editMode ? undefined : '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap', minWidth: editMode ? '120px' : undefined }}>
-                          {editMode
+                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '12px', maxWidth: isEditing ? undefined : '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isEditing ? undefined : 'nowrap', minWidth: isEditing ? '120px' : undefined }}>
+                          {isEditing
                             ? <input style={cellInp} value={String(e.notes ?? '')} onChange={ev => setCell(t.id, 'notes', ev.target.value)} />
                             : t.notes || '—'}
                         </td>
 
-                        {/* פעולות (עריכה בלבד) */}
-                        {editMode && !viewOnly && (
-                          <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'flex', gap: '4px' }}>
-                              <button title="שכפל" onClick={() => openDuplicate(t)}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', padding: '2px 4px' }}>📋</button>
-                              <button title="מחק" onClick={() => deleteTire(t)}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', padding: '2px 4px' }}>🗑️</button>
-                            </div>
-                          </td>
-                        )}
                       </tr>
                     )
                   })}

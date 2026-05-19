@@ -167,9 +167,10 @@ export default function BillingClient() {
 
   const [tab, setTab]             = useState<Tab>('monthly')
   const [currentMonth, setMonth]  = useState(monthISO)
-  const [editMode, setEditMode]   = useState(false)
-  const [itemsEdit, setItemsEdit] = useState(false)
   const [loading, setLoading]     = useState(true)
+  const [selectedEntryId,   setSelectedEntryId]   = useState<string | null>(null)
+  const [selectedItemId,    setSelectedItemId]    = useState<string | null>(null)
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null)
   const [saving, setSaving]       = useState(false)
   const [dirFilter,     setDirFilter]     = useState<'all' | 'expense' | 'income'>('all')
   const [contactFilter, setContactFilter] = useState('')
@@ -222,6 +223,14 @@ export default function BillingClient() {
   const [eNotes,   setENotes]   = useState('')
   const [eVat,     setEVat]     = useState<'before' | 'after'>('after')
   const [ePpuUnit, setEPpuUnit] = useState<'ils' | 'agorot'>('ils')
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setSelectedEntryId(null); setSelectedItemId(null); setSelectedContactId(null) }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [])
 
   // ── Init ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -295,6 +304,10 @@ export default function BillingClient() {
   const totalIncome   = entries.filter(e => e.direction === 'income').reduce((s, e) => s + Number(e.amount), 0)
   const totalPaidExp  = entries.filter(e => e.direction === 'expense').reduce((s, e) => s + paidTotal(e), 0)
   const totalPaidInc  = entries.filter(e => e.direction === 'income').reduce((s, e) => s + paidTotal(e), 0)
+
+  const selEntry   = selectedEntryId   ? visibleEntries.find(e => e.id === selectedEntryId)   ?? null : null
+  const selItem    = selectedItemId    ? items.find(it => it.id === selectedItemId)            ?? null : null
+  const selContact = selectedContactId ? contacts.find(c => c.id === selectedContactId)        ?? null : null
 
   // ── Generate entries ───────────────────────────────────────────────────
 
@@ -704,19 +717,14 @@ export default function BillingClient() {
               <Button variant="secondary" size="sm" onClick={() => openEntryModal()}>➕ חריג</Button>
               <Button variant="secondary" size="sm" onClick={generateEntries} disabled={saving}>🔄 צור רשומות</Button>
               {entries.length > 0 && (
-                <>
-                  <Button size="sm"
-                    onClick={payAll}
-                    disabled={saving || !contactFilter}
-                    title={!contactFilter ? 'בחר איש קשר לפני "שלם הכל"' : undefined}
-                    style={{ opacity: !contactFilter ? 0.5 : 1 }}
-                  >
-                    ⚡ שלם הכל{contactFilter ? ` – ${contactById(contactFilter)?.name ?? ''}` : ''}
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => setEditMode(v => !v)}>
-                    {editMode ? '✅ סיום' : '✏️ עריכה'}
-                  </Button>
-                </>
+                <Button size="sm"
+                  onClick={payAll}
+                  disabled={saving || !contactFilter}
+                  title={!contactFilter ? 'בחר איש קשר לפני "שלם הכל"' : undefined}
+                  style={{ opacity: !contactFilter ? 0.5 : 1 }}
+                >
+                  ⚡ שלם הכל{contactFilter ? ` – ${contactById(contactFilter)?.name ?? ''}` : ''}
+                </Button>
               )}
             </div>
           </div>
@@ -728,6 +736,18 @@ export default function BillingClient() {
               <span style={{ fontSize: '12px' }}>לחץ &quot;צור רשומות&quot; ליצירה אוטומטית מהסעיפים הקבועים</span>
             </div>
           ) : (
+            <>
+              {selEntry && (
+                <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {selEntry.name} — {fmt(selEntry.amount)}</span>
+                  {balance(selEntry) > 0 && (
+                    <Button size="sm" variant="secondary" onClick={() => { const e = selEntry; setPayEntry(e); setPayAmount(String(balance(e).toFixed(2))); setPayDate(todayISO()); setPayNotes('') }}>💰 שלם</Button>
+                  )}
+                  <Button size="sm" variant="secondary" onClick={() => openEntryModal(selEntry)}>✏️ ערוך</Button>
+                  <Button size="sm" variant="danger" onClick={() => { deleteEntry(selEntry.id); setSelectedEntryId(null) }}>🗑 מחק</Button>
+                  <button onClick={() => setSelectedEntryId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
+                </div>
+              )}
             <div className="billing-table-wrap" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -739,7 +759,6 @@ export default function BillingClient() {
                     <th style={thSt}>שולם</th>
                     <th style={thSt}>יתרה</th>
                     <th style={thSt}>סטטוס</th>
-                    {editMode && <th style={thSt}></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -750,9 +769,9 @@ export default function BillingClient() {
                     const contact = entryContactObj(e)
                     return (
                       <tr key={e.id}
-                        onClick={() => !editMode && (setPayEntry(e), setPayAmount(String(bal.toFixed(2))), setPayDate(todayISO()), setPayNotes(''))}
-                        className={!editMode ? 'tr-hover' : undefined}
-                        style={{ borderBottom: '1px solid var(--border)', cursor: editMode ? 'default' : 'pointer' }}
+                        onClick={() => setSelectedEntryId(selectedEntryId === e.id ? null : e.id)}
+                        className="tr-hover"
+                        style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selectedEntryId === e.id ? '#eff6ff' : undefined }}
                       >
                         <td style={tdSt}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -807,18 +826,13 @@ export default function BillingClient() {
                             background: badge.bg, color: badge.color,
                           }}>{badge.label}</span>
                         </td>
-                        {editMode && (
-                          <td style={{ ...tdSt, display: 'flex', gap: '6px' }}>
-                            <Button variant="secondary" size="sm" title="ערוך חיוב" onClick={() => openEntryModal(e)}>✏️</Button>
-                            <Button variant="danger" size="sm" title="מחק חיוב" onClick={() => deleteEntry(e.id)}>🗑️</Button>
-                          </td>
-                        )}
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
             </div>
+            </>
           )}
 
           {entries.length > 0 && (
@@ -846,11 +860,6 @@ export default function BillingClient() {
         <div>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
             <Button onClick={() => openItemModal()}>➕ סעיף חדש</Button>
-            {items.length > 0 && (
-              <Button variant="secondary" style={{ marginRight: 'auto' }} onClick={() => setItemsEdit(v => !v)}>
-                {itemsEdit ? '✅ סיום עריכה' : '✏️ עריכה'}
-              </Button>
-            )}
           </div>
 
           {items.length === 0 ? (
@@ -861,6 +870,15 @@ export default function BillingClient() {
                 : 'הגדר סעיפים קבועים כדי לייצר רשומות אוטומטיות'}
             </div>
           ) : (
+            <>
+              {selItem && (
+                <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {selItem.name}</span>
+                  <Button size="sm" variant="secondary" onClick={() => openItemModal(selItem)}>✏️ ערוך</Button>
+                  <Button size="sm" variant="danger" onClick={() => { deleteItem(selItem.id); setSelectedItemId(null) }}>🗑 מחק</Button>
+                  <button onClick={() => setSelectedItemId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
+                </div>
+              )}
             <div className="billing-table-wrap" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -872,14 +890,13 @@ export default function BillingClient() {
                     <th style={thSt}>סכום / יח&apos;</th>
                     <th style={thSt}>תוקף מ-</th>
                     <th style={thSt}>פעיל</th>
-                    {itemsEdit && <th style={thSt}></th>}
                   </tr>
                 </thead>
                 <tbody>
                   {items.map(it => {
                     const contact = contactById(it.contact_id)
                     return (
-                      <tr key={it.id} style={{ borderBottom: '1px solid var(--border)', opacity: it.active ? 1 : 0.5 }}>
+                      <tr key={it.id} onClick={() => setSelectedItemId(selectedItemId === it.id ? null : it.id)} style={{ borderBottom: '1px solid var(--border)', opacity: it.active ? 1 : 0.5, cursor: 'pointer', background: selectedItemId === it.id ? '#eff6ff' : undefined }}>
                         <td style={{ ...tdSt, fontWeight: 500 }}>{it.name}</td>
                         <td style={{ ...tdSt, fontSize: '12px' }}>
                           {contact ? (
@@ -910,18 +927,13 @@ export default function BillingClient() {
                             {it.active ? '✓' : '✗'}
                           </span>
                         </td>
-                        {itemsEdit && (
-                          <td style={{ ...tdSt, display: 'flex', gap: '6px' }}>
-                            <Button variant="secondary" size="sm" title="ערוך סעיף" onClick={() => openItemModal(it)}>✏️</Button>
-                            <Button variant="danger" size="sm" title="מחק סעיף" onClick={() => deleteItem(it.id)}>🗑️</Button>
-                          </td>
-                        )}
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       )}
@@ -931,11 +943,6 @@ export default function BillingClient() {
         <div>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
             <Button onClick={() => openContactModal()}>➕ איש קשר חדש</Button>
-            {contacts.length > 0 && (
-              <Button variant="secondary" style={{ marginRight: 'auto' }} onClick={() => setItemsEdit(v => !v)}>
-                {itemsEdit ? '✅ סיום עריכה' : '✏️ עריכה'}
-              </Button>
-            )}
           </div>
 
           {contacts.length === 0 ? (
@@ -944,6 +951,15 @@ export default function BillingClient() {
               הוסף ספק, שוכר, עירייה – כל גורם שמשתתף בחשבונות
             </div>
           ) : (
+            <>
+              {selContact && (
+                <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {selContact.name}</span>
+                  <Button size="sm" variant="secondary" onClick={() => openContactModal(selContact)}>✏️ ערוך</Button>
+                  <Button size="sm" variant="danger" onClick={() => { deleteContact(selContact.id); setSelectedContactId(null) }}>🗑 מחק</Button>
+                  <button onClick={() => setSelectedContactId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
+                </div>
+              )}
             <div className="billing-table-wrap" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -953,14 +969,13 @@ export default function BillingClient() {
                     <th style={thSt}>כיוון ברירת מחדל</th>
                     <th style={thSt}>טלפון</th>
                     <th style={thSt}>סעיפים פעילים</th>
-                    {itemsEdit && <th style={thSt}></th>}
                   </tr>
                 </thead>
                 <tbody>
                   {contacts.map(c => {
                     const activeItems = items.filter(it => it.contact_id === c.id && it.active).length
                     return (
-                      <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <tr key={c.id} onClick={() => setSelectedContactId(selectedContactId === c.id ? null : c.id)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', background: selectedContactId === c.id ? '#eff6ff' : undefined }}>
                         <td style={{ ...tdSt, fontWeight: 600 }}>{c.name}</td>
                         <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{ROLE_LABELS[c.role] ?? c.role}</td>
                         <td style={tdSt}>
@@ -976,18 +991,13 @@ export default function BillingClient() {
                         <td style={{ ...tdSt, color: activeItems > 0 ? 'var(--primary)' : 'var(--text-muted)', fontWeight: activeItems > 0 ? 600 : 400 }}>
                           {activeItems > 0 ? `${activeItems} סעיפים` : '—'}
                         </td>
-                        {itemsEdit && (
-                          <td style={{ ...tdSt, display: 'flex', gap: '6px' }}>
-                            <Button variant="secondary" size="sm" title="ערוך איש קשר" onClick={() => openContactModal(c)}>✏️</Button>
-                            <Button variant="danger" size="sm" title="מחק איש קשר" onClick={() => deleteContact(c.id)}>🗑️</Button>
-                          </td>
-                        )}
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </div>
       )}

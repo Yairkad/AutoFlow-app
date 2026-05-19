@@ -212,23 +212,20 @@ function printWorkOrder(job: AlignmentJob, biz: BizInfo) {
 // ── Job Row ────────────────────────────────────────────────────────────────────
 
 function JobRow({
-  job, onEdit, onDelete, onWhatsApp, onStatusChange, onCopyLink, onPrint,
+  job, onStatusChange, selected, onSelect,
 }: {
   job: AlignmentJob
-  onEdit: (job: AlignmentJob) => void
-  onDelete: (id: string) => void
-  onWhatsApp: (job: AlignmentJob) => void
   onStatusChange: (id: string, status: JobStatus) => void
-  onCopyLink: (job: AlignmentJob) => void
-  onPrint: (job: AlignmentJob) => void
+  selected: boolean
+  onSelect: () => void
 }) {
   const carInfo   = [job.make, job.model, job.year].filter(Boolean).join(' ')
   const curStatus = STATUSES.find(s => s.key === job.status)!
 
   return (
-    <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-card)' }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
+    <tr onClick={onSelect} style={{ borderBottom: '1px solid var(--border)', background: selected ? '#eff6ff' : 'var(--bg-card)', cursor: 'pointer', transition: 'background .1s' }}
+      onMouseEnter={e => { if (!selected) e.currentTarget.style.background = 'var(--bg)' }}
+      onMouseLeave={e => { if (!selected) e.currentTarget.style.background = 'var(--bg-card)' }}
     >
       {/* Plate */}
       <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
@@ -270,7 +267,8 @@ function JobRow({
       <td style={{ padding: '10px 12px' }}>
         <select
           value={job.status}
-          onChange={e => onStatusChange(job.id, e.target.value as JobStatus)}
+          onClick={e => e.stopPropagation()}
+          onChange={e => { e.stopPropagation(); onStatusChange(job.id, e.target.value as JobStatus) }}
           style={{
             padding: '4px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 700,
             border: 'none', cursor: 'pointer', background: curStatus.bg, color: curStatus.color,
@@ -281,19 +279,6 @@ function JobRow({
             <option key={s.key} value={s.key}>{s.label}</option>
           ))}
         </select>
-      </td>
-
-      {/* Actions */}
-      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-        <div style={{ display: 'flex', gap: '4px' }}>
-          {job.customer_phone
-            ? <button title="WhatsApp" onClick={() => onWhatsApp(job)} style={actionBtn}>📲</button>
-            : <button title="העתק לינק" onClick={() => onCopyLink(job)} style={actionBtn}>📋</button>
-          }
-          <button title="הדפס הזמנה" onClick={() => onPrint(job)} style={actionBtn}>🖨️</button>
-          <button title="ערוך" onClick={() => onEdit(job)} style={actionBtn}>✏️</button>
-          <button title="מחק" onClick={() => onDelete(job.id)} style={{ ...actionBtn, color: 'var(--danger)' }}>🗑️</button>
-        </div>
       </td>
     </tr>
   )
@@ -437,6 +422,13 @@ export default function AlignmentClient() {
   const [saving,       setSaving]       = useState(false)
   const [plateLoading, setPlateLoading] = useState(false)
   const [statusFilter, setStatusFilter] = useState<JobStatus | 'all'>('all')
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedJobId(null) }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [])
 
   // ── Load ──────────────────────────────────────────────────────────────────────
 
@@ -630,6 +622,7 @@ export default function AlignmentClient() {
     : jobs.filter(j => j.status === statusFilter)
 
   const activeCount = jobs.filter(j => j.status !== 'delivered').length
+  const selJob = selectedJobId ? visibleJobs.find(j => j.id === selectedJobId) ?? null : null
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '60px', color: 'var(--text-muted)' }}>טוען...</div>
@@ -677,35 +670,46 @@ export default function AlignmentClient() {
           <span style={{ fontSize: '12px' }}>לחץ &quot;+ עבודה חדשה&quot; להוספה</span>
         </div>
       ) : (
-        <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid var(--border)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', direction: 'rtl' }}>
-            <thead>
-              <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                <th style={thSt}>לוחית</th>
-                <th style={thSt}>רכב</th>
-                <th style={thSt}>לקוח</th>
-                <th style={thSt}>עבודה / הערות</th>
-                <th style={thSt}>מחיר</th>
-                <th style={thSt}>סטטוס</th>
-                <th style={thSt}>פעולות</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleJobs.map(job => (
-                <JobRow
-                  key={job.id}
-                  job={job}
-                  onEdit={openEdit}
-                  onDelete={handleDelete}
-                  onWhatsApp={handleWhatsApp}
-                  onStatusChange={updateStatus}
-                  onCopyLink={handleCopyLink}
-                  onPrint={j => printWorkOrder(j, bizInfo.current)}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {selJob && (
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {selJob.plate} — {selJob.customer_name}</span>
+              {selJob.customer_phone
+                ? <button onClick={() => handleWhatsApp(selJob)} style={{ padding: '5px 10px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>📲 ווצאפ</button>
+                : <button onClick={() => handleCopyLink(selJob)} style={{ padding: '5px 10px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>📋 העתק</button>
+              }
+              <Button size="sm" variant="secondary" onClick={() => { printWorkOrder(selJob, bizInfo.current) }}>🖨️ הדפס</Button>
+              <Button size="sm" variant="secondary" onClick={() => openEdit(selJob)}>✏️ ערוך</Button>
+              <Button size="sm" variant="danger" onClick={() => handleDelete(selJob.id)}>🗑 מחק</Button>
+              <button onClick={() => setSelectedJobId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
+            </div>
+          )}
+          <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid var(--border)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', direction: 'rtl' }}>
+              <thead>
+                <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
+                  <th style={thSt}>לוחית</th>
+                  <th style={thSt}>רכב</th>
+                  <th style={thSt}>לקוח</th>
+                  <th style={thSt}>עבודה / הערות</th>
+                  <th style={thSt}>מחיר</th>
+                  <th style={thSt}>סטטוס</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleJobs.map(job => (
+                  <JobRow
+                    key={job.id}
+                    job={job}
+                    onStatusChange={updateStatus}
+                    selected={selectedJobId === job.id}
+                    onSelect={() => setSelectedJobId(selectedJobId === job.id ? null : job.id)}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Modal */}

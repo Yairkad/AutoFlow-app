@@ -315,7 +315,7 @@ export default function InspectionsClient() {
   const [saving, setSaving]           = useState(false)
   const [plateLoading, setPlateLoading] = useState(false)
   const [search, setSearch]           = useState('')
-  const [showActions, setShowActions] = useState(false)
+  const [selectedInsId, setSelectedInsId] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set())
   const [driveConnected, setDriveConnected] = useState(false)
   const [isAdmin, setIsAdmin]         = useState(false)
@@ -337,6 +337,12 @@ export default function InspectionsClient() {
       .order('created_at', { ascending: false })
     setInspections(data ?? [])
   }, [supabase])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedInsId(null) }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [])
 
   useEffect(() => {
     const init = async () => {
@@ -829,19 +835,6 @@ export default function InspectionsClient() {
               <span style={{ fontSize: 18 }}>📋</span>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => setShowActions(v => !v)}
-                style={{
-                  padding: '6px 14px', border: '1px solid var(--border)',
-                  borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
-                  fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
-                  background: showActions ? 'var(--primary)' : 'var(--bg-card)',
-                  color: showActions ? '#fff' : 'var(--text-muted)',
-                  transition: 'all .15s',
-                }}
-              >
-                ✏️ {showActions ? 'סיום עריכה' : 'עריכה'}
-              </button>
               <Button variant="primary" size="sm">
                 📊 ייצוא לאקסל
               </Button>
@@ -860,6 +853,21 @@ export default function InspectionsClient() {
             />
           </div>
 
+          {/* SelectionBar */}
+          {selectedInsId && (() => {
+            const ins = filtered.find(i => i.id === selectedInsId)
+            if (!ins) return null
+            return (
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {ins.plate} — {ins.owner_name}</span>
+                <Button size="sm" variant="secondary" onClick={() => openEdit(ins)}>✏️ ערוך</Button>
+                <Button size="sm" variant="secondary" onClick={() => handlePrint(ins)}>🖨️ הדפס</Button>
+                <Button size="sm" variant="danger" onClick={() => handleDelete(ins.id)}>🗑 מחק</Button>
+                <button onClick={() => setSelectedInsId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
+              </div>
+            )
+          })()}
+
           {/* Cards */}
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
@@ -870,10 +878,12 @@ export default function InspectionsClient() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {filtered.map(ins => (
-                <div key={ins.id} style={{
-                  background: 'var(--bg-card)', border: '1px solid var(--border)',
+                <div key={ins.id} onClick={() => setSelectedInsId(selectedInsId === ins.id ? null : ins.id)} style={{
+                  background: selectedInsId === ins.id ? '#eff6ff' : 'var(--bg-card)',
+                  border: `1px solid ${selectedInsId === ins.id ? '#bfdbfe' : 'var(--border)'}`,
                   borderRadius: 'var(--radius)', padding: '12px 16px',
                   display: 'flex', flexDirection: 'column', gap: 8,
+                  cursor: 'pointer', transition: 'background .15s',
                 }}>
                   {/* Header: plate + date */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -987,13 +997,6 @@ export default function InspectionsClient() {
 
                     <div style={{ flex: 1 }} />
 
-                    {showActions && (
-                      <div style={{ display: 'flex', gap: 2 }}>
-                        <ActionBtn onClick={() => openEdit(ins)} title="עריכה">✏️</ActionBtn>
-                        <ActionBtn onClick={() => handlePrint(ins)} title="הדפס">🖨️</ActionBtn>
-                        <ActionBtn onClick={() => handleDelete(ins.id)} title="מחיקה">🗑️</ActionBtn>
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}
