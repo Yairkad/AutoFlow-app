@@ -57,14 +57,14 @@ export default function YardDashboard({ initialSessions }: Props) {
       </div>
 
       {/* Car grid */}
-      <div className="flex-1 overflow-y-auto" style={{ padding: '14px' }}>
+      <div className="flex-1 overflow-y-auto" style={{ padding: '14px', minHeight: 0, minWidth: 0 }}>
         {sessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
             <span className="text-5xl">🏁</span>
             <p className="text-lg font-medium">אין רכבים פעילים ברחבה</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', width: '100%' }}>
             {sessions.map(s => {
               const state = timerState(s.opened_at)
               const items = s.yard_session_items ?? []

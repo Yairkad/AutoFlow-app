@@ -28,26 +28,6 @@ export default async function WorkCardPage({ params }: { params: Promise<{ id: s
 
   if (!session) notFound()
 
-  // Auto-enrich: if make/model missing, fetch from plate API and persist
-  if (!session.make && session.plate) {
-    try {
-      const plateRes = await fetch(
-        `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://auto-flow-app.vercel.app'}/api/public/plate?plate=${encodeURIComponent(session.plate)}`,
-        { cache: 'no-store' }
-      )
-      const vehicle = await plateRes.json()
-      if (vehicle?.make) {
-        await supabase
-          .from('yard_sessions')
-          .update({ make: vehicle.make, model: vehicle.model ?? null, year: vehicle.year ? String(vehicle.year) : null })
-          .eq('id', session.id)
-        session.make  = vehicle.make
-        session.model = vehicle.model ?? null
-        session.year  = vehicle.year ? String(vehicle.year) : session.year
-      }
-    } catch { /* non-critical */ }
-  }
-
   return (
     <WorkCardClient
       session={session as YardSession}

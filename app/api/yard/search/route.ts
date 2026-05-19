@@ -36,16 +36,19 @@ export async function GET(req: NextRequest) {
       .gt('qty', 0)
 
     if (q) {
-      // Try to parse as size: 195/55/16 or 195 55 16
-      const sizeParts = q.match(/^(\d+)[\/\s\-](\d+)[\/\s\-](\d+)$/)
-      const singleNum = q.match(/^(\d+)$/)
-      if (sizeParts) {
+      // Extract all digit groups — handles 195/55/16, 195/55R16, 195-55-16, etc.
+      const nums = q.match(/\d+/g) ?? []
+      if (nums.length >= 3) {
         tireQuery = tireQuery
-          .eq('width', Number(sizeParts[1]))
-          .eq('profile', Number(sizeParts[2]))
-          .eq('rim', Number(sizeParts[3]))
-      } else if (singleNum) {
-        tireQuery = tireQuery.eq('width', Number(singleNum[1]))
+          .eq('width',   Number(nums[0]))
+          .eq('profile', Number(nums[1]))
+          .eq('rim',     Number(nums[2]))
+      } else if (nums.length === 2) {
+        tireQuery = tireQuery
+          .eq('width',   Number(nums[0]))
+          .eq('profile', Number(nums[1]))
+      } else if (nums.length === 1) {
+        tireQuery = tireQuery.eq('width', Number(nums[0]))
       } else {
         tireQuery = tireQuery.or(`brand.ilike.${search},sku.ilike.${search}`)
       }
