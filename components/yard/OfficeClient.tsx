@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { YardSession, YardSessionItem, YardService } from '@/lib/yard/types'
 import { sessionDisplayName, sessionTotal, minutesSince, formatPlate } from '@/lib/yard/types'
+import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
 
 const VAT = 1.18
 
@@ -15,7 +16,16 @@ interface Props {
 
 export default function OfficeClient({ initialActive, initialPending }: Props) {
   const router  = useRouter()
-  const [tab,     setTab]     = useState<'pending' | 'active'>('pending')
+  const [tab,     setTab]     = useState<'pending' | 'active' | 'history'>('pending')
+  const [historyPlate,  setHistoryPlate]  = useState('')
+  const [historySearch, setHistorySearch] = useState<string | null>(null)
+  const historyInputRef = useRef<HTMLInputElement>(null)
+
+  function doHistorySearch() {
+    if (historyPlate.length < 7) return
+    historyInputRef.current?.blur()
+    setHistorySearch(historyPlate)
+  }
   const [active,  setActive]  = useState(initialActive)
   const [pending, setPending] = useState(initialPending)
   const [closing,      setClosing]      = useState<string | null>(null)
@@ -247,6 +257,17 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
             </span>
           </button>
         ))}
+        <button onClick={() => setTab('history')}
+          className="text-base font-semibold transition-colors"
+          style={{
+            padding: '14px 24px',
+            borderBottom: tab === 'history' ? '3px solid #2563eb' : '3px solid transparent',
+            color: tab === 'history' ? '#1d4ed8' : '#94a3b8',
+            marginBottom: '-2px',
+          }}
+        >
+          היסטוריית רכב
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto" style={{ padding: '16px 20px' }}>
@@ -386,6 +407,45 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
               })}
             </div>
           </div>
+        )}
+
+        {/* ── Tab: History ── */}
+        {tab === 'history' && (
+          <div className="max-w-xl mx-auto" style={{ paddingTop: '8px' }}>
+            <div className="flex gap-2" style={{ marginBottom: '16px' }}>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="הזן מספר רכב..."
+                value={historyPlate}
+                onChange={e => setHistoryPlate(e.target.value.replace(/\D/g, ''))}
+                ref={historyInputRef}
+                onKeyDown={e => e.key === 'Enter' && doHistorySearch()}
+                className="flex-1 border-2 border-blue-400 rounded-xl font-bold outline-none focus:border-blue-600 transition-colors"
+                style={{ padding: '12px 16px', fontSize: '18px', letterSpacing: '3px', direction: 'ltr' }}
+              />
+              <button
+                onClick={doHistorySearch}
+                disabled={historyPlate.length < 7}
+                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl font-bold transition-colors"
+                style={{ padding: '12px 20px', fontSize: '15px' }}
+              >
+                חפש
+              </button>
+            </div>
+            {historySearch && historySearch.length >= 7 && (
+              <p className="text-slate-400 text-sm text-center">
+                מציג היסטוריה עבור {formatPlate(historySearch)}
+              </p>
+            )}
+          </div>
+        )}
+
+        {historySearch && historySearch.length >= 7 && tab === 'history' && (
+          <VehicleHistoryModal
+            plate={historySearch}
+            onClose={() => setHistorySearch(null)}
+          />
         )}
       </div>
 

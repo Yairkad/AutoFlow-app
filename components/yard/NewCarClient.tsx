@@ -3,16 +3,19 @@
 import { useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatPlate } from '@/lib/yard/types'
+import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
 
 type VehicleInfo = { make?: string; model?: string; year?: number } | null
 
 export default function NewCarClient() {
   const router = useRouter()
-  const [digits, setDigits]   = useState('')
-  const [vehicle, setVehicle] = useState<VehicleInfo>(null)
-  const [loading, setLoading] = useState(false)
-  const [saving,  setSaving]  = useState(false)
-  const [error,   setError]   = useState<string | null>(null)
+  const [digits, setDigits]         = useState('')
+  const [vehicle, setVehicle]       = useState<VehicleInfo>(null)
+  const [loading, setLoading]       = useState(false)
+  const [saving,  setSaving]        = useState(false)
+  const [error,   setError]         = useState<string | null>(null)
+  const [historyCount, setHistoryCount] = useState<number | null>(null)
+  const [showHistory, setShowHistory]   = useState(false)
 
   // Tracks latest in-flight plate lookup so we can patch after navigation
   const lookupRef = useRef<Promise<VehicleInfo>>(Promise.resolve(null))
@@ -21,7 +24,7 @@ export default function NewCarClient() {
   const plate = formatPlate(digits)
 
   const lookup = useCallback(async (d: string) => {
-    if (d.length < 7) { setVehicle(null); lookingRef.current = false; return }
+    if (d.length < 7) { setVehicle(null); setHistoryCount(null); lookingRef.current = false; return }
     setLoading(true)
     lookingRef.current = true
     const promise: Promise<VehicleInfo> = fetch(`/api/public/plate?plate=${encodeURIComponent(d)}`)
@@ -29,6 +32,13 @@ export default function NewCarClient() {
       .then(data => data ? { make: data.make, model: data.model, year: data.year } : null)
       .catch(() => null)
     lookupRef.current = promise
+
+    // Fetch history count in parallel
+    fetch(`/api/yard/vehicle-history?plate=${encodeURIComponent(d)}`)
+      .then(r => r.json())
+      .then((sessions: unknown[]) => setHistoryCount(sessions.length))
+      .catch(() => setHistoryCount(null))
+
     try {
       const result = await promise
       setVehicle(result)
@@ -83,6 +93,12 @@ export default function NewCarClient() {
 
   return (
     <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
+      {showHistory && (
+        <VehicleHistoryModal
+          plate={plate}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
 
       {/* Header */}
       <div className="bg-slate-800 text-white flex-shrink-0" style={{ padding: '14px 18px' }}>
@@ -101,9 +117,20 @@ export default function NewCarClient() {
       <div style={{ margin: '10px 14px 0', minHeight: '40px' }} className="flex-shrink-0">
         {loading && <div className="text-sm text-slate-400 text-center py-1">מחפש פרטי רכב...</div>}
         {!loading && vehicle && (
-          <div className="bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm font-semibold flex items-center gap-2" style={{ padding: '10px 14px' }}>
-            <span>✓</span>
-            <span>{[vehicle.make, vehicle.model, vehicle.year].filter(Boolean).join(' ')} — זוהה אוטומטית</span>
+          <div className="bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm font-semibold flex items-center justify-between gap-2" style={{ padding: '10px 14px' }}>
+            <div className="flex items-center gap-2">
+              <span>✓</span>
+              <span>{[vehicle.make, vehicle.model, vehicle.year].filter(Boolean).join(' ')} — זוהה אוטומטית</span>
+            </div>
+            {historyCount !== null && historyCount > 0 && (
+              <button
+                onClick={() => setShowHistory(true)}
+                className="bg-blue-600 text-white text-xs font-bold rounded-lg flex-shrink-0 active:scale-95 transition-all"
+                style={{ padding: '4px 10px' }}
+              >
+                {historyCount} ביקורים קודמים
+              </button>
+            )}
           </div>
         )}
         {!loading && digits.length >= 7 && !vehicle && (
