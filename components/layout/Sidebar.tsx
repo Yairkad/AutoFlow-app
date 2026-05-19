@@ -341,6 +341,27 @@ export default function Sidebar({
           </div>
         )}
 
+        {/* Yard terminal quick-launch */}
+        {loaded && (
+          <div style={{ display: 'flex', gap: '6px', padding: '8px 10px 4px', borderTop: '1px solid var(--border)' }}>
+            {([
+              { href: '/yard',        label: 'רחבה 🔧', title: 'מסוף רחבה' },
+              { href: '/yard-office', label: 'משרד 🖥',  title: 'מסוף משרד' },
+            ] as const).map(({ href, label, title }) => (
+              <a key={href} href={href} target="_blank" rel="noopener noreferrer" title={title} style={{
+                flex: 1, textAlign: 'center', padding: '5px 4px',
+                fontSize: '11px', fontWeight: 600,
+                borderRadius: '7px', border: '1px solid var(--border)',
+                background: 'var(--bg)', color: 'var(--text-muted)',
+                textDecoration: 'none', transition: 'all .15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover, #f3faf6)'; e.currentTarget.style.color = 'var(--text)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+              >{label}</a>
+            ))}
+          </div>
+        )}
+
         {/* Hidden edit button */}
         {loaded && (
           <button
