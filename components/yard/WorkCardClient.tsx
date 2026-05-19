@@ -13,13 +13,22 @@ interface Props {
 
 export default function WorkCardClient({ session: initialSession, services }: Props) {
   const router = useRouter()
-  const [session, setSession]       = useState<YardSession>(initialSession)
-  const [confirmItem, setConfirmItem] = useState<{ name: string; onConfirm: () => void } | null>(null)
+  const [session, setSession]         = useState<YardSession>(initialSession)
+  const [confirmItem, setConfirmItem]  = useState<{ name: string; onConfirm: () => void } | null>(null)
   const [confirmEmpty, setConfirmEmpty] = useState(false)
-  const [editItem,    setEditItem]   = useState<YardSessionItem | null>(null)
-  const [priceDigits, setPriceDigits] = useState('')
+  const [editItem,    setEditItem]     = useState<YardSessionItem | null>(null)
+  const [priceDigits, setPriceDigits]  = useState('')
+  const [error,       setError]        = useState<string | null>(null)
+  const [isMobile,    setIsMobile]     = useState(false)
   const supabase = createClient()
   const items = session.yard_session_items ?? []
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 700)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   // Prefetch sub-routes so navigation is instant
   useEffect(() => {
@@ -55,7 +64,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     doAddQuick(name, price, serviceId)
   }
 
-  // Optimistic add — show item immediately, persist in background
+  // Optimistic add — show item immediately, rollback on server error
   function doAddQuick(name: string, price: number, serviceId?: string) {
     setConfirmItem(null)
     const tempId = `temp-${Date.now()}`
@@ -78,17 +87,21 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       }),
     }).then(r => r.ok ? r.json() : null).then(real => {
       if (real) {
-        setSession(s => ({
-          ...s,
-          yard_session_items: s.yard_session_items.map(i => i.id === tempId ? real : i),
-        }))
+        setSession(s => ({ ...s, yard_session_items: s.yard_session_items.map(i => i.id === tempId ? real : i) }))
       } else {
+        // Rollback optimistic item and show error
         setSession(s => ({ ...s, yard_session_items: s.yard_session_items.filter(i => i.id !== tempId) }))
+        setError('שגיאה בהוספת פריט — נסה שוב')
+        setTimeout(() => setError(null), 3000)
       }
+    }).catch(() => {
+      setSession(s => ({ ...s, yard_session_items: s.yard_session_items.filter(i => i.id !== tempId) }))
+      setError('בעיית תקשורת — נסה שוב')
+      setTimeout(() => setError(null), 3000)
     })
   }
 
-  // Fire-and-forget — navigate immediately
+  // Navigate immediately, PATCH in background
   function sendToOffice() {
     router.push('/yard')
     fetch(`/api/yard/sessions/${session.id}`, {
@@ -199,11 +212,18 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
         </button>
       </div>
 
+      {/* Error toast */}
+      {error && (
+        <div className="flex-shrink-0 bg-red-600 text-white font-semibold text-center" style={{ margin: '8px 14px 0', padding: '10px 16px', borderRadius: '10px', fontSize: '14px' }}>
+          ⚠ {error}
+        </div>
+      )}
+
       {/* ── Work body ── */}
-      <div className="flex flex-1 min-h-0" style={{ gap: '14px', margin: '12px 14px 14px' }}>
+      <div className="flex flex-1 min-h-0" style={{ flexDirection: isMobile ? 'column' : 'row', gap: '14px', margin: '12px 14px 14px' }}>
 
         {/* Action buttons — 2 columns */}
-        <div className="flex-1 grid grid-cols-2" style={{ gap: '12px', alignContent: 'start' }}>
+        <div className="grid grid-cols-2" style={{ gap: '12px', alignContent: 'start', flex: isMobile ? '0 0 auto' : '1' }}>
           {actionOrder.map(a => {
             const isNav = 'to' in a
             return (
@@ -224,8 +244,8 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
 
         {/* ── Cart panel ── */}
         <div
-          className="flex flex-col bg-white rounded-2xl overflow-hidden flex-shrink-0"
-          style={{ width: '310px', boxShadow: '0 2px 10px rgba(0,0,0,.12)' }}
+          className="flex flex-col bg-white rounded-2xl overflow-hidden"
+          style={{ width: isMobile ? '100%' : '310px', flexShrink: 0, boxShadow: '0 2px 10px rgba(0,0,0,.12)', minHeight: isMobile ? '220px' : undefined }}
         >
           <div className="bg-blue-700 text-white font-bold text-center flex-shrink-0" style={{ padding: '14px 16px', fontSize: '15px' }}>
             שירותים שהתקבלו

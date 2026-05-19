@@ -39,19 +39,32 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
   useEffect(() => { setActive(initialActive) },   [initialActive])   // eslint-disable-line
   useEffect(() => { setPending(initialPending) },  [initialPending])  // eslint-disable-line
 
-  // Realtime subscription — fires router.refresh() on any change
+  // Direct-fetch polling — updates state silently without page re-render
+  // Won't interrupt user interaction (text selection, copying, etc.)
+  async function fetchSessions() {
+    try {
+      const [ar, pr] = await Promise.all([
+        fetch('/api/yard/sessions?status=active'),
+        fetch('/api/yard/sessions?status=pending_office'),
+      ])
+      if (ar.ok) setActive(await ar.json())
+      if (pr.ok) setPending(await pr.json())
+    } catch {} // network hiccup — skip tick
+  }
+
+  // Realtime subscription for instant updates
   useEffect(() => {
     const ch = supabase
       .channel('office-yard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_sessions' }, () => router.refresh())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_session_items' }, () => router.refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_sessions' }, fetchSessions)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_session_items' }, fetchSessions)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, []) // eslint-disable-line
 
-  // Polling fallback — guarantees sync even if realtime misses an event
+  // Polling fallback every 8s — silent API fetch, no page re-render
   useEffect(() => {
-    const id = setInterval(() => router.refresh(), 8_000)
+    const id = setInterval(fetchSessions, 8_000)
     return () => clearInterval(id)
   }, []) // eslint-disable-line
 
