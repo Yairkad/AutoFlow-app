@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
+import KeyboardDismiss from '@/components/yard/KeyboardDismiss'
 
 export const metadata: Metadata = {
   title: 'מסוף רחבה',
@@ -24,6 +25,7 @@ export default function YardLayout({ children }: { children: React.ReactNode }) 
       <ConfirmProvider>
         <div style={{ width: '100vw', height: '100dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {children}
+          <KeyboardDismiss />
         </div>
       </ConfirmProvider>
     </ToastProvider>
