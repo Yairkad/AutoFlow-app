@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getYardTenantId } from '@/lib/auth/yard-token'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // GET /api/yard/sessions?status=active|pending_office|all
 export async function GET(req: NextRequest) {
@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const profile = { tenant_id: tenantId }
 
   const status = req.nextUrl.searchParams.get('status') ?? 'active'
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   let query = supabase
     .from('yard_sessions')
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
   if (!plate) return NextResponse.json({ error: 'plate required' }, { status: 400 })
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('yard_sessions')
     .insert({

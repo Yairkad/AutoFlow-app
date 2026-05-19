@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getYardTenantId } from '@/lib/auth/yard-token'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // DELETE /api/yard/sessions/[id]/items/[itemId]
 export async function DELETE(
@@ -12,7 +12,7 @@ export async function DELETE(
   const profile = { tenant_id: tenantId }
   const { id: sessionId, itemId } = await params
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { error } = await supabase
     .from('yard_session_items')
     .delete()
@@ -43,7 +43,7 @@ export async function PATCH(
   }
   if (body.quantity !== undefined) update.quantity = body.quantity
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('yard_session_items')
     .update(update)

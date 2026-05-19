@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getYardTenantId } from '@/lib/auth/yard-token'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // GET /api/yard/sessions/[id]
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -9,7 +9,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const profile = { tenant_id: tenantId }
   const { id } = await params
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('yard_sessions')
     .select(`
@@ -34,7 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json()
   const { status, make, model, year } = body
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   // Vehicle info patch (background plate-lookup resolution)
   if (status === undefined && (make !== undefined || model !== undefined || year !== undefined)) {

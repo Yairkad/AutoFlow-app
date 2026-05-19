@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth/require'
 import { getYardTenantId } from '@/lib/auth/yard-token'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 
 // GET /api/yard/services
 export async function GET() {
@@ -9,7 +9,7 @@ export async function GET() {
   if (!tenantId) return new Response('Unauthorized', { status: 401 })
   const profile = { tenant_id: tenantId }
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('yard_services')
     .select('*')
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 })
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('yard_services')
     .insert({
