@@ -145,16 +145,18 @@ export default function FreeSearchClient({ session, filterType }: Props) {
       <div className="flex items-center flex-shrink-0" style={{ gap: '10px', padding: '10px 14px 0' }}>
         <input
           type="text"
-          list="free-search-suggestions"
+          list={filterType === 'product' ? 'free-search-suggestions' : undefined}
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="חפש מוצר, צמיג, שירות..."
           className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium outline-none"
           style={{ padding: '10px 14px' }}
         />
-        <datalist id="free-search-suggestions">
-          {results.map(r => <option key={r.id} value={r.name} />)}
-        </datalist>
+        {filterType === 'product' && (
+          <datalist id="free-search-suggestions">
+            {results.map(r => <option key={r.id} value={r.name} />)}
+          </datalist>
+        )}
         <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
           <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">−</button>
           <span className="w-9 text-center font-bold border-x-2 border-slate-200 h-10 flex items-center justify-center">{qty}</span>
