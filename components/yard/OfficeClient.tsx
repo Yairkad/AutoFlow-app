@@ -391,8 +391,8 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
 
       {/* ── Price editor modal ── */}
       {priceModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.55)' }}>
-          <div className="bg-white rounded-2xl shadow-2xl flex flex-col" style={{ width: '540px', maxWidth: '95vw', maxHeight: '85vh' }}>
+        <div className="fixed inset-0 flex items-start justify-center z-50" style={{ background: 'rgba(0,0,0,0.55)', padding: '5dvh 8px', overflowY: 'auto' }}>
+          <div className="bg-white rounded-2xl shadow-2xl flex flex-col" style={{ width: '540px', maxWidth: '100%', maxHeight: '90dvh' }}>
 
             {/* Header */}
             <div className="flex items-center justify-between border-b flex-shrink-0" style={{ padding: '18px 24px' }}>
@@ -421,6 +421,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                         onChange={e => setEditNames(en => ({ ...en, [svc.id]: e.target.value }))}
                         onBlur={e => saveField(svc.id, e.target.value.trim(), Number(editPrices[svc.id] ?? svc.price))}
                         onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                        onFocus={e => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                         className="w-full border-2 border-transparent rounded-lg font-medium text-slate-800 outline-none hover:border-slate-200 focus:border-blue-400 transition-colors"
                         style={{ padding: '6px 10px', fontSize: '14px', background: 'transparent' }}
                       />
@@ -433,6 +434,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                         onChange={e => setEditPrices(ep => ({ ...ep, [svc.id]: e.target.value }))}
                         onBlur={e => saveField(svc.id, (editNames[svc.id] ?? svc.name).trim(), Number(e.target.value))}
                         onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                        onFocus={e => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                         className="flex-1 outline-none font-bold text-blue-600 text-center"
                         style={{ padding: '0 6px', fontSize: '15px', height: '100%', minWidth: 0 }}
                       />
