@@ -1,47 +1,36 @@
 'use client'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 
-interface Props { children: ReactNode }
-
-export default function LandscapeLock({ children }: Props) {
-  const [style, setStyle] = useState<React.CSSProperties>({
-    width: '100vw', height: '100vh', overflow: 'hidden',
-  })
-
+export default function LandscapeLock({ children }: { children: ReactNode }) {
   useEffect(() => {
-    function update() {
-      const w = window.innerWidth
-      const h = window.innerHeight
-      if (h > w) {
-        // Portrait → rotate wrapper 90° CW so content appears landscape
-        setStyle({
-          transform: 'rotate(90deg)',
-          transformOrigin: 'top left',
-          position: 'fixed',
-          top: 0,
-          left: h,        // move to right edge of portrait viewport
-          width: h,       // rotated width  = portrait height
-          height: w,      // rotated height = portrait width
-          overflow: 'hidden',
-        })
-      } else {
-        setStyle({ width: '100vw', height: '100vh', overflow: 'hidden' })
+    const el = document.createElement('style')
+    el.id = 'landscape-lock-css'
+    // Geometry (portrait: vw=short, vh=long):
+    //   div placed at left=100vw (right edge), width=100vh, height=100vw
+    //   rotate(90deg) CW around top-left → maps exactly onto full viewport
+    el.textContent = `
+      @media screen and (orientation: portrait) {
+        .yard-landscape-lock {
+          transform: rotate(90deg) !important;
+          transform-origin: top left !important;
+          position: fixed !important;
+          top: 0 !important;
+          left: 100vw !important;
+          width: 100vh !important;
+          height: 100vw !important;
+          overflow: hidden !important;
+        }
       }
-    }
-
-    update()
-    window.addEventListener('resize', update)
-    // orientationchange fires before dimensions update, wait a frame
-    const onOrient = () => setTimeout(update, 100)
-    window.addEventListener('orientationchange', onOrient)
-    return () => {
-      window.removeEventListener('resize', update)
-      window.removeEventListener('orientationchange', onOrient)
-    }
+    `
+    document.head.appendChild(el)
+    return () => document.getElementById('landscape-lock-css')?.remove()
   }, [])
 
   return (
-    <div style={style} className="flex flex-col bg-slate-100 select-none">
+    <div
+      className="yard-landscape-lock flex flex-col bg-slate-100 select-none"
+      style={{ width: '100vw', height: '100vh' }}
+    >
       {children}
     </div>
   )
