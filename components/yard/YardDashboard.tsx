@@ -12,6 +12,7 @@ export default function YardDashboard({ initialSessions }: Props) {
   const router  = useRouter()
   const [sessions, setSessions] = useState<YardSession[]>(initialSessions)
   const [, setTick] = useState(0)
+  const [newCarLoading, setNewCarLoading] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -127,11 +128,16 @@ export default function YardDashboard({ initialSessions }: Props) {
       {/* New car button */}
       <div className="flex-shrink-0" style={{ padding: '14px' }}>
         <button
-          onClick={() => router.push('/yard/new')}
-          className="w-full bg-green-700 hover:bg-green-600 active:scale-[.98] text-white font-bold flex items-center justify-center gap-2.5 transition-all"
-          style={{ borderRadius: '12px', padding: '20px', fontSize: '20px' }}
+          onClick={() => { if (newCarLoading) return; setNewCarLoading(true); router.push('/yard/new') }}
+          disabled={newCarLoading}
+          className="w-full text-white font-bold flex items-center justify-center gap-2.5 transition-all"
+          style={{
+            borderRadius: '12px', padding: '20px', fontSize: '20px',
+            background: newCarLoading ? '#64748b' : '#15803d',
+            animation: newCarLoading ? 'btn-loading 0.7s ease-in-out infinite' : 'none',
+          }}
         >
-          <span style={{ fontSize: '24px' }}>+</span> קליטת רכב חדש
+          {newCarLoading ? '⏳' : <><span style={{ fontSize: '24px' }}>+</span> קליטת רכב חדש</>}
         </button>
       </div>
     </div>
