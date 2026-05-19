@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
