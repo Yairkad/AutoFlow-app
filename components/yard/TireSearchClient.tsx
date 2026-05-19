@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import type { YardSession, SearchResult } from '@/lib/yard/types'
-import { sessionDisplayName, formatPlate } from '@/lib/yard/types'
+import { formatPlate } from '@/lib/yard/types'
 
 // Re-use the same SearchResult type from the API
 type TireResult = SearchResult & { size: string; brand: string }
@@ -21,7 +21,6 @@ export default function TireSearchClient({ session }: Props) {
   const [qty,       setQty]         = useState(1)
   const [price,     setPrice]       = useState<number | null>(null)
   const [saving,    setSaving]      = useState(false)
-  const [hints,     setHints]       = useState<string[]>([])
 
   const CACHE_TTL = 5 * 60 * 1000
 
@@ -73,7 +72,15 @@ export default function TireSearchClient({ session }: Props) {
     if (!selected || saving) return
     setSaving(true)
     const finalPrice = price ?? selected.price
-    // Navigate immediately — realtime subscription on work card will update the cart
+    // Store pending item so WorkCard shows it instantly on mount
+    try {
+      sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify({
+        id: `pending-${Date.now()}`, session_id: session.id, tenant_id: '',
+        item_type: 'tire', ref_id: selected.id, name: selected.name, sku: selected.sku,
+        quantity: qty, unit_price: finalPrice, original_price: selected.price,
+        price_modified: finalPrice !== selected.price, created_at: new Date().toISOString(),
+      }))
+    } catch {}
     router.push(`/yard/${session.id}`)
     fetch(`/api/yard/sessions/${session.id}/items`, {
       method: 'POST',
@@ -90,8 +97,6 @@ export default function TireSearchClient({ session }: Props) {
       }),
     })
   }
-
-  const display = sessionDisplayName(session)
 
   return (
     <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>

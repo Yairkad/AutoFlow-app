@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
+import LandscapeLock from '@/components/yard/LandscapeLock'
 
 export const metadata: Metadata = {
   title: 'מסוף רחבה',
@@ -22,6 +23,7 @@ export default function YardLayout({ children }: { children: React.ReactNode }) 
   return (
     <ToastProvider>
       <ConfirmProvider>
+        <LandscapeLock />
         <div className="h-screen w-screen overflow-hidden flex flex-col bg-slate-100 select-none">
           {children}
         </div>

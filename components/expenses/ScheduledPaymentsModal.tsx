@@ -204,12 +204,14 @@ export default function ScheduledPaymentsModal({
 
     // Create expense entry
     const expRes = await supabase.from('expenses').insert({
-      tenant_id:   tenantId,
-      date:        payDate,
-      category:    payCat,
-      description: payDesc || payItem.description,
-      amount:      payItem.amount,
-      supplier_id: payItem.supplier_id,
+      tenant_id:      tenantId,
+      date:           payDate,
+      category:       payCat,
+      description:    payDesc || payItem.description,
+      amount:         payItem.amount,
+      supplier_id:    payItem.supplier_id,
+      payment_method: payItem.payment_method === 'check' ? "צ'ק" : 'העברה',
+      payment_ref:    payItem.notes || null,
     }).select('id').single()
 
     if (expRes.error) { showToast('שגיאה ביצירת הוצאה: ' + expRes.error.message, 'error'); setPaySaving(false); return }

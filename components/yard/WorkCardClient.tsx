@@ -51,6 +51,32 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     return () => { supabase.removeChannel(ch) }
   }, [session.id]) // eslint-disable-line
 
+  // On mount: pick up item written by search page before navigating back
+  useEffect(() => {
+    try {
+      const key = `yard-pending-${initialSession.id}`
+      const raw = sessionStorage.getItem(key)
+      if (!raw) return
+      sessionStorage.removeItem(key)
+      const pendingItem: YardSessionItem = JSON.parse(raw)
+      setSession(s => {
+        if (s.yard_session_items.some(i => i.ref_id === pendingItem.ref_id && i.name === pendingItem.name)) return s
+        return { ...s, yard_session_items: [...s.yard_session_items, pendingItem] }
+      })
+    } catch {}
+  }, []) // eslint-disable-line
+
+  // Sync from server (router.refresh) — keep any still-unconfirmed temp/pending items
+  useEffect(() => {
+    setSession(prev => {
+      const serverIds = new Set(initialSession.yard_session_items.map(i => i.id))
+      const stillLocal = prev.yard_session_items.filter(
+        i => (i.id.startsWith('temp-') || i.id.startsWith('pending-')) && !serverIds.has(i.id)
+      )
+      return { ...initialSession, yard_session_items: [...initialSession.yard_session_items, ...stillLocal] }
+    })
+  }, [initialSession]) // eslint-disable-line
+
   function showError(msg: string) {
     setError(msg)
     setTimeout(() => setError(null), 4000)

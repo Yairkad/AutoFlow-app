@@ -74,7 +74,15 @@ export default function FreeSearchClient({ session, filterType }: Props) {
     setConfirm(null)
     setSaving(true)
     const finalPrice = price ?? selected.price
-    // Navigate immediately — realtime subscription on work card will update the cart
+    // Store pending item so WorkCard shows it instantly on mount
+    try {
+      sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify({
+        id: `pending-${Date.now()}`, session_id: session.id, tenant_id: '',
+        item_type: selected.type, ref_id: selected.id, name: selected.name, sku: selected.sku,
+        quantity: qty, unit_price: finalPrice, original_price: selected.price,
+        price_modified: finalPrice !== selected.price, created_at: new Date().toISOString(),
+      }))
+    } catch {}
     router.push(`/yard/${session.id}`)
     fetch(`/api/yard/sessions/${session.id}/items`, {
       method: 'POST',
