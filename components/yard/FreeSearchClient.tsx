@@ -53,12 +53,14 @@ export default function FreeSearchClient({ session, filterType }: Props) {
     doAdd()
   }
 
-  async function doAdd() {
+  function doAdd() {
     if (!selected) return
     setConfirm(null)
     setSaving(true)
     const finalPrice = price ?? selected.price
-    await fetch(`/api/yard/sessions/${session.id}/items`, {
+    // Navigate immediately — realtime subscription on work card will update the cart
+    router.push(`/yard/${session.id}`)
+    fetch(`/api/yard/sessions/${session.id}/items`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -72,8 +74,6 @@ export default function FreeSearchClient({ session, filterType }: Props) {
         price_modified: finalPrice !== selected.price,
       }),
     })
-    setSaving(false)
-    router.push(`/yard/${session.id}`)
   }
 
   const display = sessionDisplayName(session)

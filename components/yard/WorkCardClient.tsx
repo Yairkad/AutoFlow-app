@@ -13,15 +13,21 @@ interface Props {
 
 export default function WorkCardClient({ session: initialSession, services }: Props) {
   const router = useRouter()
-  const [session, setSession]         = useState<YardSession>(initialSession)
-  const [sending,       setSending]      = useState(false)
-  const [loadingAction, setLoadingAction] = useState<string | null>(null)
-  const [confirmItem,   setConfirmItem]  = useState<{ name: string; onConfirm: () => void } | null>(null)
-  const [confirmEmpty,  setConfirmEmpty] = useState(false)
-  const [editItem,      setEditItem]     = useState<YardSessionItem | null>(null)
-  const [priceDigits,   setPriceDigits]  = useState('')
+  const [session, setSession]       = useState<YardSession>(initialSession)
+  const [confirmItem, setConfirmItem] = useState<{ name: string; onConfirm: () => void } | null>(null)
+  const [confirmEmpty, setConfirmEmpty] = useState(false)
+  const [editItem,    setEditItem]   = useState<YardSessionItem | null>(null)
+  const [priceDigits, setPriceDigits] = useState('')
   const supabase = createClient()
-  const items    = session.yard_session_items ?? []
+  const items = session.yard_session_items ?? []
+
+  // Prefetch sub-routes so navigation is instant
+  useEffect(() => {
+    router.prefetch(`/yard/${session.id}/tire`)
+    router.prefetch(`/yard/${session.id}/service`)
+    router.prefetch(`/yard/${session.id}/search?type=product`)
+    router.prefetch(`/yard/${session.id}/search?type=all`)
+  }, [session.id]) // eslint-disable-line
 
   useEffect(() => {
     const ch = supabase
@@ -35,67 +41,80 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     return () => { supabase.removeChannel(ch) }
   }, [session.id]) // eslint-disable-line
 
-  async function deleteItem(item: YardSessionItem) {
-    await fetch(`/api/yard/sessions/${session.id}/items/${item.id}`, { method: 'DELETE' })
+  // Optimistic delete — remove immediately, fire in background
+  function deleteItem(item: YardSessionItem) {
     setSession(s => ({ ...s, yard_session_items: s.yard_session_items.filter(i => i.id !== item.id) }))
+    fetch(`/api/yard/sessions/${session.id}/items/${item.id}`, { method: 'DELETE' })
   }
 
-  async function addQuickItem(name: string, price: number, serviceId?: string) {
+  function addQuickItem(name: string, price: number, serviceId?: string) {
     if (items.some(i => i.name === name)) {
-      setLoadingAction(null) // release button — user must confirm dialog
       setConfirmItem({ name, onConfirm: () => doAddQuick(name, price, serviceId) })
       return
     }
-    await doAddQuick(name, price, serviceId)
-    setLoadingAction(null)
+    doAddQuick(name, price, serviceId)
   }
 
-  async function doAddQuick(name: string, price: number, serviceId?: string) {
+  // Optimistic add — show item immediately, persist in background
+  function doAddQuick(name: string, price: number, serviceId?: string) {
     setConfirmItem(null)
-    const res = await fetch(`/api/yard/sessions/${session.id}/items`, {
+    const tempId = `temp-${Date.now()}`
+    const tempItem: YardSessionItem = {
+      id: tempId, session_id: session.id, tenant_id: '',
+      item_type: 'service', ref_id: serviceId ?? null,
+      name, sku: null, quantity: 1,
+      unit_price: price, original_price: price, price_modified: false,
+      created_at: new Date().toISOString(),
+    }
+    setSession(s => ({ ...s, yard_session_items: [...s.yard_session_items, tempItem] }))
+
+    fetch(`/api/yard/sessions/${session.id}/items`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        item_type:      'service',
-        ref_id:         serviceId ?? null,
-        name,
-        unit_price:     price,
-        quantity:       1,
-        original_price: price,
-        price_modified: false,
+        item_type: 'service', ref_id: serviceId ?? null,
+        name, unit_price: price, quantity: 1,
+        original_price: price, price_modified: false,
       }),
+    }).then(r => r.ok ? r.json() : null).then(real => {
+      if (real) {
+        setSession(s => ({
+          ...s,
+          yard_session_items: s.yard_session_items.map(i => i.id === tempId ? real : i),
+        }))
+      } else {
+        setSession(s => ({ ...s, yard_session_items: s.yard_session_items.filter(i => i.id !== tempId) }))
+      }
     })
-    if (res.ok) {
-      const item = await res.json()
-      setSession(s => ({ ...s, yard_session_items: [...s.yard_session_items, item] }))
-    }
   }
 
-  async function sendToOffice() {
-    setSending(true)
-    await fetch(`/api/yard/sessions/${session.id}`, {
+  // Fire-and-forget — navigate immediately
+  function sendToOffice() {
+    router.push('/yard')
+    fetch(`/api/yard/sessions/${session.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'pending_office' }),
     })
-    router.push('/yard')
   }
 
-  async function closeEmpty() {
+  function closeEmpty() {
     setConfirmEmpty(false)
-    setSending(true)
-    await fetch(`/api/yard/sessions/${session.id}`, {
+    router.push('/yard')
+    fetch(`/api/yard/sessions/${session.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'archived' }),
     })
-    router.push('/yard')
   }
 
-  function openEditItem(item: YardSessionItem) {
-    setEditItem(item)
-    setPriceDigits('')
+  function handleFinish() {
+    if (items.length === 0) { setConfirmEmpty(true); return }
+    sendToOffice()
   }
+
+  // Price edit
+  function openEditItem(item: YardSessionItem) { setEditItem(item); setPriceDigits('') }
 
   function pressPriceKey(k: string) {
     if (k === 'del') { setPriceDigits(d => d.slice(0, -1)); return }
@@ -108,28 +127,23 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     setPriceDigits(String(Math.max(0, editItem.unit_price - amount)))
   }
 
-  async function confirmPrice() {
+  function confirmPrice() {
     if (!editItem) return
     const newPrice = priceDigits === '' ? editItem.unit_price : Number(priceDigits)
-    if (newPrice !== editItem.unit_price) {
-      await fetch(`/api/yard/sessions/${session.id}/items/${editItem.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unit_price: newPrice }),
-      })
-      setSession(s => ({
-        ...s,
-        yard_session_items: s.yard_session_items.map(i =>
-          i.id === editItem.id ? { ...i, unit_price: newPrice, price_modified: true } : i
-        ),
-      }))
-    }
     setEditItem(null)
-  }
-
-  function handleFinish() {
-    if (items.length === 0) { setConfirmEmpty(true); return }
-    sendToOffice()
+    if (newPrice === editItem.unit_price) return
+    // Optimistic update
+    setSession(s => ({
+      ...s,
+      yard_session_items: s.yard_session_items.map(i =>
+        i.id === editItem.id ? { ...i, unit_price: newPrice, price_modified: true } : i
+      ),
+    }))
+    fetch(`/api/yard/sessions/${session.id}/items/${editItem.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ unit_price: newPrice }),
+    })
   }
 
   const total = sessionTotal(items)
@@ -139,19 +153,23 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     return services.find(s => s.name === name)?.price ?? fallback
   }
 
-  async function pressAction(key: string, fn: () => void | Promise<void>) {
-    if (loadingAction) return
-    setLoadingAction(key)
-    await Promise.resolve(fn())
-  }
+  const navActions = [
+    { key: 'tire',    label: '🏁 צמיג חדש',       to: `/yard/${session.id}/tire` },
+    { key: 'service', label: '⚙️ חיישנים / איזון', to: `/yard/${session.id}/service` },
+    { key: 'accs',    label: '🛒 אביזרים לרכב',   to: `/yard/${session.id}/search?type=product` },
+    { key: 'all',     label: '🔍 כל המלאי',        to: `/yard/${session.id}/search?type=all` },
+  ]
 
-  const actions = [
-    { key: 'tire',    label: '🏁 צמיג חדש',       fn: () => router.push(`/yard/${session.id}/tire`) },
-    { key: 'flat',    label: '🔧 תיקון תקר',       fn: () => addQuickItem('תיקון תקר',  svcPrice('תיקון תקר', 50)) },
-    { key: 'service', label: '⚙️ חיישנים / איזון', fn: () => router.push(`/yard/${session.id}/service`) },
-    { key: 'align',   label: '🚗 כיוון פרונט',     fn: () => addQuickItem('כיוון פרונט', svcPrice('כיוון פרונט', 120)) },
-    { key: 'accs',    label: '🛒 אביזרים לרכב',   fn: () => router.push(`/yard/${session.id}/search?type=product`) },
-    { key: 'all',     label: '🔍 כל המלאי',        fn: () => router.push(`/yard/${session.id}/search?type=all`) },
+  const quickActions = [
+    { key: 'flat',  label: '🔧 תיקון תקר',   fn: () => addQuickItem('תיקון תקר',  svcPrice('תיקון תקר',  50)) },
+    { key: 'align', label: '🚗 כיוון פרונט', fn: () => addQuickItem('כיוון פרונט', svcPrice('כיוון פרונט', 120)) },
+  ]
+
+  // Interleave: tire, flat, service, align, accs, all
+  const actionOrder = [
+    navActions[0], quickActions[0],
+    navActions[1], quickActions[1],
+    navActions[2], navActions[3],
   ]
 
   return (
@@ -186,23 +204,19 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
 
         {/* Action buttons — 2 columns */}
         <div className="flex-1 grid grid-cols-2" style={{ gap: '12px', alignContent: 'start' }}>
-          {actions.map(a => {
-            const isThis  = loadingAction === a.key
-            const anyBusy = loadingAction !== null
+          {actionOrder.map(a => {
+            const isNav = 'to' in a
             return (
               <button
                 key={a.key}
-                onClick={() => pressAction(a.key, a.fn)}
-                disabled={anyBusy}
-                className="text-white rounded-2xl font-bold flex items-center justify-center text-center shadow-sm transition-colors"
+                onClick={() => isNav ? router.push(a.to) : a.fn()}
+                className="text-white rounded-2xl font-bold flex items-center justify-center text-center shadow-sm active:scale-[.95] active:brightness-90 transition-all"
                 style={{
                   minHeight: '88px', fontSize: '17px', padding: '12px',
-                  background: isThis ? '#64748b' : '#15803d',
-                  opacity: anyBusy && !isThis ? 0.5 : 1,
-                  animation: isThis ? 'btn-loading 0.7s ease-in-out infinite' : 'none',
+                  background: '#15803d',
                 }}
               >
-                {isThis ? '⏳' : a.label}
+                {a.label}
               </button>
             )
           })}
@@ -223,10 +237,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
             ) : (
               items.map(item => (
                 <div key={item.id} className="flex items-center border-b border-slate-100 last:border-0" style={{ gap: '8px', padding: '8px 14px' }}>
-                  <button
-                    onClick={() => openEditItem(item)}
-                    className="flex-1 min-w-0 text-right"
-                  >
+                  <button onClick={() => openEditItem(item)} className="flex-1 min-w-0 text-right">
                     <div className="font-semibold text-slate-900" style={{ fontSize: '14px' }}>{item.name}</div>
                     <div className="text-slate-500 flex items-center" style={{ fontSize: '12px', gap: '4px', marginTop: '2px' }}>
                       <span>כמות: {item.quantity}</span>
@@ -235,11 +246,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
                       )}
                     </div>
                   </button>
-                  <button
-                    onClick={() => openEditItem(item)}
-                    className="font-bold text-blue-600 whitespace-nowrap flex-shrink-0"
-                    style={{ fontSize: '15px' }}
-                  >
+                  <button onClick={() => openEditItem(item)} className="font-bold text-blue-600 whitespace-nowrap flex-shrink-0" style={{ fontSize: '15px' }}>
                     {(item.unit_price * item.quantity).toLocaleString()}₪
                   </button>
                   <button
@@ -259,11 +266,10 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
 
           <button
             onClick={handleFinish}
-            disabled={sending}
-            className="text-white font-bold transition-colors flex-shrink-0 disabled:opacity-40"
+            className="text-white font-bold transition-colors flex-shrink-0 active:brightness-90"
             style={{ background: items.length === 0 ? '#475569' : '#b45309', padding: '20px 16px', fontSize: '17px' }}
           >
-            {sending ? 'שולח...' : items.length === 0 ? 'סגור כרטיס' : 'סיים ושלח לתשלום'}
+            {items.length === 0 ? 'סגור כרטיס' : 'סיים ושלח לתשלום'}
           </button>
         </div>
       </div>
@@ -296,8 +302,6 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
         return (
           <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.55)' }}>
             <div className="bg-white rounded-2xl shadow-2xl flex flex-col" style={{ width: '320px', maxWidth: '95vw' }}>
-
-              {/* Header */}
               <div className="flex items-start justify-between border-b" style={{ padding: '16px 20px' }}>
                 <div>
                   <div className="font-bold text-slate-900" style={{ fontSize: '16px' }}>{editItem.name}</div>
@@ -307,41 +311,32 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
                 </div>
                 <button onClick={() => setEditItem(null)} className="text-slate-400 hover:text-slate-700 font-bold text-lg">✕</button>
               </div>
-
-              {/* Price display */}
               <div className="text-center font-black text-blue-600" style={{ padding: '14px 20px 8px', fontSize: '36px' }}>
                 {displayPrice.toLocaleString()}₪
               </div>
-
-              {/* Discount presets */}
               <div className="flex" style={{ gap: '8px', padding: '0 20px 12px' }}>
                 {[20, 50, 100].map(d => (
-                  <button
-                    key={d}
-                    onClick={() => applyDiscount(d)}
-                    className="flex-1 bg-amber-50 border-2 border-amber-300 text-amber-700 rounded-xl font-bold transition-colors hover:bg-amber-100"
-                    style={{ padding: '10px 4px', fontSize: '14px' }}
-                  >
+                  <button key={d} onClick={() => applyDiscount(d)}
+                    className="flex-1 bg-amber-50 border-2 border-amber-300 text-amber-700 rounded-xl font-bold active:bg-amber-100"
+                    style={{ padding: '10px 4px', fontSize: '14px' }}>
                     -{d}₪
                   </button>
                 ))}
               </div>
-
-              {/* Numpad */}
               <div className="grid grid-cols-3" dir="ltr" style={{ gap: '8px', padding: '0 20px 16px' }}>
                 {['1','2','3','4','5','6','7','8','9'].map(k => (
                   <button key={k} onClick={() => pressPriceKey(k)}
-                    className="bg-slate-100 rounded-xl font-bold text-slate-800 active:bg-slate-200 transition-colors"
+                    className="bg-slate-100 rounded-xl font-bold text-slate-800 active:bg-slate-200"
                     style={{ fontSize: '22px', padding: '12px' }}>{k}</button>
                 ))}
                 <button onClick={confirmPrice}
-                  className="bg-blue-600 rounded-xl font-bold text-white active:bg-blue-700 transition-colors"
+                  className="bg-blue-600 rounded-xl font-bold text-white active:bg-blue-700"
                   style={{ fontSize: '16px', padding: '12px' }}>✓ אישור</button>
                 <button onClick={() => pressPriceKey('0')}
-                  className="bg-slate-100 rounded-xl font-bold text-slate-800 active:bg-slate-200 transition-colors"
+                  className="bg-slate-100 rounded-xl font-bold text-slate-800 active:bg-slate-200"
                   style={{ fontSize: '22px', padding: '12px' }}>0</button>
                 <button onClick={() => pressPriceKey('del')}
-                  className="bg-slate-100 rounded-xl font-bold text-red-500 active:bg-slate-200 transition-colors"
+                  className="bg-slate-100 rounded-xl font-bold text-red-500 active:bg-slate-200"
                   style={{ fontSize: '20px', padding: '12px' }}>⌫</button>
               </div>
             </div>

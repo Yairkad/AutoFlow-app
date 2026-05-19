@@ -29,6 +29,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
   const [addingNew,    setAddingNew]    = useState(false)
   const supabase = createClient()
 
+  // Timer tick for elapsed-time display
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 30_000)
     return () => clearInterval(id)
@@ -38,6 +39,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
   useEffect(() => { setActive(initialActive) },   [initialActive])   // eslint-disable-line
   useEffect(() => { setPending(initialPending) },  [initialPending])  // eslint-disable-line
 
+  // Realtime subscription — fires router.refresh() on any change
   useEffect(() => {
     const ch = supabase
       .channel('office-yard')
@@ -45,6 +47,12 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_session_items' }, () => router.refresh())
       .subscribe()
     return () => { supabase.removeChannel(ch) }
+  }, []) // eslint-disable-line
+
+  // Polling fallback — guarantees sync even if realtime misses an event
+  useEffect(() => {
+    const id = setInterval(() => router.refresh(), 8_000)
+    return () => clearInterval(id)
   }, []) // eslint-disable-line
 
   const DEFAULT_SERVICES = [

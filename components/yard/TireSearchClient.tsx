@@ -58,11 +58,13 @@ export default function TireSearchClient({ session }: Props) {
     await search(code)
   }
 
-  async function addToCart() {
-    if (!selected) return
+  function addToCart() {
+    if (!selected || saving) return
     setSaving(true)
     const finalPrice = price ?? selected.price
-    await fetch(`/api/yard/sessions/${session.id}/items`, {
+    // Navigate immediately — realtime subscription on work card will update the cart
+    router.push(`/yard/${session.id}`)
+    fetch(`/api/yard/sessions/${session.id}/items`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -76,8 +78,6 @@ export default function TireSearchClient({ session }: Props) {
         price_modified: finalPrice !== selected.price,
       }),
     })
-    setSaving(false)
-    router.push(`/yard/${session.id}`)
   }
 
   const display = sessionDisplayName(session)
