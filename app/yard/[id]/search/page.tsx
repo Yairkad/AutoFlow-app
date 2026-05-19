@@ -1,5 +1,5 @@
 import { getYardTenantId } from '@/lib/auth/yard-token'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { redirect, notFound } from 'next/navigation'
 import FreeSearchClient from '@/components/yard/FreeSearchClient'
 import type { YardSession } from '@/lib/yard/types'
@@ -16,7 +16,7 @@ export default async function SearchPage({
 
   const { id }   = await params
   const { type } = await searchParams
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const { data: session } = await supabase
     .from('yard_sessions')

@@ -1,5 +1,5 @@
 import { getYardTenantId } from '@/lib/auth/yard-token'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import YardDashboard from '@/components/yard/YardDashboard'
 import type { YardSession } from '@/lib/yard/types'
@@ -8,7 +8,7 @@ export default async function YardPage() {
   const tenantId = getYardTenantId()
   if (!tenantId) redirect('/login')
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { data: sessions } = await supabase
     .from('yard_sessions')
     .select('*, yard_session_items(id, item_type, name, unit_price, quantity, price_modified)')

@@ -1,5 +1,5 @@
 import { getYardTenantId } from '@/lib/auth/yard-token'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { redirect, notFound } from 'next/navigation'
 import ServiceGridClient from '@/components/yard/ServiceGridClient'
 import type { YardSession, YardService } from '@/lib/yard/types'
@@ -9,7 +9,7 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
   if (!tenantId) redirect('/login')
 
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const [{ data: session }, { data: services }] = await Promise.all([
     supabase.from('yard_sessions').select('id,plate,make,model,year,yard_session_items(id,name)').eq('id', id).eq('tenant_id', tenantId).single(),
