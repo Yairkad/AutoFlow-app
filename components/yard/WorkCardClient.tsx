@@ -380,7 +380,14 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
               items.map(item => (
                 <div key={item.id} className="flex items-center border-b border-slate-100 last:border-0" style={{ gap: '8px', padding: '8px 14px' }}>
                   <button onClick={() => openEditItem(item)} className="flex-1 min-w-0 text-right">
-                    <div className="font-semibold text-slate-900" style={{ fontSize: '14px' }}>{item.name}</div>
+                    <div className="font-semibold text-slate-900" style={{ fontSize: '14px' }}>
+                      {item.name}
+                      {item.tire_position && (
+                        <span className="text-green-600 font-bold" style={{ fontSize: '12px', marginRight: '6px' }}>
+                          ({({ FL:'קד״ש', FR:'קד״י', RL:'אח״ש', RR:'אח״י' } as Record<string,string>)[item.tire_position]})
+                        </span>
+                      )}
+                    </div>
                     <div className="text-slate-500 flex items-center" style={{ fontSize: '12px', gap: '4px', marginTop: '2px' }}>
                       <span>כמות: {item.quantity}</span>
                       {item.price_modified && (
