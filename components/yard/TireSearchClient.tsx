@@ -20,7 +20,6 @@ export default function TireSearchClient({ session }: Props) {
   const [selected,  setSelected]    = useState<TireResult | null>(null)
   const [qty,       setQty]         = useState(1)
   const [price,     setPrice]       = useState<number | null>(null)
-  const [showModal, setShowModal]   = useState(false)
   const [saving,    setSaving]      = useState(false)
   const [hints,     setHints]       = useState<string[]>([])
 
@@ -169,8 +168,7 @@ export default function TireSearchClient({ session }: Props) {
           <>
             <div className="flex items-center border-b" style={{ padding: '8px 16px', background: '#f1f5f9' }}>
               <span className="flex-1 text-xs font-bold text-slate-400 uppercase tracking-wide">מוצר</span>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wide" style={{ width: '80px' }}>מחיר</span>
-              <span style={{ width: '80px' }} />
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">מחיר</span>
             </div>
             {results.map((r, i) => (
               <div
@@ -190,14 +188,9 @@ export default function TireSearchClient({ session }: Props) {
                     <div className="text-slate-400 font-medium" style={{ fontSize: '13px', marginTop: '2px' }}>מלאי: {r.stock} יח׳</div>
                   )}
                 </div>
-                <div className="font-black text-blue-600 flex-shrink-0" style={{ fontSize: '16px', width: '80px' }}>
+                <div className="font-black text-blue-600 flex-shrink-0" style={{ fontSize: '16px' }}>
                   {r.price.toLocaleString()}₪
                 </div>
-                <button
-                  onClick={e => { e.stopPropagation(); setSelected(r); setPrice(r.price); setShowModal(true) }}
-                  className="flex-shrink-0 border-2 border-amber-300 text-amber-700 rounded-lg font-semibold hover:bg-amber-50 transition-colors"
-                  style={{ width: '72px', padding: '6px 4px', fontSize: '12px' }}
-                >שנה מחיר</button>
               </div>
             ))}
           </>
@@ -216,26 +209,6 @@ export default function TireSearchClient({ session }: Props) {
         </button>
       </div>
 
-      {/* Price change modal */}
-      {showModal && selected && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <div className="text-lg font-bold mb-4">שנה מחיר — {selected.name}</div>
-            <input
-              type="number"
-              autoFocus
-              value={price ?? ''}
-              onChange={e => setPrice(Number(e.target.value))}
-              className="w-full border-2 border-blue-500 rounded-xl px-4 py-3 text-2xl font-bold text-center mb-4 outline-none"
-              placeholder="מחיר חדש ₪"
-            />
-            <div className="flex gap-3">
-              <button onClick={() => setShowModal(false)} className="flex-1 py-3 border-2 border-slate-200 rounded-xl font-semibold text-slate-500">ביטול</button>
-              <button onClick={() => setShowModal(false)} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">אשר</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
