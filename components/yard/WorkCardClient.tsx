@@ -18,6 +18,8 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [confirmItem,   setConfirmItem]  = useState<{ name: string; onConfirm: () => void } | null>(null)
   const [confirmEmpty,  setConfirmEmpty] = useState(false)
+  const [editItem,      setEditItem]     = useState<YardSessionItem | null>(null)
+  const [priceDigits,   setPriceDigits]  = useState('')
   const supabase = createClient()
   const items    = session.yard_session_items ?? []
 
@@ -88,6 +90,41 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       body: JSON.stringify({ status: 'archived' }),
     })
     router.push('/yard')
+  }
+
+  function openEditItem(item: YardSessionItem) {
+    setEditItem(item)
+    setPriceDigits('')
+  }
+
+  function pressPriceKey(k: string) {
+    if (k === 'del') { setPriceDigits(d => d.slice(0, -1)); return }
+    if (priceDigits.length >= 5) return
+    setPriceDigits(d => d + k)
+  }
+
+  function applyDiscount(amount: number) {
+    if (!editItem) return
+    setPriceDigits(String(Math.max(0, editItem.unit_price - amount)))
+  }
+
+  async function confirmPrice() {
+    if (!editItem) return
+    const newPrice = priceDigits === '' ? editItem.unit_price : Number(priceDigits)
+    if (newPrice !== editItem.unit_price) {
+      await fetch(`/api/yard/sessions/${session.id}/items/${editItem.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unit_price: newPrice }),
+      })
+      setSession(s => ({
+        ...s,
+        yard_session_items: s.yard_session_items.map(i =>
+          i.id === editItem.id ? { ...i, unit_price: newPrice, price_modified: true } : i
+        ),
+      }))
+    }
+    setEditItem(null)
   }
 
   function handleFinish() {
@@ -185,8 +222,11 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
               <div className="p-5 text-center text-slate-400">הסל ריק</div>
             ) : (
               items.map(item => (
-                <div key={item.id} className="flex items-start border-b border-slate-100 last:border-0" style={{ gap: '8px', padding: '10px 14px' }}>
-                  <div className="flex-1 min-w-0">
+                <div key={item.id} className="flex items-center border-b border-slate-100 last:border-0" style={{ gap: '8px', padding: '8px 14px' }}>
+                  <button
+                    onClick={() => openEditItem(item)}
+                    className="flex-1 min-w-0 text-right"
+                  >
                     <div className="font-semibold text-slate-900" style={{ fontSize: '14px' }}>{item.name}</div>
                     <div className="text-slate-500 flex items-center" style={{ fontSize: '12px', gap: '4px', marginTop: '2px' }}>
                       <span>כמות: {item.quantity}</span>
@@ -194,10 +234,14 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
                         <span className="bg-amber-100 text-amber-700 rounded font-bold" style={{ fontSize: '11px', padding: '1px 5px' }}>שונה</span>
                       )}
                     </div>
-                  </div>
-                  <div className="font-bold text-blue-600 whitespace-nowrap" style={{ fontSize: '15px' }}>
+                  </button>
+                  <button
+                    onClick={() => openEditItem(item)}
+                    className="font-bold text-blue-600 whitespace-nowrap flex-shrink-0"
+                    style={{ fontSize: '15px' }}
+                  >
                     {(item.unit_price * item.quantity).toLocaleString()}₪
-                  </div>
+                  </button>
                   <button
                     onClick={() => deleteItem(item)}
                     className="text-slate-300 hover:text-red-500 leading-none flex-shrink-0 transition-colors"
@@ -245,6 +289,65 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
           </div>
         </div>
       )}
+
+      {/* ── Item price edit modal ── */}
+      {editItem && (() => {
+        const displayPrice = priceDigits === '' ? editItem.unit_price : Number(priceDigits)
+        return (
+          <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.55)' }}>
+            <div className="bg-white rounded-2xl shadow-2xl flex flex-col" style={{ width: '320px', maxWidth: '95vw' }}>
+
+              {/* Header */}
+              <div className="flex items-start justify-between border-b" style={{ padding: '16px 20px' }}>
+                <div>
+                  <div className="font-bold text-slate-900" style={{ fontSize: '16px' }}>{editItem.name}</div>
+                  <div className="text-slate-400" style={{ fontSize: '13px', marginTop: '2px' }}>
+                    מחיר מקורי: {editItem.unit_price.toLocaleString()}₪
+                  </div>
+                </div>
+                <button onClick={() => setEditItem(null)} className="text-slate-400 hover:text-slate-700 font-bold text-lg">✕</button>
+              </div>
+
+              {/* Price display */}
+              <div className="text-center font-black text-blue-600" style={{ padding: '14px 20px 8px', fontSize: '36px' }}>
+                {displayPrice.toLocaleString()}₪
+              </div>
+
+              {/* Discount presets */}
+              <div className="flex" style={{ gap: '8px', padding: '0 20px 12px' }}>
+                {[20, 50, 100].map(d => (
+                  <button
+                    key={d}
+                    onClick={() => applyDiscount(d)}
+                    className="flex-1 bg-amber-50 border-2 border-amber-300 text-amber-700 rounded-xl font-bold transition-colors hover:bg-amber-100"
+                    style={{ padding: '10px 4px', fontSize: '14px' }}
+                  >
+                    -{d}₪
+                  </button>
+                ))}
+              </div>
+
+              {/* Numpad */}
+              <div className="grid grid-cols-3" dir="ltr" style={{ gap: '8px', padding: '0 20px 16px' }}>
+                {['1','2','3','4','5','6','7','8','9'].map(k => (
+                  <button key={k} onClick={() => pressPriceKey(k)}
+                    className="bg-slate-100 rounded-xl font-bold text-slate-800 active:bg-slate-200 transition-colors"
+                    style={{ fontSize: '22px', padding: '12px' }}>{k}</button>
+                ))}
+                <button onClick={confirmPrice}
+                  className="bg-blue-600 rounded-xl font-bold text-white active:bg-blue-700 transition-colors"
+                  style={{ fontSize: '16px', padding: '12px' }}>✓ אישור</button>
+                <button onClick={() => pressPriceKey('0')}
+                  className="bg-slate-100 rounded-xl font-bold text-slate-800 active:bg-slate-200 transition-colors"
+                  style={{ fontSize: '22px', padding: '12px' }}>0</button>
+                <button onClick={() => pressPriceKey('del')}
+                  className="bg-slate-100 rounded-xl font-bold text-red-500 active:bg-slate-200 transition-colors"
+                  style={{ fontSize: '20px', padding: '12px' }}>⌫</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Duplicate confirm */}
       {confirmItem && (

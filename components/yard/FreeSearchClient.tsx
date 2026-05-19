@@ -140,26 +140,38 @@ export default function FreeSearchClient({ session, filterType }: Props) {
           <div className="p-6 text-center text-slate-400">{query ? 'לא נמצאו תוצאות' : 'הקלד לחיפוש'}</div>
         ) : (
           <>
-            <div className="grid grid-cols-[1fr_80px_90px] px-4 py-2 bg-slate-50 border-b text-xs font-bold text-slate-400 uppercase tracking-wide">
-              <span>מוצר</span><span>מחיר</span><span></span>
+            <div className="flex items-center border-b" style={{ padding: '8px 16px', background: '#f1f5f9' }}>
+              <span className="flex-1 text-xs font-bold text-slate-400 uppercase tracking-wide">מוצר</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wide" style={{ width: '80px' }}>מחיר</span>
+              <span style={{ width: '80px' }} />
             </div>
-            {results.map(r => (
+            {results.map((r, i) => (
               <div
                 key={r.id}
                 onClick={() => { setSelected(r); setPrice(r.price) }}
-                className={`grid grid-cols-[1fr_80px_90px] px-4 py-3 border-b border-slate-50 cursor-pointer transition-colors
-                  ${selected?.id === r.id ? 'bg-blue-50' : 'hover:bg-slate-50'}`}
+                className="flex items-center cursor-pointer transition-colors"
+                style={{
+                  minHeight: '62px',
+                  padding: '10px 16px',
+                  borderBottom: '1px solid #e2e8f0',
+                  background: selected?.id === r.id ? '#dbeafe' : i % 2 === 0 ? '#ffffff' : '#f8fafc',
+                }}
               >
-                <div>
-                  <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-slate-800 flex items-center" style={{ fontSize: '15px', gap: '8px' }}>
                     {r.name} {typePill(r.type)}
                   </div>
-                  {r.stock != null && <div className="text-xs text-slate-400">מלאי: {r.stock}</div>}
+                  {r.stock != null && (
+                    <div className="text-slate-400 font-medium" style={{ fontSize: '13px', marginTop: '2px' }}>מלאי: {r.stock}</div>
+                  )}
                 </div>
-                <div className="text-sm font-bold text-blue-600 self-center">{r.price.toLocaleString()}₪</div>
+                <div className="font-black text-blue-600 flex-shrink-0" style={{ fontSize: '16px', width: '80px' }}>
+                  {r.price.toLocaleString()}₪
+                </div>
                 <button
                   onClick={e => { e.stopPropagation(); setSelected(r); setPrice(r.price); setModal(true) }}
-                  className="text-xs text-slate-400 underline self-center text-center hover:text-amber-600"
+                  className="flex-shrink-0 border-2 border-amber-300 text-amber-700 rounded-lg font-semibold hover:bg-amber-50 transition-colors"
+                  style={{ width: '72px', padding: '6px 4px', fontSize: '12px' }}
                 >שנה מחיר</button>
               </div>
             ))}

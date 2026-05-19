@@ -381,49 +381,71 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
               <button onClick={() => setPriceModal(false)} className="text-slate-400 hover:text-slate-700 font-bold text-xl">✕</button>
             </div>
 
-            {/* Table header */}
-            <div className="flex items-center border-b bg-slate-50 flex-shrink-0" style={{ padding: '8px 24px', gap: '12px' }}>
-              <span className="flex-1 text-xs font-bold text-slate-400 uppercase tracking-wide">שם השירות</span>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wide" style={{ width: '100px', textAlign: 'center' }}>מחיר ₪</span>
-              <span style={{ width: '28px' }} />
-            </div>
-
             {/* Service rows */}
             <div className="overflow-y-auto flex-1">
               {services.length === 0 && (
                 <div className="text-center text-slate-400 py-8">אין שירותים — הוסף למטה</div>
               )}
-              {services.map(svc => (
-                <div key={svc.id} className="flex items-center border-b border-slate-50" style={{ padding: '8px 24px', gap: '12px' }}>
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      value={editNames[svc.id] ?? svc.name}
-                      onChange={e => setEditNames(en => ({ ...en, [svc.id]: e.target.value }))}
-                      onBlur={() => saveField(svc.id)}
-                      className="w-full border-2 border-transparent rounded-lg font-medium text-slate-800 outline-none hover:border-slate-200 focus:border-blue-400 transition-colors"
-                      style={{ padding: '6px 10px', fontSize: '14px', background: 'transparent' }}
-                    />
+
+              {/* Quick-action section */}
+              {(() => {
+                const quickNames = new Set(['תיקון תקר', 'כיוון פרונט'])
+                const quick = services.filter(s => quickNames.has(s.name))
+                const menu  = services.filter(s => !quickNames.has(s.name))
+
+                const SvcRow = ({ svc }: { svc: typeof services[0] }) => (
+                  <div key={svc.id} className="flex items-center border-b border-slate-50" style={{ padding: '8px 24px', gap: '12px' }}>
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={editNames[svc.id] ?? svc.name}
+                        onChange={e => setEditNames(en => ({ ...en, [svc.id]: e.target.value }))}
+                        onBlur={() => saveField(svc.id)}
+                        className="w-full border-2 border-transparent rounded-lg font-medium text-slate-800 outline-none hover:border-slate-200 focus:border-blue-400 transition-colors"
+                        style={{ padding: '6px 10px', fontSize: '14px', background: 'transparent' }}
+                      />
+                    </div>
+                    <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition-colors" style={{ width: '100px', height: '38px' }}>
+                      <input
+                        type="number"
+                        value={editPrices[svc.id] ?? ''}
+                        onChange={e => setEditPrices(ep => ({ ...ep, [svc.id]: e.target.value }))}
+                        onBlur={() => saveField(svc.id)}
+                        className="flex-1 outline-none font-bold text-blue-600 text-center"
+                        style={{ padding: '0 6px', fontSize: '15px', height: '100%', minWidth: 0 }}
+                      />
+                      <span className="text-slate-400 font-semibold" style={{ padding: '0 6px', fontSize: '13px' }}>₪</span>
+                    </div>
+                    <div style={{ width: '28px', textAlign: 'center' }}>
+                      {saving === svc.id
+                        ? <span className="text-green-500 font-bold text-sm">✓</span>
+                        : <button onClick={() => deleteService(svc.id)} className="text-slate-300 hover:text-red-500 transition-colors" style={{ fontSize: '16px' }}>🗑</button>
+                      }
+                    </div>
                   </div>
-                  <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition-colors" style={{ width: '100px', height: '38px' }}>
-                    <input
-                      type="number"
-                      value={editPrices[svc.id] ?? ''}
-                      onChange={e => setEditPrices(ep => ({ ...ep, [svc.id]: e.target.value }))}
-                      onBlur={() => saveField(svc.id)}
-                      className="flex-1 outline-none font-bold text-blue-600 text-center"
-                      style={{ padding: '0 6px', fontSize: '15px', height: '100%', minWidth: 0 }}
-                    />
-                    <span className="text-slate-400 font-semibold" style={{ padding: '0 6px', fontSize: '13px' }}>₪</span>
-                  </div>
-                  <div style={{ width: '28px', textAlign: 'center' }}>
-                    {saving === svc.id
-                      ? <span className="text-green-500 font-bold text-sm">✓</span>
-                      : <button onClick={() => deleteService(svc.id)} className="text-slate-300 hover:text-red-500 transition-colors" style={{ fontSize: '16px' }}>🗑</button>
-                    }
-                  </div>
-                </div>
-              ))}
+                )
+
+                return (
+                  <>
+                    {quick.length > 0 && (
+                      <>
+                        <div className="bg-slate-50 border-b" style={{ padding: '6px 24px' }}>
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">🔧 כפתורים מהירים</span>
+                        </div>
+                        {quick.map(svc => <SvcRow key={svc.id} svc={svc} />)}
+                      </>
+                    )}
+                    {menu.length > 0 && (
+                      <>
+                        <div className="bg-slate-50 border-b" style={{ padding: '6px 24px', marginTop: quick.length > 0 ? '4px' : 0 }}>
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">⚙️ תפריט שירותים</span>
+                        </div>
+                        {menu.map(svc => <SvcRow key={svc.id} svc={svc} />)}
+                      </>
+                    )}
+                  </>
+                )
+              })()}
             </div>
 
             {/* Add new */}
