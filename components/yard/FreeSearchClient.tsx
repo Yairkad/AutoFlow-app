@@ -210,13 +210,21 @@ export default function FreeSearchClient({ session, filterType }: Props) {
 
       {/* Duplicate confirm */}
       {confirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm text-center shadow-xl">
-            <div className="text-lg font-bold mb-1">{confirm.item.name}</div>
-            <div className="text-slate-500 mb-5">כבר קיים בסל — להוסיף עוד?</div>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirm(null)} className="flex-1 py-3 border-2 border-slate-200 rounded-xl font-semibold text-slate-500">ביטול</button>
-              <button onClick={confirm.onYes} className="flex-1 py-3 bg-green-700 text-white rounded-xl font-bold">כן, הוסף</button>
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.55)' }}>
+          <div className="bg-white rounded-2xl text-center shadow-xl" style={{ width: '92%', maxWidth: '400px', padding: '36px 28px' }}>
+            <div className="font-bold text-slate-900" style={{ fontSize: '20px', marginBottom: '10px' }}>{confirm.item.name}</div>
+            <div className="text-slate-500" style={{ fontSize: '16px', marginBottom: '32px' }}>כבר קיים בסל — להוסיף עוד?</div>
+            <div className="flex" style={{ gap: '14px', padding: '0 12px' }}>
+              <button onClick={() => setConfirm(null)}
+                className="flex-1 border-2 border-slate-200 rounded-xl font-semibold text-slate-500 active:bg-slate-50"
+                style={{ padding: '18px 12px', fontSize: '16px', minHeight: '60px' }}>
+                ביטול
+              </button>
+              <button onClick={confirm.onYes}
+                className="flex-1 bg-green-700 text-white rounded-xl font-bold active:bg-green-800"
+                style={{ padding: '18px 12px', fontSize: '16px', minHeight: '60px' }}>
+                כן, הוסף
+              </button>
             </div>
           </div>
         </div>

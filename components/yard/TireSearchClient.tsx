@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import type { YardSession, SearchResult } from '@/lib/yard/types'
+import type { YardSession, SearchResult, TirePosition } from '@/lib/yard/types'
 import { formatPlate } from '@/lib/yard/types'
+import TirePositionPicker from '@/components/yard/TirePositionPicker'
 
 // Re-use the same SearchResult type from the API
 type TireResult = SearchResult & { size: string; brand: string }
@@ -22,6 +23,7 @@ export default function TireSearchClient({ session }: Props) {
   const [price,         setPrice]         = useState<number | null>(null)
   const [saving,        setSaving]        = useState(false)
   const [detectedSize,  setDetectedSize]  = useState<string | null>(null)
+  const [showPicker,    setShowPicker]    = useState(false)
 
   const CACHE_TTL = 5 * 60 * 1000
 
@@ -74,15 +76,22 @@ export default function TireSearchClient({ session }: Props) {
 
   function addToCart() {
     if (!selected || saving) return
+    setShowPicker(true)
+  }
+
+  function submitWithPosition(positions: TirePosition[]) {
+    if (!selected) return
+    setShowPicker(false)
     setSaving(true)
     const finalPrice = price ?? selected.price
-    // Store pending item so WorkCard shows it instantly on mount
+    const tirePosition = positions[0] ?? null
     try {
       sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify({
         id: `pending-${Date.now()}`, session_id: session.id, tenant_id: '',
         item_type: 'tire', ref_id: selected.id, name: selected.name, sku: selected.sku,
         quantity: qty, unit_price: finalPrice, original_price: selected.price,
-        price_modified: finalPrice !== selected.price, created_at: new Date().toISOString(),
+        price_modified: finalPrice !== selected.price, tire_position: tirePosition,
+        created_at: new Date().toISOString(),
       }))
     } catch {}
     router.push(`/yard/${session.id}`)
@@ -98,12 +107,19 @@ export default function TireSearchClient({ session }: Props) {
         unit_price:     finalPrice,
         original_price: selected.price,
         price_modified: finalPrice !== selected.price,
+        tire_position:  tirePosition,
       }),
     })
   }
 
   return (
     <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
+      {showPicker && (
+        <TirePositionPicker
+          onConfirm={submitWithPosition}
+          onSkip={() => submitWithPosition([])}
+        />
+      )}
       {/* Plate header card */}
       <div className="bg-white border-[3px] border-red-500 rounded-xl flex-shrink-0" style={{ margin: '14px 14px 0', padding: '14px 18px' }}>
         {(session.make || session.model) && (

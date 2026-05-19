@@ -1,3 +1,5 @@
+export type TirePosition = 'FL' | 'FR' | 'RL' | 'RR'
+
 export interface YardSessionItem {
   id:             string
   session_id:     string
@@ -10,6 +12,7 @@ export interface YardSessionItem {
   unit_price:     number
   original_price: number
   price_modified: boolean
+  tire_position:  TirePosition | null
   created_at:     string
 }
 

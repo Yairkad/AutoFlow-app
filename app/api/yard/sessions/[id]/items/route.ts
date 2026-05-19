@@ -10,7 +10,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id: sessionId } = await params
 
   const body = await req.json()
-  const { item_type, ref_id, name, sku, quantity, unit_price, original_price, price_modified } = body
+  const { item_type, ref_id, name, sku, quantity, unit_price, original_price, price_modified, tire_position } = body
 
   if (!item_type || !name || unit_price === undefined) {
     return NextResponse.json({ error: 'item_type, name, unit_price required' }, { status: 400 })
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       unit_price,
       original_price: original_price ?? unit_price,
       price_modified: price_modified ?? false,
+      tire_position:  tire_position ?? null,
     })
     .select()
     .single()

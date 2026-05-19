@@ -1,0 +1,102 @@
+'use client'
+
+import { useState } from 'react'
+import type { TirePosition } from '@/lib/yard/types'
+
+interface Props {
+  onConfirm: (positions: TirePosition[]) => void
+  onSkip: () => void
+}
+
+const NAMES: Record<TirePosition, string> = {
+  FL: 'קדמי שמאל',
+  FR: 'קדמי ימין',
+  RL: 'אחורי שמאל',
+  RR: 'אחורי ימין',
+}
+
+const TIRE_RECTS: { id: TirePosition; x: number; y: number; w: number; h: number }[] = [
+  { id: 'FL', x: 0,     y: 37.79,  w: 21.95, h: 47.33 },
+  { id: 'FR', x: 123.7, y: 37.79,  w: 21.95, h: 47.33 },
+  { id: 'RL', x: 0,     y: 181.17, w: 21.95, h: 47.33 },
+  { id: 'RR', x: 123.7, y: 181.17, w: 21.95, h: 47.33 },
+]
+
+const CAR_PATH = 'M134.67,105.44c.06-1.55-7.92-4.89-7.92-4.89s-.46-16.44-.46-18.32A115.24,115.24,0,0,1,127,69.49c.67-5.76-.44-35.94-.62-38.27s-5.19-13.41-6-15.3-9-7.68-15.56-12.41-9-2.64-10.07-1.95h0C94.34,1.51,82.06,0,74,0S53.23,1.56,53.23,1.56c-1-.68-3.56-2.78-10.08,1.95S28.39,14,27.59,15.92s-5.82,13-6,15.3S20.3,63.73,21,69.49a116,116,0,0,1,.74,12.74c0,1.88-.47,18.32-.47,18.32s-8,3.34-7.91,4.89-.31,3.19.84,3,5.64-1.23,6.17-1.17.57,1,.57,1L21.23,201s-.8,29.23.81,35.94S26.86,262,30,265.32s5.19,12.61,44,12.61,40.94-9.24,44-12.61,6.29-21.72,7.91-28.43.8-35.94.8-35.94l.34-92.73s0-.91.57-1,5,1,6.17,1.17S134.6,107,134.67,105.44ZM53,2.44l0,0c.92-.33,18-.83,20.92-.83s20,.5,20.91.83h0c.27,1.34.66,3.73.35,3.89s-20.21,0-21.3,0-20.9.2-21.32,0S52.77,3.79,53,2.44ZM74,78.7c7,0,37.91,4.39,39.25,9.22s1.92,1.15,0,9.2-4.21,20.39-4.47,21.2-.67,1.6-1.75,1.54S97.33,116,74,116s-32,3.8-33,3.87-1.48-.74-1.74-1.54-2.56-13.14-4.48-21.2-1.34-4.37,0-9.2S66.93,78.7,74,78.7ZM26.8,26.24c-.67.26-1.27-2.49,0-4.77S30.09,15.37,32,14,43.65,6.4,43.65,6.4a2.92,2.92,0,0,1,2.6,0A1.36,1.36,0,0,1,47,8.12c-.33.6-11.47,5.64-14.89,10.2S27.47,26,26.8,26.24Zm.47,119.52V112.69c0-5.44.13-7.19.61-7.58s1.09.47,1.48.91,2.25.18,2.69.54,3.07,10.35,4.47,16.44,2.48,27,2.56,29.12-.94,2-1.35,2-9.19-6.3-9.85-7A1.89,1.89,0,0,1,27.27,145.76Zm1.61,12.49a21.88,21.88,0,0,1,8,2.27c.54.27,1.44,1,1.44,1.71s.27,26-.73,30.13-6.7,12-7.41,11.72-1.25.53-1.25-4.75-.54-34.68-.54-39.34C28.39,159.35,28.17,158.25,28.88,158.25Zm5.81,54.23c-2.55,7.55-3.93,9.53-4,8.76s-.31-11.71,0-12.75,4.87-7.15,4.87-7.15.47-1,1.17-.71C37.22,200.85,37.24,204.92,34.69,212.48Zm19,59.55c-.36,0-6.48.31-9.08-.62s-9.34-3.85-11.26-6-3.49-3.44-4.57-6.35.45-4.07.45-4.07c.9,1.68,4.2,7.51,7.69,9.48s13.41,4.11,15.82,5.72S54,272.08,53.65,272Zm-12.21-33.8c-.27-.71,1.25-7,2.21-13s1.37-11,2-12.61,3.3-1.17,4.91-.8,17.7,2.5,23.44,2.5,21.81-2.15,23.42-2.5,4.29-.87,4.91.8,1,6.61,2,12.61,2.48,12.25,2.21,13-8.49,6.52-32.54,6.52S41.71,239,41.44,238.23Zm77.8,20.88c-1.07,2.91-2.64,4.26-4.57,6.35s-8.66,5-11.26,6-8.71.58-9.08.62-1.47-.18,1-1.79,12.34-3.75,15.82-5.72,6.79-7.8,7.7-9.48C118.8,255,120.31,256.21,119.24,259.11Zm-7.95-58.48c.68-.29,1.15.71,1.15.71s4.56,6.13,4.87,7.15.1,12,0,12.75-1.46-1.21-4-8.76S110.76,200.85,111.29,200.63ZM119.6,160c0,4.66-.53,34.06-.53,39.34s-.54,4.48-1.27,4.75-6.43-7.61-7.42-11.72-.71-29.42-.71-30.13.9-1.44,1.43-1.71a21.87,21.87,0,0,1,8-2.27C119.81,158.25,119.6,159.35,119.6,160Zm.51-12.84c-.67.67-9.45,7-9.86,7s-1.4.08-1.34-2,1.14-23,2.55-29.12,4-16.09,4.47-16.44,2.28-.09,2.69-.54.87-1.42,1.49-.91c.47.39.61,2.14.61,7.58v33.07A1.84,1.84,0,0,1,120.11,147.15Zm1.08-120.91c-.68-.27-1.88-3.36-5.3-7.92S101.34,8.72,101,8.12a1.35,1.35,0,0,1,.73-1.72,2.91,2.91,0,0,1,2.6,0S114.14,12.69,116,14s3.89,5.17,5.17,7.45S121.85,26.5,121.19,26.24Z'
+
+export default function TirePositionPicker({ onConfirm, onSkip }: Props) {
+  const [selected, setSelected] = useState<Set<TirePosition>>(new Set())
+
+  function toggle(pos: TirePosition) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(pos) ? next.delete(pos) : next.add(pos)
+      return next
+    })
+  }
+
+  const selectedList = [...selected]
+  const label = selectedList.length > 0
+    ? selectedList.map(p => NAMES[p]).join(' · ')
+    : 'לחץ על הגלגלים שהוחלפו'
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5"
+      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+    >
+      <div className="bg-white rounded-2xl flex flex-col items-center gap-5 shadow-2xl" style={{ padding: '28px 32px' }}>
+        <p className="font-bold text-slate-800" style={{ fontSize: '18px' }}>איזה גלגלים הוחלפו?</p>
+
+        <svg
+          viewBox="0 0 145.65 277.93"
+          style={{ width: '160px', height: 'auto' }}
+        >
+          <path fill="#282626" d={CAR_PATH} />
+
+          {TIRE_RECTS.map(({ id, x, y, w, h }) => {
+            const isSelected = selected.has(id)
+            return (
+              <rect
+                key={id}
+                x={x} y={y} width={w} height={h} rx={3.56}
+                fill={isSelected ? '#16a34a' : '#b0b0b0'}
+                style={{
+                  cursor: 'pointer',
+                  transition: 'fill 0.15s ease',
+                  filter: isSelected ? 'drop-shadow(0 0 4px rgba(34,197,94,0.8))' : 'none',
+                }}
+                onClick={() => toggle(id)}
+              />
+            )
+          })}
+        </svg>
+
+        <p
+          className="text-center font-medium"
+          style={{ fontSize: '14px', minHeight: '20px', color: selectedList.length ? '#16a34a' : '#9ca3af' }}
+        >
+          {label}
+        </p>
+
+        <div className="flex gap-3 w-full">
+          <button
+            onClick={onSkip}
+            className="flex-1 rounded-xl border-2 border-slate-200 text-slate-500 font-semibold hover:bg-slate-50 transition-colors"
+            style={{ padding: '12px' }}
+          >
+            דלג
+          </button>
+          <button
+            onClick={() => onConfirm(selectedList)}
+            disabled={selectedList.length === 0}
+            className="flex-1 rounded-xl text-white font-bold transition-colors disabled:opacity-30"
+            style={{ padding: '12px', background: '#16a34a' }}
+          >
+            אישור
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -16,6 +16,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const [session, setSession]         = useState<YardSession>(initialSession)
   const [confirmItem, setConfirmItem]  = useState<{ name: string; onConfirm: () => void } | null>(null)
   const [confirmEmpty, setConfirmEmpty] = useState(false)
+  const [confirmBusy,  setConfirmBusy]  = useState(false)
   const [editItem,    setEditItem]     = useState<YardSessionItem | null>(null)
   const [priceDigits, setPriceDigits]  = useState('')
   const [error,       setError]        = useState<string | null>(null)
@@ -100,6 +101,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
 
   function addQuickItem(name: string, price: number, serviceId?: string) {
     if (items.some(i => i.name === name)) {
+      setConfirmBusy(false)
       setConfirmItem({ name, onConfirm: () => doAddQuick(name, price, serviceId) })
       return
     }
@@ -182,6 +184,25 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   function handleFinish() {
     if (items.length === 0) { setConfirmEmpty(true); return }
     sendToOffice()
+  }
+
+  function incrementQty(item: YardSessionItem) {
+    const newQty = item.quantity + 1
+    setSession(s => ({
+      ...s,
+      yard_session_items: s.yard_session_items.map(i => i.id === item.id ? { ...i, quantity: newQty } : i),
+    }))
+    fetch(`/api/yard/sessions/${session.id}/items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity: newQty }),
+    }).then(r => { if (!r.ok) throw new Error() }).catch(() => {
+      setSession(s => ({
+        ...s,
+        yard_session_items: s.yard_session_items.map(i => i.id === item.id ? { ...i, quantity: item.quantity } : i),
+      }))
+      showError('שגיאה בעדכון כמות — נסה שוב')
+    })
   }
 
   // Price edit
@@ -340,6 +361,11 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
                     {(item.unit_price * item.quantity).toLocaleString()}₪
                   </button>
                   <button
+                    onClick={() => incrementQty(item)}
+                    className="font-black text-green-600 hover:text-green-800 leading-none flex-shrink-0 active:scale-90 transition-all"
+                    style={{ fontSize: '22px', width: '28px', textAlign: 'center' }}
+                  >+</button>
+                  <button
                     onClick={() => deleteItem(item)}
                     className="text-slate-300 hover:text-red-500 leading-none flex-shrink-0 transition-colors"
                     style={{ fontSize: '18px' }}
@@ -368,19 +394,21 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       {/* Empty cart confirm */}
       {confirmEmpty && (
         <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.55)' }}>
-          <div className="bg-white rounded-2xl text-center shadow-xl" style={{ width: '90%', maxWidth: '360px', padding: '32px 28px' }}>
-            <div className="font-bold text-slate-900" style={{ fontSize: '18px', marginBottom: '10px' }}>סגירת כרטיס</div>
-            <div className="text-slate-500" style={{ fontSize: '15px', marginBottom: '28px' }}>הסל ריק — האם אין חיוב לרכב זה?</div>
-            <div className="flex" style={{ gap: '12px' }}>
+          <div className="bg-white rounded-2xl text-center shadow-xl" style={{ width: '92%', maxWidth: '400px', padding: '36px 28px' }}>
+            <div className="font-bold text-slate-900" style={{ fontSize: '20px', marginBottom: '10px' }}>סגירת כרטיס</div>
+            <div className="text-slate-500" style={{ fontSize: '16px', marginBottom: '32px' }}>הסל ריק — האם אין חיוב לרכב זה?</div>
+            <div className="flex" style={{ gap: '14px', padding: '0 12px' }}>
               <button onClick={() => setConfirmEmpty(false)}
-                className="flex-1 border-2 border-slate-200 rounded-xl font-semibold text-slate-500"
-                style={{ padding: '14px', fontSize: '15px' }}>
+                disabled={confirmBusy}
+                className="flex-1 border-2 border-slate-200 rounded-xl font-semibold text-slate-500 active:scale-95 active:bg-slate-50 transition-all disabled:opacity-50"
+                style={{ padding: '18px 12px', fontSize: '16px', minHeight: '60px' }}>
                 ביטול
               </button>
-              <button onClick={closeEmpty}
-                className="flex-1 bg-slate-700 text-white rounded-xl font-bold"
-                style={{ padding: '14px', fontSize: '15px' }}>
-                כן, סגור כרטיס
+              <button onClick={() => { setConfirmBusy(true); closeEmpty() }}
+                disabled={confirmBusy}
+                className="flex-1 bg-slate-700 text-white rounded-xl font-bold active:scale-95 active:bg-slate-800 transition-all disabled:opacity-60"
+                style={{ padding: '18px 12px', fontSize: '16px', minHeight: '60px' }}>
+                {confirmBusy ? '⏳' : 'כן, סגור כרטיס'}
               </button>
             </div>
           </div>
@@ -438,18 +466,18 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       {/* Duplicate confirm */}
       {confirmItem && (
         <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.55)' }}>
-          <div className="bg-white rounded-2xl text-center shadow-xl" style={{ width: '90%', maxWidth: '360px', padding: '32px 28px' }}>
-            <div className="font-bold text-slate-900" style={{ fontSize: '18px', marginBottom: '10px' }}>{confirmItem.name}</div>
-            <div className="text-slate-500" style={{ fontSize: '15px', marginBottom: '28px' }}>כבר קיים בסל — להוסיף עוד?</div>
-            <div className="flex" style={{ gap: '12px' }}>
+          <div className="bg-white rounded-2xl text-center shadow-xl" style={{ width: '92%', maxWidth: '400px', padding: '36px 28px' }}>
+            <div className="font-bold text-slate-900" style={{ fontSize: '20px', marginBottom: '10px' }}>{confirmItem.name}</div>
+            <div className="text-slate-500" style={{ fontSize: '16px', marginBottom: '32px' }}>כבר קיים בסל — להוסיף עוד?</div>
+            <div className="flex" style={{ gap: '14px', padding: '0 12px' }}>
               <button onClick={() => setConfirmItem(null)}
-                className="flex-1 border-2 border-slate-200 rounded-xl font-semibold text-slate-500"
-                style={{ padding: '14px', fontSize: '15px' }}>
+                className="flex-1 border-2 border-slate-200 rounded-xl font-semibold text-slate-500 active:bg-slate-50"
+                style={{ padding: '18px 12px', fontSize: '16px', minHeight: '60px' }}>
                 ביטול
               </button>
               <button onClick={confirmItem.onConfirm}
-                className="flex-1 bg-green-700 text-white rounded-xl font-bold"
-                style={{ padding: '14px', fontSize: '15px' }}>
+                className="flex-1 bg-green-700 text-white rounded-xl font-bold active:bg-green-800"
+                style={{ padding: '18px 12px', fontSize: '16px', minHeight: '60px' }}>
                 כן, הוסף
               </button>
             </div>
