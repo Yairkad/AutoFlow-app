@@ -18,10 +18,14 @@ export default async function ServicePage({ params }: { params: Promise<{ id: st
 
   if (!session) notFound()
 
+  // These services have dedicated quick-action buttons on the work card — exclude from grid
+  const QUICK_ACTIONS = new Set(['תיקון תקר', 'כיוון פרונט'])
+  const gridServices = (services ?? []).filter(s => !QUICK_ACTIONS.has(s.name))
+
   return (
     <ServiceGridClient
       session={session as YardSession}
-      services={(services ?? []) as YardService[]}
+      services={gridServices as YardService[]}
     />
   )
 }
