@@ -22,8 +22,9 @@ export default function FreeSearchClient({ session, filterType }: Props) {
   const [selected, setSelected] = useState<SearchResult | null>(null)
   const [qty,      setQty]      = useState(1)
   const [price,    setPrice]    = useState<number | null>(null)
-  const [confirm,  setConfirm]  = useState<{ item: SearchResult; onYes: () => void } | null>(null)
-  const [saving,   setSaving]   = useState(false)
+  const [confirm,      setConfirm]      = useState<{ item: SearchResult; onYes: () => void } | null>(null)
+  const [saving,       setSaving]       = useState(false)
+  const [confirmBusy,  setConfirmBusy]  = useState(false)
 
   const existingNames = new Set((session.yard_session_items ?? []).map(i => i.name))
   const title = filterType === 'all' ? 'כל המלאי' : 'אביזרים לרכב'
@@ -63,6 +64,7 @@ export default function FreeSearchClient({ session, filterType }: Props) {
     if (!selected) return
     const isTire = selected.type === 'tire'
     if (!isTire && existingNames.has(selected.name)) {
+      setConfirmBusy(false)
       setConfirm({ item: selected, onYes: () => doAdd() })
       return
     }
@@ -216,14 +218,16 @@ export default function FreeSearchClient({ session, filterType }: Props) {
             <div className="text-slate-500" style={{ fontSize: '16px', marginBottom: '32px' }}>כבר קיים בסל — להוסיף עוד?</div>
             <div className="flex" style={{ gap: '14px', padding: '0 12px' }}>
               <button onClick={() => setConfirm(null)}
-                className="flex-1 border-2 border-slate-200 rounded-xl font-semibold text-slate-500 active:bg-slate-50"
+                disabled={confirmBusy}
+                className="flex-1 border-2 border-slate-200 rounded-xl font-semibold text-slate-500 active:scale-95 active:bg-slate-50 transition-all disabled:opacity-50"
                 style={{ padding: '18px 12px', fontSize: '16px', minHeight: '60px' }}>
                 ביטול
               </button>
-              <button onClick={confirm.onYes}
-                className="flex-1 bg-green-700 text-white rounded-xl font-bold active:bg-green-800"
+              <button onClick={() => { setConfirmBusy(true); confirm.onYes() }}
+                disabled={confirmBusy}
+                className="flex-1 bg-green-700 text-white rounded-xl font-bold active:scale-95 active:bg-green-800 transition-all disabled:opacity-60"
                 style={{ padding: '18px 12px', fontSize: '16px', minHeight: '60px' }}>
-                כן, הוסף
+                {confirmBusy ? '⏳' : 'כן, הוסף'}
               </button>
             </div>
           </div>

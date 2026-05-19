@@ -9,12 +9,14 @@ interface Props { session: YardSession; services: YardService[] }
 
 export default function ServiceGridClient({ session, services }: Props) {
   const router = useRouter()
-  const [confirm, setConfirm]     = useState<{ svc: YardService; onYes: () => void } | null>(null)
-  const [adding,  setAdding]      = useState<string | null>(null)
+  const [confirm,      setConfirm]      = useState<{ svc: YardService; onYes: () => void } | null>(null)
+  const [adding,       setAdding]       = useState<string | null>(null)
+  const [confirmBusy,  setConfirmBusy]  = useState(false)
   const existingNames = new Set((session.yard_session_items ?? []).map(i => i.name))
 
   async function addService(svc: YardService) {
     if (existingNames.has(svc.name)) {
+      setConfirmBusy(false)
       setConfirm({ svc, onYes: () => doAdd(svc) })
       return
     }
@@ -101,14 +103,16 @@ export default function ServiceGridClient({ session, services }: Props) {
             <div className="text-slate-500" style={{ fontSize: '16px', marginBottom: '32px' }}>כבר קיים בסל — להוסיף עוד?</div>
             <div className="flex" style={{ gap: '14px', padding: '0 12px' }}>
               <button onClick={() => setConfirm(null)}
-                className="flex-1 border-2 border-slate-200 rounded-xl font-semibold text-slate-500 active:bg-slate-50"
+                disabled={confirmBusy}
+                className="flex-1 border-2 border-slate-200 rounded-xl font-semibold text-slate-500 active:scale-95 active:bg-slate-50 transition-all disabled:opacity-50"
                 style={{ padding: '18px 12px', fontSize: '16px', minHeight: '60px' }}>
                 ביטול
               </button>
-              <button onClick={confirm.onYes}
-                className="flex-1 bg-green-700 text-white rounded-xl font-bold active:bg-green-800"
+              <button onClick={() => { setConfirmBusy(true); confirm.onYes() }}
+                disabled={confirmBusy}
+                className="flex-1 bg-green-700 text-white rounded-xl font-bold active:scale-95 active:bg-green-800 transition-all disabled:opacity-60"
                 style={{ padding: '18px 12px', fontSize: '16px', minHeight: '60px' }}>
-                כן, הוסף
+                {confirmBusy ? '⏳' : 'כן, הוסף'}
               </button>
             </div>
           </div>

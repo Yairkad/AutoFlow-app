@@ -117,6 +117,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       item_type: 'service', ref_id: serviceId ?? null,
       name, sku: null, quantity: 1,
       unit_price: price, original_price: price, price_modified: false,
+      tire_position: null,
       created_at: new Date().toISOString(),
     }
     setSession(s => ({ ...s, yard_session_items: [...s.yard_session_items, tempItem] }))
@@ -471,14 +472,16 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
             <div className="text-slate-500" style={{ fontSize: '16px', marginBottom: '32px' }}>כבר קיים בסל — להוסיף עוד?</div>
             <div className="flex" style={{ gap: '14px', padding: '0 12px' }}>
               <button onClick={() => setConfirmItem(null)}
-                className="flex-1 border-2 border-slate-200 rounded-xl font-semibold text-slate-500 active:bg-slate-50"
+                disabled={confirmBusy}
+                className="flex-1 border-2 border-slate-200 rounded-xl font-semibold text-slate-500 active:scale-95 active:bg-slate-50 transition-all disabled:opacity-50"
                 style={{ padding: '18px 12px', fontSize: '16px', minHeight: '60px' }}>
                 ביטול
               </button>
-              <button onClick={confirmItem.onConfirm}
-                className="flex-1 bg-green-700 text-white rounded-xl font-bold active:bg-green-800"
+              <button onClick={() => { setConfirmBusy(true); confirmItem.onConfirm() }}
+                disabled={confirmBusy}
+                className="flex-1 bg-green-700 text-white rounded-xl font-bold active:scale-95 active:bg-green-800 transition-all disabled:opacity-60"
                 style={{ padding: '18px 12px', fontSize: '16px', minHeight: '60px' }}>
-                כן, הוסף
+                {confirmBusy ? '⏳' : 'כן, הוסף'}
               </button>
             </div>
           </div>
