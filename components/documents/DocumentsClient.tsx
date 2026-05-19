@@ -1151,7 +1151,7 @@ export default function DocumentsClient() {
           {/* Icon + Name */}
           <div style={{ display: 'flex', gap: 12 }}>
             <div>
-              <label style={labelStyle}>אייקון</label>
+              <label className="form-label">אייקון</label>
               <input
                 value={meta.icon}
                 onChange={e => setMeta(p => ({ ...p, icon: e.target.value }))}
@@ -1160,12 +1160,12 @@ export default function DocumentsClient() {
               />
             </div>
             <div style={{ flex: 1 }}>
-              <label style={labelStyle}>שם התבנית *</label>
+              <label className="form-label">שם התבנית *</label>
               <input
                 value={meta.name}
                 onChange={e => setMeta(p => ({ ...p, name: e.target.value }))}
                 placeholder="למשל: הזמנת צמיגים"
-                style={inputStyle}
+                className="form-input"
               />
             </div>
           </div>
@@ -1173,7 +1173,7 @@ export default function DocumentsClient() {
           {/* Columns */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <label style={labelStyle}>עמודות הטבלה</label>
+              <label className="form-label">עמודות הטבלה</label>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>רוחב: צרה=מס׳/כמות · רחבה=שם/הערות</span>
             </div>
             {columns.map((col, i) => (
@@ -1220,12 +1220,12 @@ export default function DocumentsClient() {
           {/* Header / Footer */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label style={labelStyle}>שורת כותרת נוספת (אופציונלי)</label>
+              <label className="form-label">שורת כותרת נוספת (אופציונלי)</label>
               <input
                 value={meta.headerExtra}
                 onChange={e => setMeta(p => ({ ...p, headerExtra: e.target.value }))}
                 placeholder='לדוגמה: שם ספק:'
-                style={inputStyle}
+                className="form-input"
               />
               {/* Align + line options */}
               <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1273,12 +1273,12 @@ export default function DocumentsClient() {
               </div>
             </div>
             <div>
-              <label style={labelStyle}>שורת תחתית (אופציונלי)</label>
+              <label className="form-label">שורת תחתית (אופציונלי)</label>
               <input
                 value={meta.footerText}
                 onChange={e => setMeta(p => ({ ...p, footerText: e.target.value }))}
                 placeholder='חתימה: _______'
-                style={inputStyle}
+                className="form-input"
               />
             </div>
           </div>
@@ -1297,12 +1297,3 @@ export default function DocumentsClient() {
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6,
-}
-
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 12px',
-  border: '1.5px solid var(--border)', borderRadius: 8,
-  fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box',
-}

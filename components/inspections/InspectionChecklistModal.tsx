@@ -504,11 +504,6 @@ export default function InspectionChecklistModal({ inspection, business, inspect
 
   // ── Styles ─────────────────────────────────────────────────────────────────────
 
-  const inp: React.CSSProperties = {
-    border: '1.5px solid var(--border)', borderRadius: 8, padding: '8px 12px',
-    fontSize: 13, background: 'var(--bg)', width: '100%',
-    fontFamily: 'inherit', color: 'var(--text)', outline: 'none',
-  }
 
   // ── Render ─────────────────────────────────────────────────────────────────────
 
@@ -629,7 +624,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
                   <div key={fi} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <div style={{ flex: 1, position: 'relative' }}>
                       <input
-                        style={inp}
+                        className="form-input"
                         list={`faults-${step}`}
                         placeholder="תאר ליקוי או השאר ריק אם תקין..."
                         value={cur.faults[fi] ?? ''}

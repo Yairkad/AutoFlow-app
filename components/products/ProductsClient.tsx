@@ -429,11 +429,6 @@ export default function ProductsClient() {
 
   // ── Styles ──────────────────────────────────────────────────────────────────
 
-  const inp: React.CSSProperties = {
-    width: '100%', padding: '8px 10px', border: '1.5px solid var(--border)',
-    borderRadius: '9px', fontSize: '13px', background: '#f8fafc',
-    color: 'var(--text)', boxSizing: 'border-box', fontFamily: 'inherit',
-  }
   const cellInp: React.CSSProperties = {
     width: '100%', padding: '4px 6px', border: '1px solid var(--accent)',
     borderRadius: '6px', fontSize: '13px', background: '#eff6ff', color: 'var(--text)',
@@ -485,14 +480,14 @@ export default function ProductsClient() {
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
             <div style={{ position: 'relative', maxWidth: '260px', display: 'flex', alignItems: 'center' }}>
               <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 10, pointerEvents: 'none', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input style={{ ...inp, paddingRight: 30 }} placeholder="חיפוש..."
+              <input className="form-input" style={{ paddingRight: 30 }} placeholder="חיפוש..."
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <select style={{ ...inp, width: 'auto' }} value={filterCat} onChange={e => setFilterCat(e.target.value)}>
+            <select className="form-input" style={{ width: 'auto' }} value={filterCat} onChange={e => setFilterCat(e.target.value)}>
               <option value=''>כל הקטגוריות</option>
               {cats.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <select style={{ ...inp, width: 'auto' }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
+            <select className="form-input" style={{ width: 'auto' }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
               <option value=''>כל המלאי</option>
               <option value='low'>מלאי נמוך</option>
               <option value='out'>אזל</option>
@@ -664,7 +659,7 @@ export default function ProductsClient() {
               <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '200px' }}>
                 <label className="form-label">מוצר {mvProductId && <span style={{ color: 'var(--primary)', fontWeight: 700 }}>✓</span>}</label>
                 <input
-                  style={{ ...inp, borderColor: mvProductId ? 'var(--primary)' : undefined }}
+                  className="form-input" style={{ borderColor: mvProductId ? 'var(--primary)' : undefined }}
                   placeholder="חפש לפי שם או מק״ט..."
                   value={mvProductSearch}
                   autoComplete="off"
@@ -735,14 +730,14 @@ export default function ProductsClient() {
               {/* Qty */}
               <div style={{ width: '90px' }}>
                 <label className="form-label">כמות</label>
-                <input style={inp} type="number" min="1" step="1" placeholder="1"
+                <input className="form-input" type="number" min="1" step="1" placeholder="1"
                   value={mvQty} onChange={e => setMvQty(e.target.value)} />
               </div>
 
               {/* Date */}
               <div style={{ width: '150px' }}>
                 <label className="form-label">תאריך</label>
-                <input style={inp} type="date" value={mvDate} onChange={e => setMvDate(e.target.value)} />
+                <input className="form-input" type="date" value={mvDate} onChange={e => setMvDate(e.target.value)} />
               </div>
 
               {/* Save */}
@@ -831,26 +826,26 @@ export default function ProductsClient() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', direction: 'rtl' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <label className="form-label">שם מוצר <span style={{ color: 'var(--danger)' }}>*</span></label>
-            <input style={inp} value={form.name} onChange={e => setF('name', e.target.value)} />
+            <input className="form-input" value={form.name} onChange={e => setF('name', e.target.value)} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <label className="form-label">קטגוריה</label>
-            <input style={inp} value={form.category} onChange={e => setF('category', e.target.value)} list="cat-list" />
+            <input className="form-input" value={form.category} onChange={e => setF('category', e.target.value)} list="cat-list" />
             <datalist id="cat-list">{cats.map(c => <option key={c} value={c} />)}</datalist>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <label className="form-label">יחידה</label>
-            <select style={inp} value={form.unit} onChange={e => setF('unit', e.target.value)}>
+            <select className="form-input" value={form.unit} onChange={e => setF('unit', e.target.value)}>
               {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
             </select>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <label className="form-label">כמות ליחידה</label>
-            <input style={inp} type="number" value={form.unit_qty} onChange={e => setF('unit_qty', e.target.value)} min="0.01" step="0.01" />
+            <input className="form-input" type="number" value={form.unit_qty} onChange={e => setF('unit_qty', e.target.value)} min="0.01" step="0.01" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <label className="form-label">מחיר קנייה (₪ לפני מע&quot;מ)</label>
-            <input style={inp} type="number" value={form.buy_price} min="0" step="0.01" placeholder="0.00"
+            <input className="form-input" type="number" value={form.buy_price} min="0" step="0.01" placeholder="0.00"
               onChange={e => {
                 const updates: Partial<typeof emptyForm> = { buy_price: e.target.value }
                 if (form.margin && parseFloat(e.target.value) > 0)
@@ -865,7 +860,7 @@ export default function ProductsClient() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <label className="form-label">% רווח</label>
-            <input style={inp} type="number" value={form.margin} min="0" step="1" placeholder="20"
+            <input className="form-input" type="number" value={form.margin} min="0" step="1" placeholder="20"
               onChange={e => {
                 const updates: Partial<typeof emptyForm> = { margin: e.target.value }
                 if (form.buy_price && parseFloat(form.buy_price) > 0)
@@ -875,30 +870,30 @@ export default function ProductsClient() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <label className="form-label">מחיר מכירה (₪)</label>
-            <input style={inp} type="number" value={form.sell_price} onChange={e => setF('sell_price', e.target.value)} min="0" step="0.01" />
+            <input className="form-input" type="number" value={form.sell_price} onChange={e => setF('sell_price', e.target.value)} min="0" step="0.01" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <label className="form-label">כמות במלאי</label>
-            <input style={inp} type="number" value={form.qty} onChange={e => setF('qty', e.target.value)} min="0" />
+            <input className="form-input" type="number" value={form.qty} onChange={e => setF('qty', e.target.value)} min="0" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <label className="form-label">כמות מינימום</label>
-            <input style={inp} type="number" value={form.min_qty} onChange={e => setF('min_qty', e.target.value)} min="0" />
+            <input className="form-input" type="number" value={form.min_qty} onChange={e => setF('min_qty', e.target.value)} min="0" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <label className="form-label">ספק</label>
-            <select style={inp} value={form.supplier_id} onChange={e => setF('supplier_id', e.target.value)}>
+            <select className="form-input" value={form.supplier_id} onChange={e => setF('supplier_id', e.target.value)}>
               <option value=''>— ללא ספק —</option>
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <label className="form-label">ברקוד / מק״ט</label>
-            <input style={inp} value={form.sku} onChange={e => setF('sku', e.target.value)} placeholder="מק״ט" />
+            <input className="form-input" value={form.sku} onChange={e => setF('sku', e.target.value)} placeholder="מק״ט" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gridColumn: '1 / -1' }}>
             <label className="form-label">הערות</label>
-            <input style={inp} value={form.notes} onChange={e => setF('notes', e.target.value)} />
+            <input className="form-input" value={form.notes} onChange={e => setF('notes', e.target.value)} />
           </div>
         </div>
       </Modal>

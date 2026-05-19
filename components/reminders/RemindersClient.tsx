@@ -311,9 +311,9 @@ export default function RemindersClient() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={labelStyle}>כותרת *</label>
+            <label className="form-label">כותרת *</label>
             <input
-              style={inputStyle}
+              className="form-input"
               value={form.title}
               onChange={e => setF('title', e.target.value)}
               placeholder={form.type === 'reminder' ? 'לדוגמה: לפגוש את יוסי' : 'לדוגמה: להתקשר לספק'}
@@ -322,8 +322,8 @@ export default function RemindersClient() {
           </div>
 
           <div>
-            <label style={labelStyle}>עדיפות</label>
-            <select style={inputStyle} value={form.priority} onChange={e => setF('priority', e.target.value as Priority)}>
+            <label className="form-label">עדיפות</label>
+            <select className="form-input" value={form.priority} onChange={e => setF('priority', e.target.value as Priority)}>
               <option value="high">גבוהה</option>
               <option value="medium">בינונית</option>
               <option value="low">נמוכה</option>
@@ -333,12 +333,12 @@ export default function RemindersClient() {
           {form.type === 'reminder' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label style={labelStyle}>תאריך יעד</label>
-                <input type="date" style={inputStyle} value={form.due_date} onChange={e => setF('due_date', e.target.value)} />
+                <label className="form-label">תאריך יעד</label>
+                <input type="date" className="form-input" value={form.due_date} onChange={e => setF('due_date', e.target.value)} />
               </div>
               <div>
-                <label style={labelStyle}>שעה (אופציונלי)</label>
-                <input type="time" style={inputStyle} value={form.due_time} onChange={e => setF('due_time', e.target.value)} />
+                <label className="form-label">שעה (אופציונלי)</label>
+                <input type="time" className="form-input" value={form.due_time} onChange={e => setF('due_time', e.target.value)} />
               </div>
             </div>
           )}
@@ -346,9 +346,9 @@ export default function RemindersClient() {
           {form.type === 'task' && (
             <>
               <div>
-                <label style={labelStyle}>טלפון לצור קשר (אופציונלי)</label>
+                <label className="form-label">טלפון לצור קשר (אופציונלי)</label>
                 <input
-                  style={inputStyle}
+                  className="form-input"
                   type="tel"
                   value={form.phone}
                   onChange={e => setF('phone', e.target.value)}
@@ -357,8 +357,8 @@ export default function RemindersClient() {
                 />
               </div>
               <div>
-                <label style={labelStyle}>סטטוס</label>
-                <select style={inputStyle} value={form.status} onChange={e => setF('status', e.target.value as TaskStatus)}>
+                <label className="form-label">סטטוס</label>
+                <select className="form-input" value={form.status} onChange={e => setF('status', e.target.value as TaskStatus)}>
                   <option value="open">פתוח</option>
                   <option value="in_progress">בטיפול</option>
                   <option value="closed">נסגר</option>
@@ -368,9 +368,9 @@ export default function RemindersClient() {
           )}
 
           <div>
-            <label style={labelStyle}>קטגוריה (אופציונלי)</label>
+            <label className="form-label">קטגוריה (אופציונלי)</label>
             <input
-              style={inputStyle}
+              className="form-input"
               value={form.category}
               onChange={e => setF('category', e.target.value)}
               placeholder="לדוגמה: ספק, לקוח, כלי רכב..."
@@ -378,9 +378,10 @@ export default function RemindersClient() {
           </div>
 
           <div>
-            <label style={labelStyle}>הערות</label>
+            <label className="form-label">הערות</label>
             <textarea
-              style={{ ...inputStyle, minHeight: 72, resize: 'vertical' }}
+              className="form-input"
+              style={{ minHeight: 72, resize: 'vertical' }}
               value={form.notes}
               onChange={e => setF('notes', e.target.value)}
               placeholder="הערות נוספות..."
@@ -627,17 +628,6 @@ function ActionBtn({ onClick, title, children }: { onClick: () => void; title: s
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
-const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: 13, fontWeight: 600,
-  color: 'var(--text-muted)', marginBottom: 4,
-}
-
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 12px',
-  border: '1px solid var(--border)', borderRadius: 8,
-  fontSize: 14, fontFamily: 'inherit',
-  boxSizing: 'border-box', background: '#fff',
-}
 
 function tagStyle(bg: string, color: string): React.CSSProperties {
   return { background: bg, color, fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 99 }

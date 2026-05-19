@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import PageHeader from '@/components/ui/PageHeader'
+import Button from '@/components/ui/Button'
 
 type ToastFn = (msg: string, type?: 'success' | 'error' | 'info') => void
 
@@ -84,15 +85,6 @@ const ALL_MODULES = [
   { key: 'tires_view',    label: '🔘 צמיגים (צפיה בלבד)' },
   { key: 'my_profile',    label: '👤 פרופיל אישי' },
 ]
-
-const btnPrim: React.CSSProperties = {
-  padding: '9px 20px', background: 'var(--primary)', color: '#fff',
-  border: '1.5px solid var(--primary)', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-}
-const btnSec: React.CSSProperties = {
-  padding: '9px 20px', background: '#fff', color: 'var(--text-muted)',
-  border: '1.5px solid var(--border)', borderRadius: '9px', fontSize: '13px', cursor: 'pointer',
-}
 
 function field(label: string, el: React.ReactNode) {
   return (
@@ -202,7 +194,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
           </div>
         </div>
 
-        <button onClick={() => setEditing(true)} style={{ ...btnSec, flexShrink: 0 }}>✏️ עריכה</button>
+        <Button variant="secondary" style={{ flexShrink: 0 }} onClick={() => setEditing(true)}>✏️ עריכה</Button>
       </div>
 
       {/* ── Edit Modal ── */}
@@ -233,9 +225,9 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
                 <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>לוגו העסק</div>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>PNG / JPG עד 500KB</div>
                 <div style={{ display: 'flex', gap: '6px' }}>
-                  <button onClick={() => fileRef.current?.click()} style={{ ...btnSec, fontSize: '12px', padding: '5px 12px' }}>בחר תמונה</button>
+                  <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()}>בחר תמונה</Button>
                   {logoPreview && (
-                    <button onClick={() => { setLogoPreview(null); setTenant(t => t ? { ...t, logo_base64: null } : t) }} style={{ ...btnSec, fontSize: '12px', padding: '5px 12px', color: 'var(--danger)', borderColor: '#fecaca' }}>הסר</button>
+                    <Button variant="danger" size="sm" onClick={() => { setLogoPreview(null); setTenant(t => t ? { ...t, logo_base64: null } : t) }}>הסר</Button>
                   )}
                 </div>
               </div>
@@ -273,10 +265,8 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
 
             {/* Action buttons */}
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '22px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-              <button onClick={cancel} style={btnSec}>ביטול</button>
-              <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>
-                {saving ? 'שומר...' : '💾 שמור'}
-              </button>
+              <Button variant="secondary" onClick={cancel}>ביטול</Button>
+              <Button loading={saving} onClick={save}>💾 שמור</Button>
             </div>
           </div>
         </div>
@@ -383,9 +373,9 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
       {/* Add user button */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontWeight: 600, fontSize: '14px' }}>👥 משתמשים</div>
-        <button onClick={() => setCreateOpen(v => !v)} style={{ ...btnPrim, padding: '7px 16px', fontSize: '12px' }}>
+        <Button size="sm" onClick={() => setCreateOpen(v => !v)}>
           {createOpen ? '✕ ביטול' : '+ הוסף משתמש'}
-        </button>
+        </Button>
       </div>
 
       {/* Create user form */}
@@ -424,9 +414,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
               </div>
             </div>
           )}
-          <button onClick={handleCreate} disabled={creating} style={{ ...btnPrim, opacity: creating ? .7 : 1, alignSelf: 'flex-start' }}>
-            {creating ? 'יוצר...' : '✓ צור משתמש'}
-          </button>
+          <Button loading={creating} onClick={handleCreate} style={{ alignSelf: 'flex-start' }}>✓ צור משתמש</Button>
         </div>
       )}
 
@@ -495,8 +483,8 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
               </div>
 
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={saveEdit} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
-                <button onClick={() => setEditing(null)} style={btnSec}>ביטול</button>
+                <Button loading={saving} onClick={saveEdit}>💾 שמור</Button>
+                <Button variant="secondary" onClick={() => setEditing(null)}>ביטול</Button>
               </div>
             </div>
           ) : (
@@ -522,7 +510,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
               </div>
               <div style={{ display: 'flex', gap: '6px' }}>
                 {p.role !== 'super_admin' && (
-                  <button onClick={() => startEdit(p)} style={{ ...btnSec, padding: '6px 14px', fontSize: '12px' }}>ערוך</button>
+                  <Button variant="secondary" size="sm" onClick={() => startEdit(p)}>ערוך</Button>
                 )}
                 {p.id !== myId && p.role !== 'super_admin' && (
                   <button
@@ -604,9 +592,9 @@ function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType
     <div style={{ marginBottom: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <div style={{ fontWeight: 600, fontSize: '14px' }}>🔗 הזמנת עובד חדש</div>
-        <button onClick={() => setOpen(v => !v)} style={{ ...btnPrim, padding: '7px 16px', fontSize: '12px' }}>
+        <Button size="sm" onClick={() => setOpen(v => !v)}>
           {open ? '✕ ביטול' : '+ צור קישור'}
-        </button>
+        </Button>
       </div>
 
       {open && (
@@ -641,9 +629,7 @@ function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType
                 <option value="30">חודש</option>
               </select>
             </div>
-            <button onClick={createToken} disabled={creating} style={{ ...btnPrim, opacity: creating ? .7 : 1 }}>
-              {creating ? 'יוצר...' : '🔗 צור קישור'}
-            </button>
+            <Button loading={creating} onClick={createToken}>🔗 צור קישור</Button>
           </div>
         </div>
       )}
@@ -669,7 +655,7 @@ function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType
                 </div>
                 <span style={{ fontSize: '12px', fontWeight: 600, color: statusColor }}>{status}</span>
                 {!t.used && !expired && (
-                  <button onClick={() => copyLink(t.token)} style={{ ...btnSec, padding: '5px 12px', fontSize: '12px' }}>העתק</button>
+                  <Button variant="secondary" size="sm" onClick={() => copyLink(t.token)}>העתק</Button>
                 )}
                 <button onClick={() => revokeToken(t.id)} style={{ padding: '5px 10px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '12px' }}>×</button>
               </div>
@@ -827,8 +813,8 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                 />
               )}
               {pinError && <div style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{pinError}</div>}
-              <button onClick={savePin} style={{ ...btnPrim, width: '100%' }}>הגדר קוד</button>
-              {settingPin && <button onClick={() => { setSettingPin(false); setPinInput(''); setPinConfirm(''); setPinError('') }} style={{ ...btnSec, width: '100%', marginTop: '8px' }}>ביטול</button>}
+              <Button fullWidth onClick={savePin}>הגדר קוד</Button>
+              {settingPin && <Button variant="secondary" fullWidth style={{ marginTop: '8px' }} onClick={() => { setSettingPin(false); setPinInput(''); setPinConfirm(''); setPinError('') }}>ביטול</Button>}
             </>
           ) : (
             <>
@@ -841,7 +827,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                 autoFocus
               />
               {pinError && <div style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{pinError}</div>}
-              <button onClick={verifyPin} style={{ ...btnPrim, width: '100%' }}>🔓 פתח כספת</button>
+              <Button fullWidth onClick={verifyPin}>🔓 פתח כספת</Button>
             </>
           )}
         </div>
@@ -860,9 +846,9 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>({items.length} פריטים)</span>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => { setChangingPin(true); setNewPin(''); setNewPinConfirm(''); setPinError('') }} style={{ ...btnSec, padding: '7px 14px', fontSize: '12px' }}>🔑 שינוי קוד</button>
-          <button onClick={() => { setUnlocked(false); setPinInput(''); setPinError('') }} style={{ ...btnSec, padding: '7px 14px', fontSize: '12px' }}>🔒 נעל</button>
-          <button onClick={openAdd} style={{ ...btnPrim, padding: '7px 16px', fontSize: '13px' }}>+ הוסף</button>
+          <Button variant="secondary" size="sm" onClick={() => { setChangingPin(true); setNewPin(''); setNewPinConfirm(''); setPinError('') }}>🔑 שינוי קוד</Button>
+          <Button variant="secondary" size="sm" onClick={() => { setUnlocked(false); setPinInput(''); setPinError('') }}>🔒 נעל</Button>
+          <Button size="sm" onClick={openAdd}>+ הוסף</Button>
         </div>
       </div>
 
@@ -887,8 +873,8 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
               </div>
               {pinError && <div style={{ color: 'var(--danger)', fontSize: '12px' }}>{pinError}</div>}
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                <button onClick={changePin} style={{ ...btnPrim, flex: 1 }}>שמור קוד</button>
-                <button onClick={() => { setChangingPin(false); setOldPinInput(''); setNewPin(''); setNewPinConfirm(''); setPinError('') }} style={btnSec}>ביטול</button>
+                <Button style={{ flex: 1 }} onClick={changePin}>שמור קוד</Button>
+                <Button variant="secondary" onClick={() => { setChangingPin(false); setOldPinInput(''); setNewPin(''); setNewPinConfirm(''); setPinError('') }}>ביטול</Button>
               </div>
             </div>
           </div>
@@ -928,8 +914,8 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
             <textarea className="form-input" style={{ height: '70px', resize: 'vertical' }} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="פרטים נוספים..." />
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
-            <button onClick={() => setShowForm(false)} style={btnSec}>ביטול</button>
+            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
       )}
@@ -1097,7 +1083,7 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <span style={{ fontSize: '14px', fontWeight: 600 }}>שירותים ({items.length})</span>
-        <button onClick={openAdd} style={btnPrim}>+ הוסף שירות</button>
+        <Button onClick={openAdd}>+ הוסף שירות</Button>
       </div>
       {showForm && (
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
@@ -1137,8 +1123,8 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
-            <button onClick={() => setShowForm(false)} style={btnSec}>ביטול</button>
+            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
       )}
@@ -1154,9 +1140,9 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
               <div style={{ fontWeight: 600, fontSize: '13px' }}>{i.name}</div>
               {i.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{i.description}</div>}
             </div>
-            <button onClick={() => toggleActive(i)} style={{ ...btnSec, padding: '4px 10px', fontSize: '11px', color: i.is_active ? 'var(--primary)' : 'var(--text-muted)' }}>{i.is_active ? '✓ פעיל' : 'מושבת'}</button>
-            <button onClick={() => openEdit(i)} style={{ ...btnSec, padding: '4px 10px', fontSize: '11px' }}>✏️</button>
-            <button onClick={() => del(i.id)} style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
+            <Button variant="secondary" size="sm" style={{ color: i.is_active ? 'var(--primary)' : 'var(--text-muted)' }} onClick={() => toggleActive(i)}>{i.is_active ? '✓ פעיל' : 'מושבת'}</Button>
+            <Button variant="secondary" size="sm" onClick={() => openEdit(i)}>✏️</Button>
+            <Button variant="danger" size="sm" onClick={() => del(i.id)}>🗑</Button>
           </div>
         ))}
       </div>
@@ -1216,7 +1202,7 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <span style={{ fontSize: '14px', fontWeight: 600 }}>מבצעים ({items.length})</span>
-        <button onClick={openAdd} style={btnPrim}>+ הוסף מבצע</button>
+        <Button onClick={openAdd}>+ הוסף מבצע</Button>
       </div>
       {showForm && (
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
@@ -1259,8 +1245,8 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
-            <button onClick={() => setShowForm(false)} style={btnSec}>ביטול</button>
+            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
       )}
@@ -1280,8 +1266,8 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
               </div>
             </div>
             <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? '#dcfce7' : '#f1f5f9', color: i.is_active ? '#16a34a' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
-            <button onClick={() => openEdit(i)} style={{ ...btnSec, padding: '4px 10px', fontSize: '11px' }}>✏️</button>
-            <button onClick={() => del(i.id)} style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
+            <Button variant="secondary" size="sm" onClick={() => openEdit(i)}>✏️</Button>
+            <Button variant="danger" size="sm" onClick={() => del(i.id)}>🗑</Button>
           </div>
         ))}
       </div>
@@ -1336,7 +1322,7 @@ function FaqSection({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <span style={{ fontSize: '14px', fontWeight: 600 }}>שאלות נפוצות ({items.length})</span>
-        <button onClick={openAdd} style={btnPrim}>+ הוסף שאלה</button>
+        <Button onClick={openAdd}>+ הוסף שאלה</Button>
       </div>
       {showForm && (
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
@@ -1368,8 +1354,8 @@ function FaqSection({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
-            <button onClick={() => setShowForm(false)} style={btnSec}>ביטול</button>
+            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
       )}
@@ -1386,8 +1372,8 @@ function FaqSection({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{i.answer.slice(0, 80)}{i.answer.length > 80 ? '...' : ''}</div>
             </div>
             <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? '#dcfce7' : '#f1f5f9', color: i.is_active ? '#16a34a' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
-            <button onClick={() => openEdit(i)} style={{ ...btnSec, padding: '4px 10px', fontSize: '11px' }}>✏️</button>
-            <button onClick={() => del(i.id)} style={{ padding: '4px 8px', border: '1px solid #fecaca', borderRadius: '6px', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
+            <Button variant="secondary" size="sm" onClick={() => openEdit(i)}>✏️</Button>
+            <Button variant="danger" size="sm" onClick={() => del(i.id)}>🗑</Button>
           </div>
         ))}
       </div>
@@ -1430,7 +1416,7 @@ function PricesSection({ supabase, tenantId, showToast }: { supabase: ReturnType
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
         <span style={{ fontSize: '14px', fontWeight: 600 }}>מחירון ({items.length} פריטים)</span>
-        <button onClick={openAdd} style={btnPrim}>+ הוסף פריט</button>
+        <Button onClick={openAdd}>+ הוסף פריט</Button>
       </div>
       {showForm && (
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
@@ -1453,8 +1439,8 @@ function PricesSection({ supabase, tenantId, showToast }: { supabase: ReturnType
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
-            <button onClick={() => setShowForm(false)} style={btnSec}>ביטול</button>
+            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
       )}
@@ -1470,8 +1456,8 @@ function PricesSection({ supabase, tenantId, showToast }: { supabase: ReturnType
                   {i.price_note && <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginRight: '6px' }}>{i.price_note}</span>}
                 </div>
                 <span style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '13px' }}>{i.price != null ? `₪${Number(i.price).toLocaleString('he-IL')}` : '—'}</span>
-                <button onClick={() => openEdit(i)} style={{ ...btnSec, padding: '3px 8px', fontSize: '11px' }}>✏️</button>
-                <button onClick={() => del(i.id)} style={{ padding: '3px 7px', border: '1px solid #fecaca', borderRadius: '5px', background: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '11px' }}>🗑</button>
+                <Button variant="secondary" size="sm" onClick={() => openEdit(i)}>✏️</Button>
+                <Button variant="danger" size="sm" onClick={() => del(i.id)}>🗑</Button>
               </div>
             ))}
           </div>

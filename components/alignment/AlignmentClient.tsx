@@ -208,12 +208,6 @@ function printWorkOrder(job: AlignmentJob, biz: BizInfo) {
   w.document.close()
 }
 
-// ── Shared styles ──────────────────────────────────────────────────────────────
-
-const areaSt: React.CSSProperties = {
-  width: '100%', padding: '8px 12px', border: '1.5px solid var(--border)', borderRadius: '9px',
-  fontSize: '14px', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', background: '#f8fafc',
-}
 
 // ── Job Row ────────────────────────────────────────────────────────────────────
 

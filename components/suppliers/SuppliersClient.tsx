@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
+import Button from '@/components/ui/Button'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -67,27 +68,6 @@ const ISRAELI_BANKS: { name: string; code: string }[] = [
 ]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-const btnPrim: React.CSSProperties = {
-  padding: '9px 20px',
-  background: 'var(--primary)',
-  color: '#fff',
-  border: '1.5px solid var(--primary)',
-  borderRadius: '9px',
-  fontSize: '13px',
-  fontWeight: 600,
-  cursor: 'pointer',
-}
-
-const btnSec: React.CSSProperties = {
-  padding: '9px 20px',
-  background: '#fff',
-  color: 'var(--text-muted)',
-  border: '1.5px solid var(--border)',
-  borderRadius: '9px',
-  fontSize: '13px',
-  cursor: 'pointer',
-}
 
 const fmt = (n: number) =>
   `₪${Number(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -305,7 +285,7 @@ export default function SuppliersClient() {
 
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <button onClick={() => openModal()} style={btnPrim}>+ הוסף ספק</button>
+        <Button onClick={() => openModal()}>+ הוסף ספק</Button>
 
         {/* Edit mode toggle */}
         <button
@@ -740,10 +720,8 @@ export default function SuppliersClient() {
               </div>
             </div>
             <div className="sticky-actions">
-              <button onClick={() => setShowModal(false)} style={btnSec}>ביטול</button>
-              <button onClick={saveSupplier} disabled={saving} style={btnPrim}>
-                {saving ? 'שומר...' : '💾 שמור'}
-              </button>
+              <Button variant="secondary" onClick={() => setShowModal(false)}>ביטול</Button>
+              <Button loading={saving} onClick={saveSupplier}>💾 שמור</Button>
             </div>
           </div>
         </div>

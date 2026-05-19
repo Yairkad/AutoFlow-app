@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
+import Button from '@/components/ui/Button'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -52,14 +53,6 @@ const waUrl = (phone: string, text: string) => {
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
-const btnPrim: React.CSSProperties = {
-  padding: '9px 20px', background: 'var(--primary)', color: '#fff',
-  border: '1.5px solid var(--primary)', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-}
-const btnSec: React.CSSProperties = {
-  padding: '9px 20px', background: '#fff', color: 'var(--text-muted)',
-  border: '1.5px solid var(--border)', borderRadius: '9px', fontSize: '13px', cursor: 'pointer',
-}
 const thSt: React.CSSProperties = {
   padding: '10px 12px', textAlign: 'right', fontWeight: 600,
   color: 'var(--text-muted)', whiteSpace: 'nowrap', fontSize: '11px',
@@ -379,7 +372,7 @@ export default function DebtsClient() {
 
   const Toolbar = ({ onAdd }: { onAdd: () => void }) => (
     <div style={{ display: 'flex', gap: '10px', marginBottom: selectedId ? '8px' : '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-      <button onClick={onAdd} style={btnPrim}>+ הוסף חוב</button>
+      <Button onClick={onAdd}>+ הוסף חוב</Button>
       <div style={{ display: 'flex', gap: '6px' }}>
         <FilterBtn f="open" label="פתוחים" />
         <FilterBtn f="closed" label="סגורים" />
@@ -712,9 +705,9 @@ export default function DebtsClient() {
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>הערות<textarea value={cDesc} onChange={e => setCDesc(e.target.value)} placeholder="הערות על החוב..." className="form-input" style={{ resize: 'vertical', minHeight: '68px' }} /></label>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>תאריך *<input type="date" value={cDate} onChange={e => setCDate(e.target.value)} className="form-input" /></label>
             </div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '22px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowCustModal(false)} style={btnSec}>ביטול</button>
-              <button onClick={saveCustDebt} disabled={cSaving} style={btnPrim}>{cSaving ? 'שומר...' : '💾 שמור'}</button>
+            <div className="sticky-actions">
+              <Button variant="secondary" onClick={() => setShowCustModal(false)}>ביטול</Button>
+              <Button loading={cSaving} onClick={saveCustDebt}>💾 שמור</Button>
             </div>
           </div>
         </div>
@@ -807,8 +800,8 @@ export default function DebtsClient() {
               </label>
             </div>
             <div className="sticky-actions">
-              <button onClick={() => setShowSuppModal(false)} style={btnSec}>ביטול</button>
-              <button onClick={saveSuppDebt} disabled={sSaving} style={btnPrim}>{sSaving ? 'שומר...' : '💾 שמור'}</button>
+              <Button variant="secondary" onClick={() => setShowSuppModal(false)}>ביטול</Button>
+              <Button loading={sSaving} onClick={saveSuppDebt}>💾 שמור</Button>
             </div>
           </div>
         </div>
@@ -832,11 +825,9 @@ export default function DebtsClient() {
                 <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="form-input" />
               </label>
             </div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '22px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setPayItem(null)} style={btnSec}>ביטול</button>
-              <button onClick={recordPayment} disabled={paySaving} style={{ ...btnPrim, background: '#16a34a' }}>
-                {paySaving ? 'רושם...' : '✓ אשר תשלום'}
-              </button>
+            <div className="sticky-actions">
+              <Button variant="secondary" onClick={() => setPayItem(null)}>ביטול</Button>
+              <Button loading={paySaving} onClick={recordPayment} style={{ background: '#16a34a', borderColor: '#16a34a' }}>✓ אשר תשלום</Button>
             </div>
           </div>
         </div>
@@ -854,13 +845,13 @@ export default function DebtsClient() {
               className="form-input" style={{ resize: 'vertical', fontSize: '13px', lineHeight: 1.6 }}
             />
             <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setWaModal(null)} style={btnSec}>ביטול</button>
+              <Button variant="secondary" onClick={() => setWaModal(null)}>ביטול</Button>
               <a
                 href={waUrl(waModal.phone, waModal.text)}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setWaModal(null)}
-                style={{ ...btnPrim, background: '#16a34a', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                style={{ padding: '8px 18px', background: '#16a34a', color: '#fff', border: '1.5px solid #16a34a', borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
                 📲 פתח ווצאפ
               </a>
