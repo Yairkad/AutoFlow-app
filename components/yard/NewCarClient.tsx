@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatPlate } from '@/lib/yard/types'
 
@@ -14,19 +14,27 @@ export default function NewCarClient() {
   const [saving,  setSaving]  = useState(false)
   const [error,   setError]   = useState<string | null>(null)
 
+  // Tracks latest in-flight plate lookup so we can patch after navigation
+  const lookupRef = useRef<Promise<VehicleInfo>>(Promise.resolve(null))
+  const lookingRef = useRef(false)
+
   const plate = formatPlate(digits)
 
   const lookup = useCallback(async (d: string) => {
-    if (d.length < 7) { setVehicle(null); return }
+    if (d.length < 7) { setVehicle(null); lookingRef.current = false; return }
     setLoading(true)
+    lookingRef.current = true
+    const promise: Promise<VehicleInfo> = fetch(`/api/public/plate?plate=${encodeURIComponent(d)}`)
+      .then(res => res.json())
+      .then(data => data ? { make: data.make, model: data.model, year: data.year } : null)
+      .catch(() => null)
+    lookupRef.current = promise
     try {
-      const res  = await fetch(`/api/public/plate?plate=${encodeURIComponent(d)}`)
-      const data = await res.json()
-      setVehicle(data ? { make: data.make, model: data.model, year: data.year } : null)
-    } catch {
-      setVehicle(null)
+      const result = await promise
+      setVehicle(result)
     } finally {
       setLoading(false)
+      lookingRef.current = false
     }
   }, [])
 
@@ -52,7 +60,21 @@ export default function NewCarClient() {
       })
       if (!res.ok) throw new Error('שגיאה ביצירת כרטיס')
       const session = await res.json()
+
+      // Navigate immediately — don't wait for plate lookup
       router.push(`/yard/${session.id}`)
+
+      // If plate lookup is still pending, patch session when it resolves
+      if (lookingRef.current) {
+        lookupRef.current.then(v => {
+          if (!v) return
+          fetch(`/api/yard/sessions/${session.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ make: v.make ?? null, model: v.model ?? null, year: v.year ? String(v.year) : null }),
+          })
+        })
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'שגיאה')
       setSaving(false)
@@ -77,7 +99,7 @@ export default function NewCarClient() {
 
       {/* Vehicle detected */}
       <div style={{ margin: '10px 14px 0', minHeight: '40px' }} className="flex-shrink-0">
-        {loading && <div className="text-sm text-slate-400 text-center py-1">מחפש...</div>}
+        {loading && <div className="text-sm text-slate-400 text-center py-1">מחפש פרטי רכב...</div>}
         {!loading && vehicle && (
           <div className="bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm font-semibold flex items-center gap-2" style={{ padding: '10px 14px' }}>
             <span>✓</span>
@@ -100,7 +122,7 @@ export default function NewCarClient() {
               className="bg-white border-2 border-slate-200 rounded-2xl font-bold text-slate-800 shadow-sm active:scale-95 active:bg-slate-100 transition-all"
               style={{ fontSize: '28px' }}>{k}</button>
           ))}
-          <button onPointerDown={confirm} disabled={digits.length < 7 || saving || loading}
+          <button onPointerDown={confirm} disabled={digits.length < 7 || saving}
             className="bg-green-700 border-2 border-green-700 rounded-2xl font-bold text-white shadow-sm active:scale-95 disabled:opacity-40 transition-all"
             style={{ fontSize: '20px' }}>{saving ? '...' : '✓ אישור'}</button>
           <button onPointerDown={() => press('0')}

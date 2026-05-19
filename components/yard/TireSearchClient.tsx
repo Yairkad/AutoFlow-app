@@ -15,14 +15,26 @@ export default function TireSearchClient({ session }: Props) {
   const scanRef     = useRef<HTMLInputElement>(null)
   const [scanMode,  setScanMode]    = useState(false)
   const [scanBuffer, setScanBuffer] = useState('')
-  const [query,     setQuery]       = useState(session.year ? '' : '')
-  const [results,   setResults]     = useState<TireResult[]>([])
-  const [selected,  setSelected]    = useState<TireResult | null>(null)
-  const [qty,       setQty]         = useState(1)
-  const [price,     setPrice]       = useState<number | null>(null)
-  const [saving,    setSaving]      = useState(false)
+  const [query,         setQuery]         = useState('')
+  const [results,       setResults]       = useState<TireResult[]>([])
+  const [selected,      setSelected]      = useState<TireResult | null>(null)
+  const [qty,           setQty]           = useState(1)
+  const [price,         setPrice]         = useState<number | null>(null)
+  const [saving,        setSaving]        = useState(false)
+  const [detectedSize,  setDetectedSize]  = useState<string | null>(null)
 
   const CACHE_TTL = 5 * 60 * 1000
+
+  // Detect tire size from plate API on mount
+  useEffect(() => {
+    if (!session.plate) return
+    const plate = session.plate.replace(/\D/g, '')
+    if (plate.length < 7) return
+    fetch(`/api/public/plate?plate=${encodeURIComponent(plate)}`)
+      .then(r => r.json())
+      .then(data => { if (data?.tireSize) setDetectedSize(data.tireSize) })
+      .catch(() => {})
+  }, []) // eslint-disable-line
 
   // Search tires — cache results by query for instant repeat lookups
   const search = useCallback(async (q: string) => {
@@ -143,7 +155,7 @@ export default function TireSearchClient({ session }: Props) {
           type="text"
           value={query}
           onChange={e => setQuery(e.target.value)}
-          placeholder="מידת צמיג (לדוג׳ 195/55/16)"
+          placeholder="הקלד מידת צמיג או השתמש בסורק"
           className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium outline-none"
           style={{ padding: '10px 14px' }}
         />
@@ -165,6 +177,21 @@ export default function TireSearchClient({ session }: Props) {
           </svg>
         </button>
       </div>
+
+      {/* Detected size suggestion */}
+      {detectedSize && !query && (
+        <div className="flex items-center gap-2 flex-shrink-0" style={{ margin: '8px 14px 0' }}>
+          <div className="flex-1 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between" style={{ padding: '10px 14px' }}>
+            <span className="text-blue-800 text-sm font-semibold">זיהינו שאלו המידות המתאימות לרכב: <span className="font-black">{detectedSize}</span></span>
+            <button
+              onClick={() => setQuery(detectedSize)}
+              className="bg-blue-600 text-white text-sm font-bold rounded-lg active:scale-95 transition-all"
+              style={{ padding: '5px 12px' }}>
+              חפש
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Results */}
       <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-slate-200" style={{ margin: '10px 14px 0' }}>

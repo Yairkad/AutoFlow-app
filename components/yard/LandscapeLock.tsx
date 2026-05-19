@@ -1,29 +1,27 @@
 'use client'
+import { useEffect } from 'react'
 
 export default function LandscapeLock() {
-  function lock() {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(screen.orientation as any).lock('landscape').catch(() => {})
-    } catch {}
-  }
+  useEffect(() => {
+    const el = document.createElement('style')
+    el.id = 'landscape-lock-css'
+    el.textContent = `
+      @media screen and (orientation: portrait) {
+        body {
+          transform: rotate(90deg);
+          transform-origin: left top;
+          width: 100vh !important;
+          height: 100vw !important;
+          overflow: hidden;
+          position: fixed;
+          top: 100%;
+          left: 0;
+        }
+      }
+    `
+    document.head.appendChild(el)
+    return () => document.getElementById('landscape-lock-css')?.remove()
+  }, [])
 
-  return (
-    <button
-      onClick={lock}
-      title="נעל מסך לרוחב"
-      style={{
-        position: 'fixed', bottom: '12px', left: '12px', zIndex: 9999,
-        width: '40px', height: '40px', borderRadius: '10px',
-        background: 'rgba(30,41,59,0.75)', border: 'none',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer', backdropFilter: 'blur(4px)',
-      }}
-    >
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="4" y="2" width="16" height="20" rx="2"/>
-        <path d="M9 17h6M8 7l4-4 4 4"/>
-      </svg>
-    </button>
-  )
+  return null
 }

@@ -32,14 +32,32 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params
 
   const body = await req.json()
-  const { status } = body
+  const { status, make, model, year } = body
+
+  const supabase = await createClient()
+
+  // Vehicle info patch (background plate-lookup resolution)
+  if (status === undefined && (make !== undefined || model !== undefined || year !== undefined)) {
+    const vehicleUpdate: Record<string, unknown> = {}
+    if (make  !== undefined) vehicleUpdate.make  = make
+    if (model !== undefined) vehicleUpdate.model = model
+    if (year  !== undefined) vehicleUpdate.year  = year
+    const { data, error } = await supabase
+      .from('yard_sessions')
+      .update(vehicleUpdate)
+      .eq('id', id)
+      .eq('tenant_id', profile.tenant_id)
+      .select()
+      .single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data)
+  }
 
   const allowed = ['active', 'pending_office', 'archived']
   if (!allowed.includes(status)) {
     return NextResponse.json({ error: 'invalid status' }, { status: 400 })
   }
 
-  const supabase = await createClient()
   const update: Record<string, unknown> = { status }
 
   if (status === 'archived') {

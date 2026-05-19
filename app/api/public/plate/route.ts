@@ -10,10 +10,12 @@ async function query(resourceId: string, plate: string) {
   const json = await res.json()
   const r = json?.result?.records?.[0]
   if (!r) return null
+  const tireSize = (r['zmig_kidmi'] || r['zmig_kid'] || null) as string | null
   return {
-    make:  (r['tozeret_nm']    as string) || null,
-    model: (r['kinuy_mishari'] as string) || null,
-    year:  r['shnat_yitzur']   ? Number(r['shnat_yitzur']) : null,
+    make:     (r['tozeret_nm']    as string) || null,
+    model:    (r['kinuy_mishari'] as string) || null,
+    year:     r['shnat_yitzur']   ? Number(r['shnat_yitzur']) : null,
+    tireSize: tireSize ? tireSize.trim() : null,
   }
 }
 
