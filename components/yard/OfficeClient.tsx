@@ -100,18 +100,16 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     setPriceModal(true)
   }
 
-  async function saveField(id: string) {
-    const price = Number(editPrices[id])
-    const name  = (editNames[id] ?? '').trim()
+  async function saveField(id: string, name: string, price: number) {
     if (!name || isNaN(price)) return
     setSaving(id)
-    await fetch(`/api/yard/services/${id}`, {
+    const res = await fetch(`/api/yard/services/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, price }),
     })
     setSaving(null)
-    setServices(sv => sv.map(s => s.id === id ? { ...s, name, price } : s))
+    if (res.ok) setServices(sv => sv.map(s => s.id === id ? { ...s, name, price } : s))
   }
 
   async function addService() {
@@ -421,7 +419,8 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                         type="text"
                         value={editNames[svc.id] ?? svc.name}
                         onChange={e => setEditNames(en => ({ ...en, [svc.id]: e.target.value }))}
-                        onBlur={() => saveField(svc.id)}
+                        onBlur={e => saveField(svc.id, e.target.value.trim(), Number(editPrices[svc.id] ?? svc.price))}
+                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
                         className="w-full border-2 border-transparent rounded-lg font-medium text-slate-800 outline-none hover:border-slate-200 focus:border-blue-400 transition-colors"
                         style={{ padding: '6px 10px', fontSize: '14px', background: 'transparent' }}
                       />
@@ -429,9 +428,11 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                     <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition-colors" style={{ width: '100px', height: '38px' }}>
                       <input
                         type="number"
+                        inputMode="numeric"
                         value={editPrices[svc.id] ?? ''}
                         onChange={e => setEditPrices(ep => ({ ...ep, [svc.id]: e.target.value }))}
-                        onBlur={() => saveField(svc.id)}
+                        onBlur={e => saveField(svc.id, (editNames[svc.id] ?? svc.name).trim(), Number(e.target.value))}
+                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
                         className="flex-1 outline-none font-bold text-blue-600 text-center"
                         style={{ padding: '0 6px', fontSize: '15px', height: '100%', minWidth: 0 }}
                       />

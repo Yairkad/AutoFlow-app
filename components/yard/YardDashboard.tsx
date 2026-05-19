@@ -57,14 +57,14 @@ export default function YardDashboard({ initialSessions }: Props) {
       </div>
 
       {/* Car grid */}
-      <div className="flex-1 overflow-y-auto" style={{ padding: '14px', minHeight: 0, minWidth: 0 }}>
+      <div className="flex-1 overflow-y-auto" style={{ padding: '14px', minHeight: 0 }}>
         {sessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
             <span className="text-5xl">🏁</span>
             <p className="text-lg font-medium">אין רכבים פעילים ברחבה</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', width: '100%' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
             {sessions.map(s => {
               const state = timerState(s.opened_at)
               const items = s.yard_session_items ?? []
@@ -82,7 +82,7 @@ export default function YardDashboard({ initialSessions }: Props) {
                   key={s.id}
                   onClick={() => router.push(`/yard/${s.id}`)}
                   className={`relative bg-white rounded-2xl text-right border-2 transition-all active:scale-95 hover:shadow-md ${cardBorder[state]}`}
-                  style={{ padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,.10)' }}
+                  style={{ padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,.10)', width: 'calc(33.333% - 8px)', flexShrink: 0 }}
                 >
                   {/* Item count badge */}
                   {items.length > 0 && (
