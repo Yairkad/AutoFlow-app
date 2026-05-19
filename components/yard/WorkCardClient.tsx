@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { YardSession, YardSessionItem, YardService } from '@/lib/yard/types'
 import { sessionTotal, formatPlate } from '@/lib/yard/types'
+import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
 
 interface Props {
   session:  YardSession
@@ -20,8 +21,10 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const [editItem,    setEditItem]     = useState<YardSessionItem | null>(null)
   const [priceDigits, setPriceDigits]  = useState('')
   const [error,       setError]        = useState<string | null>(null)
-  const [sending,     setSending]      = useState(false)
-  const [isMobile,    setIsMobile]     = useState(false)
+  const [sending,      setSending]      = useState(false)
+  const [isMobile,     setIsMobile]     = useState(false)
+  const [historyCount, setHistoryCount] = useState<number | null>(null)
+  const [showHistory,  setShowHistory]  = useState(false)
   const supabase = createClient()
   const items = session.yard_session_items ?? []
 
@@ -31,6 +34,14 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
+
+  useEffect(() => {
+    if (!session.plate) return
+    fetch(`/api/yard/vehicle-history?plate=${encodeURIComponent(session.plate)}`)
+      .then(r => r.json())
+      .then((sessions: unknown[]) => setHistoryCount(sessions.length))
+      .catch(() => {})
+  }, [session.plate])
 
   // Prefetch sub-routes so navigation is instant
   useEffect(() => {
@@ -284,6 +295,10 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   return (
     <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
 
+      {showHistory && (
+        <VehicleHistoryModal plate={session.plate} onClose={() => setShowHistory(false)} />
+      )}
+
       {/* ── Plate header card ── */}
       <div className="bg-white border-[3px] border-red-500 rounded-xl flex-shrink-0" style={{ margin: '14px 14px 0', padding: '14px 18px' }}>
         {hasMakeModel && (
@@ -292,8 +307,19 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
             {session.year && <span className="text-slate-400 font-normal mr-1">· {session.year}</span>}
           </div>
         )}
-        <div className="font-black text-slate-900 leading-tight" style={{ fontSize: '22px', letterSpacing: '2px' }}>
-          {formatPlate(session.plate)}
+        <div className="flex items-center justify-between gap-2">
+          <div className="font-black text-slate-900 leading-tight" style={{ fontSize: '22px', letterSpacing: '2px' }}>
+            {formatPlate(session.plate)}
+          </div>
+          {historyCount !== null && historyCount > 0 && (
+            <button
+              onClick={() => setShowHistory(true)}
+              className="bg-blue-600 text-white font-bold rounded-lg active:scale-95 transition-all flex-shrink-0"
+              style={{ fontSize: '12px', padding: '4px 10px' }}
+            >
+              לקוח חוזר · {historyCount} ביקורים
+            </button>
+          )}
         </div>
       </div>
 

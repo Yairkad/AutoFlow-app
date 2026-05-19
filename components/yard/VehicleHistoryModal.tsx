@@ -26,6 +26,11 @@ interface Props {
   onClose: () => void
 }
 
+const POS_NAMES: Record<TirePosition, string> = {
+  FL: 'קדמי שמאל', FR: 'קדמי ימין',
+  RL: 'אחורי שמאל', RR: 'אחורי ימין',
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('he-IL', {
     day: '2-digit', month: '2-digit', year: 'numeric',
@@ -129,6 +134,11 @@ export default function VehicleHistoryModal({ plate, onClose }: Props) {
                             <span className="text-slate-400 ml-1">{item.quantity}×</span>
                           )}
                           {item.name}
+                          {item.tire_position && (
+                            <span className="text-green-600 font-semibold" style={{ fontSize: '12px', marginRight: '6px' }}>
+                              ({POS_NAMES[item.tire_position]})
+                            </span>
+                          )}
                         </span>
                         <span className="text-slate-500 font-medium" style={{ fontSize: '13px', flexShrink: 0, marginRight: '8px' }}>
                           {(item.unit_price * item.quantity).toLocaleString()}₪

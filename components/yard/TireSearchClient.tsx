@@ -169,6 +169,7 @@ export default function TireSearchClient({ session }: Props) {
       <div className="flex items-center flex-shrink-0" style={{ gap: '10px', padding: '10px 14px 0' }}>
         <input
           type="text"
+          inputMode="numeric"
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="הקלד מידת צמיג או השתמש בסורק"
