@@ -8,7 +8,8 @@ export default function LandscapeLock() {
   useEffect(() => {
     // Try the Screen Orientation API lock (Android Chrome PWA supports this)
     try {
-      screen.orientation.lock('landscape').catch(() => {})
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(screen.orientation as any).lock('landscape').catch(() => {})
     } catch {}
 
     function check() {

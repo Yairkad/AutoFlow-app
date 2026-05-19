@@ -28,6 +28,7 @@ interface Tire {
   qty: number
   location: string | null
   notes: string | null
+  sku: string | null
   supplier_id: string | null
   condition: 'new' | 'used'
   created_at: string
@@ -53,7 +54,7 @@ const SPEED_INDICES = ['B','C','D','E','F','G','H','J','K','L','M','N','P','Q','
 
 const emptyForm = {
   brand: '', width: '', profile: '', rim: '',
-  load_idx: '', speed_idx: '',
+  load_idx: '', speed_idx: '', sku: '',
   cost_price: '', margin: '', sell_price: '',
   qty: '0', location: '', notes: '', supplier_id: '',
   condition: 'new' as 'new' | 'used',
@@ -184,7 +185,7 @@ export default function TiresClient() {
       if (filterStock === 'instock' && t.qty === 0) return false
       if (filterCondition && t.condition !== filterCondition) return false
       if (search) {
-        const hay = [t.brand, tireSize(t), t.location, t.notes, t.load_idx, t.speed_idx]
+        const hay = [t.brand, tireSize(t), t.location, t.notes, t.load_idx, t.speed_idx, t.sku]
           .join(' ').toLowerCase()
         if (!hay.includes(search.toLowerCase())) return false
       }
@@ -272,7 +273,7 @@ export default function TiresClient() {
     setEditId(t.id)
     setForm({
       brand: t.brand || '', width: String(t.width), profile: String(t.profile), rim: String(t.rim),
-      load_idx: t.load_idx || '', speed_idx: t.speed_idx || '',
+      load_idx: t.load_idx || '', speed_idx: t.speed_idx || '', sku: t.sku || '',
       cost_price: t.cost_price != null ? String(t.cost_price) : '',
       margin: t.margin ? String(t.margin) : '',
       sell_price: t.sell_price != null ? String(t.sell_price) : '',
@@ -288,7 +289,7 @@ export default function TiresClient() {
     setEditId(null)
     setForm({
       brand: t.brand || '', width: String(t.width), profile: String(t.profile), rim: String(t.rim),
-      load_idx: t.load_idx || '', speed_idx: t.speed_idx || '',
+      load_idx: t.load_idx || '', speed_idx: t.speed_idx || '', sku: '',
       cost_price: t.cost_price != null ? String(t.cost_price) : '',
       margin: t.margin ? String(t.margin) : '',
       sell_price: t.sell_price != null ? String(t.sell_price) : '',
@@ -323,6 +324,7 @@ export default function TiresClient() {
       qty:         parseInt(form.qty) || 0,
       location:    form.location.trim() || null,
       notes:       form.notes.trim() || null,
+      sku:         form.sku.trim() || null,
       supplier_id: form.supplier_id || null,
       condition:   form.condition,
     }
@@ -387,7 +389,7 @@ export default function TiresClient() {
         e.load_idx !== t.load_idx || e.speed_idx !== t.speed_idx ||
         e.location !== t.location || e.notes !== t.notes ||
         e.width !== t.width || e.profile !== t.profile || e.rim !== t.rim ||
-        e.condition !== t.condition
+        e.condition !== t.condition || e.sku !== t.sku
     })
     if (updates.length === 0) { setEditMode(false); return }
 
@@ -405,6 +407,7 @@ export default function TiresClient() {
         sell_price: e.sell_price || null,
         location:   e.location || null,
         notes:      e.notes || null,
+        sku:        e.sku || null,
         condition:  e.condition ?? 'new',
       }).eq('id', t.id)
     }))
@@ -632,6 +635,9 @@ export default function TiresClient() {
           {!viewOnly && (
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
               <Button variant="outline" onClick={printPriceList} style={{ fontSize: '13px' }}>🖨️ מחירון</Button>
+              <a href="/tires/inventory-count" style={{ textDecoration: 'none' }}>
+                <Button variant="outline" style={{ fontSize: '13px' }}>📦 ספירת מלאי</Button>
+              </a>
               <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
               {editMode ? (
                 <>
@@ -689,12 +695,21 @@ export default function TiresClient() {
                                 }}>
                                 {(e.condition ?? t.condition) === 'used' ? '♻ משומש' : '✓ חדש'}
                               </button>
+                              <input style={{ ...cellInp, fontFamily: 'monospace', fontSize: '11px' }}
+                                value={String(e.sku ?? '')}
+                                onChange={ev => setCell(t.id, 'sku', ev.target.value || null)}
+                                placeholder="מקט" />
                             </div>
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              {t.brand || <span style={{ color: 'var(--text-muted)' }}>—</span>}
-                              {t.condition === 'used' && (
-                                <span style={{ fontSize: '10px', fontWeight: 700, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '4px', padding: '1px 5px' }}>♻ מ</span>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {t.brand || <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                                {t.condition === 'used' && (
+                                  <span style={{ fontSize: '10px', fontWeight: 700, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '4px', padding: '1px 5px' }}>♻ מ</span>
+                                )}
+                              </div>
+                              {t.sku && (
+                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '2px' }}>{t.sku}</div>
                               )}
                             </div>
                           )}
@@ -1026,6 +1041,39 @@ export default function TiresClient() {
                 </select>
               </div>
             </div>
+            {/* SKU / barcode row */}
+            <div style={{ marginTop: '10px' }}>
+              <label className="form-label">מקט / ברקוד יצרן</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  id="f-sku"
+                  className="form-input"
+                  value={form.sku}
+                  onChange={e => setF('sku', e.target.value)}
+                  placeholder="סרוק ברקוד או הקלד ידנית..."
+                  style={{ flex: 1, fontFamily: 'monospace', letterSpacing: '0.5px' }}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('f-brand')?.focus() } }}
+                />
+                <button
+                  type="button"
+                  title="לחץ כאן ואז סרוק ברקוד"
+                  onClick={() => document.getElementById('f-sku')?.focus()}
+                  style={{
+                    width: 40, height: 40, border: '1px solid var(--border)', borderRadius: '8px',
+                    background: 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', flexShrink: 0,
+                  }}
+                >
+                  <svg viewBox="0 0 28 22" width="20" height="16" fill="currentColor">
+                    <rect x="0" y="0" width="2" height="22"/><rect x="4" y="0" width="1" height="22"/>
+                    <rect x="7" y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/>
+                    <rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/>
+                    <rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
               <div>
                 <label className="form-label">מותג</label>

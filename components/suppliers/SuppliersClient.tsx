@@ -94,7 +94,6 @@ export default function SuppliersClient() {
 
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
-  const [editMode, setEditMode] = useState(false)  // manage mode (show edit/delete)
 
   // Data
   const [suppliers, setSuppliers]     = useState<Supplier[]>([])
@@ -287,24 +286,6 @@ export default function SuppliersClient() {
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
         <Button onClick={() => openModal()}>+ הוסף ספק</Button>
 
-        {/* Edit mode toggle */}
-        <button
-          onClick={() => setEditMode(v => !v)}
-          style={{
-            padding: '9px 16px',
-            background: editMode ? '#fef3c7' : 'transparent',
-            color: editMode ? 'var(--warning)' : 'var(--text-muted)',
-            border: `1px solid ${editMode ? '#fcd34d' : 'var(--border)'}`,
-            borderRadius: '8px',
-            fontSize: '13px',
-            fontWeight: editMode ? 700 : 400,
-            cursor: 'pointer',
-            transition: 'all .15s',
-          }}
-        >
-          {editMode ? '✓ סיום עריכה' : '✏️ נהל ספקים'}
-        </button>
-
         <div style={{ position: 'relative', flex: 1, minWidth: '200px', maxWidth: '340px', display: 'flex', alignItems: 'center' }}>
           <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 10, pointerEvents: 'none', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input
@@ -319,12 +300,6 @@ export default function SuppliersClient() {
         </span>
         <ExcelMenu onExportExcel={exportExcel} />
       </div>
-
-      {editMode && (
-        <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '8px', padding: '10px 16px', marginBottom: '16px', fontSize: '13px', color: '#92400e' }}>
-          ✏️ מצב עריכה פעיל — לחץ על הכפתורים לעריכה / מחיקה של ספקים
-        </div>
-      )}
 
       <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
 
@@ -344,14 +319,14 @@ export default function SuppliersClient() {
                 return (
                   <div
                     key={s.id}
-                    onClick={() => !editMode && setSelected(isActive ? null : s)}
+                    onClick={() => setSelected(isActive ? null : s)}
                     style={{
                       background: 'var(--bg-card)',
                       borderRadius: 'var(--radius)',
                       border: `1px solid ${isActive ? 'var(--primary)' : 'var(--border)'}`,
                       boxShadow: isActive ? '0 0 0 2px #bbf7d0' : 'var(--shadow)',
                       padding: '14px 16px',
-                      cursor: editMode ? 'default' : 'pointer',
+                      cursor: 'pointer',
                       transition: 'all .15s',
                       display: 'flex',
                       alignItems: 'center',
@@ -412,19 +387,6 @@ export default function SuppliersClient() {
                         </a>
                       )}
 
-                      {/* Edit / Delete — only in editMode */}
-                      {editMode && (
-                        <>
-                          <button
-                            onClick={() => openModal(s)}
-                            style={{ padding: '5px 9px', background: '#f0f9ff', color: 'var(--accent)', border: '1px solid #bae6fd', borderRadius: '7px', fontSize: '13px', cursor: 'pointer' }}
-                          >✏️</button>
-                          <button
-                            onClick={() => deleteSupplier(s)}
-                            style={{ padding: '5px 9px', background: '#fef2f2', color: 'var(--danger)', border: '1px solid #fecaca', borderRadius: '7px', fontSize: '13px', cursor: 'pointer' }}
-                          >🗑</button>
-                        </>
-                      )}
                     </div>
                   </div>
                 )
@@ -434,7 +396,7 @@ export default function SuppliersClient() {
         </div>
 
         {/* ── Detail panel ── */}
-        {selected && !editMode && (
+        {selected && (
           <>
             {/* Mobile backdrop */}
             <div className="supplier-detail-backdrop" onClick={() => setSelected(null)} />
@@ -480,6 +442,8 @@ export default function SuppliersClient() {
                   💬 ווצאפ
                 </a>
               )}
+              <Button variant="outline" size="sm" onClick={() => openModal(selected)}>✏️ ערוך</Button>
+              <Button variant="danger" size="sm" onClick={() => deleteSupplier(selected)}>🗑 מחק</Button>
               <button
                 onClick={() => setSelected(null)}
                 style={{ padding: '6px 10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', color: 'var(--text-muted)' }}

@@ -235,9 +235,8 @@ export default function CarsClient() {
   const [buyerTargetId, setBuyerTargetId] = useState<string | null>(null)
   const [buyerForm,     setBuyerForm]     = useState({ name: '', phone: '', offered_price: '', notes: '' })
 
-  // Kebab menu
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const [menuPos,    setMenuPos]    = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  // Selected car
+  const [selectedCarId, setSelectedCarId] = useState<string | null>(null)
 
   // Decline modal (checking tab – לא קונה)
   const [declineModal,  setDeclineModal]  = useState(false)
@@ -292,6 +291,11 @@ export default function CarsClient() {
 
   useEffect(() => { load() }, [load])
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedCarId(null) }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [])
 
   // ── Car CRUD ──────────────────────────────────────────────────────
 
@@ -727,6 +731,8 @@ export default function CarsClient() {
 
   // ── Stats ─────────────────────────────────────────────────────────
 
+  const selCar = selectedCarId ? cars.find(c => c.id === selectedCarId) ?? null : null
+
   const invCars     = cars.filter(c => c.status !== 'sold' && c.status !== 'checking' && c.status !== 'declined')
   const checkCars   = cars.filter(c => c.status === 'checking')
   const declinedCars = cars.filter(c => c.status === 'declined')
@@ -748,15 +754,19 @@ export default function CarsClient() {
     const test  = dateChipStyle(car.test_date)
     const insur = dateChipStyle(car.insur_date)
 
+    const isSelected = selectedCarId === car.id
     return (
-      <div style={{
-        background: '#fff', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,.08)',
-        border: `2px solid ${st?.color || 'var(--border)'}`,
-        display: 'flex', flexDirection: 'column',
-      }}>
+      <div
+        onClick={() => setSelectedCarId(isSelected ? null : car.id)}
+        style={{
+          background: '#fff', borderRadius: 12,
+          boxShadow: isSelected ? '0 0 0 2px var(--primary)' : '0 1px 3px rgba(0,0,0,.08)',
+          border: `2px solid ${isSelected ? 'var(--primary)' : st?.color || 'var(--border)'}`,
+          display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'box-shadow .15s',
+        }}>
         {/* Photo */}
         <div
-          onClick={() => car.photos.length && setLightbox({ photos: car.photos, idx: 0 })}
+          onClick={e => { e.stopPropagation(); car.photos.length && setLightbox({ photos: car.photos, idx: 0 }) }}
           style={{
             height: 180, background: '#f1f5f9', position: 'relative',
             cursor: car.photos.length ? 'pointer' : 'default', overflow: 'hidden',
@@ -827,41 +837,6 @@ export default function CarsClient() {
           )}
         </div>
 
-        {/* Kebab menu */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 10px 10px' }}>
-          <button
-            onClick={e => {
-              e.stopPropagation()
-              if (openMenuId === car.id) { setOpenMenuId(null); return }
-              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-              setMenuPos({ x: rect.left, y: rect.top })
-              setOpenMenuId(car.id)
-            }}
-            style={{ border: 'none', background: '#f1f5f9', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', fontSize: 20, fontWeight: 900, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', letterSpacing: 1 }}
-            title="פעולות"
-          >⋮</button>
-
-          {openMenuId === car.id && (
-            <div
-              onClick={e => e.stopPropagation()}
-              style={{ position: 'fixed', inset: 0, zIndex: 40 }}
-              onMouseDown={() => setOpenMenuId(null)}
-            >
-              <div
-                onMouseDown={e => e.stopPropagation()}
-                style={{ position: 'fixed', bottom: window.innerHeight - menuPos.y + 4, left: menuPos.x, background: '#fff', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,.15)', zIndex: 50, minWidth: 180, overflow: 'hidden' }}
-              >
-                <MenuItem icon="✏️" label="עריכה"          onClick={() => { setOpenMenuId(null); openCarForm(car) }} />
-                {car.status !== 'sold' && <>
-                  <MenuItem icon="🟡" label="הוסף מתעניין" onClick={() => { setOpenMenuId(null); openBuyerModal(car.id) }} />
-                  <MenuItem icon="✅" label="מכור"          onClick={() => { setOpenMenuId(null); openSellModal(car.id) }} color="var(--primary)" />
-                </>}
-                <div style={{ height: 1, background: 'var(--border)', margin: '2px 0' }} />
-                <MenuItem icon="🗑️" label="מחיקה" onClick={() => { setOpenMenuId(null); deleteCar(car.id) }} color="var(--danger)" />
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     )
   }
@@ -932,17 +907,45 @@ export default function CarsClient() {
 
       {/* ── TAB: ALL ── */}
       {tab === 'all' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(290px,1fr))', gap: 18 }}>
-          {[...invCars, ...checkCars, ...soldCars].length === 0
-            ? <Empty icon="🚗" text="אין רכבים" />
-            : [...invCars, ...checkCars, ...soldCars].map(c => <div key={c.id}>{CarCard({ car: c })}</div>)
-          }
-        </div>
+        <>
+          {selCar && (
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {[selCar.make, selCar.model, selCar.plate].filter(Boolean).join(' ')}</span>
+              <Button size="sm" variant="secondary" onClick={() => openCarForm(selCar)}>✏️ ערוך</Button>
+              {selCar.status !== 'sold' && selCar.status !== 'checking' && <>
+                <Button size="sm" variant="secondary" onClick={() => openBuyerModal(selCar.id)}>🟡 מתעניין</Button>
+                <Button size="sm" onClick={() => openSellModal(selCar.id)}>✅ מכור</Button>
+              </>}
+              {selCar.status === 'checking' && <>
+                <Button size="sm" onClick={() => changeCarStatus(selCar.id, 'available')}>✅ קונה!</Button>
+                <Button size="sm" variant="danger" onClick={() => openDeclineModal(selCar.id)}>❌ לא קונה</Button>
+              </>}
+              <Button size="sm" variant="danger" onClick={() => deleteCar(selCar.id)}>🗑 מחק</Button>
+              <button onClick={() => setSelectedCarId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
+            </div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(290px,1fr))', gap: 18 }}>
+            {[...invCars, ...checkCars, ...soldCars].length === 0
+              ? <Empty icon="🚗" text="אין רכבים" />
+              : [...invCars, ...checkCars, ...soldCars].map(c => <div key={c.id}>{CarCard({ car: c })}</div>)
+            }
+          </div>
+        </>
       )}
 
       {/* ── TAB: INVENTORY ── */}
       {tab === 'inventory' && (
         <>
+          {selCar && invCars.some(c => c.id === selCar.id) && (
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {[selCar.make, selCar.model, selCar.plate].filter(Boolean).join(' ')}</span>
+              <Button size="sm" variant="secondary" onClick={() => openCarForm(selCar)}>✏️ ערוך</Button>
+              <Button size="sm" variant="secondary" onClick={() => openBuyerModal(selCar.id)}>🟡 מתעניין</Button>
+              <Button size="sm" onClick={() => openSellModal(selCar.id)}>✅ מכור</Button>
+              <Button size="sm" variant="danger" onClick={() => deleteCar(selCar.id)}>🗑 מחק</Button>
+              <button onClick={() => setSelectedCarId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
             {[{ v: 'all', l: 'הכל' }, { v: 'available', l: '🟢 למכירה' }, { v: 'reserved', l: '🟡 שמור' }, { v: 'business', l: '🟣 בשימוש העסק' }].map(f => (
               <button key={f.v} onClick={() => setInvFilter(f.v)} style={{
@@ -969,20 +972,30 @@ export default function CarsClient() {
             <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>רכבים שנבדקים לפני קנייה — לחץ "✅ אשר" להעביר למלאי</span>
             <Button onClick={() => { openCarForm(); setCarForm(f => ({ ...f, status: 'checking' })) }}>+ הוסף לבדיקה</Button>
           </div>
+          {selCar && checkCars.some(c => c.id === selCar.id) && (
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {[selCar.make, selCar.model, selCar.plate].filter(Boolean).join(' ')}</span>
+              <Button size="sm" variant="secondary" onClick={() => openCarForm(selCar)}>✏️ ערוך</Button>
+              <Button size="sm" onClick={() => changeCarStatus(selCar.id, 'available')}>✅ קונה!</Button>
+              <Button size="sm" variant="danger" onClick={() => openDeclineModal(selCar.id)}>❌ לא קונה</Button>
+              <Button size="sm" variant="danger" onClick={() => deleteCar(selCar.id)}>🗑 מחק</Button>
+              <button onClick={() => setSelectedCarId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
+            </div>
+          )}
           {checkCars.length === 0
             ? <Empty icon="🔍" text="אין רכבים בבדיקה" />
             : <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '2px solid var(--border)' }}>
-                      {['תאריך','יצרן / דגם','שנה','לוחית','ק"מ','מחיר מבוקש','איש קשר','הערות','פעולות'].map(h => (
+                      {['תאריך','יצרן / דגם','שנה','לוחית','ק"מ','מחיר מבוקש','איש קשר','הערות'].map(h => (
                         <th key={h} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {checkCars.map(car => (
-                      <tr key={car.id} style={{ borderBottom: '1px solid var(--border)', background: '#fffbeb' }}>
+                      <tr key={car.id} onClick={() => setSelectedCarId(selectedCarId === car.id ? null : car.id)} style={{ borderBottom: '1px solid var(--border)', background: selectedCarId === car.id ? '#eff6ff' : '#fffbeb', cursor: 'pointer' }}>
                         <td style={td()}>{car.created_at?.slice(0,10) || '—'}</td>
                         <td style={td()}><strong>{car.make}</strong> {car.model}</td>
                         <td style={td()}>{car.year || '—'}</td>
@@ -991,32 +1004,6 @@ export default function CarsClient() {
                         <td style={{ ...td(), fontWeight: 700, color: 'var(--warning)' }}>{fmt(car.buy_price)}</td>
                         <td style={td()}>{car.contact || '—'}</td>
                         <td style={td()}>{car.notes || '—'}</td>
-                        <td style={td()}>
-                          <div style={{ position: 'relative' }}>
-                            <button
-                              onClick={e => {
-                                e.stopPropagation()
-                                const id = `chk-${car.id}`
-                                if (openMenuId === id) { setOpenMenuId(null); return }
-                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                                setMenuPos({ x: rect.left, y: rect.top })
-                                setOpenMenuId(id)
-                              }}
-                              style={{ border: 'none', background: '#f1f5f9', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', fontSize: 20, fontWeight: 900, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            >⋮</button>
-                            {openMenuId === `chk-${car.id}` && (
-                              <div onClick={e => e.stopPropagation()} style={{ position: 'fixed', inset: 0, zIndex: 40 }} onMouseDown={() => setOpenMenuId(null)}>
-                                <div onMouseDown={e => e.stopPropagation()} style={{ position: 'fixed', bottom: window.innerHeight - menuPos.y + 4, left: menuPos.x, background: '#fff', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,.15)', zIndex: 50, minWidth: 180, overflow: 'hidden' }}>
-                                  <MenuItem icon="✏️" label="עריכה"   onClick={() => { setOpenMenuId(null); openCarForm(car) }} />
-                                  <MenuItem icon="✅" label="קונה!"   onClick={() => { setOpenMenuId(null); changeCarStatus(car.id, 'available') }} color="var(--primary)" />
-                                  <MenuItem icon="❌" label="לא קונה" onClick={() => { setOpenMenuId(null); openDeclineModal(car.id) }} color="var(--danger)" />
-                                  <div style={{ height: 1, background: 'var(--border)', margin: '2px 0' }} />
-                                  <MenuItem icon="🗑️" label="מחיקה"   onClick={() => { setOpenMenuId(null); deleteCar(car.id) }} color="var(--danger)" />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1101,36 +1088,17 @@ export default function CarsClient() {
         const displayReq  = reqFilter === 'all' ? requests      : requests.filter(r => r.status === reqFilter)
         const displaySale = reqFilter === 'all' ? saleRequests  : saleRequests.filter(r => r.status === reqFilter)
 
-        function ReqKebab({ menuKey, onEdit, onDelete, onStatus }: {
-          menuKey: string; onEdit: () => void; onDelete: () => void
-          onStatus: (s: string, cur: string) => void
+        function ReqActions({ curStatus, onEdit, onDelete, onStatus }: {
+          curStatus: string; onEdit: () => void; onDelete: () => void
+          onStatus: (s: string) => void
         }) {
           return (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '6px 10px 10px' }}>
-              <button
-                onClick={e => {
-                  e.stopPropagation()
-                  if (openMenuId === menuKey) { setOpenMenuId(null); return }
-                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                  setMenuPos({ x: rect.left, y: rect.top })
-                  setOpenMenuId(menuKey)
-                }}
-                style={{ border: 'none', background: '#f1f5f9', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', fontSize: 20, fontWeight: 900, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >⋮</button>
-              {openMenuId === menuKey && (
-                <div onClick={e => e.stopPropagation()} style={{ position: 'fixed', inset: 0, zIndex: 40 }} onMouseDown={() => setOpenMenuId(null)}>
-                  <div onMouseDown={e => e.stopPropagation()} style={{ position: 'fixed', bottom: window.innerHeight - menuPos.y + 4, left: menuPos.x, background: '#fff', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,.15)', zIndex: 50, minWidth: 180, overflow: 'hidden' }}>
-                    <MenuItem icon="✏️" label="עריכה" onClick={() => { setOpenMenuId(null); onEdit() }} />
-                    <div style={{ height: 1, background: 'var(--border)', margin: '2px 0' }} />
-                    {REQ_STATUSES.filter(s => s.value !== menuKey.split('|')[1]).map(s => (
-                      <MenuItem key={s.value} icon="●" label={s.label} color={s.color}
-                        onClick={() => { setOpenMenuId(null); onStatus(s.value, menuKey.split('|')[1]) }} />
-                    ))}
-                    <div style={{ height: 1, background: 'var(--border)', margin: '2px 0' }} />
-                    <MenuItem icon="🗑️" label="מחיקה" onClick={() => { setOpenMenuId(null); onDelete() }} color="var(--danger)" />
-                  </div>
-                </div>
-              )}
+            <div style={{ display: 'flex', gap: 6, padding: '6px 12px 12px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <Button size="sm" variant="secondary" onClick={onEdit}>✏️ ערוך</Button>
+              {REQ_STATUSES.filter(s => s.value !== curStatus).map(s => (
+                <Button key={s.value} size="sm" variant="secondary" onClick={() => onStatus(s.value)}>{s.label}</Button>
+              ))}
+              <Button size="sm" variant="danger" onClick={onDelete}>🗑</Button>
             </div>
           )
         }
@@ -1201,7 +1169,7 @@ export default function CarsClient() {
                             {req.notes && <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>{req.notes}</div>}
                             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{req.created_at?.slice(0,10)}</div>
                           </div>
-                          {ReqKebab({ menuKey: `req-${req.id}|${req.status}`, onEdit: () => openReqForm(req), onDelete: () => deleteReq(req.id), onStatus: (s) => changeReqStatus(req.id, s) })}
+                          {ReqActions({ curStatus: req.status, onEdit: () => openReqForm(req), onDelete: () => deleteReq(req.id), onStatus: (s) => changeReqStatus(req.id, s) })}
                         </div>
                       )
                     })}
@@ -1245,7 +1213,7 @@ export default function CarsClient() {
                             {req.notes && <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>{req.notes}</div>}
                             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{req.created_at?.slice(0,10)}</div>
                           </div>
-                          {ReqKebab({ menuKey: `sale-${req.id}|${req.status}`, onEdit: () => openSaleReqForm(req), onDelete: () => deleteSaleReq(req.id), onStatus: (s) => changeSaleReqStatus(req.id, s) })}
+                          {ReqActions({ curStatus: req.status, onEdit: () => openSaleReqForm(req), onDelete: () => deleteSaleReq(req.id), onStatus: (s) => changeSaleReqStatus(req.id, s) })}
                         </div>
                       )
                     })}

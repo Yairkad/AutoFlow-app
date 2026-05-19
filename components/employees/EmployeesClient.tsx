@@ -212,8 +212,8 @@ export default function EmployeesClient() {
   // Salary table edit mode
   const [salaryEditMode, setSalaryEditMode] = useState(false)
 
-  // Employee card 3-dots open
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  // Selected employee (replaces 3-dots menu)
+  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null)
 
   // Quick bank/personal info view
   const [bankViewEmp, setBankViewEmp] = useState<Employee | null>(null)
@@ -223,11 +223,10 @@ export default function EmployeesClient() {
   const bankDropRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!openMenuId) return
-    const handler = () => setOpenMenuId(null)
-    document.addEventListener('click', handler)
-    return () => document.removeEventListener('click', handler)
-  }, [openMenuId])
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedEmpId(null) }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [])
 
   useEffect(() => {
     if (!showBankDrop) return
@@ -601,11 +600,12 @@ export default function EmployeesClient() {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: '16px' }}>
         {sorted.map(e => (
-          <div key={e.id} style={{
+          <div key={e.id} onClick={() => setSelectedEmpId(selectedEmpId === e.id ? null : e.id)} style={{
             background: '#fff', borderRadius: 'var(--radius)',
-            boxShadow: 'var(--shadow)', padding: '18px',
+            boxShadow: selectedEmpId === e.id ? '0 0 0 2px var(--primary)' : 'var(--shadow)', padding: '18px',
             borderRight: `4px solid ${e.is_active ? 'var(--primary)' : 'var(--border)'}`,
             opacity: e.is_active ? 1 : 0.7,
+            cursor: 'pointer', transition: 'box-shadow .15s',
           }}>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
@@ -644,45 +644,6 @@ export default function EmployeesClient() {
                 : `₪${(e.base_salary || 0).toLocaleString('he-IL', { maximumFractionDigits: 0 })} לחודש`}
             </div>
 
-            {/* Actions – 3-dots menu */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px', position: 'relative' }}>
-              <button
-                onClick={ev => { ev.stopPropagation(); setOpenMenuId(openMenuId === e.id ? null : e.id) }}
-                style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', padding: '4px 10px', fontSize: '18px', color: 'var(--text-muted)', lineHeight: 1 }}
-                title="אפשרויות"
-              >⋮</button>
-              {openMenuId === e.id && (
-                <div
-                  onClick={ev => ev.stopPropagation()}
-                  style={{
-                    position: 'absolute', bottom: '100%', left: 0, zIndex: 100,
-                    background: '#fff', border: '1px solid var(--border)', borderRadius: '10px',
-                    boxShadow: '0 4px 20px rgba(0,0,0,.12)', minWidth: '160px', overflow: 'hidden',
-                    marginBottom: '4px',
-                  }}
-                >
-                  {[
-                    { label: '✏️ עריכה', action: () => { openEdit(e); setOpenMenuId(null) } },
-                    { label: '🏦 פרטי בנק / אישי', action: () => { setBankViewEmp(e); setOpenMenuId(null) } },
-                    ...(e.email ? [{ label: '🔗 שלח הזמנה', action: () => { sendInviteLink(e.email!); setOpenMenuId(null) } }] : []),
-                    { label: '📋 היסטוריה', action: () => { openHistory(e); setOpenMenuId(null) } },
-                    { label: '🗑️ מחק', action: () => { deleteEmp(e); setOpenMenuId(null) }, danger: true },
-                  ].map(item => (
-                    <button
-                      key={item.label}
-                      onClick={item.action}
-                      className="tr-hover"
-                      style={{
-                        display: 'block', width: '100%', textAlign: 'right', padding: '10px 14px',
-                        border: 'none', background: 'none', fontSize: '13px',
-                        color: (item as { danger?: boolean }).danger ? 'var(--danger)' : 'var(--text)',
-                        fontFamily: 'inherit',
-                      }}
-                    >{item.label}</button>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
         ))}
       </div>
@@ -959,6 +920,21 @@ export default function EmployeesClient() {
             <ExcelMenu onExportExcel={exportExcel} />
             <Button onClick={openAdd}>+ הוסף עובד</Button>
           </div>
+          {selectedEmpId && (() => {
+            const emp = employees.find(e => e.id === selectedEmpId)
+            if (!emp) return null
+            return (
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 16px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 700, fontSize: '13px', color: '#1d4ed8', flex: 1 }}>✓ {emp.full_name}</span>
+                <Button variant="secondary" size="sm" onClick={() => openEdit(emp)}>✏️ ערוך</Button>
+                <Button variant="secondary" size="sm" onClick={() => setBankViewEmp(emp)}>🏦 פרטי בנק</Button>
+                {emp.email && <Button variant="secondary" size="sm" onClick={() => sendInviteLink(emp.email!)}>🔗 הזמנה</Button>}
+                <Button variant="secondary" size="sm" onClick={() => openHistory(emp)}>📋 היסטוריה</Button>
+                <Button variant="danger" size="sm" onClick={() => deleteEmp(emp)}>🗑 מחק</Button>
+                <button onClick={() => setSelectedEmpId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '16px', padding: '2px 6px' }}>✕</button>
+              </div>
+            )
+          })()}
           {renderEmpCards()}
         </div>
       )}
