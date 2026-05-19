@@ -148,7 +148,6 @@ export default function FreeSearchClient({ session, filterType }: Props) {
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="חפש מוצר, צמיג, שירות..."
-          autoFocus
           className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium outline-none"
           style={{ padding: '10px 14px' }}
         />
