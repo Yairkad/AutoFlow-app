@@ -47,14 +47,6 @@ export default function TireSearchClient({ session }: Props) {
     return () => clearTimeout(t)
   }, [query, search])
 
-  // Hint sizes from transport ministry
-  useEffect(() => {
-    if (!session.plate) return
-    // Sizes from the plate's tire_size field (would come from plate lookup).
-    // For now we show the session year as a hint prompt.
-    setHints([])
-  }, [session.plate])
-
   // Scanner mode: focus hidden input, collect barcode keystrokes
   useEffect(() => {
     if (!scanMode) return
