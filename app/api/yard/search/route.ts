@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const q    = req.nextUrl.searchParams.get('q')?.trim() ?? ''
   const type = req.nextUrl.searchParams.get('type') ?? 'all'
 
-  const supabase  = await createClient()
+  const supabase = createServiceClient()
   const results: SearchResult[] = []
 
   const search = `%${q}%`
