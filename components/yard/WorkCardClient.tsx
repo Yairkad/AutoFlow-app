@@ -111,6 +111,9 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   // Optimistic add — show item immediately, rollback on server error
   function doAddQuick(name: string, price: number, serviceId?: string) {
     setConfirmItem(null)
+    // If item already in cart, increment its quantity instead of adding a new row
+    const existing = items.find(i => i.name === name)
+    if (existing) { changeQty(existing, 1); return }
     const tempId = `temp-${Date.now()}`
     const tempItem: YardSessionItem = {
       id: tempId, session_id: session.id, tenant_id: '',
@@ -187,8 +190,9 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     sendToOffice()
   }
 
-  function incrementQty(item: YardSessionItem) {
-    const newQty = item.quantity + 1
+  function changeQty(item: YardSessionItem, delta: number) {
+    const newQty = item.quantity + delta
+    if (newQty <= 0) { deleteItem(item); return }
     setSession(s => ({
       ...s,
       yard_session_items: s.yard_session_items.map(i => i.id === item.id ? { ...i, quantity: newQty } : i),
@@ -361,11 +365,18 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
                   <button onClick={() => openEditItem(item)} className="font-bold text-blue-600 whitespace-nowrap flex-shrink-0" style={{ fontSize: '15px' }}>
                     {(item.unit_price * item.quantity).toLocaleString()}₪
                   </button>
-                  <button
-                    onClick={() => incrementQty(item)}
-                    className="font-black text-green-600 hover:text-green-800 leading-none flex-shrink-0 active:scale-90 transition-all"
-                    style={{ fontSize: '22px', width: '28px', textAlign: 'center' }}
-                  >+</button>
+                  <div className="flex items-center flex-shrink-0" style={{ gap: '2px' }}>
+                    <button
+                      onClick={() => changeQty(item, -1)}
+                      className="font-black text-slate-400 hover:text-red-500 leading-none active:scale-90 transition-all"
+                      style={{ fontSize: '22px', width: '26px', textAlign: 'center' }}
+                    >−</button>
+                    <button
+                      onClick={() => changeQty(item, 1)}
+                      className="font-black text-green-600 hover:text-green-800 leading-none active:scale-90 transition-all"
+                      style={{ fontSize: '22px', width: '26px', textAlign: 'center' }}
+                    >+</button>
+                  </div>
                   <button
                     onClick={() => deleteItem(item)}
                     className="text-slate-300 hover:text-red-500 leading-none flex-shrink-0 transition-colors"
