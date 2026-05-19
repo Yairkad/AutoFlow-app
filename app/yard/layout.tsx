@@ -22,7 +22,9 @@ export default function YardLayout({ children }: { children: React.ReactNode }) 
   return (
     <ToastProvider>
       <ConfirmProvider>
-        {children}
+        <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          {children}
+        </div>
       </ConfirmProvider>
     </ToastProvider>
   )
