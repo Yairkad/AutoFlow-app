@@ -24,6 +24,7 @@ export default function TireSearchClient({ session }: Props) {
   const [saving,        setSaving]        = useState(false)
   const [detectedSize,  setDetectedSize]  = useState<string | null>(null)
   const [showPicker,    setShowPicker]    = useState(false)
+  const [suggestions,   setSuggestions]   = useState<string[]>([])
 
   const CACHE_TTL = 5 * 60 * 1000
 
@@ -35,6 +36,17 @@ export default function TireSearchClient({ session }: Props) {
     fetch(`/api/public/plate?plate=${encodeURIComponent(plate)}`)
       .then(r => r.json())
       .then(data => { if (data?.tireSize) setDetectedSize(data.tireSize) })
+      .catch(() => {})
+  }, []) // eslint-disable-line
+
+  // Pre-fetch tire names for autocomplete suggestions
+  useEffect(() => {
+    fetch('/api/yard/search?q=2&type=tire')
+      .then(r => r.json())
+      .then((data: TireResult[]) => {
+        const unique = [...new Set(data.map((r: TireResult) => r.name))]
+        setSuggestions(unique)
+      })
       .catch(() => {})
   }, []) // eslint-disable-line
 
@@ -170,12 +182,16 @@ export default function TireSearchClient({ session }: Props) {
         <input
           type="text"
           inputMode="numeric"
+          list="tire-suggestions"
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="הקלד מידת צמיג או השתמש בסורק"
           className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium outline-none"
           style={{ padding: '10px 14px' }}
         />
+        <datalist id="tire-suggestions">
+          {suggestions.map(s => <option key={s} value={s} />)}
+        </datalist>
         <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
           <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">−</button>
           <span className="w-9 text-center font-bold border-x-2 border-slate-200 h-10 flex items-center justify-center">{qty}</span>

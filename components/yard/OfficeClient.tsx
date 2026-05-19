@@ -417,8 +417,8 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                 type="text"
                 inputMode="numeric"
                 placeholder="הזן מספר רכב..."
-                value={historyPlate}
-                onChange={e => setHistoryPlate(e.target.value.replace(/\D/g, ''))}
+                value={formatPlate(historyPlate)}
+                onChange={e => setHistoryPlate(e.target.value.replace(/\D/g, '').slice(0, 8))}
                 ref={historyInputRef}
                 onKeyDown={e => e.key === 'Enter' && doHistorySearch()}
                 className="flex-1 border-2 border-blue-400 rounded-xl font-bold outline-none focus:border-blue-600 transition-colors"
