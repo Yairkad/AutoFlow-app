@@ -25,8 +25,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const items = session.yard_session_items ?? []
 
   useEffect(() => {
-    // Use the larger dimension so LandscapeLock-rotated portrait devices get desktop layout
-    const check = () => setIsMobile(Math.max(window.innerWidth, window.innerHeight) < 700)
+    const check = () => setIsMobile(window.innerWidth < 700)
     check()
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)

@@ -3,27 +3,48 @@ import { useEffect, type ReactNode } from 'react'
 
 export default function LandscapeLock({ children }: { children: ReactNode }) {
   useEffect(() => {
-    const el = document.createElement('style')
-    el.id = 'landscape-lock-css'
-    // Geometry (portrait: vw=short, vh=long):
-    //   div placed at left=100vw (right edge), width=100vh, height=100vw
-    //   rotate(90deg) CW around top-left → maps exactly onto full viewport
-    el.textContent = `
-      @media screen and (orientation: portrait) {
-        .yard-landscape-lock {
-          transform: rotate(90deg) !important;
-          transform-origin: top left !important;
-          position: fixed !important;
-          top: 0 !important;
-          left: 100vw !important;
-          width: 100vh !important;
-          height: 100vw !important;
-          overflow: hidden !important;
-        }
+    // Try native OS lock first (Android Chrome PWA fullscreen).
+    // If it works, the keyboard also rotates — no CSS trick needed.
+    const tryNativeLock = async () => {
+      try {
+        await screen.orientation.lock('landscape')
+        return true
+      } catch {
+        return false
       }
-    `
-    document.head.appendChild(el)
-    return () => document.getElementById('landscape-lock-css')?.remove()
+    }
+
+    let cssInjected = false
+
+    tryNativeLock().then(locked => {
+      if (locked) return // native lock succeeded — nothing else needed
+
+      // Fallback: CSS rotation for browsers that don't support the API
+      const el = document.createElement('style')
+      el.id = 'landscape-lock-css'
+      el.textContent = `
+        @media screen and (orientation: portrait) {
+          .yard-landscape-lock {
+            transform: rotate(90deg) !important;
+            transform-origin: top left !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 100vw !important;
+            width: 100vh !important;
+            height: 100vw !important;
+            overflow: hidden !important;
+          }
+        }
+      `
+      document.head.appendChild(el)
+      cssInjected = true
+    })
+
+    return () => {
+      // Release native lock when leaving yard
+      try { screen.orientation.unlock() } catch {}
+      if (cssInjected) document.getElementById('landscape-lock-css')?.remove()
+    }
   }, [])
 
   return (

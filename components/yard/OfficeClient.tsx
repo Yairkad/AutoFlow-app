@@ -412,7 +412,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                 const quick = services.filter(s => quickNames.has(s.name))
                 const menu  = services.filter(s => !quickNames.has(s.name))
 
-                const SvcRow = ({ svc }: { svc: typeof services[0] }) => (
+                const renderRow = (svc: YardService) => (
                   <div key={svc.id} className="flex items-center border-b border-slate-50" style={{ padding: '8px 24px', gap: '12px' }}>
                     <div className="flex-1">
                       <input
@@ -456,7 +456,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                         <div className="bg-slate-50 border-b" style={{ padding: '6px 24px' }}>
                           <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">🔧 כפתורים מהירים</span>
                         </div>
-                        {quick.map(svc => <SvcRow key={svc.id} svc={svc} />)}
+                        {quick.map(svc => renderRow(svc))}
                       </>
                     )}
                     {menu.length > 0 && (
@@ -464,7 +464,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                         <div className="bg-slate-50 border-b" style={{ padding: '6px 24px', marginTop: quick.length > 0 ? '4px' : 0 }}>
                           <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">⚙️ תפריט שירותים</span>
                         </div>
-                        {menu.map(svc => <SvcRow key={svc.id} svc={svc} />)}
+                        {menu.map(svc => renderRow(svc))}
                       </>
                     )}
                   </>
