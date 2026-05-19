@@ -1,30 +1,48 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
-export default function LandscapeLock() {
+interface Props { children: ReactNode }
+
+export default function LandscapeLock({ children }: Props) {
+  const [style, setStyle] = useState<React.CSSProperties>({
+    width: '100vw', height: '100vh', overflow: 'hidden',
+  })
+
   useEffect(() => {
-    const el = document.createElement('style')
-    el.id = 'landscape-lock-css'
-    // Rotate body 90° CW when in portrait so content always appears landscape.
-    // Geometry: element placed at left=100vw, top=0 with size 100vh×100vw,
-    // then rotated CW around its top-left corner → covers exactly the viewport.
-    el.textContent = `
-      @media screen and (orientation: portrait) {
-        body {
-          transform: rotate(90deg);
-          transform-origin: top left;
-          position: fixed;
-          top: 0;
-          left: 100vw;
-          width: 100vh;
-          height: 100vw;
-          overflow: hidden;
-        }
+    function update() {
+      const w = window.innerWidth
+      const h = window.innerHeight
+      if (h > w) {
+        // Portrait → rotate wrapper 90° CW so content appears landscape
+        setStyle({
+          transform: 'rotate(90deg)',
+          transformOrigin: 'top left',
+          position: 'fixed',
+          top: 0,
+          left: h,        // move to right edge of portrait viewport
+          width: h,       // rotated width  = portrait height
+          height: w,      // rotated height = portrait width
+          overflow: 'hidden',
+        })
+      } else {
+        setStyle({ width: '100vw', height: '100vh', overflow: 'hidden' })
       }
-    `
-    document.head.appendChild(el)
-    return () => document.getElementById('landscape-lock-css')?.remove()
+    }
+
+    update()
+    window.addEventListener('resize', update)
+    // orientationchange fires before dimensions update, wait a frame
+    const onOrient = () => setTimeout(update, 100)
+    window.addEventListener('orientationchange', onOrient)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('orientationchange', onOrient)
+    }
   }, [])
 
-  return null
+  return (
+    <div style={style} className="flex flex-col bg-slate-100 select-none">
+      {children}
+    </div>
+  )
 }

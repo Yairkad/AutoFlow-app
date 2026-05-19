@@ -23,10 +23,9 @@ export default function YardLayout({ children }: { children: React.ReactNode }) 
   return (
     <ToastProvider>
       <ConfirmProvider>
-        <LandscapeLock />
-        <div className="h-screen w-screen overflow-hidden flex flex-col bg-slate-100 select-none">
+        <LandscapeLock>
           {children}
-        </div>
+        </LandscapeLock>
       </ConfirmProvider>
     </ToastProvider>
   )
