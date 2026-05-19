@@ -384,7 +384,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
                       {item.name}
                       {item.tire_position && (
                         <span className="text-green-600 font-bold" style={{ fontSize: '12px', marginRight: '6px' }}>
-                          ({({ FL:'קד״ש', FR:'קד״י', RL:'אח״ש', RR:'אח״י' } as Record<string,string>)[item.tire_position]})
+                          ({({ FL:'קדמי שמאל', FR:'קדמי ימין', RL:'אחורי שמאל', RR:'אחורי ימין' } as Record<string,string>)[item.tire_position]})
                         </span>
                       )}
                     </div>
