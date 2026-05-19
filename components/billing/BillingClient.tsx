@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import Button from '@/components/ui/Button'
+import PageHeader from '@/components/ui/PageHeader'
 import Modal from '@/components/ui/Modal'
 import Input from '@/components/ui/Input'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
@@ -154,12 +155,7 @@ const thSt: React.CSSProperties = {
   color: 'var(--text-muted)', fontSize: '11px', whiteSpace: 'nowrap',
   background: '#f8fafc', borderBottom: '1px solid var(--border)', letterSpacing: '0.3px',
 }
-const tdSt: React.CSSProperties = { padding: '11px 12px', fontSize: '13px', verticalAlign: 'middle', borderBottom: '1px solid #f1f5f9' }
-const selSt: React.CSSProperties = {
-  padding: '8px 12px', border: '1.5px solid var(--border)', borderRadius: '9px',
-  fontSize: '14px', background: '#f8fafc', color: 'var(--text)', fontFamily: 'inherit', width: '100%',
-}
-const labelSt: React.CSSProperties = { fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }
+const tdSt: React.CSSProperties = { padding: '10px 12px', fontSize: '13px', verticalAlign: 'middle', borderBottom: '1px solid var(--border)' }
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -639,15 +635,12 @@ export default function BillingClient() {
   return (
     <div style={{ padding: '20px', maxWidth: '960px', margin: '0 auto', direction: 'rtl' }}>
 
-      {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#f59e0b,#fbbf24)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #f59e0b44' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>חשבונות</h1>
-          </div>
-        </div>
-        {tab === 'monthly' && (
+      <PageHeader
+        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>}
+        iconBg="linear-gradient(135deg,#f59e0b,#fbbf24)"
+        iconShadow="#f59e0b44"
+        title="חשבונות"
+        actions={tab === 'monthly' ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Button variant="secondary" size="sm" onClick={() => changeMonth(prevMonth(currentMonth))}>→</Button>
             <span style={{ fontWeight: 600, fontSize: '15px', minWidth: '130px', textAlign: 'center' }}>
@@ -655,8 +648,8 @@ export default function BillingClient() {
             </span>
             <Button variant="secondary" size="sm" onClick={() => changeMonth(nextMonth(currentMonth))}>←</Button>
           </div>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {/* ── Tabs ── */}
       <div className="scroll-x" style={{ marginBottom: '20px' }}>
@@ -698,7 +691,7 @@ export default function BillingClient() {
 
             {allContactsInMonth.length > 0 && (
               <select value={contactFilter} onChange={e => setContactFilter(e.target.value)}
-                style={{ ...selSt, width: 'auto', padding: '5px 10px', fontSize: '12px' }}>
+                className="form-input" style={{ width: 'auto', padding: '5px 10px', fontSize: '12px' }}>
                 <option value="">כל אנשי הקשר</option>
                 {allContactsInMonth.map(c => (
                   <option key={c.id} value={c.id}>{c.name} ({ROLE_LABELS[c.role] ?? c.role})</option>
@@ -816,8 +809,8 @@ export default function BillingClient() {
                         </td>
                         {editMode && (
                           <td style={{ ...tdSt, display: 'flex', gap: '6px' }}>
-                            <Button variant="secondary" size="sm" onClick={() => openEntryModal(e)}>✏️</Button>
-                            <Button variant="danger" size="sm" onClick={() => deleteEntry(e.id)}>🗑️</Button>
+                            <Button variant="secondary" size="sm" title="ערוך חיוב" onClick={() => openEntryModal(e)}>✏️</Button>
+                            <Button variant="danger" size="sm" title="מחק חיוב" onClick={() => deleteEntry(e.id)}>🗑️</Button>
                           </td>
                         )}
                       </tr>
@@ -919,8 +912,8 @@ export default function BillingClient() {
                         </td>
                         {itemsEdit && (
                           <td style={{ ...tdSt, display: 'flex', gap: '6px' }}>
-                            <Button variant="secondary" size="sm" onClick={() => openItemModal(it)}>✏️</Button>
-                            <Button variant="danger" size="sm" onClick={() => deleteItem(it.id)}>🗑️</Button>
+                            <Button variant="secondary" size="sm" title="ערוך סעיף" onClick={() => openItemModal(it)}>✏️</Button>
+                            <Button variant="danger" size="sm" title="מחק סעיף" onClick={() => deleteItem(it.id)}>🗑️</Button>
                           </td>
                         )}
                       </tr>
@@ -985,8 +978,8 @@ export default function BillingClient() {
                         </td>
                         {itemsEdit && (
                           <td style={{ ...tdSt, display: 'flex', gap: '6px' }}>
-                            <Button variant="secondary" size="sm" onClick={() => openContactModal(c)}>✏️</Button>
-                            <Button variant="danger" size="sm" onClick={() => deleteContact(c.id)}>🗑️</Button>
+                            <Button variant="secondary" size="sm" title="ערוך איש קשר" onClick={() => openContactModal(c)}>✏️</Button>
+                            <Button variant="danger" size="sm" title="מחק איש קשר" onClick={() => deleteContact(c.id)}>🗑️</Button>
                           </td>
                         )}
                       </tr>
@@ -1133,8 +1126,8 @@ export default function BillingClient() {
                 </div>
                 {payEntry.direction === 'expense' && (
                   <div style={{ marginBottom: '4px' }}>
-                    <label style={labelSt}>אמצעי תשלום</label>
-                    <select style={{ ...selSt, width: 'auto' }} value={payMethod} onChange={e => setPayMethod(e.target.value)}>
+                    <label className="form-label">אמצעי תשלום</label>
+                    <select className="form-input" style={{ width: 'auto' }} value={payMethod} onChange={e => setPayMethod(e.target.value)}>
                       {['מזומן', "צ'ק", 'העברה', 'אשראי'].map(m => <option key={m}>{m}</option>)}
                     </select>
                   </div>
@@ -1162,8 +1155,8 @@ export default function BillingClient() {
           <Input label="שם" value={coName} onChange={e => setCoName(e.target.value)} placeholder="חברה X, שוכר Y, עירייה..." />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             <div>
-              <label style={labelSt}>תפקיד</label>
-              <select style={selSt} value={coRole} onChange={e => {
+              <label className="form-label">תפקיד</label>
+              <select className="form-input" value={coRole} onChange={e => {
                 setCoRole(e.target.value)
                 setCoDir(ROLE_DEFAULT_DIR[e.target.value] ?? 'expense')
               }}>
@@ -1171,8 +1164,8 @@ export default function BillingClient() {
               </select>
             </div>
             <div>
-              <label style={labelSt}>כיוון ברירת מחדל</label>
-              <select style={selSt} value={coDir} onChange={e => setCoDir(e.target.value as 'expense' | 'income')}>
+              <label className="form-label">כיוון ברירת מחדל</label>
+              <select className="form-input" value={coDir} onChange={e => setCoDir(e.target.value as 'expense' | 'income')}>
                 <option value="expense">↑ הוצאה</option>
                 <option value="income">↓ הכנסה</option>
               </select>
@@ -1199,8 +1192,8 @@ export default function BillingClient() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <Input label="שם הסעיף" value={iName} onChange={e => setIName(e.target.value)} placeholder="שכירות, ארנונה, חשמל..." />
           <div>
-            <label style={labelSt}>איש קשר</label>
-            <select style={selSt} value={iContact} onChange={e => {
+            <label className="form-label">איש קשר</label>
+            <select className="form-input" value={iContact} onChange={e => {
               setIContact(e.target.value)
               const c = contacts.find(c => c.id === e.target.value)
               if (c) setIDir(c.default_direction)
@@ -1213,17 +1206,17 @@ export default function BillingClient() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             <div>
-              <label style={labelSt}>
+              <label className="form-label">
                 כיוון {iContact && <span style={{ color: 'var(--primary)', fontSize: '11px' }}>(מוגדר מהאיש קשר)</span>}
               </label>
-              <select style={selSt} value={iDir} onChange={e => setIDir(e.target.value as 'expense' | 'income')}>
+              <select className="form-input" value={iDir} onChange={e => setIDir(e.target.value as 'expense' | 'income')}>
                 <option value="expense">↑ הוצאה</option>
                 <option value="income">↓ הכנסה</option>
               </select>
             </div>
             <div>
-              <label style={labelSt}>סוג</label>
-              <select style={selSt} value={iType} onChange={e => setIType(e.target.value as 'fixed' | 'meter')}>
+              <label className="form-label">סוג</label>
+              <select className="form-input" value={iType} onChange={e => setIType(e.target.value as 'fixed' | 'meter')}>
                 <option value="fixed">קבוע</option>
                 <option value="meter">לפי מונה</option>
               </select>
@@ -1232,7 +1225,7 @@ export default function BillingClient() {
           {iType === 'fixed' ? (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <label style={{ ...labelSt, marginBottom: 0 }}>סכום חודשי</label>
+                <label className="form-label" style={{ marginBottom: 0 }}>סכום חודשי</label>
                 <VatToggle mode={iVat} onChange={setIVat} />
               </div>
               <Input type="number" value={iAmt} onChange={e => setIAmt(e.target.value)} placeholder="0.00" />
@@ -1247,7 +1240,7 @@ export default function BillingClient() {
           ) : (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <label style={{ ...labelSt, marginBottom: 0 }}>מחיר ליחידה</label>
+                <label className="form-label" style={{ marginBottom: 0 }}>מחיר ליחידה</label>
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <UnitToggle unit={iPpuUnit} onChange={setIPpuUnit} />
                   <VatToggle mode={iVat} onChange={setIVat} />
@@ -1296,8 +1289,8 @@ export default function BillingClient() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <Input label="תיאור" value={eName} onChange={e => setEName(e.target.value)} placeholder="תיאור החיוב..." />
           <div>
-            <label style={labelSt}>איש קשר</label>
-            <select style={selSt} value={eContact} onChange={e => {
+            <label className="form-label">איש קשר</label>
+            <select className="form-input" value={eContact} onChange={e => {
               setEContact(e.target.value)
               const c = contacts.find(c => c.id === e.target.value)
               if (c) setEDir(c.default_direction)
@@ -1310,17 +1303,17 @@ export default function BillingClient() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             <div>
-              <label style={labelSt}>
+              <label className="form-label">
                 כיוון {eContact && <span style={{ color: 'var(--primary)', fontSize: '11px' }}>(מהאיש קשר)</span>}
               </label>
-              <select style={selSt} value={eDir} onChange={e => setEDir(e.target.value as 'expense' | 'income')}>
+              <select className="form-input" value={eDir} onChange={e => setEDir(e.target.value as 'expense' | 'income')}>
                 <option value="expense">↑ הוצאה</option>
                 <option value="income">↓ הכנסה</option>
               </select>
             </div>
             <div>
-              <label style={labelSt}>סוג</label>
-              <select style={selSt} value={eType} onChange={e => setEType(e.target.value as 'fixed' | 'meter')}>
+              <label className="form-label">סוג</label>
+              <select className="form-input" value={eType} onChange={e => setEType(e.target.value as 'fixed' | 'meter')}>
                 <option value="fixed">סכום ישיר</option>
                 <option value="meter">לפי מונה</option>
               </select>
@@ -1330,7 +1323,7 @@ export default function BillingClient() {
           {eType === 'fixed' ? (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <label style={{ ...labelSt, marginBottom: 0 }}>סכום</label>
+                <label className="form-label" style={{ marginBottom: 0 }}>סכום</label>
                 <VatToggle mode={eVat} onChange={setEVat} />
               </div>
               <Input type="number" value={eAmt} onChange={e => setEAmt(e.target.value)} placeholder="0.00" />
@@ -1348,7 +1341,7 @@ export default function BillingClient() {
               <Input label="קריאה נוכחית" type="number" value={eCurr} onChange={e => setECurr(e.target.value)} />
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ ...labelSt, marginBottom: 0 }}>מחיר/יח&apos;</label>
+                  <label className="form-label" style={{ marginBottom: 0 }}>מחיר/יח&apos;</label>
                   <UnitToggle unit={ePpuUnit} onChange={setEPpuUnit} />
                 </div>
                 <Input type="number" value={ePpu} onChange={e => setEPpu(e.target.value)}

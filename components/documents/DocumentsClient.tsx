@@ -7,6 +7,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
+import PageHeader from '@/components/ui/PageHeader'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -767,54 +768,51 @@ export default function DocumentsClient() {
 
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#06b6d4,#22d3ee)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #06b6d444' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text)' }}>מסמכים</h2>
-        </div>
-        {docTab === 'templates'
+      <PageHeader
+        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>}
+        iconBg="linear-gradient(135deg,#06b6d4,#22d3ee)"
+        iconShadow="#06b6d444"
+        title="מסמכים"
+        actions={docTab === 'templates'
           ? <Button variant="primary" onClick={openAdd}>➕ תבנית חדשה</Button>
-          : driveConnected && (
-            <>
-              <input type="file" id="doc-drive-upload" style={{ display: 'none' }} multiple
-                onChange={e => { if (e.target.files?.length) uploadDriveFiles(e.target.files); e.target.value = '' }}
-              />
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {isMobile && <button onClick={() => setShowScanner(true)} disabled={!!uploadProgress} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                background: 'var(--surface, #f5f5f5)', color: 'var(--text)', borderRadius: 8,
-                padding: '8px 14px', fontSize: 14, fontWeight: 600,
-                cursor: uploadProgress ? 'default' : 'pointer',
-                opacity: uploadProgress ? 0.7 : 1,
-                border: '1.5px solid var(--border)',
-              }}>
-                📷 סרוק
-              </button>}
-              <label htmlFor="doc-drive-upload" style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                background: '#f0fdf9', color: '#15803d', borderRadius: 9,
-                border: '1.5px solid #bbf7d0',
-                padding: '8px 16px', fontSize: 14, fontWeight: 600,
-                cursor: uploadProgress ? 'default' : 'pointer',
-                opacity: uploadProgress ? 0.7 : 1,
-                pointerEvents: uploadProgress ? 'none' : 'auto',
-              }}>
-                {uploadProgress ? `⏳ ${uploadProgress.done}/${uploadProgress.total}` : '📤 העלה קבצים'}
-              </label>
-              {uploadProgress && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 120, height: 6, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', background: 'var(--primary)', borderRadius: 99, width: `${(uploadProgress.done/uploadProgress.total)*100}%`, transition: 'width 0.3s' }} />
+          : driveConnected
+            ? <>
+                <input type="file" id="doc-drive-upload" style={{ display: 'none' }} multiple
+                  onChange={e => { if (e.target.files?.length) uploadDriveFiles(e.target.files); e.target.value = '' }}
+                />
+                {isMobile && <button onClick={() => setShowScanner(true)} disabled={!!uploadProgress} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  background: 'var(--surface, #f5f5f5)', color: 'var(--text)', borderRadius: 8,
+                  padding: '8px 14px', fontSize: 14, fontWeight: 600,
+                  cursor: uploadProgress ? 'default' : 'pointer',
+                  opacity: uploadProgress ? 0.7 : 1,
+                  border: '1.5px solid var(--border)',
+                }}>
+                  📷 סרוק
+                </button>}
+                <label htmlFor="doc-drive-upload" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  background: '#f0fdf9', color: '#15803d', borderRadius: 9,
+                  border: '1.5px solid #bbf7d0',
+                  padding: '8px 16px', fontSize: 14, fontWeight: 600,
+                  cursor: uploadProgress ? 'default' : 'pointer',
+                  opacity: uploadProgress ? 0.7 : 1,
+                  pointerEvents: uploadProgress ? 'none' : 'auto',
+                }}>
+                  {uploadProgress ? `⏳ ${uploadProgress.done}/${uploadProgress.total}` : '📤 העלה קבצים'}
+                </label>
+                {uploadProgress && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 120, height: 6, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', background: 'var(--primary)', borderRadius: 99, width: `${(uploadProgress.done/uploadProgress.total)*100}%`, transition: 'width 0.3s' }} />
+                    </div>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{Math.round((uploadProgress.done/uploadProgress.total)*100)}%</span>
                   </div>
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{Math.round((uploadProgress.done/uploadProgress.total)*100)}%</span>
-                </div>
-              )}
-              </div>
-            </>
-          )
+                )}
+              </>
+            : undefined
         }
-      </div>
+      />
 
       {/* Tab bar */}
       <div className="scroll-x" style={{ marginBottom: 20 }}><div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>

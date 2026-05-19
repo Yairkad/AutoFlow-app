@@ -8,6 +8,7 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import * as XLSX from 'xlsx'
 import ExcelMenu from '@/components/ui/ExcelMenu'
+import PageHeader from '@/components/ui/PageHeader'
 import { progressStart, progressDone } from '@/components/ui/RouteProgress'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -433,10 +434,6 @@ export default function ProductsClient() {
     borderRadius: '9px', fontSize: '13px', background: '#f8fafc',
     color: 'var(--text)', boxSizing: 'border-box', fontFamily: 'inherit',
   }
-  const lbl: React.CSSProperties = {
-    display: 'block', fontSize: '12px', fontWeight: 600,
-    color: 'var(--text-muted)', marginBottom: '4px',
-  }
   const cellInp: React.CSSProperties = {
     width: '100%', padding: '4px 6px', border: '1px solid var(--accent)',
     borderRadius: '6px', fontSize: '13px', background: '#eff6ff', color: 'var(--text)',
@@ -448,20 +445,14 @@ export default function ProductsClient() {
   return (
     <div style={{ direction: 'rtl' }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#ec4899,#f472b6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #ec489944' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
-          <div>
-            <h1 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>מוצרים</h1>
-            {viewOnly && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>מצב צפיה בלבד</div>}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <Button variant="outline" onClick={() => setShowPricelist(true)}>🖨️ מחירון</Button>
-          {!viewOnly && <Button onClick={openAdd}>➕ מוצר חדש</Button>}
-        </div>
-      </div>
+      <PageHeader
+        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>}
+        iconBg="linear-gradient(135deg,#ec4899,#f472b6)"
+        iconShadow="#ec489944"
+        title="מוצרים"
+        subtitle={viewOnly ? 'מצב צפיה בלבד' : undefined}
+        actions={<><Button variant="outline" onClick={() => setShowPricelist(true)}>🖨️ מחירון</Button>{!viewOnly && <Button onClick={openAdd}>➕ מוצר חדש</Button>}</>}
+      />
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px', marginBottom: '20px' }}>
@@ -656,7 +647,7 @@ export default function ProductsClient() {
 
               {/* Type toggle */}
               <div style={{ minWidth: '160px' }}>
-                <div style={{ ...lbl }}>סוג תנועה</div>
+                <div className="form-label">סוג תנועה</div>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {([['sale', '💰 מכירה'], ['order', '📦 הזמנה']] as const).map(([t, label]) => (
                     <button key={t} onClick={() => setMvType(t)} style={{
@@ -671,7 +662,7 @@ export default function ProductsClient() {
 
               {/* Product */}
               <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '200px' }}>
-                <label style={lbl}>מוצר {mvProductId && <span style={{ color: 'var(--primary)', fontWeight: 700 }}>✓</span>}</label>
+                <label className="form-label">מוצר {mvProductId && <span style={{ color: 'var(--primary)', fontWeight: 700 }}>✓</span>}</label>
                 <input
                   style={{ ...inp, borderColor: mvProductId ? 'var(--primary)' : undefined }}
                   placeholder="חפש לפי שם או מק״ט..."
@@ -743,14 +734,14 @@ export default function ProductsClient() {
 
               {/* Qty */}
               <div style={{ width: '90px' }}>
-                <label style={lbl}>כמות</label>
+                <label className="form-label">כמות</label>
                 <input style={inp} type="number" min="1" step="1" placeholder="1"
                   value={mvQty} onChange={e => setMvQty(e.target.value)} />
               </div>
 
               {/* Date */}
               <div style={{ width: '150px' }}>
-                <label style={lbl}>תאריך</label>
+                <label className="form-label">תאריך</label>
                 <input style={inp} type="date" value={mvDate} onChange={e => setMvDate(e.target.value)} />
               </div>
 
@@ -839,26 +830,26 @@ export default function ProductsClient() {
         </>}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', direction: 'rtl' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label style={lbl}>שם מוצר <span style={{ color: 'var(--danger)' }}>*</span></label>
+            <label className="form-label">שם מוצר <span style={{ color: 'var(--danger)' }}>*</span></label>
             <input style={inp} value={form.name} onChange={e => setF('name', e.target.value)} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label style={lbl}>קטגוריה</label>
+            <label className="form-label">קטגוריה</label>
             <input style={inp} value={form.category} onChange={e => setF('category', e.target.value)} list="cat-list" />
             <datalist id="cat-list">{cats.map(c => <option key={c} value={c} />)}</datalist>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label style={lbl}>יחידה</label>
+            <label className="form-label">יחידה</label>
             <select style={inp} value={form.unit} onChange={e => setF('unit', e.target.value)}>
               {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
             </select>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label style={lbl}>כמות ליחידה</label>
+            <label className="form-label">כמות ליחידה</label>
             <input style={inp} type="number" value={form.unit_qty} onChange={e => setF('unit_qty', e.target.value)} min="0.01" step="0.01" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label style={lbl}>מחיר קנייה (₪ לפני מע&quot;מ)</label>
+            <label className="form-label">מחיר קנייה (₪ לפני מע&quot;מ)</label>
             <input style={inp} type="number" value={form.buy_price} min="0" step="0.01" placeholder="0.00"
               onChange={e => {
                 const updates: Partial<typeof emptyForm> = { buy_price: e.target.value }
@@ -873,7 +864,7 @@ export default function ProductsClient() {
             )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label style={lbl}>% רווח</label>
+            <label className="form-label">% רווח</label>
             <input style={inp} type="number" value={form.margin} min="0" step="1" placeholder="20"
               onChange={e => {
                 const updates: Partial<typeof emptyForm> = { margin: e.target.value }
@@ -883,30 +874,30 @@ export default function ProductsClient() {
               }} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label style={lbl}>מחיר מכירה (₪)</label>
+            <label className="form-label">מחיר מכירה (₪)</label>
             <input style={inp} type="number" value={form.sell_price} onChange={e => setF('sell_price', e.target.value)} min="0" step="0.01" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label style={lbl}>כמות במלאי</label>
+            <label className="form-label">כמות במלאי</label>
             <input style={inp} type="number" value={form.qty} onChange={e => setF('qty', e.target.value)} min="0" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label style={lbl}>כמות מינימום</label>
+            <label className="form-label">כמות מינימום</label>
             <input style={inp} type="number" value={form.min_qty} onChange={e => setF('min_qty', e.target.value)} min="0" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label style={lbl}>ספק</label>
+            <label className="form-label">ספק</label>
             <select style={inp} value={form.supplier_id} onChange={e => setF('supplier_id', e.target.value)}>
               <option value=''>— ללא ספק —</option>
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label style={lbl}>ברקוד / מק״ט</label>
+            <label className="form-label">ברקוד / מק״ט</label>
             <input style={inp} value={form.sku} onChange={e => setF('sku', e.target.value)} placeholder="מק״ט" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gridColumn: '1 / -1' }}>
-            <label style={lbl}>הערות</label>
+            <label className="form-label">הערות</label>
             <input style={inp} value={form.notes} onChange={e => setF('notes', e.target.value)} />
           </div>
         </div>

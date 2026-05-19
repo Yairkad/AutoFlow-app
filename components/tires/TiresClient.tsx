@@ -6,6 +6,8 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import PageHeader from '@/components/ui/PageHeader'
+import StatCard from '@/components/ui/StatCard'
 import * as XLSX from 'xlsx'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 
@@ -537,20 +539,6 @@ export default function TiresClient() {
 
   // ── Styles ────────────────────────────────────────────────────────────────────
 
-  const inp: React.CSSProperties = {
-    width: '100%', padding: '8px 10px', border: '1.5px solid var(--border)',
-    borderRadius: '9px', fontSize: '13px', background: '#f8fafc',
-    color: 'var(--text)', boxSizing: 'border-box', fontFamily: 'inherit',
-  }
-  const inpErr = (err?: boolean): React.CSSProperties => ({
-    ...inp,
-    borderColor: err ? 'var(--danger)' : undefined,
-    background:  err ? '#fff5f5' : undefined,
-  })
-  const lbl: React.CSSProperties = {
-    display: 'block', fontSize: '12px', fontWeight: 600,
-    color: 'var(--text-muted)', marginBottom: '4px',
-  }
   const cellInp: React.CSSProperties = {
     width: '100%', padding: '4px 6px', border: '1px solid var(--accent)',
     borderRadius: '6px', fontSize: '13px', background: '#eff6ff',
@@ -562,22 +550,17 @@ export default function TiresClient() {
   return (
     <div style={{ direction: 'rtl' }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#6b7280,#9ca3af)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #6b728044' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg></div>
-          <div>
-            <h1 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>צמיגים</h1>
-            {viewOnly && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>מצב צפיה בלבד</div>}
-          </div>
-        </div>
-        {!viewOnly && (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Button variant="outline" onClick={() => setRecvOpen(true)}>📦 הזמנה שהתקבלה</Button>
-            <Button onClick={openAdd}>➕ צמיג חדש</Button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>}
+        iconBg="linear-gradient(135deg,#6b7280,#9ca3af)"
+        iconShadow="#6b728044"
+        title="צמיגים"
+        subtitle={viewOnly ? 'מצב צפיה בלבד' : undefined}
+        actions={!viewOnly ? <>
+          <Button variant="outline" onClick={() => setRecvOpen(true)}>📦 הזמנה שהתקבלה</Button>
+          <Button onClick={openAdd}>➕ צמיג חדש</Button>
+        </> : undefined}
+      />
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(130px, calc(50% - 6px)), 1fr))', gap: '12px', marginBottom: '20px' }}>
@@ -612,27 +595,27 @@ export default function TiresClient() {
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center' }}>
             <div style={{ position: 'relative', flex: '1 1 160px', minWidth: 0, display: 'flex', alignItems: 'center' }}>
               <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 10, pointerEvents: 'none', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input style={{ ...inp, paddingRight: 30 }} placeholder="חיפוש מותג / מידה..."
+              <input className="form-input" style={{ paddingRight: 30 }} placeholder="חיפוש מותג / מידה..."
                 value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <select style={{ ...inp, flex: '1 1 80px', minWidth: 0 }} value={filterWidth} onChange={e => setFilterWidth(e.target.value)}>
+            <select className="form-input" style={{ flex: '1 1 80px', minWidth: 0 }} value={filterWidth} onChange={e => setFilterWidth(e.target.value)}>
               <option value=''>רוחב</option>
               {WIDTHS.map(w => <option key={w} value={w}>{w}</option>)}
             </select>
-            <select style={{ ...inp, flex: '1 1 80px', minWidth: 0 }} value={filterProf} onChange={e => setFilterProf(e.target.value)}>
+            <select className="form-input" style={{ flex: '1 1 80px', minWidth: 0 }} value={filterProf} onChange={e => setFilterProf(e.target.value)}>
               <option value=''>פרופיל</option>
               {PROFILES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-            <select style={{ ...inp, flex: '1 1 75px', minWidth: 0 }} value={filterRim} onChange={e => setFilterRim(e.target.value)}>
+            <select className="form-input" style={{ flex: '1 1 75px', minWidth: 0 }} value={filterRim} onChange={e => setFilterRim(e.target.value)}>
               <option value=''>קוטר</option>
               {RIMS.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
-            <select style={{ ...inp, flex: '1 1 90px', minWidth: 0 }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
+            <select className="form-input" style={{ flex: '1 1 90px', minWidth: 0 }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
               <option value=''>כל המלאי</option>
               <option value='instock'>במלאי</option>
               <option value='out'>אזל</option>
             </select>
-            <select style={{ ...inp, flex: '1 1 90px', minWidth: 0 }} value={filterCondition} onChange={e => setFilterCondition(e.target.value)}>
+            <select className="form-input" style={{ flex: '1 1 90px', minWidth: 0 }} value={filterCondition} onChange={e => setFilterCondition(e.target.value)}>
               <option value=''>חדש + משומש</option>
               <option value='new'>חדש בלבד</option>
               <option value='used'>משומש בלבד</option>
@@ -690,10 +673,10 @@ export default function TiresClient() {
                     const indices = [t.load_idx, t.speed_idx].filter(Boolean).join(' / ') || '—'
 
                     return (
-                      <tr key={t.id} style={{ borderBottom: '1px solid var(--border)', background: editMode ? '#fafeff' : undefined }}>
+                      <tr key={t.id} className={!editMode ? 'tr-hover' : undefined} style={{ borderBottom: '1px solid var(--border)', background: editMode ? '#fafeff' : undefined }}>
 
                         {/* מותג */}
-                        <td style={{ padding: '8px 12px', fontWeight: 700, minWidth: editMode ? '110px' : undefined }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 700, minWidth: editMode ? '110px' : undefined }}>
                           {editMode ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                               <input style={cellInp} value={String(e.brand ?? '')} onChange={ev => setCell(t.id, 'brand', ev.target.value)} list="brand-list-inline" />
@@ -718,7 +701,7 @@ export default function TiresClient() {
                         </td>
 
                         {/* מידה */}
-                        <td style={{ padding: '8px 12px' }}>
+                        <td style={{ padding: '10px 12px' }}>
                           {editMode ? (
                             <div style={{ display: 'flex', gap: '4px', minWidth: '180px' }}>
                               <input style={{ ...cellInp, width: '52px' }} type="number" value={String(e.width ?? '')} onChange={ev => setCell(t.id, 'width', parseInt(ev.target.value) || 0)} placeholder="רוחב" />
@@ -735,7 +718,7 @@ export default function TiresClient() {
                         </td>
 
                         {/* מדדים */}
-                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: editMode ? '130px' : undefined }}>
+                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: editMode ? '130px' : undefined }}>
                           {editMode ? (
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <input style={{ ...cellInp, width: '54px' }} value={String(e.load_idx ?? '')} onChange={ev => setCell(t.id, 'load_idx', ev.target.value)} placeholder="עומס" />
@@ -745,7 +728,7 @@ export default function TiresClient() {
                         </td>
 
                         {/* מחיר קנייה */}
-                        {isAdmin && <td style={{ padding: '8px 12px', minWidth: editMode ? '90px' : undefined }}>
+                        {isAdmin && <td style={{ padding: '10px 12px', minWidth: editMode ? '90px' : undefined }}>
                           {editMode
                             ? <input style={cellInp} type="number" value={String(e.cost_price ?? '')} onChange={ev => setCell(t.id, 'cost_price', parseFloat(ev.target.value) || 0)} />
                             : t.cost_price ? (
@@ -757,35 +740,35 @@ export default function TiresClient() {
                         </td>}
 
                         {/* % רווח */}
-                        {isAdmin && <td style={{ padding: '8px 12px', color: 'var(--text-muted)', minWidth: editMode ? '70px' : undefined }}>
+                        {isAdmin && <td style={{ padding: '10px 12px', color: 'var(--text-muted)', minWidth: editMode ? '70px' : undefined }}>
                           {editMode
                             ? <input style={cellInp} type="number" value={String(e.margin ?? '')} onChange={ev => setCell(t.id, 'margin', parseFloat(ev.target.value) || 0)} />
                             : marginPct}
                         </td>}
 
                         {/* מחיר מכירה */}
-                        <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--primary)', minWidth: editMode ? '90px' : undefined }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--primary)', minWidth: editMode ? '90px' : undefined }}>
                           {editMode
                             ? <input style={cellInp} type="number" value={String(e.sell_price ?? '')} onChange={ev => setCell(t.id, 'sell_price', parseFloat(ev.target.value) || 0)} />
                             : fmtPrice(t.sell_price)}
                         </td>
 
                         {/* כמות — read-only */}
-                        <td style={{ padding: '8px 12px' }}>
+                        <td style={{ padding: '10px 12px' }}>
                           <span style={{ background: qtyBg, color: qtyColor, borderRadius: '6px', padding: '3px 8px', fontWeight: 600, fontSize: '12px', whiteSpace: 'nowrap' }}>
                             {isOut ? 'אזל' : t.qty}
                           </span>
                         </td>
 
                         {/* מיקום */}
-                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: editMode ? '100px' : undefined }}>
+                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: editMode ? '100px' : undefined }}>
                           {editMode
                             ? <input style={cellInp} value={String(e.location ?? '')} onChange={ev => setCell(t.id, 'location', ev.target.value)} />
                             : t.location || '—'}
                         </td>
 
                         {/* הערות */}
-                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '12px', maxWidth: editMode ? undefined : '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap', minWidth: editMode ? '120px' : undefined }}>
+                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '12px', maxWidth: editMode ? undefined : '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: editMode ? undefined : 'nowrap', minWidth: editMode ? '120px' : undefined }}>
                           {editMode
                             ? <input style={cellInp} value={String(e.notes ?? '')} onChange={ev => setCell(t.id, 'notes', ev.target.value)} />
                             : t.notes || '—'}
@@ -793,7 +776,7 @@ export default function TiresClient() {
 
                         {/* פעולות (עריכה בלבד) */}
                         {editMode && !viewOnly && (
-                          <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
+                          <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <button title="שכפל" onClick={() => openDuplicate(t)}
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', padding: '2px 4px' }}>📋</button>
@@ -826,7 +809,7 @@ export default function TiresClient() {
 
               {/* Type */}
               <div style={{ minWidth: '160px' }}>
-                <div style={lbl}>סוג תנועה</div>
+                <div className="form-label">סוג תנועה</div>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {([['sale', '💰 מכירה'], ['order', '📦 הזמנה']] as const).map(([tp, label]) => (
                     <button key={tp} onClick={() => setMvType(tp)} style={{
@@ -841,9 +824,9 @@ export default function TiresClient() {
 
               {/* Tire search */}
               <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '200px' }}>
-                <label style={lbl}>צמיג {mvTireId && <span style={{ color: 'var(--primary)', fontWeight: 700 }}>✓</span>}</label>
+                <label className="form-label">צמיג {mvTireId && <span style={{ color: 'var(--primary)', fontWeight: 700 }}>✓</span>}</label>
                 <input
-                  style={{ ...inp, borderColor: mvTireId ? 'var(--primary)' : undefined }}
+                  className="form-input" style={{ borderColor: mvTireId ? 'var(--primary)' : undefined }}
                   placeholder="חפש לפי מידה או מותג..."
                   value={mvTireSearch}
                   autoComplete="off"
@@ -917,15 +900,15 @@ export default function TiresClient() {
 
               {/* Qty */}
               <div style={{ width: '90px' }}>
-                <label style={lbl}>כמות</label>
-                <input style={inp} type="number" min="1" step="1" placeholder="1"
+                <label className="form-label">כמות</label>
+                <input className="form-input" type="number" min="1" step="1" placeholder="1"
                   value={mvQty} onChange={e => setMvQty(e.target.value)} />
               </div>
 
               {/* Date */}
               <div style={{ width: '150px' }}>
-                <label style={lbl}>תאריך</label>
-                <input style={inp} type="date" value={mvDate} onChange={e => setMvDate(e.target.value)} />
+                <label className="form-label">תאריך</label>
+                <input className="form-input" type="date" value={mvDate} onChange={e => setMvDate(e.target.value)} />
               </div>
 
               {/* Save */}
@@ -1016,8 +999,8 @@ export default function TiresClient() {
             <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', marginBottom: '12px' }}>מידות הצמיג</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '10px' }}>
               <div>
-                <label style={lbl}>רוחב (מ&quot;מ) <span style={{ color: 'var(--danger)' }}>*</span></label>
-                <select id="f-width" style={inpErr(formErrs.width)} value={form.width}
+                <label className="form-label">רוחב (מ&quot;מ) <span style={{ color: 'var(--danger)' }}>*</span></label>
+                <select id="f-width" className={`form-input${formErrs.width ? ' error' : ''}`} value={form.width}
                   onChange={e => { setF('width', e.target.value); setFormErrs(p => ({ ...p, width: false })) }}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-profile') as HTMLSelectElement)?.focus() } }}>
                   <option value="">— בחר —</option>
@@ -1025,8 +1008,8 @@ export default function TiresClient() {
                 </select>
               </div>
               <div>
-                <label style={lbl}>פרופיל (%) <span style={{ color: 'var(--danger)' }}>*</span></label>
-                <select id="f-profile" style={inpErr(formErrs.profile)} value={form.profile}
+                <label className="form-label">פרופיל (%) <span style={{ color: 'var(--danger)' }}>*</span></label>
+                <select id="f-profile" className={`form-input${formErrs.profile ? ' error' : ''}`} value={form.profile}
                   onChange={e => { setF('profile', e.target.value); setFormErrs(p => ({ ...p, profile: false })) }}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-rim') as HTMLSelectElement)?.focus() } }}>
                   <option value="">— בחר —</option>
@@ -1034,8 +1017,8 @@ export default function TiresClient() {
                 </select>
               </div>
               <div>
-                <label style={lbl}>קוטר (אינץ') <span style={{ color: 'var(--danger)' }}>*</span></label>
-                <select id="f-rim" style={inpErr(formErrs.rim)} value={form.rim}
+                <label className="form-label">קוטר (אינץ') <span style={{ color: 'var(--danger)' }}>*</span></label>
+                <select id="f-rim" className={`form-input${formErrs.rim ? ' error' : ''}`} value={form.rim}
                   onChange={e => { setF('rim', e.target.value); setFormErrs(p => ({ ...p, rim: false })) }}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-brand') as HTMLInputElement)?.focus() } }}>
                   <option value="">— בחר —</option>
@@ -1045,8 +1028,8 @@ export default function TiresClient() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
               <div>
-                <label style={lbl}>מותג</label>
-                <input id="f-brand" style={inp} value={form.brand} placeholder="Michelin, Bridgestone..."
+                <label className="form-label">מותג</label>
+                <input id="f-brand" className="form-input" value={form.brand} placeholder="Michelin, Bridgestone..."
                   list="brand-list-modal"
                   onChange={e => setF('brand', e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-load') as HTMLSelectElement)?.focus() } }} />
@@ -1055,8 +1038,8 @@ export default function TiresClient() {
                 </datalist>
               </div>
               <div>
-                <label style={lbl}>אינדקס עומס</label>
-                <select id="f-load" style={inp} value={form.load_idx}
+                <label className="form-label">אינדקס עומס</label>
+                <select id="f-load" className="form-input" value={form.load_idx}
                   onChange={e => setF('load_idx', e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-speed') as HTMLSelectElement)?.focus() } }}>
                   <option value="">—</option>
@@ -1064,8 +1047,8 @@ export default function TiresClient() {
                 </select>
               </div>
               <div>
-                <label style={lbl}>אינדקס מהירות</label>
-                <select id="f-speed" style={inp} value={form.speed_idx}
+                <label className="form-label">אינדקס מהירות</label>
+                <select id="f-speed" className="form-input" value={form.speed_idx}
                   onChange={e => setF('speed_idx', e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-cost') as HTMLInputElement)?.focus() } }}>
                   <option value="">—</option>
@@ -1078,8 +1061,8 @@ export default function TiresClient() {
           {/* Section 2 – pricing & stock */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
             <div>
-              <label style={lbl}>מחיר קנייה (₪ לפני מע&quot;מ)</label>
-              <input id="f-cost" style={inp} type="number" value={form.cost_price} min={0} placeholder="0.00"
+              <label className="form-label">מחיר קנייה (₪ לפני מע&quot;מ)</label>
+              <input id="f-cost" className="form-input" type="number" value={form.cost_price} min={0} placeholder="0.00"
                 onChange={e => { setF('cost_price', e.target.value); calcSellPrice(e.target.value, form.margin) }}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-margin') as HTMLInputElement)?.focus() } }} />
               {form.cost_price && !isNaN(parseFloat(form.cost_price)) && (
@@ -1089,14 +1072,14 @@ export default function TiresClient() {
               )}
             </div>
             <div>
-              <label style={lbl}>% רווח</label>
-              <input id="f-margin" style={inp} type="number" value={form.margin} min={0} placeholder="25"
+              <label className="form-label">% רווח</label>
+              <input id="f-margin" className="form-input" type="number" value={form.margin} min={0} placeholder="25"
                 onChange={e => { setF('margin', e.target.value); calcSellPrice(form.cost_price, e.target.value) }}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-sell') as HTMLInputElement)?.focus() } }} />
             </div>
             <div>
-              <label style={lbl}>מחיר מכירה (₪)</label>
-              <input id="f-sell" style={inp} type="number" value={form.sell_price} min={0}
+              <label className="form-label">מחיר מכירה (₪)</label>
+              <input id="f-sell" className="form-input" type="number" value={form.sell_price} min={0}
                 onChange={e => { setF('sell_price', e.target.value); calcMargin(e.target.value, form.cost_price) }}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-qty') as HTMLInputElement)?.focus() } }} />
               {form.sell_price && !isNaN(parseFloat(form.sell_price)) && (
@@ -1106,24 +1089,24 @@ export default function TiresClient() {
               )}
             </div>
             <div>
-              <label style={lbl}>כמות במלאי</label>
-              <input id="f-qty" style={inp} type="number" value={form.qty} min={0}
+              <label className="form-label">כמות במלאי</label>
+              <input id="f-qty" className="form-input" type="number" value={form.qty} min={0}
                 onChange={e => setF('qty', e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-location') as HTMLInputElement)?.focus() } }} />
             </div>
             <div>
-              <label style={lbl}>מיקום במחסן</label>
-              <input id="f-location" style={inp} value={form.location} placeholder="מדף A3"
+              <label className="form-label">מיקום במחסן</label>
+              <input id="f-location" className="form-input" value={form.location} placeholder="מדף A3"
                 onChange={e => setF('location', e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-notes') as HTMLInputElement)?.focus() } }} />
             </div>
             <div>
-              <label style={lbl}>הערות</label>
-              <input id="f-notes" style={inp} value={form.notes}
+              <label className="form-label">הערות</label>
+              <input id="f-notes" className="form-input" value={form.notes}
                 onChange={e => setF('notes', e.target.value)} />
             </div>
             <div>
-              <label style={lbl}>מצב הצמיג</label>
+              <label className="form-label">מצב הצמיג</label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {(['new', 'used'] as const).map(c => (
                   <button key={c} type="button" onClick={() => setF('condition', c)} style={{
@@ -1140,8 +1123,8 @@ export default function TiresClient() {
             </div>
             {suppliers.length > 0 && (
               <div>
-                <label style={lbl}>ספק</label>
-                <select style={inp} value={form.supplier_id} onChange={e => setF('supplier_id', e.target.value)}>
+                <label className="form-label">ספק</label>
+                <select className="form-input" value={form.supplier_id} onChange={e => setF('supplier_id', e.target.value)}>
                   <option value="">— ללא ספק —</option>
                   {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
@@ -1161,8 +1144,8 @@ export default function TiresClient() {
         <div style={{ direction: 'rtl', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {suppliers.length > 0 && (
             <div>
-              <label style={lbl}>ספק</label>
-              <select style={inp} value={recvSupplier} onChange={e => setRecvSupplier(e.target.value)}>
+              <label className="form-label">ספק</label>
+              <select className="form-input" value={recvSupplier} onChange={e => setRecvSupplier(e.target.value)}>
                 <option value="">— בחר ספק —</option>
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -1175,7 +1158,7 @@ export default function TiresClient() {
             <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
               {/* Tire selector */}
               <div style={{ flex: 1, position: 'relative' }}>
-                <input style={{ ...inp, borderColor: item.tireId ? 'var(--primary)' : undefined }}
+                <input className="form-input" style={{ borderColor: item.tireId ? 'var(--primary)' : undefined }}
                   placeholder="חפש צמיג..."
                   value={item.search}
                   autoComplete="off"
@@ -1193,7 +1176,7 @@ export default function TiresClient() {
                     <div style={{ position: 'absolute', top: '100%', right: 0, left: 0, zIndex: 50, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,.12)', marginTop: 2 }}>
                       {matches.map(t => (
                         <div key={t.id} onMouseDown={() => setRecvItems(p => p.map((r, i) => i === idx ? { ...r, tireId: t.id, search: (t.brand ? t.brand + ' ' : '') + tireSize(t), dropOpen: false } : r))}
-                          style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 13, display: 'flex', justifyContent: 'space-between' }}
+                          style={{ padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 13, display: 'flex', justifyContent: 'space-between' }}
                           onMouseEnter={ev => (ev.currentTarget.style.background = 'var(--bg)')}
                           onMouseLeave={ev => (ev.currentTarget.style.background = '')}>
                           <span>
@@ -1208,7 +1191,7 @@ export default function TiresClient() {
                 })()}
               </div>
               {/* Qty */}
-              <input style={{ ...inp, width: 80 }} type="number" min={1} placeholder="כמות"
+              <input className="form-input" style={{ width: 80 }} type="number" min={1} placeholder="כמות"
                 value={item.qty} onChange={e => setRecvItems(p => p.map((r, i) => i === idx ? { ...r, qty: e.target.value } : r))} />
               {/* Remove */}
               {recvItems.length > 1 && (
@@ -1228,15 +1211,3 @@ export default function TiresClient() {
   )
 }
 
-// ── Stat Card ──────────────────────────────────────────────────────────────────
-
-function StatCard({ label, value, color }: { label: string; value: string | number; color?: 'blue' | 'orange' | 'red' | 'green' }) {
-  const colors = { blue: 'var(--accent)', orange: 'var(--warning)', red: 'var(--danger)', green: 'var(--primary)' }
-  const bgs    = { blue: '#eff6ff',       orange: '#fffbeb',        red: '#fef2f2',       green: '#f0fdf4' }
-  return (
-    <div style={{ background: color ? bgs[color] : '#f0fdf4', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
-      <div style={{ fontSize: '20px', fontWeight: 900, color: color ? colors[color] : 'var(--primary)' }}>{value}</div>
-      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{label}</div>
-    </div>
-  )
-}

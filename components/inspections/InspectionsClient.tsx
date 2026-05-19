@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Button from '@/components/ui/Button'
+import PageHeader from '@/components/ui/PageHeader'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import InspectionChecklistModal, { ChecklistBadge, parseFindings, printChecklist } from './InspectionChecklistModal'
@@ -75,15 +76,7 @@ function nowTimeStr() {
 // ── Field label helper ─────────────────────────────────────────────────────────
 
 function FL({ children }: { children: React.ReactNode }) {
-  return (
-    <label style={{
-      display: 'block', fontSize: 11, fontWeight: 700,
-      color: 'var(--text-muted)', textTransform: 'uppercase',
-      letterSpacing: '0.4px', marginBottom: 4,
-    }}>
-      {children}
-    </label>
-  )
+  return <label className="form-label">{children}</label>
 }
 
 // ── Section card ───────────────────────────────────────────────────────────────
@@ -647,14 +640,13 @@ export default function InspectionsClient() {
     <div style={{ padding: '20px 24px' }}>
 
 
-      {/* Page title */}
-      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#10b981,#34d399)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #10b98144' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 12 2 2 4-4"/></svg></div>
-        <div>
-          <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text)' }}>בדיקות קניה</h1>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>{inspections.length} בדיקות שמורות</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 12 2 2 4-4"/></svg>}
+        iconBg="linear-gradient(135deg,#10b981,#34d399)"
+        iconShadow="#10b98144"
+        title="בדיקות קניה"
+        subtitle={`${inspections.length} בדיקות שמורות`}
+      />
 
       {/* Tab bar */}
       <div className="scroll-x" style={{ marginBottom: 24 }}><div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
@@ -666,7 +658,7 @@ export default function InspectionsClient() {
             key={t.key}
             onClick={() => setTab(t.key)}
             style={{
-              padding: '7px 18px', border: 'none', cursor: 'pointer',
+              padding: '7px 16px', border: 'none', cursor: 'pointer',
               fontFamily: 'inherit', fontSize: 13, fontWeight: tab === t.key ? 600 : 400,
               color: tab === t.key ? 'var(--text)' : 'var(--text-muted)',
               background: tab === t.key ? '#fff' : 'transparent',

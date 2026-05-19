@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
+import PageHeader from '@/components/ui/PageHeader'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -67,22 +68,11 @@ const ISRAELI_BANKS: { name: string; code: string }[] = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const inputSt: React.CSSProperties = {
-  padding: '9px 12px',
-  border: '1.5px solid var(--border)',
-  borderRadius: '9px',
-  fontSize: '13px',
-  background: '#f8fafc',
-  direction: 'rtl',
-  width: '100%',
-  boxSizing: 'border-box',
-}
-
 const btnPrim: React.CSSProperties = {
   padding: '9px 20px',
-  background: '#f0fdf9',
-  color: '#15803d',
-  border: '1.5px solid #bbf7d0',
+  background: 'var(--primary)',
+  color: '#fff',
+  border: '1.5px solid var(--primary)',
   borderRadius: '9px',
   fontSize: '13px',
   fontWeight: 600,
@@ -305,14 +295,13 @@ export default function SuppliersClient() {
 
   return (
     <div>
-      {/* Page heading */}
-      <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#64748b,#94a3b8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #64748b44' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><rect x="9" y="14" width="6" height="7"/></svg></div>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>ספקים / נותני שירות</h1>
-          <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>ניהול ספקים ונותני שירות, אנשי קשר וחובות</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><rect x="9" y="14" width="6" height="7"/></svg>}
+        iconBg="linear-gradient(135deg,#64748b,#94a3b8)"
+        iconShadow="#64748b44"
+        title="ספקים / נותני שירות"
+        subtitle="ניהול ספקים ונותני שירות, אנשי קשר וחובות"
+      />
 
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -342,7 +331,7 @@ export default function SuppliersClient() {
             placeholder="חיפוש ספק / טלפון / איש קשר..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ ...inputSt, paddingRight: 30 }}
+            className="form-input" style={{ paddingRight: 30 }}
           />
         </div>
         <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
@@ -646,7 +635,7 @@ export default function SuppliersClient() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   שם ספק *
-                  <input value={fName} onChange={e => setFName(e.target.value)} placeholder="שם החברה / הספק" style={inputSt} />
+                  <input value={fName} onChange={e => setFName(e.target.value)} placeholder="שם החברה / הספק" className="form-input" />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   קטגוריה
@@ -655,7 +644,7 @@ export default function SuppliersClient() {
                     onChange={e => setFCategory(e.target.value)}
                     list="supplier-categories-list"
                     placeholder="בחר או הקלד קטגוריה"
-                    style={inputSt}
+                    className="form-input"
                   />
                   <datalist id="supplier-categories-list">
                     {categories.map(c => <option key={c} value={c} />)}
@@ -665,26 +654,26 @@ export default function SuppliersClient() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   איש קשר
-                  <input value={fContact} onChange={e => setFContact(e.target.value)} placeholder="שם מלא" style={inputSt} />
+                  <input value={fContact} onChange={e => setFContact(e.target.value)} placeholder="שם מלא" className="form-input" />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   טלפון
-                  <input type="tel" value={fPhone} onChange={e => setFPhone(e.target.value)} placeholder="050-0000000" style={inputSt} />
+                  <input type="tel" value={fPhone} onChange={e => setFPhone(e.target.value)} placeholder="050-0000000" className="form-input" />
                 </label>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   אימייל
-                  <input type="email" value={fEmail} onChange={e => setFEmail(e.target.value)} placeholder="example@mail.com" style={inputSt} />
+                  <input type="email" value={fEmail} onChange={e => setFEmail(e.target.value)} placeholder="example@mail.com" className="form-input" />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   כתובת
-                  <input value={fAddress} onChange={e => setFAddress(e.target.value)} placeholder="רחוב + עיר" style={inputSt} />
+                  <input value={fAddress} onChange={e => setFAddress(e.target.value)} placeholder="רחוב + עיר" className="form-input" />
                 </label>
               </div>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                 הערות
-                <textarea value={fNotes} onChange={e => setFNotes(e.target.value)} placeholder="פרטים נוספים..." rows={2} style={{ ...inputSt, resize: 'vertical' }} />
+                <textarea value={fNotes} onChange={e => setFNotes(e.target.value)} placeholder="פרטים נוספים..." rows={2} className="form-input" style={{ resize: 'vertical' }} />
               </label>
               {/* Bank / payment details */}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
@@ -699,7 +688,7 @@ export default function SuppliersClient() {
                       <input
                         value={fBankName}
                         placeholder="התחל להקליד..."
-                        style={{ ...inputSt, paddingLeft: '32px' }}
+                        className="form-input" style={{ paddingLeft: '32px' }}
                         onFocus={() => setShowBankDrop(true)}
                         onBlur={() => setTimeout(() => setShowBankDrop(false), 150)}
                         onChange={e => { setFBankName(e.target.value); setShowBankDrop(true) }}
@@ -737,15 +726,15 @@ export default function SuppliersClient() {
                   </label>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                     סניף
-                    <input value={fBankBranch} onChange={e => setFBankBranch(e.target.value)} placeholder="מספר סניף" style={inputSt} />
+                    <input value={fBankBranch} onChange={e => setFBankBranch(e.target.value)} placeholder="מספר סניף" className="form-input" />
                   </label>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                     מספר חשבון
-                    <input value={fBankAccount} onChange={e => setFBankAccount(e.target.value)} placeholder="12345678" style={inputSt} />
+                    <input value={fBankAccount} onChange={e => setFBankAccount(e.target.value)} placeholder="12345678" className="form-input" />
                   </label>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                     שם בעל החשבון
-                    <input value={fBankHolder} onChange={e => setFBankHolder(e.target.value)} placeholder="שם מלא" style={inputSt} />
+                    <input value={fBankHolder} onChange={e => setFBankHolder(e.target.value)} placeholder="שם מלא" className="form-input" />
                   </label>
                 </div>
               </div>

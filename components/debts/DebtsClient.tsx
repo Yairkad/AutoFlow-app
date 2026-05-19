@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
+import PageHeader from '@/components/ui/PageHeader'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -51,13 +52,9 @@ const waUrl = (phone: string, text: string) => {
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
-const inputSt: React.CSSProperties = {
-  padding: '9px 12px', border: '1.5px solid var(--border)', borderRadius: '9px',
-  fontSize: '13px', background: '#f8fafc', direction: 'rtl', width: '100%', boxSizing: 'border-box',
-}
 const btnPrim: React.CSSProperties = {
-  padding: '9px 20px', background: '#f0fdf9', color: '#15803d',
-  border: '1.5px solid #bbf7d0', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+  padding: '9px 20px', background: 'var(--primary)', color: '#fff',
+  border: '1.5px solid var(--primary)', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
 }
 const btnSec: React.CSSProperties = {
   padding: '9px 20px', background: '#fff', color: 'var(--text-muted)',
@@ -392,7 +389,7 @@ export default function DebtsClient() {
         placeholder={tab === 'customers' ? 'חיפוש שם / טלפון / לוחית...' : 'חיפוש ספק / תיאור...'}
         value={search}
         onChange={e => setSearch(e.target.value)}
-        style={{ ...inputSt, flex: 1, minWidth: '180px', maxWidth: '300px' }}
+        className="form-input" style={{ flex: 1, minWidth: '180px', maxWidth: '300px' }}
       />
       <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
         יתרה: <strong style={{ color: 'var(--danger)' }}>{fmt(tab === 'customers' ? openCustTotal : openSuppTotal)}</strong>
@@ -524,13 +521,13 @@ export default function DebtsClient() {
 
   return (
     <div>
-      <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#ef4444,#f87171)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #ef444444' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>חובות</h1>
-          <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>מעקב חובות לקוחות וספקים</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>}
+        iconBg="linear-gradient(135deg,#ef4444,#f87171)"
+        iconShadow="#ef444444"
+        title="חובות"
+        subtitle="מעקב חובות לקוחות וספקים"
+      />
 
       {/* Tabs */}
       <div className="scroll-x" style={{ marginBottom: '20px' }}>
@@ -705,15 +702,15 @@ export default function DebtsClient() {
             <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editCust ? '✏️ עריכת חוב לקוח' : '+ חוב לקוח חדש'}</h3>
             <div style={{ display: 'grid', gap: '14px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>שם לקוח *<input value={cName} onChange={e => setCName(e.target.value)} placeholder="שם מלא" style={inputSt} /></label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>טלפון<input type="tel" value={cPhone} onChange={e => setCPhone(e.target.value)} placeholder="050-0000000" style={inputSt} /></label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>שם לקוח *<input value={cName} onChange={e => setCName(e.target.value)} placeholder="שם מלא" className="form-input" /></label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>טלפון<input type="tel" value={cPhone} onChange={e => setCPhone(e.target.value)} placeholder="050-0000000" className="form-input" /></label>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>לוחית רישוי<input inputMode="numeric" value={cPlate} onChange={e => setCPlate(e.target.value)} placeholder="12-345-67" style={inputSt} /></label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>סכום (₪) *<input type="number" min="0" step="0.01" value={cAmount} onChange={e => setCAmount(e.target.value)} placeholder="0.00" style={inputSt} /></label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>לוחית רישוי<input inputMode="numeric" value={cPlate} onChange={e => setCPlate(e.target.value)} placeholder="12-345-67" className="form-input" /></label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>סכום (₪) *<input type="number" min="0" step="0.01" value={cAmount} onChange={e => setCAmount(e.target.value)} placeholder="0.00" className="form-input" /></label>
               </div>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>הערות<textarea value={cDesc} onChange={e => setCDesc(e.target.value)} placeholder="הערות על החוב..." style={{ ...inputSt, resize: 'vertical', minHeight: '68px' }} /></label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>תאריך *<input type="date" value={cDate} onChange={e => setCDate(e.target.value)} style={inputSt} /></label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>הערות<textarea value={cDesc} onChange={e => setCDesc(e.target.value)} placeholder="הערות על החוב..." className="form-input" style={{ resize: 'vertical', minHeight: '68px' }} /></label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>תאריך *<input type="date" value={cDate} onChange={e => setCDate(e.target.value)} className="form-input" /></label>
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '22px', justifyContent: 'flex-end' }}>
               <button onClick={() => setShowCustModal(false)} style={btnSec}>ביטול</button>
@@ -735,14 +732,14 @@ export default function DebtsClient() {
                     <span>ספק</span>
                     <a href="/suppliers" style={{ fontSize: '11px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}>+ הוסף ספק חדש</a>
                   </div>
-                  <select value={sSupplier} onChange={e => setSSupplier(e.target.value)} style={inputSt}>
+                  <select value={sSupplier} onChange={e => setSSupplier(e.target.value)} className="form-input">
                     <option value="">— ללא ספק ספציפי —</option>
                     {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   תאריך *
-                  <input type="date" value={sDate} onChange={e => setSDate(e.target.value)} style={inputSt} />
+                  <input type="date" value={sDate} onChange={e => setSDate(e.target.value)} className="form-input" />
                 </label>
               </div>
 
@@ -779,14 +776,14 @@ export default function DebtsClient() {
                         value={inv.number}
                         onChange={e => updateInvoiceLine(i, 'number', e.target.value)}
                         placeholder="מספר חשבונית..."
-                        style={{ ...inputSt, margin: 0 }}
+                        className="form-input" style={{ margin: 0 }}
                       />
                       <input
                         type="number" min="0" step="0.01"
                         value={inv.amount}
                         onChange={e => updateInvoiceLine(i, 'amount', e.target.value)}
                         placeholder="סכום..."
-                        style={{ ...inputSt, margin: 0 }}
+                        className="form-input" style={{ margin: 0 }}
                       />
                       <button
                         type="button"
@@ -806,7 +803,7 @@ export default function DebtsClient() {
 
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                 הערות (אופציונלי)
-                <input value={sNotes} onChange={e => setSNotes(e.target.value)} placeholder="פירוט נוסף..." style={inputSt} />
+                <input value={sNotes} onChange={e => setSNotes(e.target.value)} placeholder="פירוט נוסף..." className="form-input" />
               </label>
             </div>
             <div className="sticky-actions">
@@ -828,11 +825,11 @@ export default function DebtsClient() {
             <div style={{ display: 'grid', gap: '14px' }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                 סכום תשלום (₪) *
-                <input type="number" min="0.01" step="0.01" max={payItem.balance} value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="0.00" style={inputSt} />
+                <input type="number" min="0.01" step="0.01" max={payItem.balance} value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="0.00" className="form-input" />
               </label>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                 תאריך תשלום
-                <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} style={inputSt} />
+                <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="form-input" />
               </label>
             </div>
             <div style={{ display: 'flex', gap: '10px', marginTop: '22px', justifyContent: 'flex-end' }}>
@@ -854,7 +851,7 @@ export default function DebtsClient() {
               value={waModal.text}
               onChange={e => setWaModal(m => m ? { ...m, text: e.target.value } : m)}
               rows={5}
-              style={{ ...inputSt, resize: 'vertical', fontSize: '13px', lineHeight: 1.6 }}
+              className="form-input" style={{ resize: 'vertical', fontSize: '13px', lineHeight: 1.6 }}
             />
             <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
               <button onClick={() => setWaModal(null)} style={btnSec}>ביטול</button>

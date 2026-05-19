@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import AppShell from '@/components/layout/AppShell'
 import Button from '@/components/ui/Button'
+import PageHeader from '@/components/ui/PageHeader'
 import Input from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
 import ExcelMenu from '@/components/ui/ExcelMenu'
@@ -103,9 +104,8 @@ function presetRange(p: SumPreset): { from: string; to: string } {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const TH: React.CSSProperties = { padding: '10px 14px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap', background: '#f8fafc', borderBottom: '1px solid var(--border)', letterSpacing: '0.3px' }
-const TD: React.CSSProperties = { padding: '10px 14px', textAlign: 'right', verticalAlign: 'middle', fontSize: '14px', borderBottom: '1px solid #f1f5f9' }
-const SEL: React.CSSProperties = { padding: '8px 12px', fontSize: '14px', border: '1.5px solid var(--border)', borderRadius: '9px', background: '#f8fafc', color: 'var(--text)', fontFamily: 'inherit', outline: 'none' }
+const TH: React.CSSProperties = { padding: '10px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap', background: '#f8fafc', borderBottom: '1px solid var(--border)', letterSpacing: '0.3px' }
+const TD: React.CSSProperties = { padding: '10px 12px', textAlign: 'right', verticalAlign: 'middle', fontSize: '14px', borderBottom: '1px solid var(--border)' }
 const ICON_BTN: React.CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: '6px', fontSize: '15px', opacity: 0.7 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -171,7 +171,7 @@ function CategorySelect({
             value={newCat}
             onChange={e => setNewCat(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') setAdding(false) }}
-            style={{ ...SEL, flex: 1 }}
+            className="form-input" style={{ flex: 1 }}
           />
           <button onClick={submit} style={{ padding: '7px 12px', borderRadius: '9px', border: '1.5px solid #bbf7d0', background: '#f0fdf9', color: '#15803d', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>הוסף</button>
           <button onClick={() => setAdding(false)} style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '13px', color: 'var(--text-muted)' }}>✕</button>
@@ -194,7 +194,7 @@ function CategorySelect({
         </div>
       ) : (
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <select value={value} onChange={e => onChange(e.target.value)} style={{ ...SEL, flex: 1 }}>
+          <select value={value} onChange={e => onChange(e.target.value)} className="form-input" style={{ flex: 1 }}>
             {cats.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           <button onClick={() => setAdding(true)} title="הוסף קטגוריה" style={{ padding: '7px 9px', borderRadius: '8px', border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '15px', color: 'var(--primary)', flexShrink: 0 }}>＋</button>
@@ -750,28 +750,21 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
 
   return (
     <AppShell>
-      {/* ── Page header ──────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#1a9e5c,#4ade80)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #1a9e5c44' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-          <div>
-            <h1 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>הוצאות והכנסות</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '2px', marginBottom: 0 }}>ניהול תזרים מזומנים חודשי</p>
+      <PageHeader
+        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
+        iconBg="linear-gradient(135deg,#1a9e5c,#4ade80)"
+        iconShadow="#1a9e5c44"
+        title="הוצאות והכנסות"
+        subtitle="ניהול תזרים מזומנים חודשי"
+        actions={tab !== 'summary' ? <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: '#f1f5f9', borderRadius: '10px', padding: '4px 6px' }}>
+            <button onClick={() => shiftMonth(1)}  style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '2px 6px', lineHeight: 1 }}>›</button>
+            <span style={{ fontSize: '14px', fontWeight: 600, minWidth: '130px', textAlign: 'center' }}>{monthLabel(month)}</span>
+            <button onClick={() => shiftMonth(-1)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '2px 6px', lineHeight: 1 }}>‹</button>
           </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {tab !== 'summary' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: '#f1f5f9', borderRadius: '10px', padding: '4px 6px' }}>
-              <button onClick={() => shiftMonth(1)}  style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '2px 6px', lineHeight: 1 }}>›</button>
-              <span style={{ fontSize: '14px', fontWeight: 600, minWidth: '130px', textAlign: 'center' }}>{monthLabel(month)}</span>
-              <button onClick={() => shiftMonth(-1)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '2px 6px', lineHeight: 1 }}>‹</button>
-            </div>
-          )}
-          {tab !== 'summary' && (
-            <Button onClick={openAdd}>+ הוסף {tab === 'expenses' ? 'הוצאה' : 'הכנסה'}</Button>
-          )}
-        </div>
-      </div>
+          <Button onClick={openAdd}>+ הוסף {tab === 'expenses' ? 'הוצאה' : 'הכנסה'}</Button>
+        </> : undefined}
+      />
 
       {/* ── Summary cards ─────────────────────────────────────────────────────── */}
       {tab !== 'summary' && (
@@ -868,15 +861,15 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               placeholder="חיפוש לפי תיאור, קטגוריה, ספק..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ ...SEL, width: '100%', paddingRight: '32px' }}
+              className="form-input" style={{ paddingRight: '32px' }}
             />
           </div>
-          <select value={filterCat} onChange={e => setFilterCat(e.target.value)} style={{ ...SEL, minWidth: '130px' }}>
+          <select value={filterCat} onChange={e => setFilterCat(e.target.value)} className="form-input" style={{ minWidth: '130px', width: 'auto' }}>
             <option value="">כל הקטגוריות</option>
             {cats.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           {tab === 'expenses' && suppliers.length > 0 && (
-            <select value={filterSup} onChange={e => setFilterSup(e.target.value)} style={{ ...SEL, minWidth: '130px' }}>
+            <select value={filterSup} onChange={e => setFilterSup(e.target.value)} className="form-input" style={{ minWidth: '130px', width: 'auto' }}>
               <option value="">כל הספקים</option>
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
@@ -932,11 +925,11 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <label style={{ fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>מתאריך</label>
-                <input type="date" value={sumDateFrom} onChange={e => setSumDateFrom(e.target.value)} style={{ ...SEL, width: 'auto' }} />
+                <input type="date" value={sumDateFrom} onChange={e => setSumDateFrom(e.target.value)} className="form-input" style={{ width: 'auto' }} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <label style={{ fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>עד תאריך</label>
-                <input type="date" value={sumDateTo} onChange={e => setSumDateTo(e.target.value)} style={{ ...SEL, width: 'auto' }} />
+                <input type="date" value={sumDateTo} onChange={e => setSumDateTo(e.target.value)} className="form-input" style={{ width: 'auto' }} />
               </div>
               <Button size="sm" onClick={fetchSummary}>רענן</Button>
             </div>
@@ -1064,8 +1057,8 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                     <td style={{ ...TD, textAlign: 'left', fontWeight: 700, color: tab === 'expenses' ? 'var(--danger)' : 'var(--primary)' }}>{fmt(row.amount)}</td>
                     <td style={{ ...TD, whiteSpace: 'nowrap' }}>
                       {editMode && <>
-                        <button onClick={() => openEdit(row)} style={ICON_BTN}>✏️</button>
-                        <button onClick={() => del(row.id)}   style={ICON_BTN}>🗑️</button>
+                        <button title="ערוך" onClick={() => openEdit(row)} style={ICON_BTN}>✏️</button>
+                        <button title="מחק" onClick={() => del(row.id)}   style={ICON_BTN}>🗑️</button>
                       </>}
                     </td>
                   </tr>
@@ -1138,7 +1131,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           {tab === 'expenses' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>ספק (אופציונלי)</label>
-              <select value={fSupplier} onChange={e => setFSupplier(e.target.value)} style={{ ...SEL, width: '100%' }}>
+              <select value={fSupplier} onChange={e => setFSupplier(e.target.value)} className="form-input">
                 <option value="">— ללא ספק —</option>
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
@@ -1168,7 +1161,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                   placeholder={fPayMethod === "צ'ק" ? "מס' צ'ק (אופציונלי)" : 'אסמכתא (אופציונלי)'}
                   value={fPayRef}
                   onChange={e => setFPayRef(e.target.value)}
-                  style={{ ...SEL, width: '100%' }}
+                  className="form-input"
                 />
               )}
             </div>
@@ -1209,7 +1202,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                     placeholder={fSchedMethod === 'check' ? "מס' צ'ק (אופציונלי)" : 'אסמכתא / מס׳ אסמכתא (אופציונלי)'}
                     value={fSchedRef}
                     onChange={e => setFSchedRef(e.target.value)}
-                    style={{ ...SEL, width: '100%', background: '#fff' }}
+                    className="form-input" style={{ background: '#fff' }}
                   />
                 </div>
               )}
@@ -1271,8 +1264,8 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                       </button>
                     </td>
                     <td style={{ ...TD, whiteSpace: 'nowrap' }}>
-                      <button onClick={() => openRecForm(r)} style={ICON_BTN}>✏️</button>
-                      <button onClick={() => delRec(r.id)}   style={ICON_BTN}>🗑️</button>
+                      <button title="ערוך הוצאה קבועה" onClick={() => openRecForm(r)} style={ICON_BTN}>✏️</button>
+                      <button title="מחק הוצאה קבועה" onClick={() => delRec(r.id)}   style={ICON_BTN}>🗑️</button>
                     </td>
                   </tr>
                 ))}
@@ -1314,7 +1307,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <label style={{ fontSize: '13px', fontWeight: 500 }}>ספק (אופציונלי)</label>
-            <select value={rfSupplier} onChange={e => setRfSupplier(e.target.value)} style={{ ...SEL, width: '100%' }}>
+            <select value={rfSupplier} onChange={e => setRfSupplier(e.target.value)} className="form-input">
               <option value="">— ללא ספק —</option>
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>

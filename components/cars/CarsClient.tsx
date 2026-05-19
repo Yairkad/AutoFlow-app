@@ -9,6 +9,7 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import PlateInput from '@/components/ui/PlateInput'
 import ExcelMenu from '@/components/ui/ExcelMenu'
+import PageHeader from '@/components/ui/PageHeader'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
 import { VehicleData } from '@/lib/utils/plateApi'
@@ -888,20 +889,14 @@ export default function CarsClient() {
   return (
     <div style={{ padding: '20px 24px', maxWidth: 1400, margin: '0 auto' }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#8b5cf6,#a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #8b5cf644' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v4h-7V8Z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
-          <div>
-            <h2 style={{ margin: 0, fontWeight: 700, fontSize: 18, color: 'var(--text)' }}>ניהול רכבים</h2>
-            <p style={{ margin: '2px 0 0', color: 'var(--text-muted)', fontSize: 12 }}>מלאי, קנייה, מכירה ובקשות לקוחות</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <ExcelMenu onExportExcel={exportExcel} />
-          <Button onClick={() => openCarForm()}>+ הוסף רכב</Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v4h-7V8Z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>}
+        iconBg="linear-gradient(135deg,#8b5cf6,#a78bfa)"
+        iconShadow="#8b5cf644"
+        title="ניהול רכבים"
+        subtitle="מלאי, קנייה, מכירה ובקשות לקוחות"
+        actions={<><ExcelMenu onExportExcel={exportExcel} /><Button onClick={() => openCarForm()}>+ הוסף רכב</Button></>}
+      />
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(130px, calc(50% - 6px)), 1fr))', gap: 12, marginBottom: 24 }}>

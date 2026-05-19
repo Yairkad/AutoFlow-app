@@ -6,7 +6,7 @@ type Variant = 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost'
 type Size = 'sm' | 'md' | 'lg'
 
 const VARIANTS: Record<Variant, React.CSSProperties> = {
-  primary:   { background: '#f0fdf9', color: '#15803d', border: '1.5px solid #bbf7d0', fontWeight: 600 },
+  primary:   { background: 'var(--primary)', color: '#fff', border: '1.5px solid var(--primary)', fontWeight: 600 },
   secondary: { background: '#fff',    color: 'var(--text)',       border: '1.5px solid var(--border)'  },
   danger:    { background: '#fff0f0', color: '#dc2626',           border: '1.5px solid #fca5a5'        },
   outline:   { background: 'transparent', color: 'var(--text)',   border: '1.5px solid var(--border)'  },

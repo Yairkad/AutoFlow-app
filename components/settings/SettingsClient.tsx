@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import PageHeader from '@/components/ui/PageHeader'
 
 type ToastFn = (msg: string, type?: 'success' | 'error' | 'info') => void
 
@@ -84,14 +85,9 @@ const ALL_MODULES = [
   { key: 'my_profile',    label: '👤 פרופיל אישי' },
 ]
 
-const inputSt: React.CSSProperties = {
-  padding: '9px 12px', border: '1.5px solid var(--border)', borderRadius: '9px',
-  fontSize: '13px', background: '#f8fafc', direction: 'rtl', width: '100%', boxSizing: 'border-box',
-}
-const labelSt: React.CSSProperties = { fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '5px' }
 const btnPrim: React.CSSProperties = {
-  padding: '9px 20px', background: '#f0fdf9', color: '#15803d',
-  border: '1.5px solid #bbf7d0', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+  padding: '9px 20px', background: 'var(--primary)', color: '#fff',
+  border: '1.5px solid var(--primary)', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer',
 }
 const btnSec: React.CSSProperties = {
   padding: '9px 20px', background: '#fff', color: 'var(--text-muted)',
@@ -101,7 +97,7 @@ const btnSec: React.CSSProperties = {
 function field(label: string, el: React.ReactNode) {
   return (
     <div>
-      <label style={labelSt}>{label}</label>
+      <label className="form-label">{label}</label>
       {el}
     </div>
   )
@@ -250,28 +246,28 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
               {/* פרטי העסק */}
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>🏢 פרטי העסק</div>
               <div className="settings-grid-3">
-                {field('שם עסק *', <input style={inputSt} value={tenant.name} onChange={e => setTenant(t => t ? { ...t, name: e.target.value } : t)} placeholder="שם העסק" />)}
-                {field('כותרת משנה', <input style={inputSt} value={tenant.sub_title ?? ''} onChange={e => setTenant(t => t ? { ...t, sub_title: e.target.value } : t)} placeholder="מוסך ופנצריה" />)}
-                {field('טלפון', <input type="tel" style={inputSt} value={tenant.phone ?? ''} onChange={e => setTenant(t => t ? { ...t, phone: e.target.value } : t)} placeholder="050-0000000" dir="ltr" />)}
-                {field('כתובת', <input style={inputSt} value={tenant.address ?? ''} onChange={e => setTenant(t => t ? { ...t, address: e.target.value } : t)} placeholder="רחוב, עיר" />)}
-                {field('ח.פ / ע.מ', <input style={inputSt} value={tenant.tax_id ?? ''} onChange={e => setTenant(t => t ? { ...t, tax_id: e.target.value } : t)} placeholder="מספר עוסק" dir="ltr" />)}
-                {field('מספר רישיון', <input style={inputSt} value={tenant.license_number ?? ''} onChange={e => setTenant(t => t ? { ...t, license_number: e.target.value } : t)} placeholder="הכנס מספר בלבד" />)}
+                {field('שם עסק *', <input className="form-input" value={tenant.name} onChange={e => setTenant(t => t ? { ...t, name: e.target.value } : t)} placeholder="שם העסק" />)}
+                {field('כותרת משנה', <input className="form-input" value={tenant.sub_title ?? ''} onChange={e => setTenant(t => t ? { ...t, sub_title: e.target.value } : t)} placeholder="מוסך ופנצריה" />)}
+                {field('טלפון', <input type="tel" className="form-input" value={tenant.phone ?? ''} onChange={e => setTenant(t => t ? { ...t, phone: e.target.value } : t)} placeholder="050-0000000" dir="ltr" />)}
+                {field('כתובת', <input className="form-input" value={tenant.address ?? ''} onChange={e => setTenant(t => t ? { ...t, address: e.target.value } : t)} placeholder="רחוב, עיר" />)}
+                {field('ח.פ / ע.מ', <input className="form-input" value={tenant.tax_id ?? ''} onChange={e => setTenant(t => t ? { ...t, tax_id: e.target.value } : t)} placeholder="מספר עוסק" dir="ltr" />)}
+                {field('מספר רישיון', <input className="form-input" value={tenant.license_number ?? ''} onChange={e => setTenant(t => t ? { ...t, license_number: e.target.value } : t)} placeholder="הכנס מספר בלבד" />)}
               </div>
-              {field('אימייל (ליצירת קשר)', <input style={inputSt} dir="ltr" type="email" value={tenant.public_info?.email ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, email: e.target.value } } : t)} placeholder="info@example.com" />)}
+              {field('אימייל (ליצירת קשר)', <input className="form-input" dir="ltr" type="email" value={tenant.public_info?.email ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, email: e.target.value } } : t)} placeholder="info@example.com" />)}
 
               {/* דף ציבורי */}
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginTop: '4px' }}>🌐 דף ציבורי</div>
-              {field('שעות פעילות', <input style={inputSt} value={tenant.public_info?.hours ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, hours: e.target.value } } : t)} placeholder="א׳-ה׳ 08:00–18:00 | ו׳ 08:00–13:00" />)}
+              {field('שעות פעילות', <input className="form-input" value={tenant.public_info?.hours ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, hours: e.target.value } } : t)} placeholder="א׳-ה׳ 08:00–18:00 | ו׳ 08:00–13:00" />)}
               <div className="settings-grid-2">
-                {field('קישור Waze', <input style={inputSt} dir="ltr" value={tenant.public_info?.waze_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, waze_url: e.target.value } } : t)} placeholder="https://waze.com/ul/..." />)}
-                {field('קישור Google Maps', <input style={inputSt} dir="ltr" value={tenant.public_info?.maps_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, maps_url: e.target.value } } : t)} placeholder="https://maps.app.goo.gl/..." />)}
+                {field('קישור Waze', <input className="form-input" dir="ltr" value={tenant.public_info?.waze_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, waze_url: e.target.value } } : t)} placeholder="https://waze.com/ul/..." />)}
+                {field('קישור Google Maps', <input className="form-input" dir="ltr" value={tenant.public_info?.maps_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, maps_url: e.target.value } } : t)} placeholder="https://maps.app.goo.gl/..." />)}
               </div>
 
               {/* SEO */}
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginTop: '4px' }}>🔍 SEO / כרטיסיית הדפדפן</div>
-              {field('כותרת (title)', <input style={inputSt} value={tenant.public_info?.meta_title ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_title: e.target.value } } : t)} placeholder={`${tenant.name} – מערכת ניהול`} />)}
+              {field('כותרת (title)', <input className="form-input" value={tenant.public_info?.meta_title ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_title: e.target.value } } : t)} placeholder={`${tenant.name} – מערכת ניהול`} />)}
               {field('תיאור (description)', (
-                <textarea style={{ ...inputSt, resize: 'vertical', minHeight: '60px' }} value={tenant.public_info?.meta_description ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_description: e.target.value } } : t)} placeholder="תיאור קצר של העסק – עד 160 תווים" maxLength={160} rows={2} />
+                <textarea className="form-input" style={{ resize: 'vertical', minHeight: '60px' }} value={tenant.public_info?.meta_description ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, meta_description: e.target.value } } : t)} placeholder="תיאור קצר של העסק – עד 160 תווים" maxLength={160} rows={2} />
               ))}
             </div>
 
@@ -396,22 +392,22 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
       {createOpen && (
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {field('שם מלא', <input style={inputSt} value={createForm.full_name} onChange={e => setCreateForm(f => ({ ...f, full_name: e.target.value }))} placeholder="ישראל ישראלי" />)}
-            {field('טלפון', <input type="tel" style={inputSt} value={createForm.phone} onChange={e => setCreateForm(f => ({ ...f, phone: e.target.value }))} dir="ltr" placeholder="050-0000000" />)}
+            {field('שם מלא', <input className="form-input" value={createForm.full_name} onChange={e => setCreateForm(f => ({ ...f, full_name: e.target.value }))} placeholder="ישראל ישראלי" />)}
+            {field('טלפון', <input type="tel" className="form-input" value={createForm.phone} onChange={e => setCreateForm(f => ({ ...f, phone: e.target.value }))} dir="ltr" placeholder="050-0000000" />)}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {field('אימייל *', <input style={inputSt} type="email" value={createForm.email} onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))} dir="ltr" placeholder="user@example.com" />)}
-            {field('סיסמה זמנית *', <input style={inputSt} type="text" value={createForm.password} onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))} dir="ltr" placeholder="לפחות 6 תווים" />)}
+            {field('אימייל *', <input className="form-input" type="email" value={createForm.email} onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))} dir="ltr" placeholder="user@example.com" />)}
+            {field('סיסמה זמנית *', <input className="form-input" type="text" value={createForm.password} onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))} dir="ltr" placeholder="לפחות 6 תווים" />)}
           </div>
           {field('תפקיד', (
-            <select style={inputSt} value={createForm.role} onChange={e => setCreateForm(f => ({ ...f, role: e.target.value }))}>
+            <select className="form-input" value={createForm.role} onChange={e => setCreateForm(f => ({ ...f, role: e.target.value }))}>
               <option value="admin">👑 מנהל</option>
               <option value="employee">👤 עובד</option>
             </select>
           ))}
           {createForm.role === 'employee' && (
             <div>
-              <label style={labelSt}>הרשאות</label>
+              <label className="form-label">הרשאות</label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginTop: '6px' }}>
                 {ALL_MODULES.map(m => {
                   const active = createForm.allowed_modules.includes(m.key)
@@ -446,15 +442,15 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 {field('שם מלא', (
-                  <input style={inputSt} value={editData.full_name ?? ''} onChange={e => setEditData(d => ({ ...d, full_name: e.target.value }))} />
+                  <input className="form-input" value={editData.full_name ?? ''} onChange={e => setEditData(d => ({ ...d, full_name: e.target.value }))} />
                 ))}
                 {field('טלפון', (
-                  <input type="tel" style={inputSt} value={editData.phone ?? ''} onChange={e => setEditData(d => ({ ...d, phone: e.target.value }))} dir="ltr" />
+                  <input type="tel" className="form-input" value={editData.phone ?? ''} onChange={e => setEditData(d => ({ ...d, phone: e.target.value }))} dir="ltr" />
                 ))}
               </div>
 
               {field('תפקיד', (
-                <select style={inputSt} value={editData.role} onChange={e => setEditData(d => ({ ...d, role: e.target.value }))}>
+                <select className="form-input" value={editData.role} onChange={e => setEditData(d => ({ ...d, role: e.target.value }))}>
                   <option value="super_admin">🔧 מפתח</option>
                   <option value="admin">👑 מנהל</option>
                   <option value="employee">👤 עובד</option>
@@ -463,7 +459,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
 
               {editData.role === 'employee' && (
                 <div>
-                  <label style={labelSt}>מודולים מורשים</label>
+                  <label className="form-label">מודולים מורשים</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {ALL_MODULES.map(m => {
                       const active = (editData.allowed_modules ?? []).includes(m.key)
@@ -617,7 +613,7 @@ function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '18px', marginBottom: '14px' }}>
           {/* Modules */}
           <div style={{ marginBottom: '14px' }}>
-            <label style={labelSt}>הרשאות לעובד החדש</label>
+            <label className="form-label">הרשאות לעובד החדש</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px', marginTop: '6px' }}>
               {ALL_MODULES.map(m => {
                 const active = selMods.includes(m.key)
@@ -637,8 +633,8 @@ function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType
           {/* Expiry + create */}
           <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
             <div>
-              <label style={labelSt}>תוקף</label>
-              <select style={{ ...inputSt, width: '130px' }} value={expiryDays} onChange={e => setExpiryDays(e.target.value)}>
+              <label className="form-label">תוקף</label>
+              <select className="form-input" style={{ width: '130px' }} value={expiryDays} onChange={e => setExpiryDays(e.target.value)}>
                 <option value="1">יום אחד</option>
                 <option value="3">3 ימים</option>
                 <option value="7">שבוע</option>
@@ -820,14 +816,14 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                 type="password" inputMode="numeric" maxLength={12} autoComplete="new-password" readOnly onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.removeAttribute('readonly')} autoCorrect="off" autoCapitalize="off" spellCheck={false} data-lpignore="true" data-1p-ignore="true"
                 value={pinInput} onChange={e => setPinInput(e.target.value)}
                 placeholder="קוד גישה (מינימום 4)"
-                style={{ ...inputSt, textAlign: 'center', letterSpacing: '4px', fontSize: '18px', marginBottom: '12px' }}
+                className="form-input" style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '18px', marginBottom: '12px' }}
               />
               {(!hasPinSet || settingPin) && (
                 <input
                   type="password" inputMode="numeric" maxLength={12} autoComplete="new-password" readOnly onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.removeAttribute('readonly')} autoCorrect="off" autoCapitalize="off" spellCheck={false} data-lpignore="true" data-1p-ignore="true"
                   value={pinConfirm} onChange={e => setPinConfirm(e.target.value)}
                   placeholder="אמת קוד גישה"
-                  style={{ ...inputSt, textAlign: 'center', letterSpacing: '4px', fontSize: '18px', marginBottom: '12px' }}
+                  className="form-input" style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '18px', marginBottom: '12px' }}
                 />
               )}
               {pinError && <div style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{pinError}</div>}
@@ -841,7 +837,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                 value={pinInput} onChange={e => setPinInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && verifyPin()}
                 placeholder="קוד גישה"
-                style={{ ...inputSt, textAlign: 'center', letterSpacing: '4px', fontSize: '18px', marginBottom: '12px' }}
+                className="form-input" style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '18px', marginBottom: '12px' }}
                 autoFocus
               />
               {pinError && <div style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{pinError}</div>}
@@ -878,16 +874,16 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
             <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '20px' }}>🔑 שינוי קוד כספת</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <label style={labelSt}>קוד נוכחי</label>
-                <input type="password" inputMode="numeric" maxLength={12} autoComplete="new-password" readOnly onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.removeAttribute('readonly')} autoCorrect="off" autoCapitalize="off" spellCheck={false} data-lpignore="true" data-1p-ignore="true" style={{ ...inputSt, textAlign: 'center', letterSpacing: '4px', fontSize: '16px' }} value={oldPinInput} onChange={e => setOldPinInput(e.target.value)} autoFocus />
+                <label className="form-label">קוד נוכחי</label>
+                <input type="password" inputMode="numeric" maxLength={12} autoComplete="new-password" readOnly onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.removeAttribute('readonly')} autoCorrect="off" autoCapitalize="off" spellCheck={false} data-lpignore="true" data-1p-ignore="true" className="form-input" style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '16px' }} value={oldPinInput} onChange={e => setOldPinInput(e.target.value)} autoFocus />
               </div>
               <div>
-                <label style={labelSt}>קוד חדש (מינימום 4)</label>
-                <input type="password" inputMode="numeric" maxLength={12} autoComplete="new-password" readOnly onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.removeAttribute('readonly')} autoCorrect="off" autoCapitalize="off" spellCheck={false} data-lpignore="true" data-1p-ignore="true" style={{ ...inputSt, textAlign: 'center', letterSpacing: '4px', fontSize: '16px' }} value={newPin} onChange={e => setNewPin(e.target.value)} />
+                <label className="form-label">קוד חדש (מינימום 4)</label>
+                <input type="password" inputMode="numeric" maxLength={12} autoComplete="new-password" readOnly onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.removeAttribute('readonly')} autoCorrect="off" autoCapitalize="off" spellCheck={false} data-lpignore="true" data-1p-ignore="true" className="form-input" style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '16px' }} value={newPin} onChange={e => setNewPin(e.target.value)} />
               </div>
               <div>
-                <label style={labelSt}>אמת קוד חדש</label>
-                <input type="password" inputMode="numeric" maxLength={12} autoComplete="new-password" readOnly onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.removeAttribute('readonly')} autoCorrect="off" autoCapitalize="off" spellCheck={false} data-lpignore="true" data-1p-ignore="true" style={{ ...inputSt, textAlign: 'center', letterSpacing: '4px', fontSize: '16px' }} value={newPinConfirm} onChange={e => setNewPinConfirm(e.target.value)} onKeyDown={e => e.key === 'Enter' && changePin()} />
+                <label className="form-label">אמת קוד חדש</label>
+                <input type="password" inputMode="numeric" maxLength={12} autoComplete="new-password" readOnly onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.removeAttribute('readonly')} autoCorrect="off" autoCapitalize="off" spellCheck={false} data-lpignore="true" data-1p-ignore="true" className="form-input" style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '16px' }} value={newPinConfirm} onChange={e => setNewPinConfirm(e.target.value)} onKeyDown={e => e.key === 'Enter' && changePin()} />
               </div>
               {pinError && <div style={{ color: 'var(--danger)', fontSize: '12px' }}>{pinError}</div>}
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
@@ -905,31 +901,31 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
           <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '16px' }}>{editItem ? 'עריכת פריט' : 'פריט חדש'}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
             <div>
-              <label style={labelSt}>כותרת *</label>
-              <input style={inputSt} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="לדוגמה: בנק הפועלים" />
+              <label className="form-label">כותרת *</label>
+              <input className="form-input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="לדוגמה: בנק הפועלים" />
             </div>
             <div>
-              <label style={labelSt}>קטגוריה</label>
-              <select style={inputSt} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+              <label className="form-label">קטגוריה</label>
+              <select className="form-input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
                 {Object.entries(CAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
             <div>
-              <label style={labelSt}>שם משתמש / מספר חשבון</label>
-              <input style={inputSt} value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="user@example.com" dir="ltr" />
+              <label className="form-label">שם משתמש / מספר חשבון</label>
+              <input className="form-input" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="user@example.com" dir="ltr" />
             </div>
             <div>
-              <label style={labelSt}>סיסמא / PIN / קוד</label>
-              <input style={inputSt} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" dir="ltr" />
+              <label className="form-label">סיסמא / PIN / קוד</label>
+              <input className="form-input" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" dir="ltr" />
             </div>
           </div>
           <div style={{ marginBottom: '12px' }}>
-            <label style={labelSt}>URL / קישור (אופציונלי)</label>
-            <input style={inputSt} value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="https://..." dir="ltr" />
+            <label className="form-label">URL / קישור (אופציונלי)</label>
+            <input className="form-input" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="https://..." dir="ltr" />
           </div>
           <div style={{ marginBottom: '16px' }}>
-            <label style={labelSt}>הערות</label>
-            <textarea style={{ ...inputSt, height: '70px', resize: 'vertical' } as React.CSSProperties} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="פרטים נוספים..." />
+            <label className="form-label">הערות</label>
+            <textarea className="form-input" style={{ height: '70px', resize: 'vertical' }} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="פרטים נוספים..." />
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={save} disabled={saving} style={{ ...btnPrim, opacity: saving ? .7 : 1 }}>{saving ? 'שומר...' : '💾 שמור'}</button>
@@ -1106,11 +1102,11 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
       {showForm && (
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-            <div><label style={labelSt}>שם *</label><input style={inputSt} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="לדוגמה: כיוון פרונט" /></div>
-            <div><label style={labelSt}>אייקון (אימוג׳י) — אם אין תמונה</label><input style={{ ...inputSt, fontSize: '20px' }} value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} placeholder="🔧" /></div>
+            <div><label className="form-label">שם *</label><input className="form-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="לדוגמה: כיוון פרונט" /></div>
+            <div><label className="form-label">אייקון (אימוג׳י) — אם אין תמונה</label><input className="form-input" style={{ fontSize: '20px' }} value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} placeholder="🔧" /></div>
           </div>
           <div style={{ marginBottom: '10px' }}>
-            <label style={labelSt}>תמונה לשירות (עדיפה על אייקון)</label>
+            <label className="form-label">תמונה לשירות (עדיפה על אייקון)</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               {form.image_url && (
                 <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -1121,7 +1117,7 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
                 <input type="file" accept="image/*" onChange={onImageChange} style={{ fontSize: '13px' }} />
                 <input
-                  style={{ ...inputSt, fontSize: '12px' }}
+                  className="form-input" style={{ fontSize: '12px' }}
                   placeholder="או הדבק קישור תמונה / Google Drive..."
                   defaultValue={form.image_url && !form.image_url.startsWith('data:') ? form.image_url : ''}
                   onBlur={e => { if (!form.image_url?.startsWith('data:')) onImageUrlInput(e.target.value) }}
@@ -1129,9 +1125,9 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
               </div>
             </div>
           </div>
-          <div style={{ marginBottom: '10px' }}><label style={labelSt}>תיאור</label><input style={inputSt} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="תיאור קצר של השירות..." /></div>
+          <div style={{ marginBottom: '10px' }}><label className="form-label">תיאור</label><input className="form-input" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="תיאור קצר של השירות..." /></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <div style={{ flex: 1 }}><label style={labelSt}>סדר הצגה</label><input type="number" style={inputSt} value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
+            <div style={{ flex: 1 }}><label className="form-label">סדר הצגה</label><input type="number" className="form-input" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px', fontSize: '13px' }}>
               <label className="toggle-switch">
                 <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
@@ -1224,11 +1220,11 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
       </div>
       {showForm && (
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
-          <div style={{ marginBottom: '10px' }}><label style={labelSt}>כותרת *</label><input style={inputSt} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="לדוגמה: 20% הנחה על צמיגים" /></div>
-          <div style={{ marginBottom: '10px' }}><label style={labelSt}>תיאור</label><textarea style={{ ...inputSt, height: '60px', resize: 'vertical' } as React.CSSProperties} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="פרטי המבצע..." /></div>
-          <div style={{ marginBottom: '10px' }}><label style={labelSt}>אותיות קטנות (תנאים, הגבלות, תוקף)</label><input style={inputSt} value={form.fine_print} onChange={e => setForm(f => ({ ...f, fine_print: e.target.value }))} placeholder="לדוגמה: בתוקף עד 30.4. לרכבים פרטיים בלבד." /></div>
+          <div style={{ marginBottom: '10px' }}><label className="form-label">כותרת *</label><input className="form-input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="לדוגמה: 20% הנחה על צמיגים" /></div>
+          <div style={{ marginBottom: '10px' }}><label className="form-label">תיאור</label><textarea className="form-input" style={{ height: '60px', resize: 'vertical' }} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="פרטי המבצע..." /></div>
+          <div style={{ marginBottom: '10px' }}><label className="form-label">אותיות קטנות (תנאים, הגבלות, תוקף)</label><input className="form-input" value={form.fine_print} onChange={e => setForm(f => ({ ...f, fine_print: e.target.value }))} placeholder="לדוגמה: בתוקף עד 30.4. לרכבים פרטיים בלבד." /></div>
           <div style={{ marginBottom: '10px' }}>
-            <label style={labelSt}>תמונה למבצע (אופציונלי)</label>
+            <label className="form-label">תמונה למבצע (אופציונלי)</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               {form.image_url && (
                 <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -1239,7 +1235,7 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
                 <input type="file" accept="image/*" onChange={onImageChange} style={{ fontSize: '13px' }} />
                 <input
-                  style={{ ...inputSt, fontSize: '12px' }}
+                  className="form-input" style={{ fontSize: '12px' }}
                   placeholder="או הדבק קישור תמונה / Google Drive..."
                   defaultValue={form.image_url && !form.image_url.startsWith('data:') ? form.image_url : ''}
                   onBlur={e => { if (!form.image_url?.startsWith('data:')) onImageUrlInput(e.target.value) }}
@@ -1247,13 +1243,13 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
               </div>
             </div>
           </div>
-          <div style={{ marginBottom: '10px' }}><label style={labelSt}>קישור (כפתור "למידע נוסף")</label><input style={inputSt} value={form.link_url} onChange={e => setForm(f => ({ ...f, link_url: e.target.value }))} placeholder="https://..." /></div>
+          <div style={{ marginBottom: '10px' }}><label className="form-label">קישור (כפתור "למידע נוסף")</label><input className="form-input" value={form.link_url} onChange={e => setForm(f => ({ ...f, link_url: e.target.value }))} placeholder="https://..." /></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-            <div><label style={labelSt}>מתאריך</label><input type="date" style={inputSt} value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} /></div>
-            <div><label style={labelSt}>עד תאריך</label><input type="date" style={inputSt} value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} /></div>
+            <div><label className="form-label">מתאריך</label><input type="date" className="form-input" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} /></div>
+            <div><label className="form-label">עד תאריך</label><input type="date" className="form-input" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} /></div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <div style={{ flex: 1 }}><label style={labelSt}>סדר הצגה</label><input type="number" style={inputSt} value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
+            <div style={{ flex: 1 }}><label className="form-label">סדר הצגה</label><input type="number" className="form-input" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px', fontSize: '13px' }}>
               <label className="toggle-switch">
                 <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
@@ -1344,10 +1340,10 @@ function FaqSection({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
       </div>
       {showForm && (
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
-          <div style={{ marginBottom: '10px' }}><label style={labelSt}>שאלה *</label><input style={inputSt} value={form.question} onChange={e => setForm(f => ({ ...f, question: e.target.value }))} placeholder="לדוגמה: איפה מוצאים את קבוצת הרישוי?" /></div>
-          <div style={{ marginBottom: '10px' }}><label style={labelSt}>תשובה *</label><textarea style={{ ...inputSt, height: '80px', resize: 'vertical' } as React.CSSProperties} value={form.answer} onChange={e => setForm(f => ({ ...f, answer: e.target.value }))} placeholder="התשובה המפורטת..." /></div>
+          <div style={{ marginBottom: '10px' }}><label className="form-label">שאלה *</label><input className="form-input" value={form.question} onChange={e => setForm(f => ({ ...f, question: e.target.value }))} placeholder="לדוגמה: איפה מוצאים את קבוצת הרישוי?" /></div>
+          <div style={{ marginBottom: '10px' }}><label className="form-label">תשובה *</label><textarea className="form-input" style={{ height: '80px', resize: 'vertical' }} value={form.answer} onChange={e => setForm(f => ({ ...f, answer: e.target.value }))} placeholder="התשובה המפורטת..." /></div>
           <div style={{ marginBottom: '10px' }}>
-            <label style={labelSt}>תמונה להמחשה (אופציונלי)</label>
+            <label className="form-label">תמונה להמחשה (אופציונלי)</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               {form.image_url && (
                 <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -1357,12 +1353,12 @@ function FaqSection({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
                 <input type="file" accept="image/*" onChange={onImageChange} style={{ fontSize: '13px' }} />
-                <input style={{ ...inputSt, fontSize: '12px' }} placeholder="או הדבק קישור / Google Drive..." defaultValue={form.image_url && !form.image_url.startsWith('data:') ? form.image_url : ''} onBlur={e => { if (!form.image_url?.startsWith('data:')) onImageUrlInput(e.target.value) }} />
+                <input className="form-input" style={{ fontSize: '12px' }} placeholder="או הדבק קישור / Google Drive..." defaultValue={form.image_url && !form.image_url.startsWith('data:') ? form.image_url : ''} onBlur={e => { if (!form.image_url?.startsWith('data:')) onImageUrlInput(e.target.value) }} />
               </div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <div style={{ flex: 1 }}><label style={labelSt}>סדר הצגה</label><input type="number" style={inputSt} value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
+            <div style={{ flex: 1 }}><label className="form-label">סדר הצגה</label><input type="number" className="form-input" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px', fontSize: '13px' }}>
               <label className="toggle-switch">
                 <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
@@ -1439,15 +1435,15 @@ function PricesSection({ supabase, tenantId, showToast }: { supabase: ReturnType
       {showForm && (
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-            <div><label style={labelSt}>קטגוריה *</label><input style={inputSt} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="לדוגמה: כיוון פרונט" list="cat-list" /><datalist id="cat-list">{categories.map(c => <option key={c} value={c} />)}</datalist></div>
-            <div><label style={labelSt}>שם שירות *</label><input style={inputSt} value={form.service_name} onChange={e => setForm(f => ({ ...f, service_name: e.target.value }))} placeholder="לדוגמה: רכב פרטי" /></div>
+            <div><label className="form-label">קטגוריה *</label><input className="form-input" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="לדוגמה: כיוון פרונט" list="cat-list" /><datalist id="cat-list">{categories.map(c => <option key={c} value={c} />)}</datalist></div>
+            <div><label className="form-label">שם שירות *</label><input className="form-input" value={form.service_name} onChange={e => setForm(f => ({ ...f, service_name: e.target.value }))} placeholder="לדוגמה: רכב פרטי" /></div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-            <div><label style={labelSt}>מחיר (₪)</label><input type="number" style={inputSt} value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0" dir="ltr" /></div>
-            <div><label style={labelSt}>הערת מחיר</label><input style={inputSt} value={form.price_note} onChange={e => setForm(f => ({ ...f, price_note: e.target.value }))} placeholder='לדוגמה: "החל מ-"' /></div>
+            <div><label className="form-label">מחיר (₪)</label><input type="number" className="form-input" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0" dir="ltr" /></div>
+            <div><label className="form-label">הערת מחיר</label><input className="form-input" value={form.price_note} onChange={e => setForm(f => ({ ...f, price_note: e.target.value }))} placeholder='לדוגמה: "החל מ-"' /></div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <div style={{ flex: 1 }}><label style={labelSt}>סדר</label><input type="number" style={inputSt} value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
+            <div style={{ flex: 1 }}><label className="form-label">סדר</label><input type="number" className="form-input" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} /></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '16px', fontSize: '13px' }}>
               <label className="toggle-switch">
                 <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
@@ -1739,14 +1735,14 @@ export default function SettingsClient() {
 
   return (
     <div style={{ direction: 'rtl' }}>
-      {/* Title */}
-      <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#64748b,#94a3b8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #64748b44' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></div>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>הגדרות</h1>
-          <p style={{ margin: '2px 0 0', color: 'var(--text-muted)', fontSize: '12px' }}>ניהול עסק, משתמשים והרשאות</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>}
+        iconBg="linear-gradient(135deg,#64748b,#94a3b8)"
+        iconShadow="#64748b44"
+        title="הגדרות"
+        subtitle="ניהול עסק, משתמשים והרשאות"
+        marginBottom={24}
+      />
 
       {/* Google Drive status — admins only */}
       {isAdmin && driveConnected !== null && (

@@ -8,6 +8,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import ExcelMenu from '@/components/ui/ExcelMenu'
+import PageHeader from '@/components/ui/PageHeader'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -128,18 +129,6 @@ function calcTotal(base: number, hours: number, payType: string, additions: AdjI
 }
 
 // ── Inline styles ──────────────────────────────────────────────────────────────
-
-const inp: React.CSSProperties = {
-  padding: '8px 10px', border: '1.5px solid var(--border)',
-  borderRadius: '9px', fontSize: '13px', width: '100%',
-  boxSizing: 'border-box', direction: 'rtl', background: '#f8fafc',
-  fontFamily: 'inherit',
-}
-
-const lbl: React.CSSProperties = {
-  display: 'block', fontSize: '12px', fontWeight: 600,
-  color: 'var(--text-muted)', marginBottom: '4px',
-}
 
 const field: React.CSSProperties = { display: 'flex', flexDirection: 'column' }
 
@@ -760,7 +749,7 @@ export default function EmployeesClient() {
                         value={hoursMap[e.id] ?? (sal?.hours || '')}
                         onChange={ev => setHoursMap(prev => ({ ...prev, [e.id]: ev.target.value }))}
                         onBlur={() => saveHours(e)}
-                        style={{ ...inp, width: '70px' }}
+                        className="form-input" style={{ width: '70px' }}
                       />
                     ) : e.salary_type === 'hourly' ? (
                       <span>{sal?.hours || 0} שע׳</span>
@@ -921,18 +910,13 @@ export default function EmployeesClient() {
 
   return (
     <div>
-      {/* Page Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#8b5cf6,#a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #8b5cf644' }}>
-            <svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </div>
-          <div>
-            <h1 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text)' }}>עובדים</h1>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>ניהול עובדים ומשכורות</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>}
+        iconBg="linear-gradient(135deg,#8b5cf6,#a78bfa)"
+        iconShadow="#8b5cf644"
+        title="עובדים"
+        subtitle="ניהול עובדים ומשכורות"
+      />
 
       {/* Stats */}
       <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
@@ -988,7 +972,7 @@ export default function EmployeesClient() {
               <select
                 value={period}
                 onChange={e => setPeriod(e.target.value)}
-                style={{ ...inp, width: 'auto' }}
+                className="form-input" style={{ width: 'auto' }}
               >
                 {buildPeriodList().map(p => (
                   <option key={p} value={p}>{periodLabel(p)}</option>
@@ -1057,47 +1041,47 @@ export default function EmployeesClient() {
         {/* Basic fields */}
         <div style={grid2}>
           <div style={field}>
-            <label style={lbl}>שם מלא *</label>
-            <input style={inp} value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="ישראל ישראלי" />
+            <label className="form-label">שם מלא *</label>
+            <input className="form-input" value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="ישראל ישראלי" />
           </div>
           <div style={field}>
-            <label style={lbl}>תפקיד</label>
-            <input style={inp} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} placeholder="מכונאי, מוכר..." />
+            <label className="form-label">תפקיד</label>
+            <input className="form-input" value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} placeholder="מכונאי, מוכר..." />
           </div>
           <div style={field}>
-            <label style={lbl}>מייל *</label>
-            <input style={inp} type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="name@example.com" />
+            <label className="form-label">מייל *</label>
+            <input className="form-input" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="name@example.com" />
           </div>
           <div style={field}>
-            <label style={lbl}>טלפון</label>
-            <input style={inp} type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="050-0000000" />
+            <label className="form-label">טלפון</label>
+            <input className="form-input" type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="050-0000000" />
           </div>
           {form.salary_type === 'monthly' ? (
             <div style={field}>
-              <label style={lbl}>שכר בסיס (₪/חודש)</label>
-              <input style={inp} type="number" min="0" step="1" value={form.base_salary} onChange={e => setForm(f => ({ ...f, base_salary: e.target.value }))} placeholder="7000" />
+              <label className="form-label">שכר בסיס (₪/חודש)</label>
+              <input className="form-input" type="number" min="0" step="1" value={form.base_salary} onChange={e => setForm(f => ({ ...f, base_salary: e.target.value }))} placeholder="7000" />
             </div>
           ) : (
             <div style={field}>
-              <label style={lbl}>תעריף שעתי (₪/שעה)</label>
-              <input style={inp} type="number" min="0" step="0.5" value={form.hourly_rate} onChange={e => setForm(f => ({ ...f, hourly_rate: e.target.value }))} placeholder="45" />
+              <label className="form-label">תעריף שעתי (₪/שעה)</label>
+              <input className="form-input" type="number" min="0" step="0.5" value={form.hourly_rate} onChange={e => setForm(f => ({ ...f, hourly_rate: e.target.value }))} placeholder="45" />
             </div>
           )}
           <div style={field}>
-            <label style={lbl}>יום תשלום בחודש</label>
+            <label className="form-label">יום תשלום בחודש</label>
             <input
-              style={inp} type="number" min="1" max="31" placeholder="למשל 10"
+              className="form-input" type="number" min="1" max="31" placeholder="למשל 10"
               value={form.payment_day}
               onChange={e => setForm(f => ({ ...f, payment_day: e.target.value }))}
             />
           </div>
           <div style={field}>
-            <label style={lbl}>תאריך תחילת עבודה</label>
-            <input style={inp} type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} />
+            <label className="form-label">תאריך תחילת עבודה</label>
+            <input className="form-input" type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} />
           </div>
           <div style={field}>
-            <label style={lbl}>תאריך סיום עבודה <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(ריק = פעיל)</span></label>
-            <input style={inp} type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
+            <label className="form-label">תאריך סיום עבודה <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(ריק = פעיל)</span></label>
+            <input className="form-input" type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
           </div>
           <div style={{ ...field }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#f8fafc', borderRadius: '9px', border: '1.5px solid var(--border)' }}>
@@ -1109,8 +1093,8 @@ export default function EmployeesClient() {
             </div>
           </div>
           <div style={{ ...field, gridColumn: '1/-1' }}>
-            <label style={lbl}>הערות</label>
-            <textarea style={{ ...inp, resize: 'vertical' }} rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+            <label className="form-label">הערות</label>
+            <textarea className="form-input" style={{ resize: 'vertical' }} rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
           </div>
         </div>
 
@@ -1122,11 +1106,11 @@ export default function EmployeesClient() {
           <div style={{ padding: '14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             {/* שם בנק – custom dropdown + badge מס' בנק */}
             <div style={field}>
-              <label style={lbl}>שם בנק</label>
+              <label className="form-label">שם בנק</label>
               <div ref={bankDropRef} style={{ position: 'relative' }}>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <input
-                    style={inp}
+                    className="form-input"
                     value={form.bank_name}
                     placeholder="התחל להקליד..."
                     onFocus={() => setShowBankDrop(true)}
@@ -1188,16 +1172,16 @@ export default function EmployeesClient() {
               </div>
             </div>
             <div style={field}>
-              <label style={lbl}>מספר סניף</label>
-              <input style={inp} value={form.bank_branch} placeholder="123" onChange={e => setForm(f => ({ ...f, bank_branch: e.target.value }))} />
+              <label className="form-label">מספר סניף</label>
+              <input className="form-input" value={form.bank_branch} placeholder="123" onChange={e => setForm(f => ({ ...f, bank_branch: e.target.value }))} />
             </div>
             <div style={field}>
-              <label style={lbl}>מספר חשבון</label>
-              <input style={inp} value={form.bank_account} placeholder="12345678" onChange={e => setForm(f => ({ ...f, bank_account: e.target.value }))} />
+              <label className="form-label">מספר חשבון</label>
+              <input className="form-input" value={form.bank_account} placeholder="12345678" onChange={e => setForm(f => ({ ...f, bank_account: e.target.value }))} />
             </div>
             <div style={field}>
-              <label style={lbl}>שם בעל החשבון</label>
-              <input style={inp} value={form.bank_holder} placeholder="אם שונה מהעובד" onChange={e => setForm(f => ({ ...f, bank_holder: e.target.value }))} />
+              <label className="form-label">שם בעל החשבון</label>
+              <input className="form-input" value={form.bank_holder} placeholder="אם שונה מהעובד" onChange={e => setForm(f => ({ ...f, bank_holder: e.target.value }))} />
             </div>
           </div>
         </details>
@@ -1209,31 +1193,31 @@ export default function EmployeesClient() {
           </summary>
           <div style={{ padding: '14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div style={field}>
-              <label style={lbl}>מספר ת.ז.</label>
-              <input style={inp} value={form.id_number} onChange={e => setForm(f => ({ ...f, id_number: e.target.value }))} placeholder="000000000" />
+              <label className="form-label">מספר ת.ז.</label>
+              <input className="form-input" value={form.id_number} onChange={e => setForm(f => ({ ...f, id_number: e.target.value }))} placeholder="000000000" />
             </div>
             <div style={field}>
-              <label style={lbl}>תאריך לידה</label>
-              <input style={inp} type="date" value={form.birth_date} onChange={e => setForm(f => ({ ...f, birth_date: e.target.value }))} />
+              <label className="form-label">תאריך לידה</label>
+              <input className="form-input" type="date" value={form.birth_date} onChange={e => setForm(f => ({ ...f, birth_date: e.target.value }))} />
             </div>
             <div style={{ ...field, gridColumn: '1/-1' }}>
-              <label style={lbl}>כתובת מגורים</label>
-              <input style={inp} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="רחוב, מספר, עיר" />
+              <label className="form-label">כתובת מגורים</label>
+              <input className="form-input" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="רחוב, מספר, עיר" />
             </div>
             <div style={field}>
-              <label style={lbl}>מידת חולצה</label>
-              <select style={inp} value={form.shirt_size} onChange={e => setForm(f => ({ ...f, shirt_size: e.target.value }))}>
+              <label className="form-label">מידת חולצה</label>
+              <select className="form-input" value={form.shirt_size} onChange={e => setForm(f => ({ ...f, shirt_size: e.target.value }))}>
                 <option value="">—</option>
                 {SHIRT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div style={field}>
-              <label style={lbl}>מידת מכנסיים</label>
-              <input style={inp} value={form.pants_size} onChange={e => setForm(f => ({ ...f, pants_size: e.target.value }))} placeholder="32, 34, L..." />
+              <label className="form-label">מידת מכנסיים</label>
+              <input className="form-input" value={form.pants_size} onChange={e => setForm(f => ({ ...f, pants_size: e.target.value }))} placeholder="32, 34, L..." />
             </div>
             <div style={field}>
-              <label style={lbl}>מידת נעליים</label>
-              <input style={inp} value={form.shoe_size} onChange={e => setForm(f => ({ ...f, shoe_size: e.target.value }))} placeholder="42" />
+              <label className="form-label">מידת נעליים</label>
+              <input className="form-input" value={form.shoe_size} onChange={e => setForm(f => ({ ...f, shoe_size: e.target.value }))} placeholder="42" />
             </div>
           </div>
         </details>
@@ -1255,9 +1239,9 @@ export default function EmployeesClient() {
         <p style={sectionTitle}>➕ תוספות</p>
         {adjAdditions.map((a, i) => (
           <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px', alignItems: 'center' }}>
-            <input style={{ ...inp, flex: 1 }} placeholder="בונוס, נסיעות..." value={a.label}
+            <input className="form-input" style={{ flex: 1 }} placeholder="בונוס, נסיעות..." value={a.label}
               onChange={e => adjItem(adjAdditions, setAdjAdditions, i, 'label', e.target.value)} />
-            <input style={{ ...inp, width: '90px' }} type="number" min="0" step="1" placeholder="₪" value={a.amount || ''}
+            <input className="form-input" style={{ width: '90px' }} type="number" min="0" step="1" placeholder="₪" value={a.amount || ''}
               onChange={e => adjItem(adjAdditions, setAdjAdditions, i, 'amount', e.target.value)} />
             <button onClick={() => setAdjAdditions(prev => prev.filter((_, j) => j !== i))}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: '18px', padding: '0 4px' }}>×</button>
@@ -1268,9 +1252,9 @@ export default function EmployeesClient() {
         <p style={{ ...sectionTitle, marginTop: '20px' }}>➖ ניכויים</p>
         {adjDeductions.map((d, i) => (
           <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px', alignItems: 'center' }}>
-            <input style={{ ...inp, flex: 1 }} placeholder="ניכוי, מחלה..." value={d.label}
+            <input className="form-input" style={{ flex: 1 }} placeholder="ניכוי, מחלה..." value={d.label}
               onChange={e => adjItem(adjDeductions, setAdjDeductions, i, 'label', e.target.value)} />
-            <input style={{ ...inp, width: '90px' }} type="number" min="0" step="1" placeholder="₪" value={d.amount || ''}
+            <input className="form-input" style={{ width: '90px' }} type="number" min="0" step="1" placeholder="₪" value={d.amount || ''}
               onChange={e => adjItem(adjDeductions, setAdjDeductions, i, 'amount', e.target.value)} />
             <button onClick={() => setAdjDeductions(prev => prev.filter((_, j) => j !== i))}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: '18px', padding: '0 4px' }}>×</button>
@@ -1279,8 +1263,8 @@ export default function EmployeesClient() {
         <Button size="sm" variant="secondary" onClick={() => setAdjDeductions(prev => [...prev, { label: '', amount: 0 }])}>+ הוסף ניכוי</Button>
 
         <div style={{ marginTop: '16px' }}>
-          <label style={lbl}>הערות</label>
-          <input style={inp} value={adjNotes} onChange={e => setAdjNotes(e.target.value)} placeholder="הערה..." />
+          <label className="form-label">הערות</label>
+          <input className="form-input" value={adjNotes} onChange={e => setAdjNotes(e.target.value)} placeholder="הערה..." />
         </div>
       </Modal>
 
@@ -1299,7 +1283,7 @@ export default function EmployeesClient() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={field}>
-            <label style={lbl}>אמצעי תשלום</label>
+            <label className="form-label">אמצעי תשלום</label>
             <div style={{ display: 'flex', gap: '6px' }}>
               {PAYMENT_METHODS.map(m => (
                 <button key={m} onClick={() => setPayMethod(m)} style={{
@@ -1315,12 +1299,12 @@ export default function EmployeesClient() {
             </div>
           </div>
           <div style={field}>
-            <label style={lbl}>אסמכתא (אופציונלי)</label>
-            <input style={inp} value={payRef} onChange={e => setPayRef(e.target.value)} placeholder="מספר צ'ק / אסמכתא העברה..." />
+            <label className="form-label">אסמכתא (אופציונלי)</label>
+            <input className="form-input" value={payRef} onChange={e => setPayRef(e.target.value)} placeholder="מספר צ'ק / אסמכתא העברה..." />
           </div>
           <div style={field}>
-            <label style={lbl}>תאריך תשלום (יירשם כהוצאה)</label>
-            <input style={inp} type="date" value={payDate} onChange={e => setPayDate(e.target.value)} />
+            <label className="form-label">תאריך תשלום (יירשם כהוצאה)</label>
+            <input className="form-input" type="date" value={payDate} onChange={e => setPayDate(e.target.value)} />
           </div>
           <div style={{ background: '#f0fdf4', padding: '12px', borderRadius: '8px', fontSize: '14px', fontWeight: 700, color: 'var(--primary)' }}>
             סה״כ לתשלום: {fmt(salaryFor(payEmpId)?.total ?? employees.find(e => e.id === payEmpId)?.base_salary ?? 0)}

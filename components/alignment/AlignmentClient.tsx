@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import PageHeader from '@/components/ui/PageHeader'
 import Input from '@/components/ui/Input'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
@@ -209,13 +210,6 @@ function printWorkOrder(job: AlignmentJob, biz: BizInfo) {
 
 // ── Shared styles ──────────────────────────────────────────────────────────────
 
-const selSt: React.CSSProperties = {
-  padding: '8px 12px', border: '1.5px solid var(--border)', borderRadius: '9px',
-  fontSize: '14px', background: '#f8fafc', color: 'var(--text)', fontFamily: 'inherit', width: '100%',
-}
-const labelSt: React.CSSProperties = {
-  fontSize: '12px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '4px',
-}
 const areaSt: React.CSSProperties = {
   width: '100%', padding: '8px 12px', border: '1.5px solid var(--border)', borderRadius: '9px',
   fontSize: '14px', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', background: '#f8fafc',
@@ -336,7 +330,7 @@ function JobForm({
 
       {/* Plate */}
       <div>
-        <label style={labelSt}>לוחית רישוי *</label>
+        <label className="form-label">לוחית רישוי *</label>
         <div style={{ display: 'flex', gap: '8px' }}>
           <input
             value={form.plate}
@@ -344,7 +338,7 @@ function JobForm({
             dir="ltr"
             inputMode="numeric"
             placeholder="12-345-67"
-            style={{ ...areaSt, fontFamily: 'monospace', resize: 'none', flex: 1, padding: '8px 12px' }}
+            className="form-input" style={{ fontFamily: 'monospace', resize: 'none', flex: 1 }}
           />
           <Button size="sm" onClick={onPlateSearch} loading={plateLoading}>🔍 מלא</Button>
         </div>
@@ -366,7 +360,7 @@ function JobForm({
 
       {/* Job type – all independent toggles */}
       <div>
-        <label style={labelSt}>סוג עבודה *</label>
+        <label className="form-label">סוג עבודה *</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
           {([
             { label: 'פרונט קדמי',    tag: 'kadmi',  color: 'var(--primary)' },
@@ -419,12 +413,13 @@ function JobForm({
       />
 
       <div>
-        <label style={labelSt}>הערות</label>
+        <label className="form-label">הערות</label>
         <textarea
           value={form.notes}
           onChange={e => onChange('notes', e.target.value)}
           rows={2}
-          style={areaSt}
+          className="form-input"
+          style={{ resize: 'vertical' }}
         />
       </div>
     </div>
@@ -649,20 +644,17 @@ export default function AlignmentClient() {
   return (
     <div style={{ padding: '20px', maxWidth: '960px', margin: '0 auto', direction: 'rtl' }}>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#6366f1,#818cf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #6366f144' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg></div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>כיוון פרונט</h1>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{activeCount} עבודות פעילות</div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <PageHeader
+        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>}
+        iconBg="linear-gradient(135deg,#6366f1,#818cf8)"
+        iconShadow="#6366f144"
+        title="כיוון פרונט"
+        subtitle={`${activeCount} עבודות פעילות`}
+        actions={<>
           <ExcelMenu onExportExcel={exportExcel} />
           <Button onClick={openAdd}>+ עבודה חדשה</Button>
-        </div>
-      </div>
+        </>}
+      />
 
       {/* Status filter */}
       <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', flexWrap: 'wrap' }}>

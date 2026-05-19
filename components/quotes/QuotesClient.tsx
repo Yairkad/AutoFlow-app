@@ -8,6 +8,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import ExcelMenu from '@/components/ui/ExcelMenu'
+import PageHeader from '@/components/ui/PageHeader'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -155,7 +156,6 @@ const inpStyle: React.CSSProperties = {
   fontSize: 13, background: '#f8fafc', fontFamily: 'inherit', width: '100%',
 }
 const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4 }
-const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }
 const gridStyle: React.CSSProperties = {
   display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12,
 }
@@ -710,20 +710,14 @@ export default function QuotesClient() {
   return (
     <div style={{ maxWidth: 1200 }}>
 
-      {/* ── Page title */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: 'linear-gradient(135deg,#0ea5e9,#38bdf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px #0ea5e944' }}><svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-          <div>
-            <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text)' }}>הצעות מחיר</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: 12, margin: '2px 0 0' }}>ניהול בקשות לקוחות + הצעות ספקים</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <ExcelMenu onExportExcel={exportExcel} />
-          <Button onClick={openAdd}>➕ הצעה חדשה</Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
+        iconBg="linear-gradient(135deg,#0ea5e9,#38bdf8)"
+        iconShadow="#0ea5e944"
+        title="הצעות מחיר"
+        subtitle="ניהול בקשות לקוחות + הצעות ספקים"
+        actions={<><ExcelMenu onExportExcel={exportExcel} /><Button onClick={openAdd}>➕ הצעה חדשה</Button></>}
+      />
 
       {/* ── Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
@@ -948,15 +942,15 @@ export default function QuotesClient() {
         <div style={gridStyle}>
           {/* ── Common fields */}
           <div style={fieldStyle}>
-            <label style={labelStyle}>תאריך</label>
+            <label className="form-label">תאריך</label>
             <input type="date" value={f.quote_date} onChange={e => setF('quote_date', e.target.value)} style={inpStyle} />
           </div>
           <div style={fieldStyle}>
-            <label style={labelStyle}>שם לקוח *</label>
+            <label className="form-label">שם לקוח *</label>
             <input placeholder="שם" value={f.client_name} onChange={e => setF('client_name', e.target.value)} style={inpStyle} />
           </div>
           <div style={fieldStyle}>
-            <label style={labelStyle}>טלפון *</label>
+            <label className="form-label">טלפון *</label>
             <input type="tel" placeholder="050-0000000" value={f.phone} onChange={e => setF('phone', e.target.value)} style={inpStyle} />
           </div>
 
@@ -965,7 +959,7 @@ export default function QuotesClient() {
             <>
               {/* מס׳ רכב + API */}
               <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>מס׳ רכב</label>
+                <label className="form-label">מס׳ רכב</label>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <input
                     placeholder="12-345-67"
@@ -994,11 +988,11 @@ export default function QuotesClient() {
               </div>
 
               <div style={fieldStyle}>
-                <label style={labelStyle}>מותג</label>
+                <label className="form-label">מותג</label>
                 <input placeholder="Michelin, Bridgestone..." value={tireForm.brand} onChange={e => setTireForm(p => ({ ...p, brand: e.target.value }))} style={inpStyle} />
               </div>
               <div style={fieldStyle}>
-                <label style={labelStyle}>כמות</label>
+                <label className="form-label">כמות</label>
                 <input type="number" min={1} value={tireForm.qty} onChange={e => setTireForm(p => ({ ...p, qty: e.target.value }))} style={inpStyle} />
               </div>
 
@@ -1015,21 +1009,21 @@ export default function QuotesClient() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                   <div style={fieldStyle}>
-                    <label style={labelStyle}>רוחב *</label>
+                    <label className="form-label">רוחב *</label>
                     <select value={tireForm.width} onChange={e => setTireForm(p => ({ ...p, width: e.target.value }))} style={inpStyle}>
                       <option value="">בחר</option>
                       {WIDTHS.map(w => <option key={w}>{w}</option>)}
                     </select>
                   </div>
                   <div style={fieldStyle}>
-                    <label style={labelStyle}>פרופיל</label>
+                    <label className="form-label">פרופיל</label>
                     <select value={tireForm.profile} onChange={e => setTireForm(p => ({ ...p, profile: e.target.value }))} style={inpStyle}>
                       <option value="">בחר</option>
                       {PROFILES.map(p => <option key={p}>{p}</option>)}
                     </select>
                   </div>
                   <div style={fieldStyle}>
-                    <label style={labelStyle}>קוטר (R)</label>
+                    <label className="form-label">קוטר (R)</label>
                     <select value={tireForm.rim} onChange={e => setTireForm(p => ({ ...p, rim: e.target.value }))} style={inpStyle}>
                       <option value="">בחר</option>
                       {RIMS.map(r => <option key={r}>{r}</option>)}
@@ -1044,7 +1038,7 @@ export default function QuotesClient() {
           {!isTireModal && (
             <>
               <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>שם החלק *</label>
+                <label className="form-label">שם החלק *</label>
                 <input placeholder="שם החלק המבוקש" value={partForm.part_name} onChange={e => setPartForm(p => ({ ...p, part_name: e.target.value }))} style={inpStyle} />
               </div>
 
@@ -1061,7 +1055,7 @@ export default function QuotesClient() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <div style={fieldStyle}>
-                    <label style={labelStyle}>מס׳ רכב *</label>
+                    <label className="form-label">מס׳ רכב *</label>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <input
                         placeholder="12-345-67"
@@ -1083,7 +1077,7 @@ export default function QuotesClient() {
                     </div>
                   </div>
                   <div style={fieldStyle}>
-                    <label style={labelStyle}>יצרן / דגם</label>
+                    <label className="form-label">יצרן / דגם</label>
                     <input placeholder="ימולא אוטומטית" value={partForm.car_model} onChange={e => setPartForm(p => ({ ...p, car_model: e.target.value }))} style={inpStyle} />
                   </div>
                 </div>
@@ -1100,7 +1094,7 @@ export default function QuotesClient() {
 
           {/* ── Pricing */}
           <div style={fieldStyle}>
-            <label style={labelStyle}>הצעה ללקוח (₪{isTireModal ? ' ליח׳' : ''})</label>
+            <label className="form-label">הצעה ללקוח (₪{isTireModal ? ' ליח׳' : ''})</label>
             <input
               type="number" placeholder="0.00" min={0} step={0.01}
               value={f.sell_price}
@@ -1110,7 +1104,7 @@ export default function QuotesClient() {
           </div>
 
           <div style={fieldStyle}>
-            <label style={labelStyle}>סטטוס</label>
+            <label className="form-label">סטטוס</label>
             <select value={f.status} onChange={e => setF('status', e.target.value)} style={inpStyle}>
               {Object.entries(STATUS_LABEL).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
@@ -1119,7 +1113,7 @@ export default function QuotesClient() {
           </div>
 
           <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
-            <label style={labelStyle}>הערות</label>
+            <label className="form-label">הערות</label>
             <input placeholder="הערה חופשית" value={f.notes} onChange={e => setF('notes', e.target.value)} style={inpStyle} />
           </div>
 
