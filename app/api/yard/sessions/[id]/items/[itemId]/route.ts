@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth/require'
+import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createClient } from '@/lib/supabase/server'
 
 // DELETE /api/yard/sessions/[id]/items/[itemId]
@@ -7,9 +7,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string; itemId: string }> }
 ) {
-  const auth = await requireAuth()
-  if ('error' in auth) return auth.error
-  const { profile } = auth
+  const tenantId = getYardTenantId()
+  if (!tenantId) return new Response('Unauthorized', { status: 401 })
+  const profile = { tenant_id: tenantId }
   const { id: sessionId, itemId } = await params
 
   const supabase = await createClient()
@@ -29,9 +29,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string; itemId: string }> }
 ) {
-  const auth = await requireAuth()
-  if ('error' in auth) return auth.error
-  const { profile } = auth
+  const tenantId = getYardTenantId()
+  if (!tenantId) return new Response('Unauthorized', { status: 401 })
+  const profile = { tenant_id: tenantId }
   const { id: sessionId, itemId } = await params
 
   const body = await req.json()

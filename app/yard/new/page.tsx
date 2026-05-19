@@ -1,9 +1,9 @@
-import { requireAuth } from '@/lib/auth/require'
+import { getYardTenantId } from '@/lib/auth/yard-token'
 import { redirect } from 'next/navigation'
 import NewCarClient from '@/components/yard/NewCarClient'
 
 export default async function NewCarPage() {
-  const auth = await requireAuth()
-  if ('error' in auth) redirect('/login')
+  const tenantId = getYardTenantId()
+  if (!tenantId) redirect('/login')
   return <NewCarClient />
 }

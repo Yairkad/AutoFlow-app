@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth/require'
+import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createClient } from '@/lib/supabase/server'
 
 // GET /api/yard/sessions?status=active|pending_office|all
 export async function GET(req: NextRequest) {
-  const auth = await requireAuth()
-  if ('error' in auth) return auth.error
-  const { profile } = auth
+  const tenantId = getYardTenantId()
+  if (!tenantId) return new Response('Unauthorized', { status: 401 })
+  const profile = { tenant_id: tenantId }
 
   const status = req.nextUrl.searchParams.get('status') ?? 'active'
   const supabase = await createClient()
@@ -29,9 +29,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/yard/sessions — open new session
 export async function POST(req: NextRequest) {
-  const auth = await requireAuth()
-  if ('error' in auth) return auth.error
-  const { user, profile } = auth
+  const tenantId = getYardTenantId()
+  if (!tenantId) return new Response('Unauthorized', { status: 401 })
+  const profile = { tenant_id: tenantId }
 
   const body = await req.json()
   const { plate, make, model, year } = body
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       make:  make  ?? null,
       model: model ?? null,
       year:  year  ?? null,
-      opened_by: user.id,
+      opened_by: null,
     })
     .select()
     .single()

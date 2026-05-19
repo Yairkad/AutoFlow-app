@@ -1,12 +1,12 @@
-import { requireAuth } from '@/lib/auth/require'
+import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import TireSearchClient from '@/components/yard/TireSearchClient'
 import type { YardSession } from '@/lib/yard/types'
 
 export default async function TirePage({ params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAuth()
-  if ('error' in auth) redirect('/login')
+  const tenantId = getYardTenantId()
+  if (!tenantId) redirect('/login')
 
   const { id } = await params
   const supabase = await createClient()
@@ -14,7 +14,7 @@ export default async function TirePage({ params }: { params: Promise<{ id: strin
     .from('yard_sessions')
     .select('id, plate, make, model, year')
     .eq('id', id)
-    .eq('tenant_id', auth.profile.tenant_id)
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!session) notFound()

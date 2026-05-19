@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth/require'
+import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createClient } from '@/lib/supabase/server'
 
 // GET /api/yard/services
 export async function GET() {
-  const auth = await requireAuth()
-  if ('error' in auth) return auth.error
-  const { profile } = auth
+  const tenantId = getYardTenantId()
+  if (!tenantId) return new Response('Unauthorized', { status: 401 })
+  const profile = { tenant_id: tenantId }
 
   const supabase = await createClient()
   const { data, error } = await supabase

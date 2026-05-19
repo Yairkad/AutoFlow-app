@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth/require'
+import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import FreeSearchClient from '@/components/yard/FreeSearchClient'
@@ -11,8 +11,8 @@ export default async function SearchPage({
   params: Promise<{ id: string }>
   searchParams: Promise<{ type?: string }>
 }) {
-  const auth = await requireAuth()
-  if ('error' in auth) redirect('/login')
+  const tenantId = getYardTenantId()
+  if (!tenantId) redirect('/login')
 
   const { id }   = await params
   const { type } = await searchParams
@@ -22,7 +22,7 @@ export default async function SearchPage({
     .from('yard_sessions')
     .select('id,plate,make,model,year,yard_session_items(id,name)')
     .eq('id', id)
-    .eq('tenant_id', auth.profile.tenant_id)
+    .eq('tenant_id', tenantId)
     .single()
 
   if (!session) notFound()

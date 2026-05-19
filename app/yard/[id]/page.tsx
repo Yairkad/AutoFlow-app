@@ -1,12 +1,12 @@
-import { requireAuth } from '@/lib/auth/require'
+import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import WorkCardClient from '@/components/yard/WorkCardClient'
 import type { YardSession, YardService } from '@/lib/yard/types'
 
 export default async function WorkCardPage({ params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAuth()
-  if ('error' in auth) redirect('/login')
+  const tenantId = getYardTenantId()
+  if (!tenantId) redirect('/login')
 
   const { id } = await params
   const supabase = await createClient()
@@ -16,12 +16,12 @@ export default async function WorkCardPage({ params }: { params: Promise<{ id: s
       .from('yard_sessions')
       .select('*, yard_session_items(*)')
       .eq('id', id)
-      .eq('tenant_id', auth.profile.tenant_id)
+      .eq('tenant_id', tenantId)
       .single(),
     supabase
       .from('yard_services')
       .select('*')
-      .eq('tenant_id', auth.profile.tenant_id)
+      .eq('tenant_id', tenantId)
       .eq('is_active', true)
       .order('sort_order'),
   ])

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth/require'
+import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createClient } from '@/lib/supabase/server'
 
 // GET /api/yard/sessions/[id]
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAuth()
-  if ('error' in auth) return auth.error
-  const { profile } = auth
+  const tenantId = getYardTenantId()
+  if (!tenantId) return new Response('Unauthorized', { status: 401 })
+  const profile = { tenant_id: tenantId }
   const { id } = await params
 
   const supabase = await createClient()
@@ -26,9 +26,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 // PATCH /api/yard/sessions/[id] — change status
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireAuth()
-  if ('error' in auth) return auth.error
-  const { user, profile } = auth
+  const tenantId = getYardTenantId()
+  if (!tenantId) return new Response('Unauthorized', { status: 401 })
+  const profile = { tenant_id: tenantId }
   const { id } = await params
 
   const body = await req.json()
@@ -62,7 +62,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (status === 'archived') {
     update.closed_at = new Date().toISOString()
-    update.closed_by = user.id
+    update.closed_by = null
 
     // Deduct inventory for all items with ref_id
     const { data: session } = await supabase
