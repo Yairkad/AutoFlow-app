@@ -28,20 +28,36 @@ export default function FreeSearchClient({ session, filterType }: Props) {
   const existingNames = new Set((session.yard_session_items ?? []).map(i => i.name))
   const title = filterType === 'all' ? 'כל המלאי' : 'אביזרים לרכב'
 
+  const CACHE_KEY = `yard-search-${filterType}`
+  const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
   const search = useCallback(async (q: string) => {
     const res  = await fetch(`/api/yard/search?q=${encodeURIComponent(q)}&type=${filterType}`)
     const data = await res.json()
     setResults(data)
     setSelected(null)
-  }, [filterType])
+    // Cache empty-query (full list) for instant load next time
+    if (!q) {
+      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })) } catch {}
+    }
+  }, [filterType]) // eslint-disable-line
 
   useEffect(() => {
     const t = setTimeout(() => search(query), 300)
     return () => clearTimeout(t)
   }, [query, search])
 
-  // Load defaults on mount
-  useEffect(() => { search('') }, [search])
+  // Load defaults on mount — show cache instantly, then refresh
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(CACHE_KEY)
+      if (raw) {
+        const { data, ts } = JSON.parse(raw)
+        if (Date.now() - ts < CACHE_TTL) setResults(data)
+      }
+    } catch {}
+    search('')
+  }, []) // eslint-disable-line
 
   async function addToCart() {
     if (!selected) return

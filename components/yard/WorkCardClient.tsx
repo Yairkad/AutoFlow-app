@@ -19,6 +19,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const [editItem,    setEditItem]     = useState<YardSessionItem | null>(null)
   const [priceDigits, setPriceDigits]  = useState('')
   const [error,       setError]        = useState<string | null>(null)
+  const [sending,     setSending]      = useState(false)
   const [isMobile,    setIsMobile]     = useState(false)
   const supabase = createClient()
   const items = session.yard_session_items ?? []
@@ -50,10 +51,25 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     return () => { supabase.removeChannel(ch) }
   }, [session.id]) // eslint-disable-line
 
-  // Optimistic delete — remove immediately, fire in background
+  function showError(msg: string) {
+    setError(msg)
+    setTimeout(() => setError(null), 4000)
+  }
+
+  // Optimistic delete — remove immediately, revert on error
   function deleteItem(item: YardSessionItem) {
     setSession(s => ({ ...s, yard_session_items: s.yard_session_items.filter(i => i.id !== item.id) }))
     fetch(`/api/yard/sessions/${session.id}/items/${item.id}`, { method: 'DELETE' })
+      .then(r => {
+        if (!r.ok) {
+          setSession(s => ({ ...s, yard_session_items: [...s.yard_session_items, item].sort((a,b) => a.created_at.localeCompare(b.created_at)) }))
+          showError('שגיאה במחיקת פריט — נסה שוב')
+        }
+      })
+      .catch(() => {
+        setSession(s => ({ ...s, yard_session_items: [...s.yard_session_items, item].sort((a,b) => a.created_at.localeCompare(b.created_at)) }))
+        showError('בעיית תקשורת — נסה שוב')
+      })
   }
 
   function addQuickItem(name: string, price: number, serviceId?: string) {
@@ -101,24 +117,40 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     })
   }
 
-  // Navigate immediately, PATCH in background
-  function sendToOffice() {
-    router.push('/yard')
-    fetch(`/api/yard/sessions/${session.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'pending_office' }),
-    })
+  // Await PATCH (fast ~200ms), show error and stay on page if it fails
+  async function sendToOffice() {
+    setSending(true)
+    try {
+      const r = await fetch(`/api/yard/sessions/${session.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'pending_office' }),
+        signal: AbortSignal.timeout(6000),
+      })
+      if (!r.ok) throw new Error()
+      router.push('/yard')
+    } catch {
+      setSending(false)
+      showError('שגיאה בשליחה למשרד — נסה שוב')
+    }
   }
 
-  function closeEmpty() {
+  async function closeEmpty() {
     setConfirmEmpty(false)
-    router.push('/yard')
-    fetch(`/api/yard/sessions/${session.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'archived' }),
-    })
+    setSending(true)
+    try {
+      const r = await fetch(`/api/yard/sessions/${session.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'archived' }),
+        signal: AbortSignal.timeout(6000),
+      })
+      if (!r.ok) throw new Error()
+      router.push('/yard')
+    } catch {
+      setSending(false)
+      showError('שגיאה בסגירת כרטיס — נסה שוב')
+    }
   }
 
   function handleFinish() {
@@ -145,17 +177,29 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     const newPrice = priceDigits === '' ? editItem.unit_price : Number(priceDigits)
     setEditItem(null)
     if (newPrice === editItem.unit_price) return
+    const snapshot = editItem
     // Optimistic update
     setSession(s => ({
       ...s,
       yard_session_items: s.yard_session_items.map(i =>
-        i.id === editItem.id ? { ...i, unit_price: newPrice, price_modified: true } : i
+        i.id === snapshot.id ? { ...i, unit_price: newPrice, price_modified: true } : i
       ),
     }))
-    fetch(`/api/yard/sessions/${session.id}/items/${editItem.id}`, {
+    fetch(`/api/yard/sessions/${session.id}/items/${snapshot.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ unit_price: newPrice }),
+    }).then(r => {
+      if (!r.ok) throw new Error()
+    }).catch(() => {
+      // Revert price
+      setSession(s => ({
+        ...s,
+        yard_session_items: s.yard_session_items.map(i =>
+          i.id === snapshot.id ? { ...i, unit_price: snapshot.unit_price, price_modified: snapshot.price_modified } : i
+        ),
+      }))
+      showError('שגיאה בעדכון מחיר — נסה שוב')
     })
   }
 
@@ -286,10 +330,11 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
 
           <button
             onClick={handleFinish}
-            className="text-white font-bold transition-colors flex-shrink-0 active:brightness-90"
+            disabled={sending}
+            className="text-white font-bold transition-colors flex-shrink-0 active:brightness-90 disabled:opacity-60"
             style={{ background: items.length === 0 ? '#475569' : '#b45309', padding: '20px 16px', fontSize: '17px' }}
           >
-            {items.length === 0 ? 'סגור כרטיס' : 'סיים ושלח לתשלום'}
+            {sending ? '⏳ שולח...' : items.length === 0 ? 'סגור כרטיס' : 'סיים ושלח לתשלום'}
           </button>
         </div>
       </div>

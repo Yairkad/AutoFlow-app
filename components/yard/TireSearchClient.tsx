@@ -23,14 +23,25 @@ export default function TireSearchClient({ session }: Props) {
   const [saving,    setSaving]      = useState(false)
   const [hints,     setHints]       = useState<string[]>([])
 
-  // Search tires
+  const CACHE_TTL = 5 * 60 * 1000
+
+  // Search tires — cache results by query for instant repeat lookups
   const search = useCallback(async (q: string) => {
     if (!q.trim()) { setResults([]); return }
+    const cacheKey = `yard-tires-${q.trim()}`
+    try {
+      const raw = sessionStorage.getItem(cacheKey)
+      if (raw) {
+        const { data, ts } = JSON.parse(raw)
+        if (Date.now() - ts < CACHE_TTL) { setResults(data); setSelected(null) }
+      }
+    } catch {}
     const res  = await fetch(`/api/yard/search?q=${encodeURIComponent(q)}&type=tire`)
     const data = await res.json()
     setResults(data)
     setSelected(null)
-  }, [])
+    try { sessionStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() })) } catch {}
+  }, []) // eslint-disable-line
 
   useEffect(() => {
     const t = setTimeout(() => search(query), 300)
