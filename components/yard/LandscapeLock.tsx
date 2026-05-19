@@ -1,39 +1,29 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-
 export default function LandscapeLock() {
-  const [isPortrait, setIsPortrait] = useState(false)
-
-  useEffect(() => {
-    // Try the Screen Orientation API lock (Android Chrome PWA supports this)
+  function lock() {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(screen.orientation as any).lock('landscape').catch(() => {})
     } catch {}
-
-    function check() {
-      setIsPortrait(window.innerHeight > window.innerWidth)
-    }
-    check()
-    window.addEventListener('resize', check)
-    window.addEventListener('orientationchange', check)
-    return () => {
-      window.removeEventListener('resize', check)
-      window.removeEventListener('orientationchange', check)
-    }
-  }, [])
-
-  if (!isPortrait) return null
+  }
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-900 text-white"
-      style={{ gap: '16px' }}
+    <button
+      onClick={lock}
+      title="נעל מסך לרוחב"
+      style={{
+        position: 'fixed', bottom: '12px', left: '12px', zIndex: 9999,
+        width: '40px', height: '40px', borderRadius: '10px',
+        background: 'rgba(30,41,59,0.75)', border: 'none',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', backdropFilter: 'blur(4px)',
+      }}
     >
-      <div style={{ fontSize: '56px' }}>🔄</div>
-      <div className="font-bold text-center" style={{ fontSize: '22px' }}>סובב את המכשיר</div>
-      <div className="text-slate-400 text-center" style={{ fontSize: '15px' }}>המסוף מיועד לשימוש לרוחב</div>
-    </div>
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="4" y="2" width="16" height="20" rx="2"/>
+        <path d="M9 17h6M8 7l4-4 4 4"/>
+      </svg>
+    </button>
   )
 }
