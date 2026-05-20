@@ -39,8 +39,10 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
   const [editPrices,   setEditPrices]   = useState<Record<string, string>>({})
   const [editNames,    setEditNames]    = useState<Record<string, string>>({})
   const [editSkus,     setEditSkus]     = useState<Record<string, string>>({})
-  const [saving,       setSaving]       = useState<string | null>(null)
-  const [newSvc,       setNewSvc]       = useState({ name: '', price: '', sku: '' })
+  const [dirty,          setDirty]          = useState<Set<string>>(new Set())
+  const [saveAllLoading, setSaveAllLoading] = useState(false)
+  const [saveStatus,     setSaveStatus]     = useState<'idle' | 'ok' | 'err'>('idle')
+  const [newSvc,         setNewSvc]         = useState({ name: '', price: '', sku: '' })
   const [addingNew,    setAddingNew]    = useState(false)
   const supabase = createClient()
 
@@ -113,19 +115,59 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     setEditPrices(Object.fromEntries(data.map(s => [s.id, String(s.price)])))
     setEditNames(Object.fromEntries(data.map(s => [s.id, s.name])))
     setEditSkus(Object.fromEntries(data.map(s => [s.id, s.sku ?? ''])))
+    setDirty(new Set())
+    setSaveStatus('idle')
     setPriceModal(true)
   }
 
-  async function saveField(id: string, name: string, price: number, sku: string) {
-    if (!name || isNaN(price)) return
-    setSaving(id)
-    const res = await fetch(`/api/yard/services/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, price, sku: sku.trim() || null }),
-    })
-    setSaving(null)
-    if (res.ok) setServices(sv => sv.map(s => s.id === id ? { ...s, name, price, sku: sku.trim() || null } : s))
+  function markDirty(id: string) {
+    setDirty(d => new Set([...d, id]))
+  }
+
+  async function saveAll() {
+    if (dirty.size === 0) return
+    setSaveAllLoading(true)
+    setSaveStatus('idle')
+    try {
+      await Promise.all([...dirty].map(id => {
+        const svc = services.find(s => s.id === id)
+        if (!svc) return Promise.resolve()
+        const name  = (editNames[id] ?? svc.name).trim()
+        const price = Number(editPrices[id] ?? svc.price)
+        const sku   = (editSkus[id] ?? '').trim() || null
+        if (!name || isNaN(price)) return Promise.resolve()
+        return fetch(`/api/yard/services/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, price, sku }),
+        }).then(r => { if (!r.ok) throw new Error('failed') })
+      }))
+      setServices(sv => sv.map(s => {
+        if (!dirty.has(s.id)) return s
+        return {
+          ...s,
+          name:  (editNames[s.id]  ?? s.name).trim(),
+          price: Number(editPrices[s.id] ?? s.price),
+          sku:   (editSkus[s.id]   ?? '').trim() || null,
+        }
+      }))
+      setDirty(new Set())
+      setSaveStatus('ok')
+      setTimeout(() => setSaveStatus('idle'), 3000)
+    } catch {
+      setSaveStatus('err')
+      setTimeout(() => setSaveStatus('idle'), 4000)
+    } finally {
+      setSaveAllLoading(false)
+    }
+  }
+
+  function cancelAll() {
+    setEditNames(Object.fromEntries(services.map(s => [s.id, s.name])))
+    setEditPrices(Object.fromEntries(services.map(s => [s.id, String(s.price)])))
+    setEditSkus(Object.fromEntries(services.map(s => [s.id, s.sku ?? ''])))
+    setDirty(new Set())
+    setSaveStatus('idle')
   }
 
   async function addService() {
@@ -148,6 +190,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
   async function deleteService(id: string) {
     await fetch(`/api/yard/services/${id}`, { method: 'DELETE' })
     setServices(sv => sv.filter(s => s.id !== id))
+    setDirty(d => { const n = new Set(d); n.delete(id); return n })
   }
 
   async function closeSession(id: string) {
@@ -500,61 +543,51 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                 const quick = services.filter(s => quickNames.has(s.name))
                 const menu  = services.filter(s => !quickNames.has(s.name))
 
-                const save = (id: string) => saveField(
-                  id,
-                  (editNames[id] ?? services.find(s => s.id === id)?.name ?? '').trim(),
-                  Number(editPrices[id] ?? 0),
-                  editSkus[id] ?? '',
-                )
-
-                const renderRow = (svc: YardService) => (
-                  <div key={svc.id} className="flex items-center border-b border-slate-50" style={{ padding: '8px 24px', gap: '10px' }}>
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={editNames[svc.id] ?? svc.name}
-                        onChange={e => setEditNames(en => ({ ...en, [svc.id]: e.target.value }))}
-                        onBlur={() => save(svc.id)}
-                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
-                        onFocus={e => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                        className="w-full border-2 border-transparent rounded-lg font-medium text-slate-800 outline-none hover:border-slate-200 focus:border-blue-400 transition-colors"
-                        style={{ padding: '6px 10px', fontSize: '14px', background: 'transparent' }}
-                      />
+                const renderRow = (svc: YardService) => {
+                  const isDirty = dirty.has(svc.id)
+                  return (
+                    <div key={svc.id} className="flex items-center border-b border-slate-50 transition-colors"
+                      style={{ padding: '8px 24px', gap: '10px', background: isDirty ? '#fffbeb' : 'transparent' }}>
+                      {isDirty && <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: '#f59e0b' }} />}
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={editNames[svc.id] ?? svc.name}
+                          onChange={e => { setEditNames(en => ({ ...en, [svc.id]: e.target.value })); markDirty(svc.id) }}
+                          onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                          onFocus={e => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                          className="w-full border-2 border-transparent rounded-lg font-medium text-slate-800 outline-none hover:border-slate-200 focus:border-blue-400 transition-colors"
+                          style={{ padding: '6px 10px', fontSize: '14px', background: 'transparent' }}
+                        />
+                      </div>
+                      <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition-colors" style={{ width: '110px', height: '38px' }}>
+                        <input
+                          type="text"
+                          placeholder="מק״ט"
+                          value={editSkus[svc.id] ?? ''}
+                          onChange={e => { setEditSkus(es => ({ ...es, [svc.id]: e.target.value })); markDirty(svc.id) }}
+                          onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                          className="flex-1 outline-none font-medium text-slate-600 text-center"
+                          style={{ padding: '0 6px', fontSize: '13px', height: '100%', minWidth: 0 }}
+                        />
+                      </div>
+                      <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition-colors" style={{ width: '100px', height: '38px' }}>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          value={editPrices[svc.id] ?? ''}
+                          onChange={e => { setEditPrices(ep => ({ ...ep, [svc.id]: e.target.value })); markDirty(svc.id) }}
+                          onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                          onFocus={e => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                          className="flex-1 outline-none font-bold text-blue-600 text-center"
+                          style={{ padding: '0 6px', fontSize: '15px', height: '100%', minWidth: 0 }}
+                        />
+                        <span className="text-slate-400 font-semibold" style={{ padding: '0 6px', fontSize: '13px' }}>₪</span>
+                      </div>
+                      <button onClick={() => deleteService(svc.id)} className="text-slate-300 hover:text-red-500 transition-colors flex-shrink-0" style={{ fontSize: '16px', width: '28px', textAlign: 'center' }}>🗑</button>
                     </div>
-                    <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition-colors" style={{ width: '110px', height: '38px' }}>
-                      <input
-                        type="text"
-                        placeholder="מק״ט"
-                        value={editSkus[svc.id] ?? ''}
-                        onChange={e => setEditSkus(es => ({ ...es, [svc.id]: e.target.value }))}
-                        onBlur={() => save(svc.id)}
-                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
-                        className="flex-1 outline-none font-medium text-slate-600 text-center"
-                        style={{ padding: '0 6px', fontSize: '13px', height: '100%', minWidth: 0 }}
-                      />
-                    </div>
-                    <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition-colors" style={{ width: '100px', height: '38px' }}>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        value={editPrices[svc.id] ?? ''}
-                        onChange={e => setEditPrices(ep => ({ ...ep, [svc.id]: e.target.value }))}
-                        onBlur={() => save(svc.id)}
-                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
-                        onFocus={e => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                        className="flex-1 outline-none font-bold text-blue-600 text-center"
-                        style={{ padding: '0 6px', fontSize: '15px', height: '100%', minWidth: 0 }}
-                      />
-                      <span className="text-slate-400 font-semibold" style={{ padding: '0 6px', fontSize: '13px' }}>₪</span>
-                    </div>
-                    <div style={{ width: '28px', textAlign: 'center' }}>
-                      {saving === svc.id
-                        ? <span className="text-green-500 font-bold text-sm">✓</span>
-                        : <button onClick={() => deleteService(svc.id)} className="text-slate-300 hover:text-red-500 transition-colors" style={{ fontSize: '16px' }}>🗑</button>
-                      }
-                    </div>
-                  </div>
-                )
+                  )
+                }
 
                 return (
                   <>
@@ -578,6 +611,44 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                 )
               })()}
             </div>
+
+            {/* Save / Cancel bar */}
+            {(dirty.size > 0 || saveStatus !== 'idle') && (
+              <div className={`border-t flex-shrink-0 flex items-center justify-between transition-colors ${
+                saveStatus === 'ok'  ? 'bg-green-50 border-green-200' :
+                saveStatus === 'err' ? 'bg-red-50 border-red-200'     :
+                'bg-amber-50 border-amber-200'
+              }`} style={{ padding: '12px 24px' }}>
+                <span className={`text-sm font-semibold ${
+                  saveStatus === 'ok'  ? 'text-green-700' :
+                  saveStatus === 'err' ? 'text-red-600'   :
+                  'text-amber-700'
+                }`}>
+                  {saveStatus === 'ok'  ? '✓ נשמר בהצלחה' :
+                   saveStatus === 'err' ? '✗ שגיאה בשמירה — נסה שוב' :
+                   `${dirty.size} ${dirty.size === 1 ? 'שינוי' : 'שינויים'} לא שמורים`}
+                </span>
+                {saveStatus === 'idle' && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={cancelAll}
+                      className="border-2 border-slate-300 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold transition-colors"
+                      style={{ padding: '7px 16px', fontSize: '13px' }}
+                    >
+                      ביטול
+                    </button>
+                    <button
+                      onClick={saveAll}
+                      disabled={saveAllLoading}
+                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors"
+                      style={{ padding: '7px 18px', fontSize: '13px' }}
+                    >
+                      {saveAllLoading ? 'שומר...' : 'שמור שינויים'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Add new */}
             <div className="border-t flex-shrink-0" style={{ padding: '14px 24px' }}>
