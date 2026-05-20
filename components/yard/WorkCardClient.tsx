@@ -59,6 +59,19 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
           filter: `session_id=eq.${session.id}` },
         () => router.refresh()
       )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'yard_sessions',
+          filter: `id=eq.${session.id}` },
+        (payload) => {
+          const n = payload.new as Partial<YardSession>
+          setSession(s => ({
+            ...s,
+            make:  n.make  ?? s.make,
+            model: n.model ?? s.model,
+            year:  n.year  ?? s.year,
+          }))
+        }
+      )
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [session.id]) // eslint-disable-line
