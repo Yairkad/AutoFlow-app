@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { YardSession, YardSessionItem, YardService } from '@/lib/yard/types'
+import type { YardSession, YardSessionItem, YardService, TirePosition } from '@/lib/yard/types'
 import { sessionTotal, formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
+import TirePositionPicker from '@/components/yard/TirePositionPicker'
+import type { SearchResult } from '@/app/api/yard/search/route'
 
 interface Props {
   session:  YardSession
@@ -22,9 +24,14 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const [priceDigits, setPriceDigits]  = useState('')
   const [error,       setError]        = useState<string | null>(null)
   const [sending,      setSending]      = useState(false)
-  const [isMobile,     setIsMobile]     = useState(false)
-  const [historyCount, setHistoryCount] = useState<number | null>(null)
-  const [showHistory,  setShowHistory]  = useState(false)
+  const [isMobile,      setIsMobile]      = useState(false)
+  const [historyCount,  setHistoryCount]  = useState<number | null>(null)
+  const [showHistory,   setShowHistory]   = useState(false)
+  const [pickerForItem,  setPickerForItem]  = useState<YardSessionItem | null>(null)
+  const [scanMode,       setScanMode]       = useState(false)
+  const [scanBuf,        setScanBuf]        = useState('')
+  const [scanTireResult, setScanTireResult] = useState<SearchResult | null>(null)
+  const scanRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
   const items = session.yard_session_items ?? []
 
@@ -42,6 +49,28 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       .then((sessions: unknown[]) => setHistoryCount(sessions.length))
       .catch(() => {})
   }, [session.plate])
+
+  // If make/model is missing, retry plate lookup in the background and patch session
+  useEffect(() => {
+    if (session.make || !session.plate) return
+    const plate = session.plate.replace(/\D/g, '')
+    if (plate.length < 7) return
+    const t = setTimeout(() => {
+      fetch(`/api/public/plate?plate=${encodeURIComponent(plate)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (!data?.make) return
+          fetch(`/api/yard/sessions/${session.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ make: data.make ?? null, model: data.model ?? null, year: data.year ? String(data.year) : null }),
+          })
+          setSession(s => ({ ...s, make: data.make ?? s.make, model: data.model ?? s.model, year: data.year ? String(data.year) : s.year }))
+        })
+        .catch(() => {})
+    }, 3000)
+    return () => clearTimeout(t)
+  }, []) // eslint-disable-line
 
   // Prefetch sub-routes so navigation is instant
   useEffect(() => {
@@ -214,7 +243,140 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     sendToOffice()
   }
 
+  // ── Barcode scan ──────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (scanMode) { setScanBuf(''); scanRef.current?.focus() }
+  }, [scanMode])
+
+  async function handleBarcodeScan(code: string) {
+    setScanMode(false)
+    setScanBuf('')
+    const res  = await fetch(`/api/yard/barcode?code=${encodeURIComponent(code)}`)
+    const item: SearchResult | null = await res.json()
+
+    if (!item) {
+      showError(`ברקוד לא נמצא: ${code}`)
+      return
+    }
+
+    if (item.type === 'tire') {
+      setScanTireResult(item)
+      return
+    }
+
+    // Product or service — add directly with qty 1
+    const tempId = `scan-${Date.now()}`
+    setSession(s => ({
+      ...s,
+      yard_session_items: [...s.yard_session_items, {
+        id: tempId, session_id: s.id, tenant_id: '',
+        item_type: item.type, ref_id: item.id, name: item.name, sku: item.sku,
+        quantity: 1, unit_price: item.price, original_price: item.price,
+        price_modified: false, tire_position: null,
+        created_at: new Date().toISOString(),
+      }],
+    }))
+    fetch(`/api/yard/sessions/${session.id}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        item_type: item.type, ref_id: item.id, name: item.name, sku: item.sku,
+        quantity: 1, unit_price: item.price, original_price: item.price,
+        price_modified: false, tire_position: null,
+      }),
+    }).then(r => r.json()).then(newItem => {
+      setSession(s => ({
+        ...s,
+        yard_session_items: s.yard_session_items.map(i => i.id === tempId ? newItem : i),
+      }))
+    }).catch(() => {
+      setSession(s => ({ ...s, yard_session_items: s.yard_session_items.filter(i => i.id !== tempId) }))
+      showError('שגיאה בהוספת פריט')
+    })
+  }
+
+  function addScannedTireWithPosition(positions: TirePosition[]) {
+    const result = scanTireResult
+    setScanTireResult(null)
+    if (!result) return
+    positions.forEach(pos => {
+      const tempId = `scan-tire-${Date.now()}-${pos}`
+      setSession(s => ({
+        ...s,
+        yard_session_items: [...s.yard_session_items, {
+          id: tempId, session_id: s.id, tenant_id: '',
+          item_type: 'tire', ref_id: result.id, name: result.name, sku: result.sku,
+          quantity: 1, unit_price: result.price, original_price: result.price,
+          price_modified: false, tire_position: pos,
+          created_at: new Date().toISOString(),
+        }],
+      }))
+      fetch(`/api/yard/sessions/${session.id}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          item_type: 'tire', ref_id: result.id, name: result.name, sku: result.sku,
+          quantity: 1, unit_price: result.price, original_price: result.price,
+          price_modified: false, tire_position: pos,
+        }),
+      }).then(r => r.json()).then(newItem => {
+        setSession(s => ({
+          ...s,
+          yard_session_items: s.yard_session_items.map(i => i.id === tempId ? newItem : i),
+        }))
+      }).catch(() => {
+        setSession(s => ({ ...s, yard_session_items: s.yard_session_items.filter(i => i.id !== tempId) }))
+        showError('שגיאה בהוספת צמיג')
+      })
+    })
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+
+  function addTireWithPosition(positions: TirePosition[]) {
+    const item = pickerForItem
+    setPickerForItem(null)
+    if (!item) return
+    positions.forEach(pos => {
+      const tempId = `pending-pos-${Date.now()}-${pos}`
+      setSession(s => ({
+        ...s,
+        yard_session_items: [...s.yard_session_items, {
+          id: tempId, session_id: s.id, tenant_id: '',
+          item_type: 'tire', ref_id: item.ref_id, name: item.name, sku: item.sku,
+          quantity: 1, unit_price: item.unit_price, original_price: item.original_price,
+          price_modified: item.price_modified, tire_position: pos,
+          created_at: new Date().toISOString(),
+        }],
+      }))
+      fetch(`/api/yard/sessions/${session.id}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          item_type: 'tire', ref_id: item.ref_id, name: item.name, sku: item.sku,
+          quantity: 1, unit_price: item.unit_price, original_price: item.original_price,
+          price_modified: item.price_modified, tire_position: pos,
+        }),
+      }).then(r => r.json()).then(newItem => {
+        setSession(s => ({
+          ...s,
+          yard_session_items: s.yard_session_items.map(i => i.id === tempId ? newItem : i),
+        }))
+      }).catch(() => {
+        setSession(s => ({
+          ...s,
+          yard_session_items: s.yard_session_items.filter(i => i.id !== tempId),
+        }))
+      })
+    })
+  }
+
   function changeQty(item: YardSessionItem, delta: number) {
+    if (item.item_type === 'tire' && delta > 0) {
+      setPickerForItem(item)
+      return
+    }
     const newQty = item.quantity + delta
     if (newQty <= 0) { deleteItem(item); return }
     setSession(s => ({
@@ -312,6 +474,34 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
         <VehicleHistoryModal plate={session.plate} onClose={() => setShowHistory(false)} />
       )}
 
+      {/* Barcode scan — hidden input captures scanner keystrokes */}
+      {scanMode && (
+        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-4"
+          style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(3px)' }}
+          onClick={() => setScanMode(false)}>
+          <svg viewBox="0 0 56 44" width="72" height="56" fill="white" style={{ opacity: 0.9 }}>
+            <rect x="0"  y="0" width="4" height="44"/><rect x="8"  y="0" width="2" height="44"/>
+            <rect x="13" y="0" width="6" height="44"/><rect x="23" y="0" width="2" height="44"/>
+            <rect x="29" y="0" width="4" height="44"/><rect x="37" y="0" width="2" height="44"/>
+            <rect x="43" y="0" width="6" height="44"/><rect x="53" y="0" width="2" height="44"/>
+          </svg>
+          <p className="text-white font-bold text-xl">ממתין לסריקה...</p>
+          <p className="text-white/60 text-sm">לחץ לביטול</p>
+        </div>
+      )}
+      <input
+        ref={scanRef}
+        className="absolute opacity-0 w-0 h-0"
+        value={scanBuf}
+        onChange={e => setScanBuf(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter' && scanBuf.trim()) handleBarcodeScan(scanBuf.trim()) }}
+      />
+
+      {/* Scanned tire — position picker */}
+      {scanTireResult && (
+        <TirePositionPicker onConfirm={addScannedTireWithPosition} />
+      )}
+
       {/* ── Plate header card ── */}
       <div className="bg-white border-[3px] border-red-500 rounded-xl flex-shrink-0" style={{ margin: '14px 14px 0', padding: '14px 18px' }}>
         {hasMakeModel && (
@@ -375,6 +565,20 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
               </button>
             )
           })}
+          {/* Barcode scan — full width */}
+          <button
+            onClick={() => setScanMode(true)}
+            className="col-span-2 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-[.98] active:brightness-90 transition-all"
+            style={{ minHeight: '52px', fontSize: '16px', background: '#1e40af' }}
+          >
+            <svg viewBox="0 0 28 22" width="20" height="16" fill="white">
+              <rect x="0"  y="0" width="2" height="22"/><rect x="4"  y="0" width="1" height="22"/>
+              <rect x="7"  y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/>
+              <rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/>
+              <rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/>
+            </svg>
+            סרוק ברקוד
+          </button>
         </div>
 
         {/* ── Cart panel ── */}
@@ -448,6 +652,11 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
           </button>
         </div>
       </div>
+
+      {/* Tire position picker — for adding extra tire unit */}
+      {pickerForItem && (
+        <TirePositionPicker onConfirm={addTireWithPosition} />
+      )}
 
       {/* Empty cart confirm */}
       {confirmEmpty && (

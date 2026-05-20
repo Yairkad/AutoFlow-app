@@ -563,7 +563,7 @@ export default function TiresClient() {
         title="צמיגים"
         subtitle={viewOnly ? 'מצב צפיה בלבד' : undefined}
         actions={!viewOnly ? <>
-          <Button variant="outline" onClick={() => setRecvOpen(true)}>📦 הזמנה שהתקבלה</Button>
+          <Button variant="outline" onClick={() => window.location.href = '/yard/receive'}>📦 קבלת סחורה</Button>
           <Button onClick={openAdd}>➕ צמיג חדש</Button>
         </> : undefined}
       />

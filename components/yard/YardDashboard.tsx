@@ -125,8 +125,8 @@ export default function YardDashboard({ initialSessions }: Props) {
         )}
       </div>
 
-      {/* New car button */}
-      <div className="flex-shrink-0" style={{ padding: '14px' }}>
+      {/* Bottom buttons */}
+      <div className="flex-shrink-0 flex flex-col gap-2" style={{ padding: '14px' }}>
         <button
           onClick={() => { if (newCarLoading) return; setNewCarLoading(true); router.push('/yard/new') }}
           disabled={newCarLoading}
@@ -138,6 +138,13 @@ export default function YardDashboard({ initialSessions }: Props) {
           }}
         >
           {newCarLoading ? '⏳' : <><span style={{ fontSize: '24px' }}>+</span> קליטת רכב חדש</>}
+        </button>
+        <button
+          onClick={() => router.push('/yard/receive')}
+          className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold flex items-center justify-center gap-2 transition-all active:scale-[.98]"
+          style={{ borderRadius: '12px', padding: '14px', fontSize: '16px' }}
+        >
+          📦 קבלת סחורה
         </button>
       </div>
     </div>

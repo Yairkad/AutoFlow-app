@@ -16,9 +16,11 @@ const CAR_PATH = 'M134.67,105.44c.06-1.55-7.92-4.89-7.92-4.89s-.46-16.44-.46-18.
 
 export default function TireDiagram({ positions, size = 80 }: Props) {
   const set = new Set(positions)
+  const hasSpare = set.has('SP')
+  const viewHeight = hasSpare ? 335 : 277.93
   return (
     <svg
-      viewBox="0 0 145.65 277.93"
+      viewBox={`0 0 145.65 ${viewHeight}`}
       style={{ width: size, height: 'auto', flexShrink: 0 }}
     >
       <path fill="#282626" d={CAR_PATH} />
@@ -29,6 +31,27 @@ export default function TireDiagram({ positions, size = 80 }: Props) {
           fill={set.has(id) ? '#16a34a' : '#d1d5db'}
         />
       ))}
+      {hasSpare && (
+        <g transform="translate(72.825, 298)">
+          <circle r="18" fill="#16a34a" />
+          <circle r="11" fill="#dcfce7" />
+          <circle r="4"  fill="#16a34a" />
+          {[0, 72, 144, 216, 288].map(deg => {
+            const rad = (deg * Math.PI) / 180
+            return (
+              <line key={deg}
+                x1={5 * Math.cos(rad)} y1={5 * Math.sin(rad)}
+                x2={10 * Math.cos(rad)} y2={10 * Math.sin(rad)}
+                stroke="#16a34a" strokeWidth="2"
+              />
+            )
+          })}
+          <text y="32" textAnchor="middle"
+            style={{ fontSize: '9px', fontWeight: 700, fill: '#15803d' }}>
+            רזרבי
+          </text>
+        </g>
+      )}
     </svg>
   )
 }
