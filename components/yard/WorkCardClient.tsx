@@ -288,7 +288,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
 
   const navActions = [
     { key: 'tire',    label: '🏁 צמיג חדש',       to: `/yard/${session.id}/tire` },
-    { key: 'service', label: '⚙️ חיישנים / איזון', to: `/yard/${session.id}/service` },
+    { key: 'service', label: '⚙️ שירותים נוספים', to: `/yard/${session.id}/service` },
     { key: 'accs',    label: '🛒 אביזרים לרכב',   to: `/yard/${session.id}/search?type=product` },
     { key: 'all',     label: '🔍 כל המלאי',        to: `/yard/${session.id}/search?type=all` },
   ]

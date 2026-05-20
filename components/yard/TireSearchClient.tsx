@@ -261,10 +261,6 @@ export default function TireSearchClient({ session }: Props) {
           </div>
         ) : (
           <>
-            <div className="flex items-center border-b" style={{ padding: '8px 16px', background: '#f1f5f9' }}>
-              <span className="flex-1 text-xs font-bold text-slate-400 uppercase tracking-wide">מוצר</span>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">מחיר</span>
-            </div>
             {results.map((r, i) => (
               <div key={r.id} onClick={() => { setSelected(r); setPrice(r.price); setShowDropdown(false) }}
                 className="flex items-center cursor-pointer transition-colors"

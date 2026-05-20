@@ -17,6 +17,7 @@ interface Props {
 export default function OfficeClient({ initialActive, initialPending }: Props) {
   const router  = useRouter()
   const [tab,     setTab]     = useState<'pending' | 'active' | 'history'>('pending')
+  const [unread,  setUnread]  = useState(0)
   const [historyPlate,  setHistoryPlate]  = useState('')
   const [historySearch, setHistorySearch] = useState<string | null>(null)
 
@@ -69,15 +70,57 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     } catch {} // network hiccup — skip tick
   }
 
+  function playBell() {
+    try {
+      const ctx = new AudioContext()
+      const gain = ctx.createGain()
+      gain.connect(ctx.destination)
+      // Two-tone bell: high then slightly lower
+      for (const [freq, start, dur] of [[880, 0, 1.2], [660, 0.15, 1.0]] as [number, number, number][]) {
+        const osc = ctx.createOscillator()
+        osc.connect(gain)
+        osc.type = 'sine'
+        osc.frequency.value = freq
+        gain.gain.setValueAtTime(0.4, ctx.currentTime + start)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur)
+        osc.start(ctx.currentTime + start)
+        osc.stop(ctx.currentTime + start + dur)
+      }
+    } catch {}
+  }
+
   // Realtime subscription for instant updates
   useEffect(() => {
     const ch = supabase
       .channel('office-yard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_sessions' }, fetchSessions)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_session_items' }, fetchSessions)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'yard_sessions' },
+        (payload) => {
+          const n = payload.new as { status: string }
+          const o = payload.old as { status?: string }
+          if (n.status === 'pending_office' && o.status !== 'pending_office') {
+            playBell()
+            setUnread(c => c + 1)
+          }
+          fetchSessions()
+        }
+      )
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'yard_sessions' }, fetchSessions)
+      .on('postgres_changes', { event: '*',    schema: 'public', table: 'yard_session_items' }, fetchSessions)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, []) // eslint-disable-line
+
+  // Tab title badge — clears when user switches to pending tab
+  useEffect(() => {
+    if (tab === 'pending') setUnread(0)
+  }, [tab])
+
+  useEffect(() => {
+    const base = 'לוח בקרה רחבה'
+    document.title = unread > 0 ? `🔔 (${unread}) ${base}` : base
+    return () => { document.title = base }
+  }, [unread])
 
   // Polling fallback every 8s — silent API fetch, no page re-render
   useEffect(() => {
@@ -300,7 +343,13 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
               marginBottom: '-2px',
             }}
           >
-            {t === 'pending' ? 'ממתינים לאישור וסגירה' : 'בטיפול פעיל ברחבה'}
+            <span className="relative">
+              {t === 'pending' ? 'ממתינים לאישור וסגירה' : 'בטיפול פעיל ברחבה'}
+              {t === 'pending' && unread > 0 && (
+                <span className="absolute -top-2 -left-1 bg-red-500 text-white text-xs font-black rounded-full animate-bounce"
+                  style={{ padding: '1px 5px', fontSize: '10px' }}>🔔 {unread}</span>
+              )}
+            </span>
             <span className="font-bold text-white text-xs rounded-full"
               style={{ marginRight: '8px', padding: '2px 8px', background: t === 'pending' ? '#f59e0b' : '#3b82f6' }}>
               {t === 'pending' ? pending.length : active.length}
