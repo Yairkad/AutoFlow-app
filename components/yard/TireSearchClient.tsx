@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import type { YardSession, SearchResult, TirePosition } from '@/lib/yard/types'
 import { formatPlate } from '@/lib/yard/types'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
+import TireKeyboard from '@/components/yard/TireKeyboard'
 
-// Re-use the same SearchResult type from the API
 type TireResult = SearchResult & { size: string; brand: string }
 
 interface Props { session: YardSession }
@@ -24,7 +24,6 @@ export default function TireSearchClient({ session }: Props) {
   const [saving,        setSaving]        = useState(false)
   const [detectedSize,  setDetectedSize]  = useState<string | null>(null)
   const [showPicker,    setShowPicker]    = useState(false)
-  const [suggestions,   setSuggestions]   = useState<string[]>([])
 
   const CACHE_TTL = 5 * 60 * 1000
 
@@ -36,17 +35,6 @@ export default function TireSearchClient({ session }: Props) {
     fetch(`/api/public/plate?plate=${encodeURIComponent(plate)}`)
       .then(r => r.json())
       .then(data => { if (data?.tireSize) setDetectedSize(data.tireSize) })
-      .catch(() => {})
-  }, []) // eslint-disable-line
-
-  // Pre-fetch tire names for autocomplete suggestions
-  useEffect(() => {
-    fetch('/api/yard/search?q=2&type=tire')
-      .then(r => r.json())
-      .then((data: TireResult[]) => {
-        const unique = [...new Set(data.map((r: TireResult) => r.name))]
-        setSuggestions(unique)
-      })
       .catch(() => {})
   }, []) // eslint-disable-line
 
@@ -132,6 +120,7 @@ export default function TireSearchClient({ session }: Props) {
           onSkip={() => submitWithPosition([])}
         />
       )}
+
       {/* Plate header card */}
       <div className="bg-white border-[3px] border-red-500 rounded-xl flex-shrink-0" style={{ margin: '14px 14px 0', padding: '14px 18px' }}>
         {(session.make || session.model) && (
@@ -177,21 +166,17 @@ export default function TireSearchClient({ session }: Props) {
         onKeyDown={e => { if (e.key === 'Enter' && scanBuffer) handleBarcode(scanBuffer) }}
       />
 
-      {/* Search + Quantity + Scanner row */}
+      {/* Query display + Quantity + Scanner row */}
       <div className="flex items-center flex-shrink-0" style={{ gap: '10px', padding: '10px 14px 0' }}>
-        <input
-          type="text"
-          inputMode="numeric"
-          list="tire-suggestions"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="הקלד מידת צמיג או השתמש בסורק"
-          className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium outline-none"
-          style={{ padding: '10px 14px' }}
-        />
-        <datalist id="tire-suggestions">
-          {suggestions.map(s => <option key={s} value={s} />)}
-        </datalist>
+        <div
+          className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium bg-white"
+          style={{ padding: '10px 14px', minHeight: '44px', letterSpacing: '1px', direction: 'ltr' }}
+        >
+          {query
+            ? <span className="text-slate-900 font-bold">{query}</span>
+            : <span className="text-slate-400 font-normal" style={{ direction: 'rtl', display: 'block' }}>הקלד מידת צמיג...</span>
+          }
+        </div>
         <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
           <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">−</button>
           <span className="w-9 text-center font-bold border-x-2 border-slate-200 h-10 flex items-center justify-center">{qty}</span>
@@ -266,17 +251,23 @@ export default function TireSearchClient({ session }: Props) {
       </div>
 
       {/* Confirm button */}
-      <div className="flex-shrink-0" style={{ padding: '10px 14px 14px' }}>
+      <div className="flex-shrink-0" style={{ padding: '10px 14px 0' }}>
         <button
           onClick={addToCart}
           disabled={!selected || saving}
           className="w-full bg-green-700 hover:bg-green-800 disabled:opacity-40 text-white rounded-xl text-lg font-bold transition-colors"
           style={{ padding: '16px' }}
         >
-          {saving ? '...' : selected ? `הוסף לסל — ${(( price ?? selected.price) * qty).toLocaleString()}₪` : 'בחר צמיג'}
+          {saving ? '...' : selected ? `הוסף לסל — ${((price ?? selected.price) * qty).toLocaleString()}₪` : 'בחר צמיג'}
         </button>
       </div>
 
+      {/* Custom keyboard — pinned at bottom */}
+      <TireKeyboard
+        value={query}
+        onChange={setQuery}
+        onConfirm={() => search(query)}
+      />
     </div>
   )
 }

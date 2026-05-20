@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { YardSession } from '@/lib/yard/types'
 import { sessionDisplayName, formatPlate } from '@/lib/yard/types'
 import type { SearchResult } from '@/lib/yard/types'
+import HebrewNumKeyboard from '@/components/yard/HebrewNumKeyboard'
 
 interface Props {
   session:    YardSession
@@ -102,8 +103,6 @@ export default function FreeSearchClient({ session, filterType }: Props) {
     })
   }
 
-  const display = sessionDisplayName(session)
-
   const typePill = (type: string) => {
     const cls = type === 'tire' ? 'bg-blue-100 text-blue-700'
               : type === 'service' ? 'bg-purple-100 text-purple-700'
@@ -141,20 +140,17 @@ export default function FreeSearchClient({ session, filterType }: Props) {
         </button>
       </div>
 
-      {/* Search + Quantity row */}
+      {/* Query display + Quantity row */}
       <div className="flex items-center flex-shrink-0" style={{ gap: '10px', padding: '10px 14px 0' }}>
-        <input
-          type="text"
-          list="free-search-suggestions"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="חפש מוצר, צמיג, שירות..."
-          className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium outline-none"
-          style={{ padding: '10px 14px' }}
-        />
-        <datalist id="free-search-suggestions">
-          {results.map(r => <option key={r.id} value={r.name} />)}
-        </datalist>
+        <div
+          className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium bg-white"
+          style={{ padding: '10px 14px', minHeight: '44px' }}
+        >
+          {query
+            ? <span className="text-slate-900 font-bold">{query}</span>
+            : <span className="text-slate-400 font-normal">חפש מוצר, צמיג, שירות...</span>
+          }
+        </div>
         <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
           <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">−</button>
           <span className="w-9 text-center font-bold border-x-2 border-slate-200 h-10 flex items-center justify-center">{qty}</span>
@@ -165,7 +161,7 @@ export default function FreeSearchClient({ session, filterType }: Props) {
       {/* Results */}
       <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-slate-200" style={{ margin: '10px 14px 0' }}>
         {results.length === 0 ? (
-          <div className="p-6 text-center text-slate-400">{query ? 'לא נמצאו תוצאות' : 'הקלד לחיפוש'}</div>
+          <div className="p-6 text-center text-slate-400">{query ? 'לא נמצאו תוצאות' : 'טוען...'}</div>
         ) : (
           <>
             <div className="flex items-center border-b" style={{ padding: '8px 16px', background: '#f1f5f9' }}>
@@ -188,6 +184,9 @@ export default function FreeSearchClient({ session, filterType }: Props) {
                   <div className="font-bold text-slate-800 flex items-center" style={{ fontSize: '15px', gap: '8px' }}>
                     {r.name} {typePill(r.type)}
                   </div>
+                  {r.sku && (
+                    <div className="text-slate-400 font-medium" style={{ fontSize: '12px', marginTop: '1px' }}>מק״ט: {r.sku}</div>
+                  )}
                   {r.stock != null && (
                     <div className="text-slate-400 font-medium" style={{ fontSize: '13px', marginTop: '2px' }}>מלאי: {r.stock}</div>
                   )}
@@ -202,7 +201,7 @@ export default function FreeSearchClient({ session, filterType }: Props) {
       </div>
 
       {/* Add button */}
-      <div className="flex-shrink-0" style={{ padding: '10px 14px 14px' }}>
+      <div className="flex-shrink-0" style={{ padding: '10px 14px 0' }}>
         <button
           onClick={addToCart}
           disabled={!selected || saving}
@@ -212,6 +211,13 @@ export default function FreeSearchClient({ session, filterType }: Props) {
           {saving ? '...' : selected ? `הוסף לסל — ${((price ?? selected.price) * qty).toLocaleString()}₪` : 'בחר פריט'}
         </button>
       </div>
+
+      {/* Custom keyboard — pinned at bottom */}
+      <HebrewNumKeyboard
+        value={query}
+        onChange={setQuery}
+        onConfirm={() => search(query)}
+      />
 
       {/* Duplicate confirm */}
       {confirm && (

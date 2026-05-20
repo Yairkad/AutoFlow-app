@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { YardSession, YardSessionItem, YardService } from '@/lib/yard/types'
-import { sessionDisplayName, sessionTotal, minutesSince, formatPlate } from '@/lib/yard/types'
+import { sessionTotal, minutesSince, formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
 
 const VAT = 1.18
@@ -19,12 +19,16 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
   const [tab,     setTab]     = useState<'pending' | 'active' | 'history'>('pending')
   const [historyPlate,  setHistoryPlate]  = useState('')
   const [historySearch, setHistorySearch] = useState<string | null>(null)
-  const historyInputRef = useRef<HTMLInputElement>(null)
 
   function doHistorySearch() {
     if (historyPlate.length < 7) return
-    historyInputRef.current?.blur()
     setHistorySearch(historyPlate)
+  }
+
+  function historyPress(k: string) {
+    if (k === 'del') { setHistoryPlate(p => p.slice(0, -1)); return }
+    if (historyPlate.length >= 8) return
+    setHistoryPlate(p => p + k)
   }
   const [active,  setActive]  = useState(initialActive)
   const [pending, setPending] = useState(initialPending)
@@ -34,8 +38,9 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
   const [services,     setServices]     = useState<YardService[]>([])
   const [editPrices,   setEditPrices]   = useState<Record<string, string>>({})
   const [editNames,    setEditNames]    = useState<Record<string, string>>({})
+  const [editSkus,     setEditSkus]     = useState<Record<string, string>>({})
   const [saving,       setSaving]       = useState<string | null>(null)
-  const [newSvc,       setNewSvc]       = useState({ name: '', price: '' })
+  const [newSvc,       setNewSvc]       = useState({ name: '', price: '', sku: '' })
   const [addingNew,    setAddingNew]    = useState(false)
   const supabase = createClient()
 
@@ -107,19 +112,20 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     setServices(data)
     setEditPrices(Object.fromEntries(data.map(s => [s.id, String(s.price)])))
     setEditNames(Object.fromEntries(data.map(s => [s.id, s.name])))
+    setEditSkus(Object.fromEntries(data.map(s => [s.id, s.sku ?? ''])))
     setPriceModal(true)
   }
 
-  async function saveField(id: string, name: string, price: number) {
+  async function saveField(id: string, name: string, price: number, sku: string) {
     if (!name || isNaN(price)) return
     setSaving(id)
     const res = await fetch(`/api/yard/services/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, price }),
+      body: JSON.stringify({ name, price, sku: sku.trim() || null }),
     })
     setSaving(null)
-    if (res.ok) setServices(sv => sv.map(s => s.id === id ? { ...s, name, price } : s))
+    if (res.ok) setServices(sv => sv.map(s => s.id === id ? { ...s, name, price, sku: sku.trim() || null } : s))
   }
 
   async function addService() {
@@ -128,13 +134,14 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     const res = await fetch('/api/yard/services', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newSvc.name.trim(), price: Number(newSvc.price) || 0 }),
+      body: JSON.stringify({ name: newSvc.name.trim(), price: Number(newSvc.price) || 0, sku: newSvc.sku.trim() || null }),
     })
     const svc: YardService = await res.json()
     setServices(sv => [...sv, svc])
     setEditPrices(ep => ({ ...ep, [svc.id]: String(svc.price) }))
     setEditNames(en => ({ ...en, [svc.id]: svc.name }))
-    setNewSvc({ name: '', price: '' })
+    setEditSkus(es => ({ ...es, [svc.id]: svc.sku ?? '' }))
+    setNewSvc({ name: '', price: '', sku: '' })
     setAddingNew(false)
   }
 
@@ -411,33 +418,32 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
 
         {/* ── Tab: History ── */}
         {tab === 'history' && (
-          <div className="max-w-xl mx-auto" style={{ paddingTop: '8px' }}>
-            <div className="flex gap-2" style={{ marginBottom: '16px' }}>
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="הזן מספר רכב..."
-                value={formatPlate(historyPlate)}
-                onChange={e => setHistoryPlate(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                ref={historyInputRef}
-                onKeyDown={e => e.key === 'Enter' && doHistorySearch()}
-                className="flex-1 border-2 border-blue-400 rounded-xl font-bold outline-none focus:border-blue-600 transition-colors"
-                style={{ padding: '12px 16px', fontSize: '18px', letterSpacing: '3px', direction: 'ltr' }}
-              />
-              <button
-                onClick={doHistorySearch}
-                disabled={historyPlate.length < 7}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl font-bold transition-colors"
-                style={{ padding: '12px 20px', fontSize: '15px' }}
-              >
-                חפש
-              </button>
+          <div className="max-w-sm mx-auto" style={{ paddingTop: '8px' }}>
+            {/* Plate display */}
+            <div
+              className={`bg-white border-[3px] rounded-xl text-center font-black tracking-[5px] mb-3 ${historyPlate.length > 0 ? 'border-red-500 text-slate-900' : 'border-red-200 text-slate-300'}`}
+              style={{ padding: '14px 20px', fontSize: '26px' }}
+            >
+              {historyPlate.length > 0 ? formatPlate(historyPlate) : 'הזן מס׳ רכב'}
             </div>
-            {historySearch && historySearch.length >= 7 && (
-              <p className="text-slate-400 text-sm text-center">
-                מציג היסטוריה עבור {formatPlate(historySearch)}
-              </p>
-            )}
+
+            {/* Numpad */}
+            <div className="grid grid-cols-3" dir="ltr" style={{ gap: '8px' }}>
+              {['1','2','3','4','5','6','7','8','9'].map(k => (
+                <button key={k} onPointerDown={() => historyPress(k)}
+                  className="bg-white border-2 border-slate-200 rounded-xl font-bold text-slate-800 active:bg-slate-100 active:scale-95 transition-all"
+                  style={{ height: '56px', fontSize: '24px' }}>{k}</button>
+              ))}
+              <button onPointerDown={doHistorySearch} disabled={historyPlate.length < 7}
+                className="bg-blue-600 border-2 border-blue-600 rounded-xl font-bold text-white active:scale-95 disabled:opacity-40 transition-all"
+                style={{ height: '56px', fontSize: '14px' }}>🔍 חפש</button>
+              <button onPointerDown={() => historyPress('0')}
+                className="bg-white border-2 border-slate-200 rounded-xl font-bold text-slate-800 active:bg-slate-100 active:scale-95 transition-all"
+                style={{ height: '56px', fontSize: '24px' }}>0</button>
+              <button onPointerDown={() => historyPress('del')}
+                className="bg-white border-2 border-slate-200 rounded-xl font-bold text-red-500 active:bg-slate-100 active:scale-95 transition-all"
+                style={{ height: '56px', fontSize: '20px' }}>⌫</button>
+            </div>
           </div>
         )}
 
@@ -472,18 +478,37 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                 const quick = services.filter(s => quickNames.has(s.name))
                 const menu  = services.filter(s => !quickNames.has(s.name))
 
+                const save = (id: string) => saveField(
+                  id,
+                  (editNames[id] ?? services.find(s => s.id === id)?.name ?? '').trim(),
+                  Number(editPrices[id] ?? 0),
+                  editSkus[id] ?? '',
+                )
+
                 const renderRow = (svc: YardService) => (
-                  <div key={svc.id} className="flex items-center border-b border-slate-50" style={{ padding: '8px 24px', gap: '12px' }}>
+                  <div key={svc.id} className="flex items-center border-b border-slate-50" style={{ padding: '8px 24px', gap: '10px' }}>
                     <div className="flex-1">
                       <input
                         type="text"
                         value={editNames[svc.id] ?? svc.name}
                         onChange={e => setEditNames(en => ({ ...en, [svc.id]: e.target.value }))}
-                        onBlur={e => saveField(svc.id, e.target.value.trim(), Number(editPrices[svc.id] ?? svc.price))}
+                        onBlur={() => save(svc.id)}
                         onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
                         onFocus={e => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                         className="w-full border-2 border-transparent rounded-lg font-medium text-slate-800 outline-none hover:border-slate-200 focus:border-blue-400 transition-colors"
                         style={{ padding: '6px 10px', fontSize: '14px', background: 'transparent' }}
+                      />
+                    </div>
+                    <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition-colors" style={{ width: '110px', height: '38px' }}>
+                      <input
+                        type="text"
+                        placeholder="מק״ט"
+                        value={editSkus[svc.id] ?? ''}
+                        onChange={e => setEditSkus(es => ({ ...es, [svc.id]: e.target.value }))}
+                        onBlur={() => save(svc.id)}
+                        onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                        className="flex-1 outline-none font-medium text-slate-600 text-center"
+                        style={{ padding: '0 6px', fontSize: '13px', height: '100%', minWidth: 0 }}
                       />
                     </div>
                     <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition-colors" style={{ width: '100px', height: '38px' }}>
@@ -492,7 +517,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                         inputMode="numeric"
                         value={editPrices[svc.id] ?? ''}
                         onChange={e => setEditPrices(ep => ({ ...ep, [svc.id]: e.target.value }))}
-                        onBlur={e => saveField(svc.id, (editNames[svc.id] ?? svc.name).trim(), Number(e.target.value))}
+                        onBlur={() => save(svc.id)}
                         onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
                         onFocus={e => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                         className="flex-1 outline-none font-bold text-blue-600 text-center"
@@ -535,7 +560,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
             {/* Add new */}
             <div className="border-t flex-shrink-0" style={{ padding: '14px 24px' }}>
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wide" style={{ marginBottom: '8px' }}>הוסף שירות חדש</div>
-              <div className="flex" style={{ gap: '10px' }}>
+              <div className="flex" style={{ gap: '8px' }}>
                 <input
                   type="text"
                   placeholder="שם השירות"
@@ -544,6 +569,15 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                   onKeyDown={e => e.key === 'Enter' && addService()}
                   className="flex-1 border-2 border-slate-200 rounded-xl outline-none font-medium focus:border-blue-400 transition-colors"
                   style={{ padding: '10px 14px', fontSize: '14px' }}
+                />
+                <input
+                  type="text"
+                  placeholder="מק״ט"
+                  value={newSvc.sku}
+                  onChange={e => setNewSvc(n => ({ ...n, sku: e.target.value }))}
+                  onKeyDown={e => e.key === 'Enter' && addService()}
+                  className="border-2 border-slate-200 rounded-xl outline-none font-medium focus:border-blue-400 transition-colors text-center"
+                  style={{ width: '90px', padding: '10px 8px', fontSize: '13px' }}
                 />
                 <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 transition-colors" style={{ width: '90px', height: '44px' }}>
                   <input
