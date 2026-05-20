@@ -29,6 +29,7 @@ interface Props {
 const POS_NAMES: Record<TirePosition, string> = {
   FL: 'קדמי שמאל', FR: 'קדמי ימין',
   RL: 'אחורי שמאל', RR: 'אחורי ימין',
+  SP: 'רזרבי',
 }
 
 function formatDate(iso: string) {

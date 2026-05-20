@@ -13,6 +13,7 @@ const NAMES: Record<TirePosition, string> = {
   FR: 'קדמי ימין',
   RL: 'אחורי שמאל',
   RR: 'אחורי ימין',
+  SP: 'רזרבי',
 }
 
 const TIRE_RECTS: { id: TirePosition; x: number; y: number; w: number; h: number }[] = [
@@ -49,7 +50,7 @@ export default function TirePositionPicker({ onConfirm, onSkip }: Props) {
         <p className="font-bold text-slate-800" style={{ fontSize: '18px' }}>איזה גלגלים הוחלפו?</p>
 
         <svg
-          viewBox="0 0 145.65 277.93"
+          viewBox="0 0 145.65 320"
           style={{ width: '160px', height: 'auto' }}
         >
           <path fill="#282626" d={CAR_PATH} />
@@ -70,6 +71,31 @@ export default function TirePositionPicker({ onConfirm, onSkip }: Props) {
               />
             )
           })}
+
+          {/* Spare tire — below the car body */}
+          <g
+            onClick={() => toggle('SP')}
+            style={{ cursor: 'pointer' }}
+            transform="translate(72.825, 298)"
+          >
+            <circle r="18" fill={selected.has('SP') ? '#16a34a' : '#b0b0b0'}
+              style={{ transition: 'fill 0.15s ease', filter: selected.has('SP') ? 'drop-shadow(0 0 4px rgba(34,197,94,0.8))' : 'none' }} />
+            <circle r="11" fill={selected.has('SP') ? '#dcfce7' : '#e5e7eb'} />
+            <circle r="4"  fill={selected.has('SP') ? '#16a34a' : '#b0b0b0'} />
+            {[0, 72, 144, 216, 288].map(deg => {
+              const rad = (deg * Math.PI) / 180
+              const x1  = 5  * Math.cos(rad), y1 = 5  * Math.sin(rad)
+              const x2  = 10 * Math.cos(rad), y2 = 10 * Math.sin(rad)
+              return <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2}
+                stroke={selected.has('SP') ? '#16a34a' : '#b0b0b0'} strokeWidth="2" />
+            })}
+            <text
+              y="32" textAnchor="middle"
+              style={{ fontSize: '9px', fontWeight: 700, fill: selected.has('SP') ? '#15803d' : '#6b7280', userSelect: 'none' }}
+            >
+              {selected.has('SP') ? '✓ רזרבי' : 'רזרבי'}
+            </text>
+          </g>
         </svg>
 
         <p

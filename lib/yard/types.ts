@@ -1,4 +1,4 @@
-export type TirePosition = 'FL' | 'FR' | 'RL' | 'RR'
+export type TirePosition = 'FL' | 'FR' | 'RL' | 'RR' | 'SP'
 
 export interface YardSessionItem {
   id:             string

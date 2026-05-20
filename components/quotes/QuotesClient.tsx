@@ -23,6 +23,12 @@ interface SupplierOffer {
   selected: boolean
 }
 
+interface PartItem {
+  id: string
+  part_name: string
+  supplier_offers: SupplierOffer[]
+}
+
 interface Quote {
   id: string
   tenant_id: string
@@ -41,6 +47,7 @@ interface Quote {
   part_name: string | null
   sku: string | null
   car_model: string | null
+  part_items: PartItem[]
   // Pricing
   supplier_offers: SupplierOffer[]
   cost_price: number | null
@@ -76,7 +83,7 @@ const emptyTireForm = {
 }
 const emptyPartForm = {
   quote_date: '', client_name: '', phone: '',
-  plate: '', car_model: '', part_name: '',
+  plate: '', car_model: '',
   sell_price: '', status: 'open', notes: '',
 }
 
@@ -110,6 +117,15 @@ function whatsappPhone(phone: string | null) {
 
 function newOffer(): SupplierOffer {
   return { id: crypto.randomUUID(), supplier: '', type: 'חדש', price: null, sell_price: null, notes: '', selected: false }
+}
+
+function newPartItem(): PartItem {
+  return { id: crypto.randomUUID(), part_name: '', supplier_offers: [] }
+}
+
+function parseTireSize(s: string): { width: string; profile: string; rim: string } | null {
+  const m = s.match(/(\d+)\/(\d+)[Rr](\d+)/)
+  return m ? { width: m[1], profile: m[2], rim: m[3] } : null
 }
 
 // ── Offer pure helpers (module-level so OffersSection doesn't remount) ─────────
@@ -329,6 +345,58 @@ function OffersSection({
   )
 }
 
+// ── PartItemsOffersPreview ────────────────────────────────────────────────────
+
+function PartItemsOffersPreview({ partItems }: { partItems: PartItem[] }) {
+  if (!partItems.length) return <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {partItems.map(item => {
+        const sel = selectedOffer(item.supplier_offers)
+        return (
+          <div key={item.id} style={{ fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontWeight: 600, color: 'var(--text)', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {item.part_name || '?'}:
+            </span>
+            {sel ? (
+              <span style={{ color: 'var(--primary)', fontWeight: 700 }}>
+                {sel.supplier ? `${sel.supplier} ` : ''}{fmt(sel.sell_price)}
+              </span>
+            ) : (
+              <span style={{ color: 'var(--text-muted)' }}>
+                {item.supplier_offers.length ? `${item.supplier_offers.length} הצ׳` : '—'}
+              </span>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── MultiPartTotal ────────────────────────────────────────────────────────────
+
+function MultiPartTotal({ partItems }: { partItems: PartItem[] }) {
+  const totalSell = partItems.reduce((s, p) => s + (selectedOffer(p.supplier_offers)?.sell_price ?? 0), 0)
+  const totalCost = partItems.reduce((s, p) => s + (selectedOffer(p.supplier_offers)?.price     ?? 0), 0)
+  if (!totalSell && !totalCost) return null
+  const profit = totalSell - totalCost
+  return (
+    <div style={{
+      gridColumn: '1 / -1', fontSize: 12,
+      background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8,
+      padding: '8px 14px', display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center',
+    }}>
+      <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>סה״כ כל החלקים:</span>
+      {totalCost > 0 && <span>עלות: <strong>{fmt(totalCost)}</strong></span>}
+      {totalSell > 0 && <span>ללקוח: <strong style={{ color: 'var(--primary)' }}>{fmt(totalSell)}</strong></span>}
+      {totalSell > 0 && totalCost > 0 && (
+        <span>רווח: <strong style={{ color: profit >= 0 ? 'var(--primary)' : 'var(--danger)' }}>{fmt(profit)}</strong></span>
+      )}
+    </div>
+  )
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function QuotesClient() {
@@ -353,8 +421,10 @@ export default function QuotesClient() {
   // Forms
   const [tireForm,   setTireForm]   = useState({ ...emptyTireForm })
   const [partForm,   setPartForm]   = useState({ ...emptyPartForm })
-  const [tireOffers, setTireOffers] = useState<SupplierOffer[]>([])
-  const [partOffers, setPartOffers] = useState<SupplierOffer[]>([])
+  const [tireOffers,      setTireOffers]      = useState<SupplierOffer[]>([])
+  const [partItems,       setPartItems]       = useState<PartItem[]>([])
+  const [activePartId,    setActivePartId]    = useState<string | null>(null)
+  const [tireSuggestSize, setTireSuggestSize] = useState('')
   const [saving,          setSaving]          = useState(false)
   const [editMode,        setEditMode]        = useState(false)
   const [loadingTirePlate, setLoadingTirePlate] = useState(false)
@@ -374,6 +444,7 @@ export default function QuotesClient() {
       (data || []).map(q => ({
         ...q,
         supplier_offers: Array.isArray(q.supplier_offers) ? q.supplier_offers : [],
+        part_items:      Array.isArray(q.part_items)      ? q.part_items      : [],
       }))
     )
   }, [sb])
@@ -428,14 +499,20 @@ export default function QuotesClient() {
   async function searchTirePlate(plate: string) {
     if (plate.replace(/\D/g, '').length < 5) return
     setLoadingTirePlate(true)
-    const data = await fetchVehicleByPlate(plate)
-    setLoadingTirePlate(false)
-    if (data) {
-      const meta = [data.make, data.model, data.year].filter(Boolean).join(' ')
-      setTirePlateMeta(meta)
-    } else {
+    try {
+      const res  = await fetch(`/api/public/plate?plate=${encodeURIComponent(plate.replace(/[-\s]/g, ''))}`)
+      const data = await res.json()
+      if (data) {
+        const meta = [data.make, data.model, data.year].filter(Boolean).join(' ')
+        setTirePlateMeta(meta || 'נמצא')
+        if (data.tireSize) setTireSuggestSize(data.tireSize.trim())
+      } else {
+        setTirePlateMeta('לא נמצא')
+      }
+    } catch {
       setTirePlateMeta('לא נמצא')
     }
+    setLoadingTirePlate(false)
   }
 
   async function searchPartPlate(plate: string) {
@@ -457,8 +534,11 @@ export default function QuotesClient() {
     setTireForm({ ...emptyTireForm, quote_date: todayISO() })
     setPartForm({ ...emptyPartForm, quote_date: todayISO() })
     setTireOffers([])
-    setPartOffers([])
+    const initPart = newPartItem()
+    setPartItems([initPart])
+    setActivePartId(initPart.id)
     setTirePlateMeta('')
+    setTireSuggestSize('')
     setModalOpen(true)
   }
 
@@ -488,13 +568,17 @@ export default function QuotesClient() {
         phone:       q.phone       || '',
         plate:       q.plate       || '',
         car_model:   q.car_model   || '',
-        part_name:   q.part_name   || '',
         sell_price:  q.sell_price?.toString() || '',
         status:      q.status,
         notes:       q.notes || '',
       })
-      setPartOffers(q.supplier_offers)
+      const items: PartItem[] = q.part_items && q.part_items.length > 0
+        ? q.part_items
+        : [{ id: crypto.randomUUID(), part_name: q.part_name || '', supplier_offers: q.supplier_offers }]
+      setPartItems(items)
+      setActivePartId(items[0]?.id ?? null)
     }
+    setTireSuggestSize('')
     setModalOpen(true)
   }
 
@@ -503,19 +587,34 @@ export default function QuotesClient() {
   async function save() {
     const isTire = modalTab === 'tires'
     const f      = isTire ? tireForm : partForm
-    const offers = isTire ? tireOffers : partOffers
 
-    if (!f.client_name.trim())                 { showToast('נדרש שם לקוח', 'error'); return }
-    if (!f.phone.trim())                       { showToast('נדרש טלפון', 'error'); return }
-    if (isTire && !tireForm.width)             { showToast('נדרשת מידת צמיג', 'error'); return }
-    if (!isTire && !partForm.part_name.trim()) { showToast('נדרש שם חלק', 'error'); return }
-    if (!isTire && !partForm.plate.trim())     { showToast('נדרש מספר רכב', 'error'); return }
+    if (!f.client_name.trim())                                          { showToast('נדרש שם לקוח', 'error'); return }
+    if (!f.phone.trim())                                                { showToast('נדרש טלפון', 'error'); return }
+    if (isTire && !tireForm.width)                                      { showToast('נדרשת מידת צמיג', 'error'); return }
+    if (!isTire && partItems.every(p => !p.part_name.trim()))           { showToast('נדרש שם חלק', 'error'); return }
+    if (!isTire && !partForm.plate.trim())                              { showToast('נדרש מספר רכב', 'error'); return }
 
-    const sel    = selectedOffer(offers)
-    const qty    = parseInt('qty' in f ? f.qty : '1') || 1
-    const sell   = (sel?.sell_price ?? null) ?? (parseFloat(f.sell_price) || null)
-    const cost   = sel?.price ?? null
-    const profit = sell && cost ? (sell - cost) * qty : null
+    let qty: number, sell: number | null, cost: number | null, profit: number | null
+    let supplierName: string | null, saveOffers: SupplierOffer[]
+
+    if (isTire) {
+      const sel   = selectedOffer(tireOffers)
+      qty         = parseInt(tireForm.qty) || 1
+      sell        = (sel?.sell_price ?? null) ?? (parseFloat(tireForm.sell_price) || null)
+      cost        = sel?.price ?? null
+      profit      = sell && cost ? (sell - cost) * qty : null
+      supplierName = sel?.supplier || null
+      saveOffers  = tireOffers
+    } else {
+      const totalSell = partItems.reduce((s, p) => s + (selectedOffer(p.supplier_offers)?.sell_price ?? 0), 0)
+      const totalCost = partItems.reduce((s, p) => s + (selectedOffer(p.supplier_offers)?.price     ?? 0), 0)
+      qty         = 1
+      sell        = totalSell > 0 ? totalSell : (parseFloat(partForm.sell_price) || null)
+      cost        = totalCost > 0 ? totalCost : null
+      profit      = sell && cost ? sell - cost : null
+      supplierName = selectedOffer(partItems[0]?.supplier_offers ?? [])?.supplier || null
+      saveOffers  = []
+    }
 
     const payload: Record<string, unknown> = {
       tenant_id:       tenantId.current,
@@ -525,11 +624,11 @@ export default function QuotesClient() {
       phone:           f.phone.trim()  || null,
       plate:           f.plate.trim()  || null,
       qty,
-      supplier_offers: offers,
+      supplier_offers: saveOffers,
       cost_price:      cost,
       sell_price:      sell,
       profit,
-      supplier:        sel?.supplier || null,
+      supplier:        supplierName,
       status:          f.status,
       notes:           f.notes.trim() || null,
     }
@@ -540,9 +639,10 @@ export default function QuotesClient() {
       payload.profile = parseInt(tireForm.profile) || null
       payload.rim     = parseInt(tireForm.rim)     || null
     } else {
-      payload.part_name = partForm.part_name.trim() || null
-      payload.car_model = partForm.car_model.trim() || null
-      payload.plate     = partForm.plate.trim()     || null
+      payload.part_name  = partItems[0]?.part_name?.trim() || null
+      payload.car_model  = partForm.car_model.trim() || null
+      payload.plate      = partForm.plate.trim()     || null
+      payload.part_items = partItems
     }
 
     setSaving(true)
@@ -595,13 +695,20 @@ export default function QuotesClient() {
         (q.notes ? `\n\n${q.notes}` : '') +
         '\n\n_AutoFlow_'
     } else {
+      const partsText = q.part_items && q.part_items.length > 0
+        ? q.part_items.map(item => {
+            const sel = selectedOffer(item.supplier_offers)
+            return `• ${item.part_name}${sel?.sell_price != null ? ` — ${fmt(sel.sell_price)}` : ''}`
+          }).join('\n')
+        : `• ${q.part_name || ''}`
+
       msg =
         `שלום ${name} 👋\n\n` +
         `הצעת מחיר:\n` +
-        `חלק: ${q.part_name || ''}\n` +
         (q.plate ? `מס׳ רכב: ${q.plate}\n` : '') +
         (q.car_model ? `רכב: ${q.car_model}\n` : '') +
-        `מחיר: ${fmt(q.sell_price)}` +
+        `${partsText}` +
+        (q.sell_price ? `\nסה"כ: ${fmt(q.sell_price)}` : '') +
         (q.notes ? `\n\n${q.notes}` : '') +
         '\n\n_AutoFlow_'
     }
@@ -692,8 +799,22 @@ export default function QuotesClient() {
   const setF        = isTireModal
     ? (k: string, v: string) => setTireForm(p => ({ ...p, [k]: v }))
     : (k: string, v: string) => setPartForm(p => ({ ...p, [k]: v }))
+
+  const partOffers: SupplierOffer[] = activePartId
+    ? (partItems.find(p => p.id === activePartId)?.supplier_offers ?? [])
+    : []
+  const setPartOffers: React.Dispatch<React.SetStateAction<SupplierOffer[]>> = (action) => {
+    if (!activePartId) return
+    setPartItems(prev => prev.map(p =>
+      p.id === activePartId
+        ? { ...p, supplier_offers: typeof action === 'function' ? action(p.supplier_offers) : action }
+        : p
+    ))
+  }
+
   const offers    = isTireModal ? tireOffers : partOffers
-  const setOffers = isTireModal ? setTireOffers : setPartOffers
+  const setOffers: React.Dispatch<React.SetStateAction<SupplierOffer[]>> =
+    isTireModal ? setTireOffers : setPartOffers
 
   // ── Excel / JSON ───────────────────────────────────────────────────────────
 
@@ -847,7 +968,16 @@ export default function QuotesClient() {
                       </>
                     ) : (
                       <>
-                        <td style={{ ...tdStyle, maxWidth: 180, fontWeight: 600 }}>{q.part_name || '—'}</td>
+                        <td style={{ ...tdStyle, maxWidth: 200, fontWeight: 600 }}>
+                          {q.part_items && q.part_items.length > 1 ? (
+                            <div>
+                              <div style={{ fontWeight: 700 }}>{q.part_items[0]?.part_name || q.part_name || '—'}</div>
+                              <div style={{ fontSize: 11, color: 'var(--primary)' }}>+{q.part_items.length - 1} חלקים נוספים</div>
+                            </div>
+                          ) : (
+                            q.part_name || '—'
+                          )}
+                        </td>
                         <td style={tdStyle}>
                           {q.plate && <div style={{ fontSize: 13 }}>{q.plate}</div>}
                           {q.car_model && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{q.car_model}</div>}
@@ -857,7 +987,10 @@ export default function QuotesClient() {
                     )}
 
                     <td style={{ ...tdStyle, minWidth: 160 }}>
-                      <OffersPreview offers={q.supplier_offers} />
+                      {q.type === 'parts' && q.part_items && q.part_items.length > 0
+                        ? <PartItemsOffersPreview partItems={q.part_items} />
+                        : <OffersPreview offers={q.supplier_offers} />
+                      }
                     </td>
                     <td style={{ ...tdStyle, fontWeight: 700, color: 'var(--primary)', whiteSpace: 'nowrap' }}>
                       {q.sell_price ? (
@@ -987,6 +1120,33 @@ export default function QuotesClient() {
                 )}
               </div>
 
+              {/* Tire size suggestion from plate API */}
+              {tireSuggestSize && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={{
+                    background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8,
+                    padding: '9px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                  }}>
+                    <span style={{ fontSize: 12, color: '#1e40af', fontWeight: 600 }}>
+                      🔘 מידות מומלצות לרכב: <strong>{tireSuggestSize}</strong>
+                    </span>
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const parsed = parseTireSize(tireSuggestSize)
+                          if (parsed) setTireForm(p => ({ ...p, width: parsed.width, profile: parsed.profile, rim: parsed.rim }))
+                          setTireSuggestSize('')
+                        }}
+                        style={{ padding: '4px 12px', borderRadius: 6, background: '#1e40af', color: 'white', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+                      >מלא אוטומטית</button>
+                      <button type="button" onClick={() => setTireSuggestSize('')}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 16, color: '#94a3b8', lineHeight: 1 }}>✕</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div style={fieldStyle}>
                 <label className="form-label">מותג</label>
                 <input placeholder="Michelin, Bridgestone..." value={tireForm.brand} onChange={e => setTireForm(p => ({ ...p, brand: e.target.value }))} style={inpStyle} />
@@ -1037,9 +1197,78 @@ export default function QuotesClient() {
           {/* ── Part-specific */}
           {!isTireModal && (
             <>
-              <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
-                <label className="form-label">שם החלק *</label>
-                <input placeholder="שם החלק המבוקש" value={partForm.part_name} onChange={e => setPartForm(p => ({ ...p, part_name: e.target.value }))} style={inpStyle} />
+              {/* Multi-part list */}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label className="form-label" style={{ marginBottom: 6, display: 'block' }}>חלקים מבוקשים *</label>
+                {partItems.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6,
+                      padding: '7px 10px',
+                      background: activePartId === item.id ? '#f0fdf4' : 'var(--bg)',
+                      border: `2px solid ${activePartId === item.id ? 'var(--primary)' : 'var(--border)'}`,
+                      borderRadius: 9, cursor: 'pointer',
+                    }}
+                    onClick={() => setActivePartId(item.id)}
+                  >
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', minWidth: 18 }}>
+                      {idx + 1}.
+                    </span>
+                    <input
+                      placeholder="שם החלק המבוקש"
+                      value={item.part_name}
+                      onChange={e => {
+                        const v = e.target.value
+                        setPartItems(prev => prev.map(p => p.id === item.id ? { ...p, part_name: v } : p))
+                      }}
+                      onClick={e => e.stopPropagation()}
+                      style={{ ...inpStyle, flex: 1 }}
+                    />
+                    {selectedOffer(item.supplier_offers) && (
+                      <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        ✓ {fmt(selectedOffer(item.supplier_offers)?.sell_price)}
+                      </span>
+                    )}
+                    {!selectedOffer(item.supplier_offers) && item.supplier_offers.length > 0 && (
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                        {item.supplier_offers.length} הצ׳
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.stopPropagation()
+                        if (partItems.length <= 1) return
+                        const next = partItems.filter(p => p.id !== item.id)
+                        setPartItems(next)
+                        if (activePartId === item.id) setActivePartId(next[0]?.id ?? null)
+                      }}
+                      disabled={partItems.length <= 1}
+                      style={{
+                        width: 28, height: 28, border: 'none', borderRadius: 6, flexShrink: 0,
+                        cursor: partItems.length <= 1 ? 'not-allowed' : 'pointer',
+                        background: partItems.length <= 1 ? '#f1f5f9' : '#fee2e2',
+                        color: partItems.length <= 1 ? '#cbd5e1' : 'var(--danger)', fontWeight: 700, fontSize: 13,
+                      }}
+                    >✕</button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newItem = newPartItem()
+                    setPartItems(prev => [...prev, newItem])
+                    setActivePartId(newItem.id)
+                  }}
+                  style={{
+                    marginTop: 2, padding: '5px 14px', fontSize: 12,
+                    border: '1px dashed var(--border)', borderRadius: 6,
+                    background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)',
+                  }}
+                >
+                  ➕ הוסף חלק נוסף
+                </button>
               </div>
 
               {/* רכב – מקובץ */}
@@ -1085,11 +1314,24 @@ export default function QuotesClient() {
             </>
           )}
 
+          {/* ── Active part label for parts */}
+          {!isTireModal && activePartId && (
+            <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700 }}>
+                הצעות ספקים עבור:{' '}
+                <strong>
+                  {partItems.find(p => p.id === activePartId)?.part_name ||
+                    `חלק ${(partItems.findIndex(p => p.id === activePartId) + 1)}`}
+                </strong>
+              </span>
+            </div>
+          )}
+
           {/* ── Supplier offers */}
           <OffersSection
             offers={offers}
             setOffers={setOffers}
-            onSellPriceChange={v => setF('sell_price', v)}
+            onSellPriceChange={isTireModal ? v => setF('sell_price', v) : undefined}
           />
 
           {/* ── Pricing */}
@@ -1119,6 +1361,9 @@ export default function QuotesClient() {
 
           {/* ── Profit preview */}
           <ProfitPreview offers={offers} sellStr={f.sell_price} qtyStr={'qty' in f ? f.qty : '1'} />
+
+          {/* ── Multi-part total summary */}
+          {!isTireModal && partItems.length > 1 && <MultiPartTotal partItems={partItems} />}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 24 }}>
