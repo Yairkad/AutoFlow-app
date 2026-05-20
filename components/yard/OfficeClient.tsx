@@ -418,31 +418,53 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
 
         {/* ── Tab: History ── */}
         {tab === 'history' && (
-          <div className="max-w-sm mx-auto" style={{ paddingTop: '8px' }}>
-            {/* Plate display */}
-            <div
-              className={`bg-white border-[3px] rounded-xl text-center font-black tracking-[5px] mb-3 ${historyPlate.length > 0 ? 'border-red-500 text-slate-900' : 'border-red-200 text-slate-300'}`}
-              style={{ padding: '14px 20px', fontSize: '26px' }}
-            >
-              {historyPlate.length > 0 ? formatPlate(historyPlate) : 'הזן מס׳ רכב'}
-            </div>
+          <div className="flex flex-col items-center justify-start" style={{ paddingTop: '40px' }}>
+            <div className="bg-white rounded-2xl shadow-md border border-slate-200" style={{ width: '340px', padding: '32px 28px 24px' }}>
 
-            {/* Numpad */}
-            <div className="grid grid-cols-3" dir="ltr" style={{ gap: '8px' }}>
-              {['1','2','3','4','5','6','7','8','9'].map(k => (
-                <button key={k} onPointerDown={() => historyPress(k)}
-                  className="bg-white border-2 border-slate-200 rounded-xl font-bold text-slate-800 active:bg-slate-100 active:scale-95 transition-all"
-                  style={{ height: '56px', fontSize: '24px' }}>{k}</button>
-              ))}
-              <button onPointerDown={doHistorySearch} disabled={historyPlate.length < 7}
-                className="bg-blue-600 border-2 border-blue-600 rounded-xl font-bold text-white active:scale-95 disabled:opacity-40 transition-all"
-                style={{ height: '56px', fontSize: '14px' }}>🔍 חפש</button>
-              <button onPointerDown={() => historyPress('0')}
-                className="bg-white border-2 border-slate-200 rounded-xl font-bold text-slate-800 active:bg-slate-100 active:scale-95 transition-all"
-                style={{ height: '56px', fontSize: '24px' }}>0</button>
-              <button onPointerDown={() => historyPress('del')}
-                className="bg-white border-2 border-slate-200 rounded-xl font-bold text-red-500 active:bg-slate-100 active:scale-95 transition-all"
-                style={{ height: '56px', fontSize: '20px' }}>⌫</button>
+              {/* Title */}
+              <div className="text-center" style={{ marginBottom: '20px' }}>
+                <div className="font-bold text-slate-800" style={{ fontSize: '17px' }}>חיפוש היסטוריית רכב</div>
+                <div className="text-slate-400 text-sm" style={{ marginTop: '4px' }}>הזן מספר לוחית רישוי</div>
+              </div>
+
+              {/* Plate input */}
+              <input
+                type="text"
+                value={formatPlate(historyPlate)}
+                onChange={e => setHistoryPlate(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                onKeyDown={e => e.key === 'Enter' && doHistorySearch()}
+                placeholder="00-000-00"
+                className={`w-full bg-slate-50 border-[3px] rounded-xl text-center font-black outline-none transition-colors ${historyPlate.length > 0 ? 'border-red-500 text-slate-900' : 'border-slate-200 text-slate-400 focus:border-blue-400'}`}
+                style={{ padding: '14px 16px', fontSize: '28px', letterSpacing: '4px', direction: 'ltr', marginBottom: '16px' }}
+              />
+
+              {/* Numpad */}
+              <div className="grid grid-cols-3" dir="ltr" style={{ gap: '8px', marginBottom: '12px' }}>
+                {['1','2','3','4','5','6','7','8','9'].map(k => (
+                  <button key={k} onPointerDown={() => historyPress(k)}
+                    className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl font-bold text-slate-800 active:scale-95 transition-all"
+                    style={{ height: '52px', fontSize: '22px' }}>{k}</button>
+                ))}
+                <button onPointerDown={doHistorySearch} disabled={historyPlate.length < 7}
+                  className="bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-white active:scale-95 disabled:opacity-40 transition-all"
+                  style={{ height: '52px', fontSize: '13px' }}>🔍 חפש</button>
+                <button onPointerDown={() => historyPress('0')}
+                  className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl font-bold text-slate-800 active:scale-95 transition-all"
+                  style={{ height: '52px', fontSize: '22px' }}>0</button>
+                <button onPointerDown={() => historyPress('del')}
+                  className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl font-bold text-red-400 active:scale-95 transition-all"
+                  style={{ height: '52px', fontSize: '18px' }}>⌫</button>
+              </div>
+
+              {/* Search button */}
+              <button
+                onClick={doHistorySearch}
+                disabled={historyPlate.length < 7}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl font-bold transition-colors"
+                style={{ padding: '13px', fontSize: '15px' }}
+              >
+                חפש היסטוריה
+              </button>
             </div>
           </div>
         )}
