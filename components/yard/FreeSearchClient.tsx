@@ -142,15 +142,16 @@ export default function FreeSearchClient({ session, filterType }: Props) {
 
       {/* Query display + Quantity row */}
       <div className="flex items-center flex-shrink-0" style={{ gap: '10px', padding: '10px 14px 0' }}>
-        <div
-          className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium bg-white"
-          style={{ padding: '10px 14px', minHeight: '44px' }}
-        >
-          {query
-            ? <span className="text-slate-900 font-bold">{query}</span>
-            : <span className="text-slate-400 font-normal">חפש מוצר, צמיג, שירות...</span>
-          }
-        </div>
+        <input
+          type="text"
+          inputMode="none"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') search(query) }}
+          placeholder="חפש מוצר, צמיג, שירות..."
+          className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium bg-white outline-none"
+          style={{ padding: '10px 14px' }}
+        />
         <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
           <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">−</button>
           <span className="w-9 text-center font-bold border-x-2 border-slate-200 h-10 flex items-center justify-center">{qty}</span>
