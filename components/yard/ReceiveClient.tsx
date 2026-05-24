@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { SearchResult } from '@/app/api/yard/search/route'
+import CameraScanner from '@/components/yard/CameraScanner'
 
 type Stage = 'scan' | 'found' | 'notfound' | 'saving' | 'done'
 
@@ -14,7 +15,8 @@ export default function ReceiveClient() {
   const scanRef    = useRef<HTMLInputElement>(null)
   const qtyRef     = useRef<HTMLInputElement>(null)
 
-  const [stage,     setStage]     = useState<Stage>('scan')
+  const [stage,      setStage]      = useState<Stage>('scan')
+  const [cameraOpen, setCameraOpen] = useState(false)
   const [scanBuf,   setScanBuf]   = useState('')
   const [lastCode,  setLastCode]  = useState('')
   const [found,     setFound]     = useState<SearchResult | null>(null)
@@ -116,6 +118,13 @@ export default function ReceiveClient() {
   return (
     <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
 
+      {cameraOpen && (
+        <CameraScanner
+          onScan={code => { setCameraOpen(false); handleScan(code) }}
+          onClose={() => setCameraOpen(false)}
+        />
+      )}
+
       {/* Toast */}
       {toast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-700 text-white font-bold rounded-xl shadow-xl"
@@ -163,10 +172,16 @@ export default function ReceiveClient() {
               הסורק פעיל — כוון לברקוד על הקופסה / הצמיג
             </p>
             <button
-              onClick={() => scanRef.current?.focus()}
+              onClick={() => setCameraOpen(true)}
               className="bg-blue-600 text-white font-bold rounded-xl active:scale-95 transition-all"
               style={{ padding: '14px 32px', fontSize: '16px' }}>
-              הפעל סורק
+              📷 סרוק עם מצלמה
+            </button>
+            <button
+              onClick={() => scanRef.current?.focus()}
+              className="bg-slate-600 text-white font-semibold rounded-xl active:scale-95 transition-all"
+              style={{ padding: '10px 24px', fontSize: '14px' }}>
+              🔌 סורק חיצוני
             </button>
           </div>
         )}
