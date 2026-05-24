@@ -168,7 +168,7 @@ function VerifyScreen({ onVerify }: { onVerify: (plate: string, phone: string) =
         </form>
 
         <div className="bg-gray-50 px-6 py-3 text-center">
-          <p className="text-xs text-gray-400">אוטוליין – מערכת ניהול מוסך</p>
+          <p className="text-xs text-gray-400">אוטו ליין – מערכת ניהול מוסך</p>
         </div>
       </div>
     </div>
@@ -241,7 +241,7 @@ function AlignmentStatusScreen({ job }: { job: AlignmentJob }) {
         </div>
 
         <div className="bg-gray-50 px-6 py-3 text-center">
-          <p className="text-xs text-gray-400">אוטוליין – מערכת ניהול מוסך</p>
+          <p className="text-xs text-gray-400">אוטו ליין – מערכת ניהול מוסך</p>
         </div>
       </div>
     </div>
@@ -388,7 +388,7 @@ function TestTransferStatusScreen({ job }: { job: TestTransferJob }) {
         )}
 
         <div className="bg-gray-50 px-6 py-3 text-center">
-          <p className="text-xs text-gray-400">אוטוליין – מערכת ניהול מוסך</p>
+          <p className="text-xs text-gray-400">אוטו ליין – מערכת ניהול מוסך</p>
         </div>
       </div>
     </div>

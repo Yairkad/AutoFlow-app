@@ -156,18 +156,107 @@ export async function deleteFile(accessToken: string, fileId: string): Promise<v
   })
 }
 
+// ── Move file to different parent ──────────────────────────────────────────
+
+export async function moveFile(accessToken: string, fileId: string, newParentId: string, oldParentId: string): Promise<void> {
+  await fetch(`${DRIVE_URL}/files/${fileId}?addParents=${encodeURIComponent(newParentId)}&removeParents=${encodeURIComponent(oldParentId)}&fields=id`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+}
+
+// List only non-folder files inside a folder
+export async function listFilesOnly(accessToken: string, folderId: string): Promise<DriveFile[]> {
+  const q = `'${folderId}' in parents and trashed=false and mimeType!='application/vnd.google-apps.folder'`
+  const fields = 'files(id,name,mimeType,size,createdTime,thumbnailLink,webViewLink)'
+  const res = await fetch(`${DRIVE_URL}/files?q=${encodeURIComponent(q)}&fields=${encodeURIComponent(fields)}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  const data = await res.json()
+  return data.files ?? []
+}
+
+// List sub-folders inside a folder
+async function listSubFolders(accessToken: string, parentId: string): Promise<Array<{ id: string; name: string }>> {
+  const q = `'${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`
+  const res = await fetch(`${DRIVE_URL}/files?q=${encodeURIComponent(q)}&fields=files(id,name)`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  const data = await res.json()
+  return data.files ?? []
+}
+
+// Find ALL root folders matching the business name
+export async function findAllRootFolders(accessToken: string, businessName: string): Promise<Array<{ id: string; name: string; createdTime: string }>> {
+  const q = `name='AutoFlow – ${businessName.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`
+  const res = await fetch(`${DRIVE_URL}/files?q=${encodeURIComponent(q)}&fields=files(id,name,createdTime)&orderBy=createdTime`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  const data = await res.json()
+  return data.files ?? []
+}
+
 // ── Setup root folders ─────────────────────────────────────────────────────
 
 export async function setupRootFolders(accessToken: string, businessName: string): Promise<string> {
-  // Create root folder named after the business
   const rootId = await createFolder(accessToken, `AutoFlow – ${businessName}`)
-
-  // Create sub-folders
   await Promise.all([
     createFolder(accessToken, 'רכבים', rootId),
     createFolder(accessToken, 'בדיקות קניה', rootId),
     createFolder(accessToken, 'מסמכים', rootId),
   ])
-
   return rootId
+}
+
+// ── Merge all duplicate root folders into one ──────────────────────────────
+
+const SUB_FOLDERS = ['רכבים', 'בדיקות קניה', 'מסמכים']
+
+export async function mergeRootFolders(
+  accessToken: string,
+  businessName: string,
+  canonicalRootId: string,
+): Promise<{ moved: number; deleted: number }> {
+  const allRoots = await findAllRootFolders(accessToken, businessName)
+  const others = allRoots.filter(f => f.id !== canonicalRootId)
+
+  if (others.length === 0) return { moved: 0, deleted: 0 }
+
+  // Ensure canonical root has all sub-folders
+  const canonicalSubs: Record<string, string> = {}
+  for (const name of SUB_FOLDERS) {
+    canonicalSubs[name] = await getOrCreateFolder(accessToken, name, canonicalRootId)
+  }
+
+  let moved = 0
+  let deleted = 0
+
+  for (const root of others) {
+    const subs = await listSubFolders(accessToken, root.id)
+
+    // Move files from each sub-folder to matching canonical sub-folder
+    for (const sub of subs) {
+      const targetId = canonicalSubs[sub.name]
+      const files = await listFilesOnly(accessToken, sub.id)
+      for (const file of files) {
+        await moveFile(accessToken, file.id, targetId ?? canonicalRootId, sub.id)
+        moved++
+      }
+      await deleteFile(accessToken, sub.id)
+      deleted++
+    }
+
+    // Move any files sitting directly in the duplicate root
+    const rootFiles = await listFilesOnly(accessToken, root.id)
+    for (const file of rootFiles) {
+      await moveFile(accessToken, file.id, canonicalRootId, root.id)
+      moved++
+    }
+
+    await deleteFile(accessToken, root.id)
+    deleted++
+  }
+
+  return { moved, deleted }
 }

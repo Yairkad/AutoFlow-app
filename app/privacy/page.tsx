@@ -5,8 +5,8 @@ import { createServiceClient } from '@/lib/supabase/service'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'מדיניות פרטיות – אוטוליין',
-  description: 'מדיניות הפרטיות של אוטוליין פנצריה ושירותי רכב',
+  title: 'מדיניות פרטיות – אוטו ליין',
+  description: 'מדיניות הפרטיות של אוטו ליין פנצריה ושירותי רכב',
 }
 
 const TENANT_ID = 'c618f567-139b-4ce9-ac77-67affe93c27d'
@@ -20,7 +20,7 @@ export default async function PrivacyPage() {
     .eq('id', TENANT_ID)
     .single()
 
-  const name    = tenant?.name    ?? 'אוטוליין'
+  const name    = tenant?.name    ?? 'אוטו ליין'
   const phone   = tenant?.phone   ?? ''
   const address = tenant?.address ?? ''
   const email   = (tenant?.public_info as { email?: string } | null)?.email ?? ''

@@ -23,12 +23,14 @@ export async function GET(req: Request) {
     // Exchange code for tokens
     const { access_token, refresh_token } = await exchangeCode(code)
 
-    // Get tenant name for root folder
-    const { data: tenant } = await sb.from('tenants').select('name').eq('id', tenantId).single()
+    // Get tenant name + existing root folder (if reconnecting)
+    const { data: tenant } = await sb.from('tenants').select('name,drive_root_folder_id').eq('id', tenantId).single()
     const bizName = tenant?.name || 'AutoFlow'
 
-    // Create Drive folder structure
-    const rootFolderId = await setupRootFolders(access_token, bizName)
+    // Only create folder structure on first connect; reuse existing root on reconnect
+    const rootFolderId = tenant?.drive_root_folder_id
+      ? tenant.drive_root_folder_id
+      : await setupRootFolders(access_token, bizName)
 
     // Save to DB
     await sb.from('tenants').update({

@@ -10,7 +10,7 @@ import CarsForSale from '@/components/landing/CarsForSale'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'אוטוליין – פנצריה ושירותי רכב',
+  title: 'אוטו ליין – פנצריה ושירותי רכב',
   description: 'תיקון ומכירת צמיגים, כיוון פרונט, בדיקות רכב לפני קניה, סוכנות רכב יד 2. שירות מקצועי ומהיר.',
 }
 
@@ -46,7 +46,7 @@ export default async function LandingPage() {
 
   const pi = (tenant?.public_info ?? {}) as PublicInfo
   const BUSINESS = {
-    name:     tenant?.name     ?? 'אוטוליין',
+    name:     tenant?.name     ?? 'אוטו ליין',
     tagline:  tenant?.sub_title ?? 'פנצריה ושירותי רכב',
     phone:    tenant?.phone    ?? '',
     address:  tenant?.address  ?? '',

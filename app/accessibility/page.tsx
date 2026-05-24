@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'הצהרת נגישות – אוטוליין',
-  description: 'הצהרת הנגישות של אוטוליין פנצריה ושירותי רכב',
+  title: 'הצהרת נגישות – אוטו ליין',
+  description: 'הצהרת הנגישות של אוטו ליין פנצריה ושירותי רכב',
 }
 
 const UPDATED = '17 במרץ 2026'
@@ -15,7 +15,7 @@ export default function AccessibilityPage() {
       {/* ── Nav ── */}
       <header style={{ background: '#1a2a6c', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ color: '#F5C800', fontWeight: 800, fontSize: '20px', textDecoration: 'none', letterSpacing: '-0.5px' }}>
-          אוטוליין
+          אוטו ליין
         </Link>
         <Link href="/" style={{ color: '#fff', fontSize: '14px', opacity: 0.8, textDecoration: 'none' }}>
           ← חזרה לדף הבית
@@ -32,7 +32,7 @@ export default function AccessibilityPage() {
         </p>
 
         <Section title="1. מחויבות לנגישות">
-          אוטוליין פנצריה ושירותי רכב מחויבת להנגשת שירותיה הדיגיטליים לכלל הציבור,
+          אוטו ליין פנצריה ושירותי רכב מחויבת להנגשת שירותיה הדיגיטליים לכלל הציבור,
           לרבות אנשים עם מוגבלויות, בהתאם ל<strong>חוק שוויון זכויות לאנשים עם מוגבלות, התשנ&quot;ח–1998</strong>{' '}
           ו<strong>תקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות), תשע&quot;ג–2013</strong>.
         </Section>

@@ -303,7 +303,7 @@ function ActionBtn({ onClick, title, children }: { onClick: () => void; title: s
 export default function InspectionsClient() {
   const supabase    = useRef(createClient()).current
   const tenantId    = useRef<string | null>(null)
-  const bizInfo     = useRef<BusinessInfo>({ name: 'אוטוליין', sub_title: null, logo: null, phone: null, address: null, license_number: null, tax_id: null })
+  const bizInfo     = useRef<BusinessInfo>({ name: 'אוטו ליין', sub_title: null, logo: null, phone: null, address: null, license_number: null, tax_id: null })
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
 
@@ -364,7 +364,7 @@ export default function InspectionsClient() {
         .maybeSingle()
       if (tenant) {
         bizInfo.current = {
-          name:           tenant.name ?? 'אוטוליין',
+          name:           tenant.name ?? 'אוטו ליין',
           sub_title:      tenant.sub_title ?? null,
           logo:           tenant.logo_base64 ?? null,
           phone:          tenant.phone ?? null,

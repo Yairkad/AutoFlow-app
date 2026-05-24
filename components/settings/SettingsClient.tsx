@@ -1686,15 +1686,31 @@ export default function SettingsClient() {
   const canVault = myRole === 'super_admin'
 
   const [driveConnected, setDriveConnected] = useState<boolean | null>(null)
+  const [driveMerging, setDriveMerging] = useState(false)
+
   useEffect(() => {
     if (!isAdmin || !tenantId) return
     fetch(`/api/drive/status?tenant_id=${tenantId}`)
       .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => setDriveConnected(false))
-    // Handle redirect back from OAuth
     const params = new URLSearchParams(window.location.search)
     if (params.get('drive') === 'connected') { setDriveConnected(true); window.history.replaceState({}, '', '/settings') }
     if (params.get('drive') === 'error') { showToast('שגיאה בחיבור Drive', 'error'); window.history.replaceState({}, '', '/settings') }
   }, [isAdmin, tenantId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleDriveMerge() {
+    if (!tenantId || driveMerging) return
+    setDriveMerging(true)
+    try {
+      const res = await fetch('/api/drive/merge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant_id: tenantId }) })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      showToast(`✅ מוזג! הועברו ${data.moved} קבצים, נמחקו ${data.deleted} תיקיות כפולות`, 'success')
+    } catch {
+      showToast('שגיאה באיחוד תיקיות', 'error')
+    } finally {
+      setDriveMerging(false)
+    }
+  }
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
     { key: 'business', label: 'פרטי עסק',    icon: '🏢' },
@@ -1748,18 +1764,33 @@ export default function SettingsClient() {
             </div>
           </div>
           {tenantId && (
-            <a
-              href={`/api/drive/auth?tenant_id=${tenantId}`}
-              style={{
-                padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
-                textDecoration: 'none', flexShrink: 0,
-                background: driveConnected ? 'transparent' : 'var(--primary)',
-                color: driveConnected ? 'var(--text-muted)' : '#fff',
-                border: driveConnected ? '1px solid var(--border)' : 'none',
-              }}
-            >
-              {driveConnected ? '🔄 חבר מחדש' : 'חבר Drive →'}
-            </a>
+            <div style={{ display: 'flex', gap: '8px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              {driveConnected && (
+                <button
+                  onClick={handleDriveMerge}
+                  disabled={driveMerging}
+                  style={{
+                    padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
+                    cursor: driveMerging ? 'wait' : 'pointer', border: '1px solid var(--border)',
+                    background: 'transparent', color: 'var(--text-muted)',
+                  }}
+                >
+                  {driveMerging ? '⏳ ממזג...' : '🗂️ מזג תיקיות כפולות'}
+                </button>
+              )}
+              <a
+                href={`/api/drive/auth?tenant_id=${tenantId}`}
+                style={{
+                  padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
+                  textDecoration: 'none',
+                  background: driveConnected ? 'transparent' : 'var(--primary)',
+                  color: driveConnected ? 'var(--text-muted)' : '#fff',
+                  border: driveConnected ? '1px solid var(--border)' : 'none',
+                }}
+              >
+                {driveConnected ? '🔄 חבר מחדש' : 'חבר Drive →'}
+              </a>
+            </div>
           )}
         </div>
       )}
