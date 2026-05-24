@@ -1,11 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { YardSession } from '@/lib/yard/types'
-import { sessionDisplayName, formatPlate } from '@/lib/yard/types'
+import { formatPlate } from '@/lib/yard/types'
 import type { SearchResult } from '@/lib/yard/types'
 import HebrewNumKeyboard from '@/components/yard/HebrewNumKeyboard'
+import CameraScanner from '@/components/yard/CameraScanner'
+import TirePositionPicker from '@/components/yard/TirePositionPicker'
+import type { TirePosition } from '@/lib/yard/types'
 
 interface Props {
   session:    YardSession
@@ -26,6 +29,12 @@ export default function FreeSearchClient({ session, filterType }: Props) {
   const [confirm,      setConfirm]      = useState<{ item: SearchResult; onYes: () => void } | null>(null)
   const [saving,       setSaving]       = useState(false)
   const [confirmBusy,  setConfirmBusy]  = useState(false)
+
+  const [scanMode,    setScanMode]    = useState(false)
+  const [cameraOpen,  setCameraOpen]  = useState(false)
+  const [scanBuffer,  setScanBuffer]  = useState('')
+  const [pickerItem,  setPickerItem]  = useState<SearchResult | null>(null)
+  const scanRef = useRef<HTMLInputElement>(null)
 
   const existingNames = new Set((session.yard_session_items ?? []).map(i => i.name))
   const title = filterType === 'all' ? 'כל המלאי' : 'אביזרים לרכב'
@@ -60,6 +69,56 @@ export default function FreeSearchClient({ session, filterType }: Props) {
     } catch {}
     search('')
   }, []) // eslint-disable-line
+
+  useEffect(() => {
+    if (!scanMode) return
+    scanRef.current?.focus()
+    setScanBuffer('')
+  }, [scanMode])
+
+  async function handleBarcode(code: string) {
+    setScanMode(false)
+    setCameraOpen(false)
+    const res = await fetch(`/api/yard/barcode?code=${encodeURIComponent(code)}`)
+    if (!res.ok) { alert('לא נמצא פריט עם ברקוד זה'); return }
+    const item: SearchResult = await res.json()
+    if (item.type === 'tire') {
+      setPickerItem(item)
+    } else {
+      setSelected(item)
+      setPrice(item.price)
+      setQuery(item.name)
+    }
+  }
+
+  function submitTireWithPosition(positions: TirePosition[]) {
+    if (!pickerItem) return
+    setPickerItem(null)
+    setSaving(true)
+    const finalPrice = pickerItem.price
+    try {
+      sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify({
+        id: `pending-${Date.now()}`, session_id: session.id, tenant_id: '',
+        item_type: 'tire', ref_id: pickerItem.id, name: pickerItem.name, sku: pickerItem.sku,
+        quantity: 1, unit_price: finalPrice, original_price: pickerItem.price,
+        price_modified: false, tire_position: positions[0] ?? null,
+        created_at: new Date().toISOString(),
+      }))
+    } catch {}
+    router.push(`/yard/${session.id}`)
+    const posArr = positions.length > 0 ? positions : [null]
+    posArr.forEach(pos => {
+      fetch(`/api/yard/sessions/${session.id}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          item_type: 'tire', ref_id: pickerItem.id, name: pickerItem.name, sku: pickerItem.sku,
+          quantity: 1, unit_price: finalPrice, original_price: pickerItem.price,
+          price_modified: false, tire_position: pos,
+        }),
+      })
+    })
+  }
 
   async function addToCart() {
     if (!selected) return
@@ -112,6 +171,14 @@ export default function FreeSearchClient({ session, filterType }: Props) {
 
   return (
     <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
+      {cameraOpen && <CameraScanner onScan={handleBarcode} onClose={() => setCameraOpen(false)} />}
+      {pickerItem && <TirePositionPicker onConfirm={submitTireWithPosition} />}
+
+      {/* Hidden input for physical scanner */}
+      <input ref={scanRef} className="absolute opacity-0 w-0 h-0"
+        value={scanBuffer} onChange={e => setScanBuffer(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter' && scanBuffer) handleBarcode(scanBuffer) }} />
+
       {/* Plate header card */}
       <div className="bg-white border-[3px] border-red-500 rounded-xl flex-shrink-0" style={{ margin: '14px 14px 0', padding: '14px 18px' }}>
         {(session.make || session.model) && (
@@ -139,6 +206,48 @@ export default function FreeSearchClient({ session, filterType }: Props) {
           🏠 רחבה ראשית
         </button>
       </div>
+
+      {/* Scan buttons */}
+      <div className="flex gap-2 flex-shrink-0" style={{ margin: '10px 14px 0' }}>
+        <button onClick={() => setCameraOpen(true)}
+          className="flex-1 bg-blue-600 text-white rounded-xl font-bold active:scale-[.97] transition-all flex items-center justify-center gap-2"
+          style={{ minHeight: '44px', fontSize: '14px' }}>
+          <svg viewBox="0 0 20 16" width="18" height="14" fill="white">
+            <rect x="7" y="0" width="6" height="2" rx="1"/>
+            <path d="M2 3h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+            <circle cx="10" cy="10" r="3" fill="none" stroke="white" strokeWidth="1.5"/>
+          </svg>
+          סרוק מצלמה
+        </button>
+        <button onClick={() => setScanMode(m => !m)}
+          className={`flex-1 rounded-xl font-bold active:scale-[.97] transition-all flex items-center justify-center gap-2 ${scanMode ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'}`}
+          style={{ minHeight: '44px', fontSize: '14px' }}>
+          <svg viewBox="0 0 28 22" width="18" height="14" fill="currentColor">
+            <rect x="0"  y="0" width="2" height="22"/><rect x="4"  y="0" width="1" height="22"/>
+            <rect x="7"  y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/>
+            <rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/>
+            <rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/>
+          </svg>
+          סורק חיצוני
+        </button>
+      </div>
+
+      {/* External scanner overlay */}
+      {scanMode && (
+        <div className="bg-blue-600 text-white rounded-xl flex items-center justify-between flex-shrink-0"
+          style={{ margin: '8px 14px 0', padding: '10px 16px' }}>
+          <span className="font-semibold flex items-center gap-2">
+            <svg viewBox="0 0 28 22" width="18" height="14" fill="white">
+              <rect x="0"  y="0" width="2" height="22"/><rect x="4"  y="0" width="1" height="22"/>
+              <rect x="7"  y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/>
+              <rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/>
+              <rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/>
+            </svg>
+            ממתין לסריקה...
+          </span>
+          <button onClick={() => setScanMode(false)} className="bg-white/20 border border-white/40 rounded-lg text-sm font-bold" style={{ padding: '5px 10px' }}>ביטול</button>
+        </div>
+      )}
 
       {/* Query display + Quantity row */}
       <div className="flex items-center flex-shrink-0" style={{ gap: '10px', padding: '10px 14px 0' }}>
