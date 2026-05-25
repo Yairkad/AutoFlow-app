@@ -139,13 +139,6 @@ export default function YardDashboard({ initialSessions }: Props) {
         >
           {newCarLoading ? '⏳' : <><span style={{ fontSize: '24px' }}>+</span> קליטת רכב חדש</>}
         </button>
-        <button
-          onClick={() => router.push('/yard/receive')}
-          className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold flex items-center justify-center gap-2 transition-all active:scale-[.98]"
-          style={{ borderRadius: '12px', padding: '14px', fontSize: '16px' }}
-        >
-          📦 קבלת סחורה
-        </button>
       </div>
     </div>
   )
