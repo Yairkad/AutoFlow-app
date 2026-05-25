@@ -34,6 +34,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
   const [active,  setActive]  = useState(initialActive)
   const [pending, setPending] = useState(initialPending)
   const [closing,      setClosing]      = useState<string | null>(null)
+  const [sendingBack,  setSendingBack]  = useState<string | null>(null)
   const [, setTick] = useState(0)
   const [priceModal,   setPriceModal]   = useState(false)
   const [services,     setServices]     = useState<YardService[]>([])
@@ -247,6 +248,17 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     setClosing(null)
   }
 
+  async function sendBackToYard(id: string) {
+    setSendingBack(id)
+    await fetch(`/api/yard/sessions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'active' }),
+    })
+    setPending(p => p.filter(s => s.id !== id))
+    setSendingBack(null)
+  }
+
   async function copyText(text: string, btn: HTMLButtonElement) {
     await navigator.clipboard.writeText(text).catch(() => {})
     const orig = btn.textContent
@@ -452,14 +464,31 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                   {/* Footer */}
                   <div className="flex items-center justify-between border-t-2 border-slate-100" style={{ padding: '14px 20px', background: '#f8fafc' }}>
                     <div className="font-black" style={{ fontSize: '18px' }}>סה״כ: {total.toLocaleString()}₪</div>
-                    <button
-                      onClick={() => closeSession(s.id)}
-                      disabled={closing === s.id}
-                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors"
-                      style={{ padding: '10px 24px', fontSize: '14px' }}
-                    >
-                      {closing === s.id ? '...' : '✓ סגור כרטיס'}
-                    </button>
+                    <div className="flex items-center" style={{ gap: '8px' }}>
+                      <button
+                        onClick={() => router.push(`/yard/${s.id}`)}
+                        className="bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold transition-colors"
+                        style={{ padding: '10px 18px', fontSize: '14px' }}
+                      >
+                        ✏️ עריכת נתונים
+                      </button>
+                      <button
+                        onClick={() => sendBackToYard(s.id)}
+                        disabled={sendingBack === s.id}
+                        className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl font-bold transition-colors"
+                        style={{ padding: '10px 18px', fontSize: '14px' }}
+                      >
+                        {sendingBack === s.id ? '...' : '🔄 החזרה לרחבה'}
+                      </button>
+                      <button
+                        onClick={() => closeSession(s.id)}
+                        disabled={closing === s.id}
+                        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors"
+                        style={{ padding: '10px 24px', fontSize: '14px' }}
+                      >
+                        {closing === s.id ? '...' : '✓ סגור כרטיס'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )

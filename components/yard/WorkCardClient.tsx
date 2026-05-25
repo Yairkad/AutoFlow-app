@@ -478,26 +478,30 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
 
       {/* Barcode scan — hidden input captures scanner keystrokes */}
       {scanMode && (
-        <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-4"
-          style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(3px)' }}
-          onClick={() => setScanMode(false)}>
-          <svg viewBox="0 0 56 44" width="72" height="56" fill="white" style={{ opacity: 0.9 }}>
-            <rect x="0"  y="0" width="4" height="44"/><rect x="8"  y="0" width="2" height="44"/>
-            <rect x="13" y="0" width="6" height="44"/><rect x="23" y="0" width="2" height="44"/>
-            <rect x="29" y="0" width="4" height="44"/><rect x="37" y="0" width="2" height="44"/>
-            <rect x="43" y="0" width="6" height="44"/><rect x="53" y="0" width="2" height="44"/>
-          </svg>
-          <p className="text-white font-bold text-xl">ממתין לסריקה...</p>
-          <p className="text-white/60 text-sm">לחץ לביטול</p>
-        </div>
+        <>
+          <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-4"
+            style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(3px)' }}
+            onClick={() => setScanMode(false)}>
+            <svg viewBox="0 0 56 44" width="72" height="56" fill="white" style={{ opacity: 0.9 }}>
+              <rect x="0"  y="0" width="4" height="44"/><rect x="8"  y="0" width="2" height="44"/>
+              <rect x="13" y="0" width="6" height="44"/><rect x="23" y="0" width="2" height="44"/>
+              <rect x="29" y="0" width="4" height="44"/><rect x="37" y="0" width="2" height="44"/>
+              <rect x="43" y="0" width="6" height="44"/><rect x="53" y="0" width="2" height="44"/>
+            </svg>
+            <p className="text-white font-bold text-xl">ממתין לסריקה...</p>
+            <p className="text-white/60 text-sm">לחץ לביטול</p>
+          </div>
+          <input
+            ref={scanRef}
+            className="absolute opacity-0 w-0 h-0"
+            tabIndex={-1}
+            inputMode="none"
+            value={scanBuf}
+            onChange={e => setScanBuf(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && scanBuf.trim()) handleBarcodeScan(scanBuf.trim()) }}
+          />
+        </>
       )}
-      <input
-        ref={scanRef}
-        className="absolute opacity-0 w-0 h-0"
-        value={scanBuf}
-        onChange={e => setScanBuf(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter' && scanBuf.trim()) handleBarcodeScan(scanBuf.trim()) }}
-      />
 
       {/* Camera barcode scanner */}
       {cameraOpen && (

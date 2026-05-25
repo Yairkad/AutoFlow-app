@@ -217,9 +217,13 @@ export default function TireSearchClient({ session }: Props) {
           </div>
         )}
 
-        <input ref={scanRef} className="absolute opacity-0 w-0 h-0"
-          value={scanBuffer} onChange={e => setScanBuffer(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && scanBuffer) handleBarcode(scanBuffer) }} />
+        {/* Only mount when active to prevent virtual keyboard on touch devices */}
+        {scanMode && (
+          <input ref={scanRef} className="absolute opacity-0 w-0 h-0"
+            tabIndex={-1} inputMode="none"
+            value={scanBuffer} onChange={e => setScanBuffer(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && scanBuffer) handleBarcode(scanBuffer) }} />
+        )}
 
         {/* Search row + autocomplete dropdown */}
         <div className="flex items-center flex-shrink-0" style={{ gap: '10px', padding: '10px 14px 0' }}>

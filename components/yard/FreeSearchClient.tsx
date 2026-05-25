@@ -174,10 +174,13 @@ export default function FreeSearchClient({ session, filterType }: Props) {
       {cameraOpen && <CameraScanner onScan={handleBarcode} onClose={() => setCameraOpen(false)} />}
       {pickerItem && <TirePositionPicker onConfirm={submitTireWithPosition} />}
 
-      {/* Hidden input for physical scanner */}
-      <input ref={scanRef} className="absolute opacity-0 w-0 h-0"
-        value={scanBuffer} onChange={e => setScanBuffer(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter' && scanBuffer) handleBarcode(scanBuffer) }} />
+      {/* Hidden input for physical scanner — only in DOM when active to prevent virtual keyboard */}
+      {scanMode && (
+        <input ref={scanRef} className="absolute opacity-0 w-0 h-0"
+          tabIndex={-1} inputMode="none"
+          value={scanBuffer} onChange={e => setScanBuffer(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && scanBuffer) handleBarcode(scanBuffer) }} />
+      )}
 
       {/* Plate header card */}
       <div className="bg-white border-[3px] border-red-500 rounded-xl flex-shrink-0" style={{ margin: '14px 14px 0', padding: '14px 18px' }}>
