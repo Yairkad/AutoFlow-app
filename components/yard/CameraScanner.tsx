@@ -1,71 +1,51 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { BrowserMultiFormatReader } from '@zxing/browser'
 
 interface Props {
   onScan:  (code: string) => void
   onClose: () => void
 }
 
-// BarcodeDetector is not in TS lib yet
-declare const BarcodeDetector: {
-  new(opts: { formats: string[] }): { detect(src: HTMLVideoElement): Promise<{ rawValue: string }[]> }
-  getSupportedFormats?(): Promise<string[]>
-}
-
 export default function CameraScanner({ onScan, onClose }: Props) {
-  const videoRef  = useRef<HTMLVideoElement>(null)
-  const rafRef    = useRef<number>(0)
-  const hitRef    = useRef(false)          // prevent double-fire
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const hitRef   = useRef(false)
   const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!('BarcodeDetector' in window)) {
-      setErr('הדפדפן אינו תומך בסריקת מצלמה — נסה Chrome')
-      return
-    }
+    if (!videoRef.current) return
 
-    const detector = new BarcodeDetector({
-      formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'itf', 'qr_code'],
+    const reader  = new BrowserMultiFormatReader()
+    let   stopped = false
+    let   controls: { stop: () => void } | null = null
+
+    reader.decodeFromConstraints(
+      { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } },
+      videoRef.current,
+      (result, error, ctrl) => {
+        controls = ctrl
+        if (result && !hitRef.current && !stopped) {
+          hitRef.current = true
+          ctrl.stop()
+          onScan(result.getText())
+          return
+        }
+        if (error && error.name !== 'NotFoundException' && !hitRef.current && !stopped) {
+          setErr('לא ניתן לגשת למצלמה — בדוק הרשאות')
+        }
+      }
+    ).catch(() => {
+      if (!stopped) setErr('לא ניתן לגשת למצלמה — בדוק הרשאות')
     })
 
-    let stream: MediaStream | null = null
-
-    async function start() {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-        })
-        if (!videoRef.current) return
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-        scan()
-      } catch {
-        setErr('לא ניתן לגשת למצלמה — בדוק הרשאות')
-      }
-    }
-
-    async function scan() {
-      if (hitRef.current) return
-      const video = videoRef.current
-      if (video && video.readyState >= 2) {
-        try {
-          const results = await detector.detect(video)
-          if (results.length > 0 && !hitRef.current) {
-            hitRef.current = true
-            onScan(results[0].rawValue)
-            return
-          }
-        } catch { /* frame not ready */ }
-      }
-      rafRef.current = requestAnimationFrame(scan)
-    }
-
-    start()
-
     return () => {
-      cancelAnimationFrame(rafRef.current)
-      stream?.getTracks().forEach(t => t.stop())
+      stopped = true
+      controls?.stop()
+      const video = videoRef.current
+      if (video?.srcObject) {
+        ;(video.srcObject as MediaStream).getTracks().forEach(t => t.stop())
+      }
     }
   }, [onScan])
 
@@ -111,14 +91,12 @@ export default function CameraScanner({ onScan, onClose }: Props) {
 
             {/* Scan frame overlay */}
             <div className="absolute inset-0 flex items-center justify-center">
-              {/* Dark vignette around the target box */}
               <div className="absolute inset-0" style={{
                 background: 'rgba(0,0,0,0.45)',
                 WebkitMaskImage: 'radial-gradient(ellipse 300px 180px at 50% 50%, transparent 60%, black 100%)',
                 maskImage:       'radial-gradient(ellipse 300px 180px at 50% 50%, transparent 60%, black 100%)',
               }} />
 
-              {/* Corner brackets */}
               <div className="relative" style={{ width: 280, height: 160 }}>
                 {[
                   'top-0 left-0 border-t-4 border-l-4 rounded-tl-lg',
@@ -129,7 +107,6 @@ export default function CameraScanner({ onScan, onClose }: Props) {
                   <div key={i} className={`absolute w-8 h-8 border-green-400 ${cls}`} />
                 ))}
 
-                {/* Animated scan line */}
                 <div className="absolute left-2 right-2" style={{
                   height: 2,
                   background: 'linear-gradient(90deg, transparent, #4ade80, transparent)',
