@@ -878,7 +878,7 @@ export default function InspectionsClient() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {filtered.map(ins => (
-                <div key={ins.id} onClick={() => setSelectedInsId(selectedInsId === ins.id ? null : ins.id)} style={{
+                <div key={ins.id} onDoubleClick={() => openEdit(ins)} style={{
                   background: selectedInsId === ins.id ? '#eff6ff' : 'var(--bg-card)',
                   border: `1px solid ${selectedInsId === ins.id ? '#bfdbfe' : 'var(--border)'}`,
                   borderRadius: 'var(--radius)', padding: '12px 16px',
