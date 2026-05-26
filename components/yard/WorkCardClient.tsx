@@ -302,35 +302,34 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     const result = scanTireResult
     setScanTireResult(null)
     if (!result) return
-    positions.forEach(pos => {
-      const tempId = `scan-tire-${Date.now()}-${pos}`
-      setSession(s => ({
-        ...s,
-        yard_session_items: [...s.yard_session_items, {
-          id: tempId, session_id: s.id, tenant_id: '',
-          item_type: 'tire', ref_id: result.id, name: result.name, sku: result.sku,
-          quantity: 1, unit_price: result.price, original_price: result.price,
-          price_modified: false, tire_position: pos,
-          created_at: new Date().toISOString(),
-        }],
-      }))
-      fetch(`/api/yard/sessions/${session.id}/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          item_type: 'tire', ref_id: result.id, name: result.name, sku: result.sku,
-          quantity: 1, unit_price: result.price, original_price: result.price,
-          price_modified: false, tire_position: pos,
-        }),
-      }).then(r => r.json()).then(newItem => {
-        setSession(s => ({
-          ...s,
-          yard_session_items: s.yard_session_items.map(i => i.id === tempId ? newItem : i),
-        }))
-      }).catch(() => {
-        setSession(s => ({ ...s, yard_session_items: s.yard_session_items.filter(i => i.id !== tempId) }))
-        showError('שגיאה בהוספת צמיג')
+    const now = Date.now()
+    const tempIds = positions.map((pos, i) => `scan-tire-${now}-${i}-${pos}`)
+    setSession(s => ({
+      ...s,
+      yard_session_items: [...s.yard_session_items, ...positions.map((pos, i) => ({
+        id: tempIds[i], session_id: s.id, tenant_id: '',
+        item_type: 'tire' as const, ref_id: result.id, name: result.name, sku: result.sku,
+        quantity: 1, unit_price: result.price, original_price: result.price,
+        price_modified: false, tire_position: pos,
+        created_at: new Date().toISOString(),
+      }))],
+    }))
+    fetch(`/api/yard/sessions/${session.id}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(positions.map(pos => ({
+        item_type: 'tire', ref_id: result.id, name: result.name, sku: result.sku,
+        quantity: 1, unit_price: result.price, original_price: result.price,
+        price_modified: false, tire_position: pos,
+      }))),
+    }).then(r => r.json()).then((newItems: YardSessionItem[]) => {
+      setSession(s => {
+        const filtered = s.yard_session_items.filter(i => !tempIds.includes(i.id))
+        return { ...s, yard_session_items: [...filtered, ...newItems] }
       })
+    }).catch(() => {
+      setSession(s => ({ ...s, yard_session_items: s.yard_session_items.filter(i => !tempIds.includes(i.id)) }))
+      showError('שגיאה בהוספת צמיג')
     })
   }
 
@@ -340,37 +339,33 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     const item = pickerForItem
     setPickerForItem(null)
     if (!item) return
-    positions.forEach(pos => {
-      const tempId = `pending-pos-${Date.now()}-${pos}`
-      setSession(s => ({
-        ...s,
-        yard_session_items: [...s.yard_session_items, {
-          id: tempId, session_id: s.id, tenant_id: '',
-          item_type: 'tire', ref_id: item.ref_id, name: item.name, sku: item.sku,
-          quantity: 1, unit_price: item.unit_price, original_price: item.original_price,
-          price_modified: item.price_modified, tire_position: pos,
-          created_at: new Date().toISOString(),
-        }],
-      }))
-      fetch(`/api/yard/sessions/${session.id}/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          item_type: 'tire', ref_id: item.ref_id, name: item.name, sku: item.sku,
-          quantity: 1, unit_price: item.unit_price, original_price: item.original_price,
-          price_modified: item.price_modified, tire_position: pos,
-        }),
-      }).then(r => r.json()).then(newItem => {
-        setSession(s => ({
-          ...s,
-          yard_session_items: s.yard_session_items.map(i => i.id === tempId ? newItem : i),
-        }))
-      }).catch(() => {
-        setSession(s => ({
-          ...s,
-          yard_session_items: s.yard_session_items.filter(i => i.id !== tempId),
-        }))
+    const now = Date.now()
+    const tempIds = positions.map((pos, i) => `pending-pos-${now}-${i}-${pos}`)
+    setSession(s => ({
+      ...s,
+      yard_session_items: [...s.yard_session_items, ...positions.map((pos, i) => ({
+        id: tempIds[i], session_id: s.id, tenant_id: '',
+        item_type: 'tire' as const, ref_id: item.ref_id, name: item.name, sku: item.sku,
+        quantity: 1, unit_price: item.unit_price, original_price: item.original_price,
+        price_modified: item.price_modified, tire_position: pos,
+        created_at: new Date().toISOString(),
+      }))],
+    }))
+    fetch(`/api/yard/sessions/${session.id}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(positions.map(pos => ({
+        item_type: 'tire', ref_id: item.ref_id, name: item.name, sku: item.sku,
+        quantity: 1, unit_price: item.unit_price, original_price: item.original_price,
+        price_modified: item.price_modified, tire_position: pos,
+      }))),
+    }).then(r => r.json()).then((newItems: YardSessionItem[]) => {
+      setSession(s => {
+        const filtered = s.yard_session_items.filter(i => !tempIds.includes(i.id))
+        return { ...s, yard_session_items: [...filtered, ...newItems] }
       })
+    }).catch(() => {
+      setSession(s => ({ ...s, yard_session_items: s.yard_session_items.filter(i => !tempIds.includes(i.id)) }))
     })
   }
 
@@ -418,28 +413,35 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     setEditItem(null)
     if (newPrice === editItem.unit_price) return
     const snapshot = editItem
-    // Optimistic update
+
+    // For tires: apply the same price to all items of the same type in the cart
+    const toUpdate = snapshot.item_type === 'tire' && snapshot.ref_id
+      ? items.filter(i => i.item_type === 'tire' && i.ref_id === snapshot.ref_id)
+      : [snapshot]
+
     setSession(s => ({
       ...s,
       yard_session_items: s.yard_session_items.map(i =>
-        i.id === snapshot.id ? { ...i, unit_price: newPrice, price_modified: true } : i
+        toUpdate.some(u => u.id === i.id) ? { ...i, unit_price: newPrice, price_modified: true } : i
       ),
     }))
-    fetch(`/api/yard/sessions/${session.id}/items/${snapshot.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ unit_price: newPrice }),
-    }).then(r => {
-      if (!r.ok) throw new Error()
-    }).catch(() => {
-      // Revert price
-      setSession(s => ({
-        ...s,
-        yard_session_items: s.yard_session_items.map(i =>
-          i.id === snapshot.id ? { ...i, unit_price: snapshot.unit_price, price_modified: snapshot.price_modified } : i
-        ),
-      }))
-      showError('שגיאה בעדכון מחיר — נסה שוב')
+
+    toUpdate.forEach(target => {
+      fetch(`/api/yard/sessions/${session.id}/items/${target.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unit_price: newPrice }),
+      }).then(r => {
+        if (!r.ok) throw new Error()
+      }).catch(() => {
+        setSession(s => ({
+          ...s,
+          yard_session_items: s.yard_session_items.map(i =>
+            i.id === target.id ? { ...i, unit_price: target.unit_price, price_modified: target.price_modified } : i
+          ),
+        }))
+        showError('שגיאה בעדכון מחיר — נסה שוב')
+      })
     })
   }
 

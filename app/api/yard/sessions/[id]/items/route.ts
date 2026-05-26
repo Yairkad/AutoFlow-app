@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createServiceClient } from '@/lib/supabase/service'
 
-// POST /api/yard/sessions/[id]/items — add item to session
+// POST /api/yard/sessions/[id]/items — add one item or a batch of items
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const tenantId = getYardTenantId()
   if (!tenantId) return new Response('Unauthorized', { status: 401 })
@@ -10,10 +10,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id: sessionId } = await params
 
   const body = await req.json()
-  const { item_type, ref_id, name, sku, quantity, unit_price, original_price, price_modified, tire_position } = body
+  const isBatch = Array.isArray(body)
+  const rows = isBatch ? body : [body]
 
-  if (!item_type || !name || unit_price === undefined) {
-    return NextResponse.json({ error: 'item_type, name, unit_price required' }, { status: 400 })
+  for (const b of rows) {
+    if (!b.item_type || !b.name || b.unit_price === undefined) {
+      return NextResponse.json({ error: 'item_type, name, unit_price required' }, { status: 400 })
+    }
   }
 
   const supabase = createServiceClient()
@@ -29,24 +32,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!session) return NextResponse.json({ error: 'session not found' }, { status: 404 })
   if (session.status === 'archived') return NextResponse.json({ error: 'session is archived' }, { status: 400 })
 
+  const inserts = rows.map(b => ({
+    session_id:     sessionId,
+    tenant_id:      profile.tenant_id,
+    item_type:      b.item_type,
+    ref_id:         b.ref_id ?? null,
+    name:           b.name,
+    sku:            b.sku ?? null,
+    quantity:       b.quantity ?? 1,
+    unit_price:     b.unit_price,
+    original_price: b.original_price ?? b.unit_price,
+    price_modified: b.price_modified ?? false,
+    tire_position:  b.tire_position ?? null,
+  }))
+
   const { data, error } = await supabase
     .from('yard_session_items')
-    .insert({
-      session_id:     sessionId,
-      tenant_id:      profile.tenant_id,
-      item_type,
-      ref_id:         ref_id ?? null,
-      name,
-      sku:            sku ?? null,
-      quantity:       quantity ?? 1,
-      unit_price,
-      original_price: original_price ?? unit_price,
-      price_modified: price_modified ?? false,
-      tire_position:  tire_position ?? null,
-    })
+    .insert(inserts)
     .select()
-    .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data, { status: 201 })
+  return NextResponse.json(isBatch ? data : data[0], { status: 201 })
 }
