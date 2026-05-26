@@ -96,9 +96,10 @@ function printFormTemplate(f: FormDoc, copies: number) {
 <head>
   <meta charset="UTF-8">
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;900&display=swap');
     * { box-sizing:border-box; margin:0; padding:0; }
     @page { size:A4 portrait; margin:15mm; }
-    body { font-family:Arial,'Heebo',sans-serif; direction:rtl; background:#fff; }
+    body { font-family:'Heebo',Arial,sans-serif; direction:rtl; background:#fff; }
     .print-page { width:100%; height:calc(297mm - 30mm); display:flex; flex-direction:column; page-break-after:always; }
     .print-page:last-child { page-break-after:avoid; }
     .doc-header { margin-bottom:8mm; flex-shrink:0; }
