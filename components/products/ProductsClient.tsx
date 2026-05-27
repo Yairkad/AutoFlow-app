@@ -561,8 +561,8 @@ export default function ProductsClient() {
                     const isEditing = editingProductId === p.id
                     return (
                       <tr key={p.id}
-                        onClick={() => { if (!isEditing) setSelectedProductId(selectedProductId === p.id ? null : p.id) }}
-                        style={{ borderBottom: '1px solid var(--border)', cursor: isEditing ? 'default' : 'pointer', background: selectedProductId === p.id ? '#eff6ff' : isEditing ? '#fafeff' : undefined }}>
+                        onClick={() => { if (!isEditing && !viewOnly) setSelectedProductId(selectedProductId === p.id ? null : p.id) }}
+                        style={{ borderBottom: '1px solid var(--border)', cursor: isEditing || viewOnly ? 'default' : 'pointer', background: selectedProductId === p.id ? '#eff6ff' : isEditing ? '#fafeff' : undefined }}>
                         <td style={{ padding: '8px 8px', color: 'var(--text-muted)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {isEditing
                             ? <input style={cellInp} value={String(e.sku ?? '')} onChange={ev => setCell(p.id, 'sku', ev.target.value)} />

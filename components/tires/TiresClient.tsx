@@ -701,8 +701,8 @@ export default function TiresClient() {
                     const isEditing = editingTireId === t.id
                     return (
                       <tr key={t.id} className="tr-hover"
-                        onClick={() => { if (!isEditing) setSelectedTireId(selectedTireId === t.id ? null : t.id) }}
-                        style={{ borderBottom: '1px solid var(--border)', background: selectedTireId === t.id ? '#eff6ff' : isEditing ? '#fafeff' : undefined, cursor: isEditing ? 'default' : 'pointer' }}>
+                        onClick={() => { if (!isEditing && !viewOnly) setSelectedTireId(selectedTireId === t.id ? null : t.id) }}
+                        style={{ borderBottom: '1px solid var(--border)', background: selectedTireId === t.id ? '#eff6ff' : isEditing ? '#fafeff' : undefined, cursor: isEditing || viewOnly ? 'default' : 'pointer' }}>
 
                         {/* מותג */}
                         <td style={{ padding: '10px 12px', fontWeight: 700, minWidth: isEditing ? '110px' : undefined }}>
