@@ -578,19 +578,22 @@ export default function TiresClient() {
         <StatCard label='הכנסות החודש'       value={fmt(revenueMonth)}    color='blue' />
       </div>
 
-      {/* Tabs */}
+      {/* Tabs – movements tab only for admins */}
       <div className="scroll-x" style={{ marginBottom: '16px' }}>
       <div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
-        {([['tires', '🔘 מלאי'], ['movements', '📊 תנועות מלאי']] as const).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)} style={{
-            padding: '7px 16px', border: 'none', borderRadius: '8px',
-            cursor: 'pointer', fontWeight: tab === t ? 600 : 400, fontSize: '13px',
-            background: tab === t ? '#fff' : 'transparent',
-            color: tab === t ? 'var(--text)' : 'var(--text-muted)',
-            boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-            transition: 'all .15s', fontFamily: 'inherit', whiteSpace: 'nowrap',
-          }}>{label}</button>
-        ))}
+        {(['tires', ...(isAdmin ? ['movements'] : [])] as ('tires' | 'movements')[]).map(t => {
+          const label = t === 'tires' ? '🔘 מלאי' : '📊 תנועות מלאי'
+          return (
+            <button key={t} onClick={() => setTab(t)} style={{
+              padding: '7px 16px', border: 'none', borderRadius: '8px',
+              cursor: 'pointer', fontWeight: tab === t ? 600 : 400, fontSize: '13px',
+              background: tab === t ? '#fff' : 'transparent',
+              color: tab === t ? 'var(--text)' : 'var(--text-muted)',
+              boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+              transition: 'all .15s', fontFamily: 'inherit', whiteSpace: 'nowrap',
+            }}>{label}</button>
+          )
+        })}
       </div>
       </div>
 
@@ -824,7 +827,7 @@ export default function TiresClient() {
       )}
 
       {/* ══════════ TAB: MOVEMENTS ══════════ */}
-      {tab === 'movements' && (
+      {tab === 'movements' && isAdmin && (
         <>
           {/* Quick entry form */}
           <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '16px', marginBottom: '16px' }}>

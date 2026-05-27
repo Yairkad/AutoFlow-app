@@ -6,12 +6,25 @@ import DashboardCharts from '@/components/dashboard/DashboardCharts'
 import RemindersPanel from '@/components/dashboard/RemindersPanel'
 import AlertsPanel from '@/components/dashboard/AlertsPanel'
 import Footer from '@/components/layout/Footer'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 type DashTab = 'stats' | 'charts'
 
 export default function DashboardPage() {
   const [tab, setTab] = useState<DashTab>('stats')
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    const sb = createClient()
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) return
+      sb.from('profiles').select('role').eq('id', session.user.id).single()
+        .then(({ data }) => {
+          setIsAdmin(data?.role === 'admin' || data?.role === 'super_admin')
+        })
+    })
+  }, [])
 
   return (
     <AppShell noFooter>
@@ -59,22 +72,28 @@ export default function DashboardPage() {
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                   <DashboardStats />
                 </div>
-                <div className="dash-alerts-desktop">
-                  <AlertsPanel />
+                {isAdmin && (
+                  <div className="dash-alerts-desktop">
+                    <AlertsPanel />
+                  </div>
+                )}
+              </div>
+
+              {/* Right column: reminders panel – admins only */}
+              {isAdmin && (
+                <div className="dash-reminders-desktop" style={{ height: '100%' }}>
+                  <RemindersPanel />
                 </div>
-              </div>
-
-              {/* Right column: reminders panel */}
-              <div className="dash-reminders-desktop" style={{ height: '100%' }}>
-                <RemindersPanel />
-              </div>
+              )}
             </div>
 
-            {/* Mobile-only sticky bottom bar */}
-            <div className="dash-mobile-bottom">
-              <AlertsPanel compact />
-              <RemindersPanel compact />
-            </div>
+            {/* Mobile-only sticky bottom bar – admins only */}
+            {isAdmin && (
+              <div className="dash-mobile-bottom">
+                <AlertsPanel compact />
+                <RemindersPanel compact />
+              </div>
+            )}
           </>
 
         ) : (
