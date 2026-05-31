@@ -123,6 +123,10 @@ export default function TiresClient() {
   const [editingTireId,  setEditingTireId]  = useState<string | null>(null)
   const [editMap,        setEditMap]        = useState<Record<string, Partial<Tire>>>({})
 
+  // Quick SKU inline edit (click directly on SKU cell)
+  const [editingSkuId,    setEditingSkuId]    = useState<string | null>(null)
+  const [editingSkuValue, setEditingSkuValue] = useState('')
+
 
   // ── Load ──────────────────────────────────────────────────────────────────────
 
@@ -494,6 +498,30 @@ export default function TiresClient() {
     e.target.value = ''
   }
 
+  // ── Quick SKU edit ────────────────────────────────────────────────────────────
+
+  async function saveSkuEdit(id: string, value: string) {
+    const trimmed = value.trim() || null
+    const prev = tires.find(t => t.id === id)?.sku ?? null
+    if (trimmed === prev) { setEditingSkuId(null); return }
+    await sb.from('tires').update({ sku: trimmed }).eq('id', id)
+    setTires(prev => prev.map(t => t.id === id ? { ...t, sku: trimmed } : t))
+    setEditingSkuId(null)
+  }
+
+  async function saveSkuAndMove(id: string, value: string) {
+    const trimmed = value.trim() || null
+    const prev = tires.find(t => t.id === id)?.sku ?? null
+    if (trimmed !== prev) {
+      await sb.from('tires').update({ sku: trimmed }).eq('id', id)
+      setTires(prev => prev.map(t => t.id === id ? { ...t, sku: trimmed } : t))
+    }
+    const idx = filtered.findIndex(t => t.id === id)
+    const next = filtered[idx + 1]
+    if (next) { setEditingSkuId(next.id); setEditingSkuValue(next.sku || '') }
+    else setEditingSkuId(null)
+  }
+
   // ── Styles ────────────────────────────────────────────────────────────────────
 
   const selTire = selectedTireId ? tires.find(t => t.id === selectedTireId) ?? null : null
@@ -613,10 +641,8 @@ export default function TiresClient() {
               ) : (
                 <>
                   <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {selTire.brand ?? ''} {tireSize(selTire)}</span>
-                  {!viewOnly && <Button size="sm" variant="secondary" onClick={() => enterEditForRow(selTire.id)}>⚡ עריכה מהירה</Button>}
                   <Button size="sm" variant="secondary" onClick={() => openEdit(selTire)}>✏️ ערוך</Button>
                   <Button size="sm" variant="secondary" onClick={() => openDuplicate(selTire)}>📋 שכפל</Button>
-                  <Button size="sm" variant="danger" onClick={() => deleteTire(selTire)}>🗑 מחק</Button>
                 </>
               )}
               <button onClick={() => { setSelectedTireId(null); setEditingTireId(null); setEditMap({}) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
@@ -746,14 +772,41 @@ export default function TiresClient() {
                             : fmtPrice(t.sell_price)}
                         </td>
 
-                        {/* מקט */}
-                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: isEditing ? '100px' : undefined }}>
-                          {isEditing
-                            ? <input style={{ ...cellInp, fontFamily: 'monospace', fontSize: '11px', letterSpacing: '0.5px' }}
-                                value={String(e.sku ?? '')}
-                                onChange={ev => setCell(t.id, 'sku', ev.target.value || null)}
-                                placeholder="מקט" />
-                            : <span style={{ fontFamily: 'monospace' }}>{t.sku || '—'}</span>}
+                        {/* מקט — לחץ ישירות לעריכה / סריקה */}
+                        <td style={{ padding: '6px 12px', fontSize: '12px', minWidth: '110px' }}
+                          onClick={ev => ev.stopPropagation()}>
+                          {isEditing ? (
+                            <input style={{ ...cellInp, fontFamily: 'monospace', fontSize: '11px', letterSpacing: '0.5px' }}
+                              value={String(e.sku ?? '')}
+                              onChange={ev => setCell(t.id, 'sku', ev.target.value || null)}
+                              placeholder="מקט" />
+                          ) : editingSkuId === t.id ? (
+                            <input
+                              autoFocus
+                              value={editingSkuValue}
+                              onChange={ev => setEditingSkuValue(ev.target.value)}
+                              onBlur={() => saveSkuEdit(t.id, editingSkuValue)}
+                              onKeyDown={ev => {
+                                if (ev.key === 'Enter' || ev.key === 'Tab') { ev.preventDefault(); saveSkuAndMove(t.id, editingSkuValue) }
+                                if (ev.key === 'Escape') setEditingSkuId(null)
+                              }}
+                              style={{ ...cellInp, fontFamily: 'monospace', fontSize: '12px', letterSpacing: '0.5px', width: '100%' }}
+                              placeholder="סרוק ברקוד..."
+                            />
+                          ) : (
+                            <span
+                              onClick={() => { if (!viewOnly) { setEditingSkuId(t.id); setEditingSkuValue(t.sku || '') } }}
+                              style={{
+                                fontFamily: 'monospace', display: 'block', minHeight: '26px', padding: '3px 6px',
+                                borderRadius: '5px', cursor: viewOnly ? 'default' : 'text',
+                                border: !t.sku && !viewOnly ? '1px dashed #cbd5e1' : '1px solid transparent',
+                                background: !t.sku && !viewOnly ? '#f8fafc' : 'transparent',
+                                color: t.sku ? 'var(--text-muted)' : 'var(--text-muted)',
+                              }}
+                            >
+                              {t.sku || (!viewOnly ? <span style={{ fontSize: '11px', color: '#94a3b8' }}>הזן / סרוק</span> : '—')}
+                            </span>
+                          )}
                         </td>
 
                         {/* כמות — read-only */}
@@ -859,6 +912,12 @@ export default function TiresClient() {
       <Modal open={formOpen} onClose={() => setFormOpen(false)}
         title={editId ? '✏️ עריכת צמיג' : '➕ הוספת צמיג'} maxWidth={620}
         footer={<>
+          {editId && (
+            <Button variant="danger" style={{ marginLeft: 'auto' }} onClick={async () => {
+              const t = tires.find(x => x.id === editId)
+              if (t) { setFormOpen(false); await deleteTire(t) }
+            }}>🗑 מחק</Button>
+          )}
           <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
           <Button onClick={saveForm}>💾 {editId ? 'שמור שינויים' : 'שמור צמיג'}</Button>
         </>}>
