@@ -31,6 +31,7 @@ interface Tire {
   sku: string | null
   supplier_id: string | null
   condition: 'new' | 'used'
+  tire_type: 'regular' | 'reinforced' | 'commercial'
   created_at: string
 }
 
@@ -58,6 +59,7 @@ const emptyForm = {
   cost_price: '', margin: '', sell_price: '',
   qty: '0', location: '', notes: '', supplier_id: '',
   condition: 'new' as 'new' | 'used',
+  tire_type: 'regular' as 'regular' | 'reinforced' | 'commercial',
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -121,14 +123,6 @@ export default function TiresClient() {
   const [editingTireId,  setEditingTireId]  = useState<string | null>(null)
   const [editMap,        setEditMap]        = useState<Record<string, Partial<Tire>>>({})
 
-  // Movement form
-  const [mvTireId,     setMvTireId]     = useState('')
-  const [mvTireSearch, setMvTireSearch] = useState('')
-  const [mvDropOpen,   setMvDropOpen]   = useState(false)
-  const [mvType,       setMvType]       = useState<'sale' | 'order'>('sale')
-  const [mvQty,        setMvQty]        = useState('')
-  const [mvDate,       setMvDate]       = useState(todayISO())
-  const [mvSaving,     setMvSaving]     = useState(false)
 
   // ── Load ──────────────────────────────────────────────────────────────────────
 
@@ -281,6 +275,7 @@ export default function TiresClient() {
       qty: String(t.qty), location: t.location || '', notes: t.notes || '',
       supplier_id: t.supplier_id || '',
       condition: t.condition ?? 'new',
+      tire_type: t.tire_type ?? 'regular',
     })
     setFormErrs({ width: false, profile: false, rim: false })
     setFormOpen(true)
@@ -296,6 +291,7 @@ export default function TiresClient() {
       sell_price: t.sell_price != null ? String(t.sell_price) : '',
       qty: '0', location: t.location || '', notes: t.notes || '', supplier_id: t.supplier_id || '',
       condition: t.condition ?? 'new',
+      tire_type: t.tire_type ?? 'regular',
     })
     setFormErrs({ width: false, profile: false, rim: false })
     setFormOpen(true)
@@ -328,6 +324,7 @@ export default function TiresClient() {
       sku:         form.sku.trim() || null,
       supplier_id: form.supplier_id || null,
       condition:   form.condition,
+      tire_type:   form.tire_type,
     }
 
     if (editId) {
@@ -411,6 +408,7 @@ export default function TiresClient() {
       notes:      e.notes || null,
       sku:        e.sku || null,
       condition:  e.condition ?? 'new',
+      tire_type:  e.tire_type ?? 'regular',
     }).eq('id', id)
     showToast('הצמיג עודכן ✓', 'success')
     setEditingTireId(null)
@@ -430,65 +428,18 @@ export default function TiresClient() {
 
   // ── Movements ─────────────────────────────────────────────────────────────────
 
-  async function saveMovement() {
-    if (!mvTireId) return showToast('יש לבחור צמיג', 'error')
-    const qty = parseInt(mvQty)
-    if (!qty || qty <= 0) return showToast('יש להזין כמות', 'error')
-
-    setMvSaving(true)
-    const tire = tires.find(t => t.id === mvTireId)
-    if (!tire) { setMvSaving(false); return }
-
-    const newQty = mvType === 'order'
-      ? tire.qty + qty
-      : Math.max(0, tire.qty - qty)
-
-    const [{ error: mvErr }, { error: qtyErr }] = await Promise.all([
-      sb.from('tire_sales').insert({
-        tenant_id: tenantId.current,
-        tire_id: mvTireId,
-        qty,
-        sold_date: mvDate,
-        movement_type: mvType,
-      }),
-      sb.from('tires').update({ qty: newQty }).eq('id', mvTireId),
-    ])
-
-    if (mvErr || qtyErr) { showToast('שגיאה בשמירה', 'error') }
-    else {
-      showToast(mvType === 'sale' ? `נרשמה מכירה של ${qty} יח׳ ✓` : `נרשמה הזמנה של ${qty} יח׳ ✓`, 'success')
-      setMvQty('')
-      setMvTireId('')
-      setMvTireSearch('')
-    }
-    setMvSaving(false)
-    await load()
-  }
-
-  async function deleteMovement(mv: TireMovement) {
-    const tire = tires.find(t => t.id === mv.tire_id)
-    if (!tire) return
-    const revertedQty = mv.movement_type === 'order'
-      ? Math.max(0, tire.qty - mv.qty)
-      : tire.qty + mv.qty
-    await Promise.all([
-      sb.from('tire_sales').delete().eq('id', mv.id),
-      sb.from('tires').update({ qty: revertedQty }).eq('id', mv.tire_id),
-    ])
-    showToast('נמחק ✓', 'success')
-    await load()
-  }
 
   // ── Excel ─────────────────────────────────────────────────────────────────────
 
   function exportExcel() {
     if (tires.length === 0) return showToast('אין נתונים לייצוא', 'error')
-    const headers = ['מותג','מצב','רוחב','פרופיל','קוטר','מידה','אינדקס עומס','אינדקס מהירות','מחיר קנייה','% רווח','מחיר מכירה','כמות','מיקום','הערות']
+    const headers = ['מותג','מצב','רוחב','פרופיל','קוטר','מידה','אינדקס עומס','אינדקס מהירות','מחיר קנייה','מחיר מכירה','מקט','כמות','מיקום','הערות']
     const rows = tires.map(t => [
       t.brand || '', t.condition === 'used' ? 'משומש' : 'חדש',
       t.width, t.profile, t.rim, tireSize(t),
       t.load_idx || '', t.speed_idx || '',
-      t.cost_price ?? '', t.margin || '', t.sell_price ?? '',
+      t.cost_price ?? '', t.sell_price ?? '',
+      t.sku || '',
       t.qty, t.location || '', t.notes || '',
     ])
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
@@ -508,26 +459,28 @@ export default function TiresClient() {
       const rows = XLSX.utils.sheet_to_json<string[]>(ws, { header: 1 }) as string[][]
       if (rows.length < 2) return showToast('הקובץ ריק', 'error')
 
+      // Column order (matches export): מותג(0) מצב(1) רוחב(2) פרופיל(3) קוטר(4) מידה(5) עומס(6) מהירות(7) מחיר קנייה(8) מחיר מכירה(9) מקט(10) כמות(11) מיקום(12) הערות(13)
       const inserts = rows.slice(1)
-        .filter(r => r[1] && r[2] && r[3])
+        .filter(r => r[2] && r[3] && r[4])
         .map(r => {
-          const cost   = parseFloat(String(r[7])) || 0
-          const margin = parseFloat(String(r[8])) || 0
-          const sell   = parseFloat(String(r[9])) || (cost > 0 && margin > 0 ? cost * (1 + margin / 100) : 0)
+          const cost = parseFloat(String(r[8])) || 0
+          const sell = parseFloat(String(r[9])) || 0
           return {
             tenant_id:  tenantId.current,
             brand:      r[0] ? String(r[0]) : null,
-            width:      parseInt(String(r[1])) || 0,
-            profile:    parseInt(String(r[2])) || 0,
-            rim:        parseInt(String(r[3])) || 0,
-            load_idx:   r[5] ? String(r[5]) : null,
-            speed_idx:  r[6] ? String(r[6]) : null,
+            condition:  String(r[1] || '') === 'משומש' ? 'used' : 'new',
+            width:      parseInt(String(r[2])) || 0,
+            profile:    parseInt(String(r[3])) || 0,
+            rim:        parseInt(String(r[4])) || 0,
+            load_idx:   r[6] ? String(r[6]) : null,
+            speed_idx:  r[7] ? String(r[7]) : null,
             cost_price: cost || null,
-            margin,
+            margin:     0,
             sell_price: sell || null,
-            qty:        parseInt(String(r[10])) || 0,
-            location:   r[11] ? String(r[11]) : null,
-            notes:      r[12] ? String(r[12]) : null,
+            sku:        r[10] ? String(r[10]) : null,
+            qty:        parseInt(String(r[11])) || 0,
+            location:   r[12] ? String(r[12]) : null,
+            notes:      r[13] ? String(r[13]) : null,
           }
         })
 
@@ -676,7 +629,7 @@ export default function TiresClient() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                    {['מותג', 'מידה', 'מדדים', ...(isAdmin ? ['מחיר קנייה', '% רווח'] : []), 'מחיר מכירה', 'כמות', 'מיקום', 'הערות'].map((h, i) => (
+                    {['מותג', 'מידה', 'מדדים', ...(isAdmin ? ['מחיר קנייה'] : []), 'מחיר מכירה', 'מקט', 'כמות', 'מיקום', 'הערות'].map((h, i) => (
                       <th key={i} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>{h}</th>
                     ))}
                   </tr>
@@ -699,13 +652,14 @@ export default function TiresClient() {
                     const indices = [t.load_idx, t.speed_idx].filter(Boolean).join(' / ') || '—'
 
                     const isEditing = editingTireId === t.id
+                    const tireTypeVal = (e as any).tire_type ?? t.tire_type ?? 'regular'
                     return (
                       <tr key={t.id} className="tr-hover"
                         onClick={() => { if (!isEditing && !viewOnly) setSelectedTireId(selectedTireId === t.id ? null : t.id) }}
                         style={{ borderBottom: '1px solid var(--border)', background: selectedTireId === t.id ? '#eff6ff' : isEditing ? '#fafeff' : undefined, cursor: isEditing || viewOnly ? 'default' : 'pointer' }}>
 
                         {/* מותג */}
-                        <td style={{ padding: '10px 12px', fontWeight: 700, minWidth: isEditing ? '110px' : undefined }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 700, minWidth: isEditing ? '130px' : undefined }}>
                           {isEditing ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                               <input style={cellInp} value={String(e.brand ?? '')} onChange={ev => setCell(t.id, 'brand', ev.target.value)} list="brand-list-inline" />
@@ -718,21 +672,29 @@ export default function TiresClient() {
                                 }}>
                                 {(e.condition ?? t.condition) === 'used' ? '♻ משומש' : '✓ חדש'}
                               </button>
-                              <input style={{ ...cellInp, fontFamily: 'monospace', fontSize: '11px' }}
-                                value={String(e.sku ?? '')}
-                                onChange={ev => setCell(t.id, 'sku', ev.target.value || null)}
-                                placeholder="מקט" />
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                {([['commercial', 'מסחרי', '#fff7ed', '#c2410c'], ['reinforced', 'מחוזק', '#eff6ff', '#1d4ed8']] as const).map(([val, label, bg, color]) => (
+                                  <button key={val}
+                                    onClick={() => setCell(t.id, 'tire_type' as keyof Tire, tireTypeVal === val ? 'regular' : val)}
+                                    style={{
+                                      flex: 1, fontSize: '11px', fontWeight: 700, border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px 4px',
+                                      background: tireTypeVal === val ? bg : '#f1f5f9',
+                                      color: tireTypeVal === val ? color : 'var(--text-muted)',
+                                    }}>{label}</button>
+                                ))}
+                              </div>
                             </div>
                           ) : (
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                {t.brand || <span style={{ color: 'var(--text-muted)' }}>—</span>}
-                                {t.condition === 'used' && (
-                                  <span style={{ fontSize: '10px', fontWeight: 700, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '4px', padding: '1px 5px' }}>♻ מ</span>
-                                )}
-                              </div>
-                              {t.sku && (
-                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '2px' }}>{t.sku}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                              {t.brand || <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                              {t.condition === 'used' && (
+                                <span style={{ fontSize: '10px', fontWeight: 700, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '4px', padding: '1px 5px' }}>♻</span>
+                              )}
+                              {t.tire_type === 'commercial' && (
+                                <span style={{ fontSize: '10px', fontWeight: 700, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', borderRadius: '4px', padding: '1px 5px' }}>מסחרי</span>
+                              )}
+                              {t.tire_type === 'reinforced' && (
+                                <span style={{ fontSize: '10px', fontWeight: 700, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '1px 5px' }}>מחוזק</span>
                               )}
                             </div>
                           )}
@@ -777,18 +739,21 @@ export default function TiresClient() {
                             ) : '—'}
                         </td>}
 
-                        {/* % רווח */}
-                        {isAdmin && <td style={{ padding: '10px 12px', color: 'var(--text-muted)', minWidth: isEditing ? '70px' : undefined }}>
-                          {isEditing
-                            ? <input style={cellInp} type="number" value={String(e.margin ?? '')} onChange={ev => setCell(t.id, 'margin', parseFloat(ev.target.value) || 0)} />
-                            : marginPct}
-                        </td>}
-
                         {/* מחיר מכירה */}
                         <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--primary)', minWidth: isEditing ? '90px' : undefined }}>
                           {isEditing
                             ? <input style={cellInp} type="number" value={String(e.sell_price ?? '')} onChange={ev => setCell(t.id, 'sell_price', parseFloat(ev.target.value) || 0)} />
                             : fmtPrice(t.sell_price)}
+                        </td>
+
+                        {/* מקט */}
+                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: isEditing ? '100px' : undefined }}>
+                          {isEditing
+                            ? <input style={{ ...cellInp, fontFamily: 'monospace', fontSize: '11px', letterSpacing: '0.5px' }}
+                                value={String(e.sku ?? '')}
+                                onChange={ev => setCell(t.id, 'sku', ev.target.value || null)}
+                                placeholder="מקט" />
+                            : <span style={{ fontFamily: 'monospace' }}>{t.sku || '—'}</span>}
                         </td>
 
                         {/* כמות — read-only */}
@@ -829,125 +794,10 @@ export default function TiresClient() {
       {/* ══════════ TAB: MOVEMENTS ══════════ */}
       {tab === 'movements' && isAdmin && (
         <>
-          {/* Quick entry form */}
-          <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '16px', marginBottom: '16px' }}>
-            <h3 style={{ margin: '0 0 14px', fontSize: '15px', fontWeight: 700 }}>רישום תנועה</h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'end' }}>
-
-              {/* Type */}
-              <div style={{ minWidth: '160px' }}>
-                <div className="form-label">סוג תנועה</div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {([['sale', '💰 מכירה'], ['order', '📦 הזמנה']] as const).map(([tp, label]) => (
-                    <button key={tp} onClick={() => setMvType(tp)} style={{
-                      flex: 1, padding: '8px', border: `2px solid ${mvType === tp ? (tp === 'sale' ? 'var(--primary)' : 'var(--accent)') : 'var(--border)'}`,
-                      borderRadius: '8px', cursor: 'pointer', fontWeight: mvType === tp ? 700 : 400, fontSize: '13px',
-                      background: mvType === tp ? (tp === 'sale' ? '#f0fdf4' : '#eff6ff') : 'var(--bg)',
-                      color: mvType === tp ? (tp === 'sale' ? 'var(--primary)' : 'var(--accent)') : 'var(--text-muted)',
-                    }}>{label}</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Tire search */}
-              <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '200px' }}>
-                <label className="form-label">צמיג {mvTireId && <span style={{ color: 'var(--primary)', fontWeight: 700 }}>✓</span>}</label>
-                <input
-                  className="form-input" style={{ borderColor: mvTireId ? 'var(--primary)' : undefined }}
-                  placeholder="חפש לפי מידה או מותג..."
-                  value={mvTireSearch}
-                  autoComplete="off"
-                  onFocus={() => setMvDropOpen(true)}
-                  onBlur={() => setTimeout(() => setMvDropOpen(false), 150)}
-                  onChange={e => {
-                    const val = e.target.value
-                    setMvTireSearch(val)
-                    setMvDropOpen(true)
-                    setMvQty('')
-                    const exact = tires.find(t =>
-                      tireSize(t) === val ||
-                      (t.brand != null && (t.brand + ' ' + tireSize(t)) === val)
-                    )
-                    setMvTireId(exact?.id ?? '')
-                  }}
-                />
-                {/* Dropdown – shows on focus (all) or when searching (filtered) */}
-                {mvDropOpen && (() => {
-                  const q = mvTireSearch.trim().toLowerCase()
-                  const matches = q
-                    ? tires.filter(t =>
-                        tireSize(t).includes(q) ||
-                        (t.brand ?? '').toLowerCase().includes(q)
-                      ).slice(0, 8)
-                    : [...tires].sort((a, b) => (b.qty - a.qty)).slice(0, 10)
-                  if (matches.length === 0) return null
-                  return (
-                    <div style={{
-                      position: 'absolute', top: '100%', right: 0, left: 0, zIndex: 50,
-                      background: 'var(--bg-card)', border: '1px solid var(--border)',
-                      borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.12)', marginTop: '2px',
-                    }}>
-                      {matches.map(t => (
-                        <div key={t.id}
-                          onMouseDown={() => {
-                            const label = (t.brand ? t.brand + ' ' : '') + tireSize(t)
-                            setMvTireSearch(label)
-                            setMvTireId(t.id)
-                            setMvDropOpen(false)
-                            setMvQty('')
-                          }}
-                          style={{
-                            padding: '9px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border)',
-                            fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          }}
-                          onMouseEnter={ev => (ev.currentTarget.style.background = 'var(--bg)')}
-                          onMouseLeave={ev => (ev.currentTarget.style.background = '')}
-                        >
-                          <span>
-                            {t.brand && <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '6px' }}>{t.brand}</span>}
-                            <strong style={{ color: 'var(--accent)' }}>{tireSize(t)}</strong>
-                          </span>
-                          <span style={{ fontSize: '11px', color: t.qty === 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
-                            מלאי: {t.qty}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
-                {mvTireId && !mvDropOpen && (() => {
-                  const tire = tires.find(x => x.id === mvTireId)
-                  return tire ? (
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
-                      מלאי נוכחי: <strong style={{ color: tire.qty === 0 ? 'var(--danger)' : 'var(--primary)' }}>{tire.qty} יח׳</strong>
-                    </div>
-                  ) : null
-                })()}
-              </div>
-
-              {/* Qty */}
-              <div style={{ width: '90px' }}>
-                <label className="form-label">כמות</label>
-                <input className="form-input" type="number" min="1" step="1" placeholder="1"
-                  value={mvQty} onChange={e => setMvQty(e.target.value)} />
-              </div>
-
-              {/* Date */}
-              <div style={{ width: '150px' }}>
-                <label className="form-label">תאריך</label>
-                <input className="form-input" type="date" value={mvDate} onChange={e => setMvDate(e.target.value)} />
-              </div>
-
-              {/* Save */}
-              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <Button onClick={saveMovement} loading={mvSaving} style={{ width: '100%' }}>
-                  💾 רשום
-                </Button>
-              </div>
-            </div>
+          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#1d4ed8' }}>
+            📋 תנועות מלאי מוצגות בקריאה בלבד. קליטת סחורה — דרך כפתור <strong>קבלת סחורה</strong>. מכירות — נקלטות אוטומטית מהמסוף ברחבה.
           </div>
 
-          {/* Movements table */}
           <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
             <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '14px' }}>
               היסטוריית תנועות ({movements.length})
@@ -956,14 +806,14 @@ export default function TiresClient() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                    {['תאריך', 'צמיג', 'סוג', 'כמות', 'השפעה על מלאי', ''].map((h, i) => (
+                    {['תאריך', 'צמיג', 'מקור', 'כמות', 'השפעה על מלאי'].map((h, i) => (
                       <th key={i} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '12px' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {movements.length === 0 ? (
-                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>אין תנועות עדיין</td></tr>
+                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>אין תנועות עדיין</td></tr>
                   ) : movements.map(mv => {
                     const tire = tires.find(t => t.id === mv.tire_id)
                     const isSale = mv.movement_type === 'sale'
@@ -986,7 +836,7 @@ export default function TiresClient() {
                             color: isSale ? 'var(--primary)' : 'var(--accent)',
                             borderRadius: '6px', padding: '3px 10px', fontWeight: 600, fontSize: '12px',
                           }}>
-                            {isSale ? '💰 מכירה' : '📦 הזמנה'}
+                            {isSale ? '🏪 מכירה מהמסוף' : '📦 קליטת סחורה'}
                           </span>
                         </td>
                         <td style={{ padding: '10px 12px', fontWeight: 700 }}>{mv.qty}</td>
@@ -994,12 +844,6 @@ export default function TiresClient() {
                           <span style={{ color: isSale ? 'var(--danger)' : 'var(--primary)', fontWeight: 600 }}>
                             {isSale ? `−${mv.qty}` : `+${mv.qty}`}
                           </span>
-                        </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <button title="מחק תנועה" onClick={() => deleteMovement(mv)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '15px', color: 'var(--danger)' }}>
-                            🗑️
-                          </button>
                         </td>
                       </tr>
                     )
@@ -1178,6 +1022,24 @@ export default function TiresClient() {
                   }}>
                     {c === 'new' ? '✓ חדש' : '♻ משומש'}
                   </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="form-label">סוג צמיג</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {([
+                  ['regular',    'רגיל',   'var(--border)',  'var(--bg)',    'var(--text-muted)'],
+                  ['reinforced', 'מחוזק',  '#bfdbfe',       '#eff6ff',      '#1d4ed8'],
+                  ['commercial', 'מסחרי',  '#fed7aa',       '#fff7ed',      '#c2410c'],
+                ] as const).map(([val, label, borderColor, bg, color]) => (
+                  <button key={val} type="button" onClick={() => setF('tire_type', val)} style={{
+                    flex: 1, padding: '8px', fontFamily: 'inherit', fontSize: '13px', cursor: 'pointer', borderRadius: '8px',
+                    border: `2px solid ${form.tire_type === val ? borderColor : 'var(--border)'}`,
+                    background: form.tire_type === val ? bg : 'var(--bg)',
+                    color: form.tire_type === val ? color : 'var(--text-muted)',
+                    fontWeight: form.tire_type === val ? 700 : 400,
+                  }}>{label}</button>
                 ))}
               </div>
             </div>

@@ -115,7 +115,7 @@ function printFormTemplate(f: FormDoc, copies: number) {
 </head>
 <body>
   ${Array(copies).fill(pageHTML).join('\n')}
-  <script>window.onload=function(){window.print()}<\/script>
+  <script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>
 </body></html>`
 
   const w = window.open('', '_blank')
@@ -271,7 +271,7 @@ function printChecklist(copies: number, _car: string, _owner: string, _phone: st
 </head>
 <body>
   ${Array(copies).fill(pageHTML).join('\n')}
-  <script>window.onload=function(){window.print()}<\/script>
+  <script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>
 </body></html>`
 
   const w = window.open('', '_blank')
@@ -321,7 +321,7 @@ function printBlankHeader(copies: number, bizNameStr: string, logoBase64: string
     .pp-logo-svc { font-size:9px; text-align:center; font-weight:bold; margin-top:4px; letter-spacing:0.5px; color:#333; }
   </style></head><body>
   ${Array(copies).fill(pageHTML).join('\n')}
-  <script>window.onload=function(){window.print()}<\/script>
+  <script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>
   </body></html>`
   const w = window.open('', '_blank')
   if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
@@ -450,7 +450,7 @@ function printWarranty(copies: number, bizNameStr: string, logoBase64: string, s
 </head>
 <body>
   ${Array(copies).fill(pageHTML).join('\n')}
-  <script>window.onload=function(){window.print()}<\/script>
+  <script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>
 </body></html>`
 
   const w = window.open('', '_blank')

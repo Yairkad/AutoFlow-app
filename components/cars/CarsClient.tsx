@@ -53,6 +53,7 @@ interface Car {
   buyer_payment: string | null
   interested_buyers: InterestedBuyer[]
   reserved_for: string | null
+  current_location: string | null
   notes: string | null
   created_at: string
 }
@@ -137,6 +138,7 @@ const emptyCarForm = {
   contact: '', owner_name: '',
   fuel_type: '', seats: '',
   reserved_for: '',
+  current_location: '',
   notes: '',
 }
 
@@ -199,6 +201,7 @@ export default function CarsClient() {
 
   const [cars,     setCars]     = useState<Car[]>([])
   const [requests,      setRequests]      = useState<CarRequest[]>([])
+  const [tenantName,    setTenantName]    = useState('')
   const [loading,       setLoading]       = useState(true)
   const [updatingReqId, setUpdatingReqId] = useState<string | null>(null)
 
@@ -273,11 +276,13 @@ export default function CarsClient() {
         .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => {})
     }
 
-    const [{ data: c }, { data: r }, { data: sr }] = await Promise.all([
+    const [{ data: c }, { data: r }, { data: sr }, { data: tn }] = await Promise.all([
       sb.from('cars').select('*').eq('tenant_id', prof.tenant_id).order('created_at', { ascending: false }),
       sb.from('car_requests').select('*').eq('tenant_id', prof.tenant_id).order('created_at', { ascending: false }),
       sb.from('car_sale_requests').select('*').eq('tenant_id', prof.tenant_id).order('created_at', { ascending: false }),
+      sb.from('tenants').select('name').eq('id', prof.tenant_id).single(),
     ])
+    if (tn?.name) setTenantName(tn.name)
 
     setCars((c || []).map(x => ({
       ...x,
@@ -296,6 +301,74 @@ export default function CarsClient() {
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [])
+
+  // ── Print buy request ─────────────────────────────────────────────
+
+  function printBuyRequest(req: CarRequest) {
+    const biz = tenantName || 'בית העסק'
+    const date = new Date().toLocaleDateString('he-IL')
+    const row = (label: string, value: string | null | undefined) =>
+      value ? `<tr><td class="lbl">${label}</td><td class="val">${value}</td></tr>` : ''
+
+    const html = `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  @page{size:A4;margin:18mm}
+  body{font-family:'Heebo',Arial,sans-serif;direction:rtl;color:#1e293b;background:#fff}
+  .header{text-align:center;border-bottom:3px solid #1a9e5c;padding-bottom:12pt;margin-bottom:16pt}
+  .biz-name{font-size:22pt;font-weight:900;color:#1a9e5c}
+  .form-title{font-size:14pt;font-weight:700;color:#334155;margin-top:6pt}
+  .date{font-size:9pt;color:#64748b;margin-top:4pt}
+  .section-title{font-size:11pt;font-weight:700;color:#1a9e5c;border-right:3px solid #1a9e5c;padding-right:8pt;margin:14pt 0 8pt}
+  table{width:100%;border-collapse:collapse;font-size:10pt}
+  .lbl{font-weight:700;width:38%;padding:6pt 8pt;background:#f8fafc;border:1px solid #e2e8f0;color:#475569}
+  .val{padding:6pt 8pt;border:1px solid #e2e8f0;color:#1e293b}
+  tr:nth-child(even) .val{background:#fafafa}
+  .notes-box{margin-top:14pt;border:1px solid #e2e8f0;border-radius:6pt;padding:10pt;min-height:50pt;font-size:10pt;color:#1e293b}
+  .footer{margin-top:24pt;border-top:1px solid #e2e8f0;padding-top:10pt;font-size:9pt;color:#94a3b8;text-align:center}
+  @media print{body{padding:0}.footer{position:fixed;bottom:0;width:100%}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="biz-name">${biz}</div>
+  <div class="form-title">טופס בקשת איתור רכב</div>
+  <div class="date">תאריך: ${date}</div>
+</div>
+
+<div class="section-title">פרטי הלקוח</div>
+<table>
+  ${row('שם מלא', req.name)}
+  ${row('טלפון', req.phone)}
+</table>
+
+<div class="section-title">דרישות הרכב</div>
+<table>
+  ${row('יצרן / דגם מועדף', req.make_pref)}
+  ${row('תקציב מקסימלי', req.budget ? '₪' + req.budget.toLocaleString('he-IL') : null)}
+  ${row('שנת ייצור מינימלית', req.min_year ? String(req.min_year) : null)}
+  ${row('ק"מ מקסימלי', req.max_km ? req.max_km.toLocaleString('he-IL') + ' ק"מ' : null)}
+  ${row('מספר מושבים', req.seats)}
+  ${row('סוג רכב', req.car_type)}
+  ${row('סוג דלק', req.fuel)}
+</table>
+
+${req.notes ? `<div class="section-title">הערות ודגשים</div><div class="notes-box">${req.notes}</div>` : ''}
+
+<div class="footer">${biz} · נוצר ב-${date} · אוטו ליין</div>
+<script>window.onload=function(){window.print()}<\/script>
+</body>
+</html>`
+
+    const w = window.open('', '_blank')
+    if (!w) { toast('אפשר חלונות קופצים בדפדפן', 'error'); return }
+    w.document.write(html)
+    w.document.close()
+  }
 
   // ── Car CRUD ──────────────────────────────────────────────────────
 
@@ -321,8 +394,9 @@ export default function CarsClient() {
         owner_name: car.owner_name || '',
         fuel_type:  car.fuel_type  || '',
         seats:      car.seats      ? String(car.seats)     : '',
-        notes:        car.notes      || '',
-        reserved_for: (car as any).reserved_for || '',
+        notes:           car.notes            || '',
+        reserved_for:    car.reserved_for     || '',
+        current_location: car.current_location || '',
       })
       setPhotoUrls(car.photos.length ? [...car.photos] : [''])
       if (driveConnected) loadCarDriveFiles(car.plate || '')
@@ -469,9 +543,10 @@ export default function CarsClient() {
       fuel_type:  carForm.fuel_type  || null,
       seats:      carForm.seats      ? Number(carForm.seats) : null,
       photos,
-      notes:        carForm.notes || null,
-      reserved_for: carForm.status === 'reserved' ? ((carForm as any).reserved_for || null) : null,
-      updated_at:   new Date().toISOString(),
+      notes:            carForm.notes            || null,
+      reserved_for:     carForm.status === 'reserved' ? (carForm.reserved_for || null) : null,
+      current_location: carForm.current_location || null,
+      updated_at:       new Date().toISOString(),
     }
 
     if (editCarId) {
@@ -759,7 +834,7 @@ export default function CarsClient() {
       <div
         onClick={() => setSelectedCarId(isSelected ? null : car.id)}
         style={{
-          background: '#fff', borderRadius: 12,
+          background: '#fff', borderRadius: 12, height: '100%',
           boxShadow: isSelected ? '0 0 0 2px var(--primary)' : '0 1px 3px rgba(0,0,0,.08)',
           border: `2px solid ${isSelected ? 'var(--primary)' : st?.color || 'var(--border)'}`,
           display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'box-shadow .15s',
@@ -815,6 +890,11 @@ export default function CarsClient() {
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 2 }}>
               {test  && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 8, background: test.bg,  color: test.color  }}>🔧 טסט: {test.label}</span>}
               {insur && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 8, background: insur.bg, color: insur.color }}>🛡️ ביטוח: {insur.label}</span>}
+            </div>
+          )}
+          {car.current_location && (
+            <div style={{ fontSize: 11, fontWeight: 600, background: '#f1f5f9', border: '1px solid var(--border)', borderRadius: 7, padding: '3px 8px', color: 'var(--text-muted)' }}>
+              📍 {car.current_location}
             </div>
           )}
 
@@ -1169,7 +1249,14 @@ export default function CarsClient() {
                             {req.notes && <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>{req.notes}</div>}
                             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{req.created_at?.slice(0,10)}</div>
                           </div>
-                          {ReqActions({ curStatus: req.status, onEdit: () => openReqForm(req), onDelete: () => deleteReq(req.id), onStatus: (s) => changeReqStatus(req.id, s) })}
+                          <div style={{ display: 'flex', gap: 6, padding: '0 12px 12px' }}>
+            <button
+              onClick={e => { e.stopPropagation(); printBuyRequest(req) }}
+              style={{ flex: 1, padding: '7px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: '1.5px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', cursor: 'pointer', fontFamily: 'inherit' }}>
+              🖨️ הדפס טופס
+            </button>
+          </div>
+          {ReqActions({ curStatus: req.status, onEdit: () => openReqForm(req), onDelete: () => deleteReq(req.id), onStatus: (s) => changeReqStatus(req.id, s) })}
                         </div>
                       )
                     })}
@@ -1305,6 +1392,9 @@ export default function CarsClient() {
               <Field label="איש קשר / מוכר"><input value={carForm.contact} onChange={e => setCarForm(f=>({...f,contact:e.target.value}))} style={inp()} /></Field>
               <Field label="שם בעלים"><input value={carForm.owner_name} onChange={e => setCarForm(f=>({...f,owner_name:e.target.value}))} style={inp()} /></Field>
             </Grid>
+            <Field label="📍 מיקום נוכחי / מי נוהג ברכב">
+              <input value={carForm.current_location} onChange={e => setCarForm(f=>({...f,current_location:e.target.value}))} style={inp()} placeholder="לדוגמה: חניון ראשי / יוסי 050-0000000" />
+            </Field>
             <Field label="הערות">
               <textarea value={carForm.notes} onChange={e => setCarForm(f=>({...f,notes:e.target.value}))} rows={2} style={{...inp(),resize:'vertical'}} />
             </Field>

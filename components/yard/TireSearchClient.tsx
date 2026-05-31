@@ -30,6 +30,7 @@ export default function TireSearchClient({ session }: Props) {
   const [selected,      setSelected]      = useState<TireResult | null>(null)
   const [price,         setPrice]         = useState<number | null>(null)
   const [saving,        setSaving]        = useState(false)
+  const selectedRef = useRef<TireResult | null>(null)
   const [detectedSize,  setDetectedSize]  = useState<string | null>(null)
   const [showPicker,    setShowPicker]    = useState(false)
   const [showKeyboard,  setShowKeyboard]  = useState(true)
@@ -96,25 +97,35 @@ export default function TireSearchClient({ session }: Props) {
     setShowKeyboard(false)
   }
 
+  function selectAndAdd(r: TireResult) {
+    selectedRef.current = r
+    setSelected(r)
+    setPrice(r.price)
+    setShowDropdown(false)
+    setShowKeyboard(false)
+    setShowPicker(true)
+  }
+
   function addToCart() {
     if (!selected || saving) return
+    selectedRef.current = selected
     setShowPicker(true)
   }
 
   function submitWithPosition(positions: TirePosition[]) {
-    if (!selected) return
+    const item = selectedRef.current ?? selected
+    if (!item) return
     setShowPicker(false)
     setSaving(true)
-    const finalPrice = price ?? selected.price
+    const finalPrice = price ?? item.price
 
     if (positions.length === 0) {
-      // No position (skip) — one item with the selected qty
       try {
         sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify({
           id: `pending-${Date.now()}`, session_id: session.id, tenant_id: '',
-          item_type: 'tire', ref_id: selected.id, name: selected.name, sku: selected.sku,
-          quantity: 1, unit_price: finalPrice, original_price: selected.price,
-          price_modified: finalPrice !== selected.price, tire_position: null,
+          item_type: 'tire', ref_id: item.id, name: item.name, sku: item.sku,
+          quantity: 1, unit_price: finalPrice, original_price: item.price,
+          price_modified: finalPrice !== item.price, tire_position: null,
           created_at: new Date().toISOString(),
         }))
       } catch {}
@@ -123,19 +134,18 @@ export default function TireSearchClient({ session }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          item_type: 'tire', ref_id: selected.id, name: selected.name, sku: selected.sku,
-          quantity: 1, unit_price: finalPrice, original_price: selected.price,
-          price_modified: finalPrice !== selected.price, tire_position: null,
+          item_type: 'tire', ref_id: item.id, name: item.name, sku: item.sku,
+          quantity: 1, unit_price: finalPrice, original_price: item.price,
+          price_modified: finalPrice !== item.price, tire_position: null,
         }),
       })
     } else {
-      // One item per selected position, each qty=1
       try {
         sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify({
           id: `pending-${Date.now()}`, session_id: session.id, tenant_id: '',
-          item_type: 'tire', ref_id: selected.id, name: selected.name, sku: selected.sku,
-          quantity: 1, unit_price: finalPrice, original_price: selected.price,
-          price_modified: finalPrice !== selected.price, tire_position: positions[0],
+          item_type: 'tire', ref_id: item.id, name: item.name, sku: item.sku,
+          quantity: 1, unit_price: finalPrice, original_price: item.price,
+          price_modified: finalPrice !== item.price, tire_position: positions[0],
           created_at: new Date().toISOString(),
         }))
       } catch {}
@@ -145,9 +155,9 @@ export default function TireSearchClient({ session }: Props) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            item_type: 'tire', ref_id: selected.id, name: selected.name, sku: selected.sku,
-            quantity: 1, unit_price: finalPrice, original_price: selected.price,
-            price_modified: finalPrice !== selected.price, tire_position: pos,
+            item_type: 'tire', ref_id: item.id, name: item.name, sku: item.sku,
+            quantity: 1, unit_price: finalPrice, original_price: item.price,
+            price_modified: finalPrice !== item.price, tire_position: pos,
           }),
         })
       })
@@ -296,10 +306,10 @@ export default function TireSearchClient({ session }: Props) {
           ) : (
             <>
               {results.map((r, i) => (
-                <div key={r.id} onClick={() => { setSelected(r); setPrice(r.price); setShowDropdown(false) }}
-                  className="flex items-center cursor-pointer transition-colors"
+                <div key={r.id} onClick={() => selectAndAdd(r)}
+                  className="flex items-center cursor-pointer transition-colors active:bg-blue-100"
                   style={{
-                    minHeight: '58px', padding: '10px 16px', borderBottom: '1px solid #e2e8f0',
+                    minHeight: '62px', padding: '10px 16px', borderBottom: '1px solid #e2e8f0',
                     background: selected?.id === r.id ? '#dbeafe' : i % 2 === 0 ? '#ffffff' : '#f8fafc',
                   }}>
                   <div className="flex-1 min-w-0">
@@ -308,8 +318,9 @@ export default function TireSearchClient({ session }: Props) {
                       <div className="text-slate-400 font-medium" style={{ fontSize: '13px', marginTop: '2px' }}>מלאי: {r.stock} יח׳</div>
                     )}
                   </div>
-                  <div className="font-black text-blue-600 flex-shrink-0" style={{ fontSize: '16px' }}>
-                    {r.price.toLocaleString()}₪
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <div className="font-black text-blue-600" style={{ fontSize: '16px' }}>{r.price.toLocaleString()}₪</div>
+                    <div className="text-xs font-semibold text-green-700 bg-green-50 rounded px-2 py-0.5">הוסף ←</div>
                   </div>
                 </div>
               ))}
