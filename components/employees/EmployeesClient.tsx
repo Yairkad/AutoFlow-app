@@ -47,11 +47,11 @@ interface Salary {
   id: string
   employee_id: string
   month: string          // MM/YYYY
-  base: number
+  base: number           // נטו תלוש (הסכום הנקי שמופיע בתלוש)
   hours: number
-  additions: AdjItem[]
-  deductions: AdjItem[]
-  total: number
+  additions: AdjItem[]   // תוספות חוץ תלוש
+  deductions: AdjItem[]  // ניכויים חוץ תלוש
+  total: number          // סה"כ = base + additions - deductions
   is_paid: boolean
   paid_date: string | null
   payment_method: string | null
@@ -121,11 +121,10 @@ function waLink(phone: string) {
   return `https://wa.me/${num}`
 }
 
-function calcTotal(base: number, hours: number, payType: string, additions: AdjItem[], deductions: AdjItem[]) {
-  const baseAmt = payType === 'hourly' ? base * hours : base
+function calcTotal(net: number, additions: AdjItem[], deductions: AdjItem[]) {
   const adds = additions.reduce((s, a) => s + (Number(a.amount) || 0), 0)
   const deds = deductions.reduce((s, d) => s + (Number(d.amount) || 0), 0)
-  return Math.max(0, baseAmt + adds - deds)
+  return Math.max(0, net + adds - deds)
 }
 
 // ── Inline styles ──────────────────────────────────────────────────────────────
@@ -186,7 +185,7 @@ export default function EmployeesClient() {
   const [editEmp, setEditEmp] = useState<Employee | null>(null)
   const [form, setForm] = useState({ ...EMPTY_FORM })
 
-  // Adjustments modal
+  // Adjustments modal (חוץ תלוש)
   const [adjModal, setAdjModal] = useState(false)
   const [adjEmpId, setAdjEmpId] = useState('')
   const [adjAdditions, setAdjAdditions] = useState<AdjItem[]>([])
@@ -206,11 +205,8 @@ export default function EmployeesClient() {
   const [histEmp, setHistEmp] = useState<Employee | null>(null)
   const [histRows, setHistRows] = useState<Salary[]>([])
 
-  // Local hours state for hourly employees (inline editing)
-  const [hoursMap, setHoursMap] = useState<Record<string, string>>({})
-
-  // Salary table edit mode
-  const [salaryEditMode, setSalaryEditMode] = useState(false)
+  // Inline net salary editing
+  const [netMap, setNetMap] = useState<Record<string, string>>({})
 
   // Selected employee (replaces 3-dots menu)
   const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null)
@@ -267,13 +263,13 @@ export default function EmployeesClient() {
     })()
   }, [sb, loadEmployees, loadSalaries])
 
-  // Sync hoursMap from DB when period or salaries change
+  // Sync netMap from DB when period or salaries change
   useEffect(() => {
     const map: Record<string, string> = {}
     salaries.forEach(s => {
-      if (s.month === period && s.hours) map[s.employee_id] = String(s.hours)
+      if (s.month === period && s.base) map[s.employee_id] = String(s.base)
     })
-    setHoursMap(map)
+    setNetMap(map)
   }, [salaries, period])
 
   // ── Salary helpers ───────────────────────────────────────────────────────────
@@ -285,16 +281,15 @@ export default function EmployeesClient() {
   async function ensureSalaryRec(emp: Employee): Promise<Salary> {
     const existing = salaryFor(emp.id)
     if (existing) return existing
-    const base = emp.salary_type === 'monthly' ? (emp.base_salary || 0) : (emp.hourly_rate || 0)
     const newRec = {
       tenant_id: tenantId.current,
       employee_id: emp.id,
       month: period,
-      base,
+      base: 0,
       hours: 0,
       additions: [],
       deductions: [],
-      total: emp.salary_type === 'monthly' ? base : 0,
+      total: 0,
       is_paid: false,
       paid_date: null,
       payment_method: null,
@@ -323,11 +318,11 @@ export default function EmployeesClient() {
       tenant_id: tid,
       employee_id: e.id,
       month: period,
-      base: e.salary_type === 'monthly' ? (e.base_salary || 0) : (e.hourly_rate || 0),
+      base: 0,
       hours: 0,
       additions: [],
       deductions: [],
-      total: e.salary_type === 'monthly' ? (e.base_salary || 0) : 0,
+      total: 0,
       is_paid: false,
       paid_date: null,
       payment_method: null,
@@ -340,14 +335,13 @@ export default function EmployeesClient() {
     setInitingPeriod(false)
   }
 
-  // ── Hours (hourly employees) ─────────────────────────────────────────────────
+  // ── Net salary inline save ───────────────────────────────────────────────────
 
-  async function saveHours(emp: Employee) {
-    const hours = parseFloat(hoursMap[emp.id] || '0') || 0
+  async function saveNet(emp: Employee) {
+    const net = parseFloat(netMap[emp.id] || '0') || 0
     const sal = await ensureSalaryRec(emp)
-    const effectiveBase = emp.salary_type === 'monthly' ? (emp.base_salary || 0) : (sal.base || emp.hourly_rate || 0)
-    const total = calcTotal(effectiveBase, hours, emp.salary_type, sal.additions || [], sal.deductions || [])
-    await sb.from('salaries').update({ hours, total }).eq('id', sal.id)
+    const total = calcTotal(net, sal.additions || [], sal.deductions || [])
+    await sb.from('salaries').update({ base: net, total }).eq('id', sal.id)
     await loadSalaries()
   }
 
@@ -366,9 +360,9 @@ export default function EmployeesClient() {
       phone: e.phone || '',
       email: e.email || '',
       role: e.role || '',
-      salary_type: e.salary_type || 'monthly',
+      salary_type: 'monthly',
       base_salary: e.base_salary != null ? String(e.base_salary) : '',
-      hourly_rate: e.hourly_rate != null ? String(e.hourly_rate) : '',
+      hourly_rate: '',
       is_active: e.is_active,
       role_level: e.role_level || 'employee',
       bank_name: e.bank_name || '',
@@ -398,9 +392,9 @@ export default function EmployeesClient() {
       phone: form.phone.trim() || null,
       email: form.email.trim().toLowerCase(),
       role: form.role.trim() || null,
-      salary_type: form.salary_type,
-      base_salary: parseFloat(form.base_salary) || null,
-      hourly_rate: parseFloat(form.hourly_rate) || null,
+      salary_type: 'monthly' as const,
+      base_salary: null,
+      hourly_rate: null,
       is_active: form.is_active,
       role_level: form.role_level,
       bank_name: form.bank_name.trim() || null,
@@ -447,7 +441,7 @@ export default function EmployeesClient() {
     showToast(`מייל הזמנה נשלח ל-${email} ✓`, 'success')
   }
 
-  // ── Adjustments modal ────────────────────────────────────────────────────────
+  // ── Adjustments modal (חוץ תלוש) ────────────────────────────────────────────
 
   async function openAdj(emp: Employee) {
     const sal = await ensureSalaryRec(emp)
@@ -463,8 +457,7 @@ export default function EmployeesClient() {
     if (!emp) return
     const sal = salaryFor(emp.id)
     if (!sal) return
-    const effectiveBase = emp.salary_type === 'monthly' ? (emp.base_salary || 0) : (sal.base || emp.hourly_rate || 0)
-    const total = calcTotal(effectiveBase, sal.hours || 0, emp.salary_type, adjAdditions, adjDeductions)
+    const total = calcTotal(sal.base || 0, adjAdditions, adjDeductions)
     await sb.from('salaries').update({
       additions: adjAdditions,
       deductions: adjDeductions,
@@ -476,9 +469,9 @@ export default function EmployeesClient() {
     showToast('עודכן ✓', 'success')
   }
 
-  function adjItem(list: AdjItem[], setList: (l: AdjItem[]) => void, i: number, field: 'label' | 'amount', val: string) {
+  function adjItem(list: AdjItem[], setList: (l: AdjItem[]) => void, i: number, f: 'label' | 'amount', val: string) {
     const next = [...list]
-    next[i] = { ...next[i], [field]: field === 'amount' ? parseFloat(val) || 0 : val }
+    next[i] = { ...next[i], [f]: f === 'amount' ? parseFloat(val) || 0 : val }
     setList(next)
   }
 
@@ -488,7 +481,6 @@ export default function EmployeesClient() {
     setPayEmpId(empId)
     setPayMethod('העברה')
     setPayRef('')
-    // Default date = last day of the salary period month
     const [mm, yyyy] = period.split('/')
     const lastDay = new Date(parseInt(yyyy), parseInt(mm), 0)
     setPayDate(lastDay.toISOString().split('T')[0])
@@ -500,19 +492,16 @@ export default function EmployeesClient() {
     if (!emp) return
     setPaying(true)
     const sal = await ensureSalaryRec(emp)
+    const freshTotal = sal.is_paid
+      ? sal.total
+      : calcTotal(sal.base || 0, sal.additions || [], sal.deductions || [])
 
-    // Recalculate total using current employee base (in case salary was updated after record creation)
-    const effectiveBase = emp.salary_type === 'monthly' ? (emp.base_salary || 0) : (sal.base || emp.hourly_rate || 0)
-    const freshTotal = sal.is_paid ? sal.total : calcTotal(effectiveBase, sal.hours || 0, emp.salary_type, sal.additions || [], sal.deductions || [])
-
-    // Ensure "שכר" category exists
     const { data: cat } = await sb.from('expense_categories')
       .select('id').eq('tenant_id', tenantId.current).eq('name', 'שכר').maybeSingle()
     if (!cat) {
       await sb.from('expense_categories').insert({ tenant_id: tenantId.current, name: 'שכר' })
     }
 
-    // Create expense record
     const { data: exp } = await sb.from('expenses').insert({
       tenant_id: tenantId.current,
       date: payDate,
@@ -523,7 +512,6 @@ export default function EmployeesClient() {
       payment_ref: payRef.trim() || null,
     }).select('id').single()
 
-    // Mark salary as paid (also update total to freshTotal to keep record consistent)
     await sb.from('salaries').update({
       is_paid: true,
       total: freshTotal,
@@ -567,15 +555,13 @@ export default function EmployeesClient() {
   // ── Derived stats ────────────────────────────────────────────────────────────
 
   const activeEmps = employees.filter(e => e.is_active)
-  // Only show employees who have started by the selected period
   const periodEmps = activeEmps.filter(e =>
     !e.start_date || e.start_date.substring(0, 7) <= periodYM(period)
   )
   const curSals = salaries.filter(s => s.month === period)
   const totalPayroll = periodEmps.reduce((sum, e) => {
     const sal = curSals.find(s => s.employee_id === e.id)
-    const base = e.salary_type === 'monthly' ? (e.base_salary || 0) : 0
-    return sum + (sal ? (sal.total || 0) : base)
+    return sum + (sal ? (sal.total || 0) : 0)
   }, 0)
   const unpaidCount = periodEmps.filter(e => {
     const sal = curSals.find(s => s.employee_id === e.id)
@@ -607,7 +593,6 @@ export default function EmployeesClient() {
             opacity: e.is_active ? 1 : 0.7,
             cursor: 'pointer', transition: 'box-shadow .15s',
           }}>
-            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
               <div>
                 <div style={{ fontWeight: 900, fontSize: '15px' }}>👷 {e.full_name}</div>
@@ -623,7 +608,6 @@ export default function EmployeesClient() {
               </span>
             </div>
 
-            {/* Contact */}
             {e.phone && (
               <a href={waLink(e.phone)} target="_blank" rel="noreferrer"
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#25d366', marginBottom: '5px', textDecoration: 'none' }}>
@@ -636,13 +620,6 @@ export default function EmployeesClient() {
                 ✉️ {e.email}
               </a>
             )}
-
-            {/* Salary info */}
-            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border)', fontSize: '13px', fontWeight: 700, color: 'var(--primary)' }}>
-              {e.salary_type === 'hourly'
-                ? `₪${(e.hourly_rate || 0).toLocaleString('he-IL')} לשעה`
-                : `₪${(e.base_salary || 0).toLocaleString('he-IL', { maximumFractionDigits: 0 })} לחודש`}
-            </div>
 
           </div>
         ))}
@@ -663,97 +640,92 @@ export default function EmployeesClient() {
           <thead>
             <tr>
               <th style={thSt}>עובד</th>
-              <th style={thSt}>שכר בסיס</th>
-              <th style={thSt}>שעות</th>
-              <th style={thSt}>תוספות</th>
-              <th style={thSt}>ניכויים</th>
-              <th style={thSt}>סה״כ</th>
+              <th style={{ ...thSt, minWidth: '140px' }}>נטו תלוש</th>
+              <th style={thSt}>חוץ תלוש</th>
+              <th style={thSt}>סה״כ לתשלום</th>
               <th style={thSt}>סטטוס</th>
-              <th style={thSt}>שלם</th>
-              {salaryEditMode && <th style={thSt}>עריכה</th>}
+              <th style={thSt}>פעולות</th>
             </tr>
           </thead>
           <tbody>
             {periodEmps.map(e => {
               const sal = salaryFor(e.id)
-              // Monthly: always use current employee salary (not snapshot in sal.base)
-              // Hourly: use sal.base (rate at time of record creation) or current rate
-              const base = e.salary_type === 'monthly'
-                ? (e.base_salary ?? 0)
-                : (sal?.base ?? e.hourly_rate ?? 0)
-              const hours = parseFloat(hoursMap[e.id] || String(sal?.hours || 0)) || 0
+              const isPaid = sal?.is_paid || false
+              const net = isPaid ? (sal?.base || 0) : (parseFloat(netMap[e.id] || '') || sal?.base || 0)
               const adds = (sal?.additions || []).reduce((s, a) => s + (Number(a.amount) || 0), 0)
               const deds = (sal?.deductions || []).reduce((s, d) => s + (Number(d.amount) || 0), 0)
-              const displayBase = e.salary_type === 'hourly'
-                ? `₪${base.toLocaleString('he-IL')} × ${hours}שע׳`
-                : `₪${Number(base).toLocaleString('he-IL', { maximumFractionDigits: 0 })}`
-              const total = sal?.is_paid
-                ? (sal.total || 0)
-                : calcTotal(base, hours, e.salary_type, sal?.additions || [], sal?.deductions || [])
-              const isPaid = sal?.is_paid || false
+              const total = isPaid ? (sal?.total || 0) : calcTotal(net, sal?.additions || [], sal?.deductions || [])
+              const hasAdj = adds > 0 || deds > 0
 
               return (
                 <tr key={e.id} style={{ background: isPaid ? '#f0fdf4' : undefined }}>
+
+                  {/* עובד */}
                   <td style={tdSt}>
                     <strong>{e.full_name}</strong>
                     {e.role && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{e.role}</div>}
                     {sal?.notes && <div style={{ fontSize: '11px', color: '#7c3aed', marginTop: 2 }}>📝 {sal.notes}</div>}
                   </td>
 
-                  <td style={tdSt}>{displayBase}</td>
-
-                  {/* Hours */}
+                  {/* נטו תלוש – inline editable */}
                   <td style={tdSt}>
-                    {e.salary_type === 'hourly' && salaryEditMode && !isPaid ? (
+                    {isPaid ? (
+                      <span style={{ fontWeight: 700 }}>{fmt(sal?.base || 0)}</span>
+                    ) : (
                       <input
-                        type="number" min="0" step="0.5"
-                        value={hoursMap[e.id] ?? (sal?.hours || '')}
-                        onChange={ev => setHoursMap(prev => ({ ...prev, [e.id]: ev.target.value }))}
-                        onBlur={() => saveHours(e)}
-                        className="form-input" style={{ width: '70px' }}
+                        type="number" min="0" step="1"
+                        value={netMap[e.id] ?? (sal?.base || '')}
+                        placeholder="הזן סכום..."
+                        onChange={ev => setNetMap(prev => ({ ...prev, [e.id]: ev.target.value }))}
+                        onBlur={() => saveNet(e)}
+                        className="form-input"
+                        style={{ width: '120px' }}
                       />
-                    ) : e.salary_type === 'hourly' ? (
-                      <span>{sal?.hours || 0} שע׳</span>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)' }}>—</span>
                     )}
                   </td>
 
-                  {/* Additions */}
+                  {/* חוץ תלוש */}
                   <td style={tdSt}>
-                    {salaryEditMode && !isPaid ? (
-                      <button onClick={() => openAdj(e)} style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: adds > 0 ? 'var(--primary)' : 'var(--text-muted)', fontSize: '13px', padding: 0,
-                      }}>
-                        {adds > 0 ? `+${fmt(adds)}` : '—'} ✏️
-                      </button>
+                    {isPaid ? (
+                      hasAdj ? (
+                        <div style={{ fontSize: '12px' }}>
+                          {adds > 0 && <div style={{ color: 'var(--primary)' }}>+{fmt(adds)}</div>}
+                          {deds > 0 && <div style={{ color: 'var(--danger)' }}>−{fmt(deds)}</div>}
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>—</span>
+                      )
                     ) : (
-                      <span style={{ color: adds > 0 ? 'var(--primary)' : 'var(--text-muted)' }}>
-                        {adds > 0 ? `+${fmt(adds)}` : '—'}
-                      </span>
+                      <button
+                        onClick={() => openAdj(e)}
+                        style={{
+                          background: hasAdj ? '#f0f9ff' : 'none',
+                          border: hasAdj ? '1px solid #bae6fd' : '1px dashed var(--border)',
+                          borderRadius: '6px', cursor: 'pointer', padding: '4px 8px',
+                          fontSize: '12px', fontFamily: 'inherit', color: hasAdj ? '#0369a1' : 'var(--text-muted)',
+                          display: 'flex', alignItems: 'center', gap: '4px',
+                        }}
+                      >
+                        {hasAdj ? (
+                          <>
+                            {adds > 0 && <span style={{ color: 'var(--primary)' }}>+{fmt(adds)}</span>}
+                            {adds > 0 && deds > 0 && <span style={{ color: 'var(--text-muted)' }}>/</span>}
+                            {deds > 0 && <span style={{ color: 'var(--danger)' }}>−{fmt(deds)}</span>}
+                            <span style={{ color: 'var(--text-muted)' }}>✏️</span>
+                          </>
+                        ) : (
+                          <span>+ הוסף</span>
+                        )}
+                      </button>
                     )}
                   </td>
 
-                  {/* Deductions */}
+                  {/* סה״כ */}
                   <td style={tdSt}>
-                    {salaryEditMode && !isPaid ? (
-                      <button onClick={() => openAdj(e)} style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: deds > 0 ? 'var(--danger)' : 'var(--text-muted)', fontSize: '13px', padding: 0,
-                      }}>
-                        {deds > 0 ? `−${fmt(deds)}` : '—'} ✏️
-                      </button>
-                    ) : (
-                      <span style={{ color: deds > 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
-                        {deds > 0 ? `−${fmt(deds)}` : '—'}
-                      </span>
-                    )}
+                    <strong style={{ fontSize: '14px' }}>{fmt(total)}</strong>
                   </td>
 
-                  <td style={tdSt}><strong>{fmt(total)}</strong></td>
-
-                  {/* Status */}
+                  {/* סטטוס */}
                   <td style={tdSt}>
                     {isPaid ? (
                       <div>
@@ -765,6 +737,11 @@ export default function EmployeesClient() {
                             {sal.payment_method}{sal.payment_ref ? ` · ${sal.payment_ref}` : ''}
                           </div>
                         )}
+                        {sal?.paid_date && (
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {new Date(sal.paid_date).toLocaleDateString('he-IL')}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <span style={{ background: '#fff7ed', color: 'var(--warning)', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>
@@ -773,27 +750,21 @@ export default function EmployeesClient() {
                     )}
                   </td>
 
-                  {/* Pay button – always visible */}
+                  {/* פעולות */}
                   <td style={tdSt}>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      {!isPaid && <Button size="sm" onClick={() => openPay(e.id)}>✅ שלם</Button>}
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {!isPaid && (
+                        <Button size="sm" onClick={() => openPay(e.id)} disabled={!net && !sal?.base}>
+                          ✅ שלם
+                        </Button>
+                      )}
+                      {isPaid && (
+                        <Button size="sm" variant="secondary" onClick={() => { if (sal) unpay(sal) }} title="בטל תשלום">↩️ בטל</Button>
+                      )}
                       <Button size="sm" variant="ghost" onClick={() => openHistory(e)} title="היסטוריה">📋</Button>
                     </div>
                   </td>
 
-                  {/* Edit-mode actions */}
-                  {salaryEditMode && (
-                    <td style={tdSt}>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        {!isPaid && (
-                          <Button size="sm" variant="secondary" onClick={() => openAdj(e)} title="תוספות וניכויים">✏️</Button>
-                        )}
-                        {isPaid && (
-                          <Button size="sm" variant="secondary" onClick={() => { if (sal) unpay(sal) }} title="בטל תשלום">↩️ בטל</Button>
-                        )}
-                      </div>
-                    </td>
-                  )}
                 </tr>
               )
             })}
@@ -857,10 +828,10 @@ export default function EmployeesClient() {
     )
   }
 
-  // ── Excel / JSON ─────────────────────────────────────────────────────────────
+  // ── Excel ─────────────────────────────────────────────────────────────────────
 
   function exportExcel() {
-    const rows = employees.map(e => ({ שם: e.full_name, טלפון: e.phone ?? '', מייל: e.email ?? '', תפקיד: e.role ?? '', 'סוג שכר': e.salary_type ?? '', 'שכר בסיס': e.base_salary ?? '', 'תאריך התחלה': e.start_date ?? '', פעיל: e.is_active ? 'כן' : 'לא', הערות: e.notes ?? '' }))
+    const rows = employees.map(e => ({ שם: e.full_name, טלפון: e.phone ?? '', מייל: e.email ?? '', תפקיד: e.role ?? '', 'שכר נטו שגרתי': e.base_salary ?? '', 'תאריך התחלה': e.start_date ?? '', פעיל: e.is_active ? 'כן' : 'לא', הערות: e.notes ?? '' }))
     const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'עובדים')
@@ -969,20 +940,14 @@ export default function EmployeesClient() {
             >
               {initingPeriod ? '⏳ יוצר...' : '🔄 אתחל חודש'}
             </button>
-            <button
-              onClick={() => setSalaryEditMode(m => !m)}
-              style={{
-                marginRight: 'auto',
-                padding: '7px 16px', borderRadius: '8px', border: '1.5px solid',
-                cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'inherit',
-                borderColor: salaryEditMode ? 'var(--warning)' : 'var(--border)',
-                background: salaryEditMode ? '#fffbeb' : '#fff',
-                color: salaryEditMode ? 'var(--warning)' : 'var(--text-muted)',
-              }}
-            >
-              {salaryEditMode ? '🔒 נעל עריכה' : '✏️ עריכה'}
-            </button>
           </div>
+
+          {/* Salary tip */}
+          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '12px', color: '#0369a1', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+            <span style={{ flexShrink: 0 }}>💡</span>
+            <span>הזן את הסכום הנטו שמופיע בתלוש של כל עובד. תוספות וניכויים <strong>חוץ תלוש</strong> (בונוסים, קנסות וכד׳) ניתן להוסיף עם כפתור ״+ הוסף״.</span>
+          </div>
+
           {renderSalaryTable()}
         </div>
       )}
@@ -1000,20 +965,6 @@ export default function EmployeesClient() {
           </>
         }
       >
-        {/* Pay type */}
-        <div style={{ display: 'flex', gap: 0, border: '1.5px solid var(--border)', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px' }}>
-          {(['monthly', 'hourly'] as const).map(t => (
-            <button key={t} onClick={() => setForm(f => ({ ...f, salary_type: t }))} style={{
-              flex: 1, padding: '9px', border: 'none', cursor: 'pointer',
-              fontFamily: 'inherit', fontSize: '13px', fontWeight: 600,
-              background: form.salary_type === t ? 'var(--primary)' : '#fff',
-              color: form.salary_type === t ? '#fff' : 'var(--text-muted)',
-            }}>
-              {t === 'monthly' ? 'שכר חודשי קבוע' : 'שכר שעתי'}
-            </button>
-          ))}
-        </div>
-
         {/* Basic fields */}
         <div style={grid2}>
           <div style={field}>
@@ -1032,17 +983,6 @@ export default function EmployeesClient() {
             <label className="form-label">טלפון</label>
             <input className="form-input" type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="050-0000000" />
           </div>
-          {form.salary_type === 'monthly' ? (
-            <div style={field}>
-              <label className="form-label">שכר בסיס (₪/חודש)</label>
-              <input className="form-input" type="number" min="0" step="1" value={form.base_salary} onChange={e => setForm(f => ({ ...f, base_salary: e.target.value }))} placeholder="7000" />
-            </div>
-          ) : (
-            <div style={field}>
-              <label className="form-label">תעריף שעתי (₪/שעה)</label>
-              <input className="form-input" type="number" min="0" step="0.5" value={form.hourly_rate} onChange={e => setForm(f => ({ ...f, hourly_rate: e.target.value }))} placeholder="45" />
-            </div>
-          )}
           <div style={field}>
             <label className="form-label">יום תשלום בחודש</label>
             <input
@@ -1080,7 +1020,6 @@ export default function EmployeesClient() {
             💳 פרטי חשבון בנק
           </summary>
           <div style={{ padding: '14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {/* שם בנק – custom dropdown + badge מס' בנק */}
             <div style={field}>
               <label className="form-label">שם בנק</label>
               <div ref={bankDropRef} style={{ position: 'relative' }}>
@@ -1092,7 +1031,6 @@ export default function EmployeesClient() {
                     onFocus={() => setShowBankDrop(true)}
                     onChange={e => { setForm(f => ({ ...f, bank_name: e.target.value })); setShowBankDrop(true) }}
                   />
-                  {/* Arrow button – always opens the list */}
                   <button
                     type="button"
                     onMouseDown={e => { e.preventDefault(); setShowBankDrop(v => !v) }}
@@ -1103,7 +1041,6 @@ export default function EmployeesClient() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >▼</button>
-                  {/* Bank code badge */}
                   {ISRAELI_BANKS.find(b => b.name === form.bank_name) && (
                     <span style={{
                       position: 'absolute', left: '36px',
@@ -1115,7 +1052,6 @@ export default function EmployeesClient() {
                     </span>
                   )}
                 </div>
-                {/* Dropdown list */}
                 {showBankDrop && (
                   <div style={{
                     position: 'absolute', top: '100%', right: 0, left: 0, zIndex: 200,
@@ -1199,11 +1135,11 @@ export default function EmployeesClient() {
         </details>
       </Modal>
 
-      {/* ── Adjustments Modal ─────────────────────────────────────────────────── */}
+      {/* ── Adjustments Modal (חוץ תלוש) ──────────────────────────────────────── */}
       <Modal
         open={adjModal}
         onClose={() => setAdjModal(false)}
-        title={`תוספות וניכויים – ${employees.find(e => e.id === adjEmpId)?.full_name || ''} – ${periodLabel(period)}`}
+        title={`תוספות וניכויים חוץ תלוש – ${employees.find(e => e.id === adjEmpId)?.full_name || ''} – ${periodLabel(period)}`}
         maxWidth={480}
         footer={
           <>
@@ -1212,7 +1148,11 @@ export default function EmployeesClient() {
           </>
         }
       >
-        <p style={sectionTitle}>➕ תוספות</p>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', marginTop: 0 }}>
+          פריטים אלו מתווספים / מנוכים מהנטו שהוזן בתלוש — לא כולל בתלוש עצמו.
+        </p>
+
+        <p style={sectionTitle}>➕ תוספות חוץ תלוש</p>
         {adjAdditions.map((a, i) => (
           <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px', alignItems: 'center' }}>
             <input className="form-input" style={{ flex: 1 }} placeholder="בונוס, נסיעות..." value={a.label}
@@ -1225,10 +1165,10 @@ export default function EmployeesClient() {
         ))}
         <Button size="sm" variant="secondary" onClick={() => setAdjAdditions(prev => [...prev, { label: '', amount: 0 }])}>+ הוסף תוספת</Button>
 
-        <p style={{ ...sectionTitle, marginTop: '20px' }}>➖ ניכויים</p>
+        <p style={{ ...sectionTitle, marginTop: '20px' }}>➖ ניכויים חוץ תלוש</p>
         {adjDeductions.map((d, i) => (
           <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px', alignItems: 'center' }}>
-            <input className="form-input" style={{ flex: 1 }} placeholder="ניכוי, מחלה..." value={d.label}
+            <input className="form-input" style={{ flex: 1 }} placeholder="ניכוי, קנס..." value={d.label}
               onChange={e => adjItem(adjDeductions, setAdjDeductions, i, 'label', e.target.value)} />
             <input className="form-input" style={{ width: '90px' }} type="number" min="0" step="1" placeholder="₪" value={d.amount || ''}
               onChange={e => adjItem(adjDeductions, setAdjDeductions, i, 'amount', e.target.value)} />
@@ -1242,6 +1182,27 @@ export default function EmployeesClient() {
           <label className="form-label">הערות</label>
           <input className="form-input" value={adjNotes} onChange={e => setAdjNotes(e.target.value)} placeholder="הערה..." />
         </div>
+
+        {/* Preview total */}
+        {(() => {
+          const sal = salaryFor(adjEmpId)
+          const net = sal?.base || 0
+          const addTotal = adjAdditions.reduce((s, a) => s + (Number(a.amount) || 0), 0)
+          const dedTotal = adjDeductions.reduce((s, d) => s + (Number(d.amount) || 0), 0)
+          const preview = calcTotal(net, adjAdditions, adjDeductions)
+          return net > 0 ? (
+            <div style={{ marginTop: '16px', background: '#f0fdf4', borderRadius: '8px', padding: '12px 14px', fontSize: '13px' }}>
+              <div style={{ color: 'var(--text-muted)', marginBottom: '4px' }}>
+                נטו תלוש: {fmt(net)}
+                {addTotal > 0 && <> + תוספות: {fmt(addTotal)}</>}
+                {dedTotal > 0 && <> − ניכויים: {fmt(dedTotal)}</>}
+              </div>
+              <div style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '14px' }}>
+                סה״כ לתשלום: {fmt(preview)}
+              </div>
+            </div>
+          ) : null
+        })()}
       </Modal>
 
       {/* ── Pay Modal ─────────────────────────────────────────────────────────── */}
@@ -1282,9 +1243,24 @@ export default function EmployeesClient() {
             <label className="form-label">תאריך תשלום (יירשם כהוצאה)</label>
             <input className="form-input" type="date" value={payDate} onChange={e => setPayDate(e.target.value)} />
           </div>
-          <div style={{ background: '#f0fdf4', padding: '12px', borderRadius: '8px', fontSize: '14px', fontWeight: 700, color: 'var(--primary)' }}>
-            סה״כ לתשלום: {fmt(salaryFor(payEmpId)?.total ?? employees.find(e => e.id === payEmpId)?.base_salary ?? 0)}
-          </div>
+          {/* Breakdown */}
+          {(() => {
+            const sal = salaryFor(payEmpId)
+            const net = sal?.base || 0
+            const adds = (sal?.additions || []).reduce((s, a) => s + (Number(a.amount) || 0), 0)
+            const deds = (sal?.deductions || []).reduce((s, d) => s + (Number(d.amount) || 0), 0)
+            const total = calcTotal(net, sal?.additions || [], sal?.deductions || [])
+            return (
+              <div style={{ background: '#f0fdf4', padding: '12px 14px', borderRadius: '8px', fontSize: '13px' }}>
+                <div style={{ color: 'var(--text-muted)', marginBottom: '6px' }}>נטו תלוש: <strong>{fmt(net)}</strong></div>
+                {adds > 0 && <div style={{ color: 'var(--primary)', marginBottom: '4px' }}>+ תוספות חוץ תלוש: {fmt(adds)}</div>}
+                {deds > 0 && <div style={{ color: 'var(--danger)', marginBottom: '4px' }}>− ניכויים חוץ תלוש: {fmt(deds)}</div>}
+                <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--primary)', borderTop: '1px solid #bbf7d0', paddingTop: '8px', marginTop: '4px' }}>
+                  סה״כ לתשלום: {fmt(total)}
+                </div>
+              </div>
+            )
+          })()}
         </div>
       </Modal>
 
@@ -1304,36 +1280,49 @@ export default function EmployeesClient() {
               <thead>
                 <tr>
                   <th style={thSt}>תקופה</th>
+                  <th style={thSt}>נטו תלוש</th>
+                  <th style={thSt}>חוץ תלוש</th>
                   <th style={thSt}>סה״כ</th>
                   <th style={thSt}>אמצעי תשלום</th>
-                  <th style={thSt}>אסמכתא</th>
-                  <th style={thSt}>תאריך תשלום</th>
+                  <th style={thSt}>תאריך</th>
                   <th style={thSt}>סטטוס</th>
                   <th style={thSt}></th>
                 </tr>
               </thead>
               <tbody>
-                {histRows.filter(s => (s.total || 0) > 0 || s.is_paid).map(s => (
-                  <tr key={s.id} style={{ background: s.is_paid ? '#f0fdf4' : undefined }}>
-                    <td style={tdSt}><strong>{periodLabel(s.month)}</strong></td>
-                    <td style={tdSt}>{fmt(s.total || 0)}</td>
-                    <td style={tdSt}>{s.payment_method || '—'}</td>
-                    <td style={tdSt}>{s.payment_ref || '—'}</td>
-                    <td style={tdSt}>{s.paid_date ? new Date(s.paid_date).toLocaleDateString('he-IL') : '—'}</td>
-                    <td style={tdSt}>
-                      {s.is_paid ? (
-                        <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>✅ שולם</span>
-                      ) : (
-                        <span style={{ background: '#fff7ed', color: 'var(--warning)', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>⏳ ממתין</span>
-                      )}
-                    </td>
-                    <td style={tdSt}>
-                      {s.is_paid && (
-                        <Button size="sm" variant="ghost" onClick={() => unpay(s)} title="בטל תשלום">↩️</Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {histRows.filter(s => (s.total || 0) > 0 || s.is_paid).map(s => {
+                  const adds = (s.additions || []).reduce((sum, a) => sum + (Number(a.amount) || 0), 0)
+                  const deds = (s.deductions || []).reduce((sum, d) => sum + (Number(d.amount) || 0), 0)
+                  return (
+                    <tr key={s.id} style={{ background: s.is_paid ? '#f0fdf4' : undefined }}>
+                      <td style={tdSt}><strong>{periodLabel(s.month)}</strong></td>
+                      <td style={tdSt}>{fmt(s.base || 0)}</td>
+                      <td style={tdSt}>
+                        {(adds > 0 || deds > 0) ? (
+                          <div style={{ fontSize: '12px' }}>
+                            {adds > 0 && <div style={{ color: 'var(--primary)' }}>+{fmt(adds)}</div>}
+                            {deds > 0 && <div style={{ color: 'var(--danger)' }}>−{fmt(deds)}</div>}
+                          </div>
+                        ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                      </td>
+                      <td style={tdSt}><strong>{fmt(s.total || 0)}</strong></td>
+                      <td style={tdSt}>{s.payment_method || '—'}</td>
+                      <td style={tdSt}>{s.paid_date ? new Date(s.paid_date).toLocaleDateString('he-IL') : '—'}</td>
+                      <td style={tdSt}>
+                        {s.is_paid ? (
+                          <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>✅ שולם</span>
+                        ) : (
+                          <span style={{ background: '#fff7ed', color: 'var(--warning)', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>⏳ ממתין</span>
+                        )}
+                      </td>
+                      <td style={tdSt}>
+                        {s.is_paid && (
+                          <Button size="sm" variant="ghost" onClick={() => unpay(s)} title="בטל תשלום">↩️</Button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -1355,7 +1344,6 @@ export default function EmployeesClient() {
               <button onClick={() => setBankViewEmp(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
             </div>
 
-            {/* Bank details */}
             {(bankViewEmp.bank_name || bankViewEmp.bank_account) ? (
               <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '14px', marginBottom: '14px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>פרטי חשבון בנק</div>
@@ -1392,7 +1380,6 @@ export default function EmployeesClient() {
               </div>
             )}
 
-            {/* Personal details */}
             {(bankViewEmp.id_number || bankViewEmp.birth_date || bankViewEmp.address) && (
               <div style={{ background: '#f9fafb', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>פרטים אישיים</div>
