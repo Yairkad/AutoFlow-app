@@ -24,7 +24,7 @@ export default function TireSearchClient({ session }: Props) {
   const router       = useRouter()
   const scanRef      = useRef<HTMLInputElement>(null)
   const [scanMode,   setScanMode]    = useState(false)
-  const [scanBuffer, setScanBuffer]  = useState('')
+  const [barcodeInput, setBarcodeInput] = useState('')
   const [query,         setQuery]         = useState('')
   const [results,       setResults]       = useState<TireResult[]>([])
   const [selected,      setSelected]      = useState<TireResult | null>(null)
@@ -72,8 +72,8 @@ export default function TireSearchClient({ session }: Props) {
 
   useEffect(() => {
     if (!scanMode) return
-    scanRef.current?.focus()
-    setScanBuffer('')
+    setBarcodeInput('')
+    setTimeout(() => scanRef.current?.focus(), 50)
   }, [scanMode])
 
   async function handleBarcode(code: string) {
@@ -169,7 +169,7 @@ export default function TireSearchClient({ session }: Props) {
       )}
 
       {/* Keyboard — left side panel, opens/closes horizontally */}
-      {showKeyboard && (
+      {showKeyboard && !scanMode && (
         <TireKeyboard
           side
           value={query}
@@ -208,58 +208,60 @@ export default function TireSearchClient({ session }: Props) {
           </button>
         </div>
 
-        {/* Scan bar */}
-        {scanMode && (
-          <div className="bg-blue-600 text-white rounded-xl flex items-center justify-between flex-shrink-0"
-            style={{ margin: '10px 14px 0', padding: '10px 16px' }}>
-            <span className="font-semibold flex items-center gap-2">
-              <svg viewBox="0 0 28 22" width="18" height="14" fill="white">
-                <rect x="0"  y="0" width="2" height="22"/><rect x="4"  y="0" width="1" height="22"/>
-                <rect x="7"  y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/>
-                <rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/>
-                <rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/>
-              </svg>
-              ממתין לסריקה...
-            </span>
-            <button onClick={() => setScanMode(false)} className="bg-white/20 border border-white/40 rounded-lg text-sm font-bold" style={{ padding: '5px 10px' }}>ביטול</button>
-          </div>
-        )}
-
-        {/* Only mount when active to prevent virtual keyboard on touch devices */}
-        {scanMode && (
-          <input ref={scanRef} className="absolute opacity-0 w-0 h-0"
-            tabIndex={-1} inputMode="none"
-            value={scanBuffer} onChange={e => setScanBuffer(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && scanBuffer) handleBarcode(scanBuffer) }} />
-        )}
-
-        {/* Search row + autocomplete dropdown */}
+        {/* Search row */}
         <div className="flex items-center flex-shrink-0" style={{ gap: '10px', padding: '10px 14px 0' }}>
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              inputMode="none"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              onFocus={() => setShowKeyboard(true)}
-              onKeyDown={e => { if (e.key === 'Enter') confirmSearch() }}
-              placeholder="165/65/15 או 165/65R15"
-              className="w-full border-2 border-blue-500 rounded-xl text-base font-bold bg-white outline-none"
-              style={{ padding: '10px 14px', letterSpacing: '1px', direction: 'ltr' }}
-            />
-          </div>
-
-          {/* Scanner */}
-          <button onClick={() => setScanMode(m => !m)}
-            className={`rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${scanMode ? 'bg-blue-600' : 'bg-slate-800'}`}
-            style={{ width: '44px', height: '44px' }}>
-            <svg viewBox="0 0 28 22" width="22" height="17" fill="white">
-              <rect x="0"  y="0" width="2" height="22"/><rect x="4"  y="0" width="1" height="22"/>
-              <rect x="7"  y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/>
-              <rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/>
-              <rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/>
-            </svg>
-          </button>
+          {scanMode ? (
+            /* Barcode input — visible, auto-focused, scanner types here */
+            <>
+              <div className="flex-1 relative">
+                <input
+                  ref={scanRef}
+                  type="text"
+                  inputMode="none"
+                  value={barcodeInput}
+                  onChange={e => setBarcodeInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && barcodeInput.trim()) handleBarcode(barcodeInput.trim()) }}
+                  placeholder="סרוק ברקוד..."
+                  className="w-full border-2 border-blue-500 rounded-xl text-base font-bold bg-blue-50 outline-none"
+                  style={{ padding: '10px 14px', letterSpacing: '2px', direction: 'ltr' }}
+                />
+              </div>
+              <button
+                onClick={() => setScanMode(false)}
+                className="rounded-xl border-2 border-slate-300 font-bold text-slate-600 bg-white flex-shrink-0 active:bg-slate-100 transition-colors"
+                style={{ padding: '0 14px', height: '44px', fontSize: '14px' }}
+              >
+                ביטול
+              </button>
+            </>
+          ) : (
+            /* Size input + scan button */
+            <>
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  inputMode="none"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  onFocus={() => setShowKeyboard(true)}
+                  onKeyDown={e => { if (e.key === 'Enter') confirmSearch() }}
+                  placeholder="165/65/15 או 165/65R15"
+                  className="w-full border-2 border-blue-500 rounded-xl text-base font-bold bg-white outline-none"
+                  style={{ padding: '10px 14px', letterSpacing: '1px', direction: 'ltr' }}
+                />
+              </div>
+              <button onClick={() => setScanMode(true)}
+                className="rounded-xl flex items-center justify-center flex-shrink-0 bg-slate-800 transition-colors"
+                style={{ width: '44px', height: '44px' }}>
+                <svg viewBox="0 0 28 22" width="22" height="17" fill="white">
+                  <rect x="0"  y="0" width="2" height="22"/><rect x="4"  y="0" width="1" height="22"/>
+                  <rect x="7"  y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/>
+                  <rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/>
+                  <rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/>
+                </svg>
+              </button>
+            </>
+          )}
         </div>
 
         {/* Detected size suggestion */}
