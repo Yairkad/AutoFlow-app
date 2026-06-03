@@ -347,12 +347,14 @@ export default function DashboardStats() {
         })
     })
 
-    const channel = supabase
-      .channel('dashboard-stats')
-      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-        fetchStats(admin, mods)
-      })
-      .subscribe()
+    const tables = ['expenses', 'income', 'customer_debts', 'supplier_debts',
+      'employees', 'products', 'tires', 'quotes', 'cars', 'car_requests',
+      'alignment_jobs', 'car_inspections']
+    let ch = supabase.channel('dashboard-stats')
+    for (const table of tables) {
+      ch = ch.on('postgres_changes', { event: '*', schema: 'public', table }, () => fetchStats(admin, mods))
+    }
+    const channel = ch.subscribe()
     return () => { supabase.removeChannel(channel) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

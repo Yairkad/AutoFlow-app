@@ -123,9 +123,9 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     return () => { document.title = base }
   }, [unread])
 
-  // Polling fallback every 8s — silent API fetch, no page re-render
+  // Polling fallback every 60s — real-time handles most updates; this is a safety net only
   useEffect(() => {
-    const id = setInterval(fetchSessions, 8_000)
+    const id = setInterval(fetchSessions, 60_000)
     return () => clearInterval(id)
   }, []) // eslint-disable-line
 
