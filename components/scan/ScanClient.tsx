@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useIsMobile } from '@/lib/hooks/useIsMobile'
 
 interface InventoryItem {
   id: string
@@ -26,6 +27,7 @@ type Mode = 'scan' | 'count'
 
 export default function ScanClient() {
   const sb = createClient()
+  const isMobile = useIsMobile()
   const scanRef   = useRef<HTMLInputElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const modeRef   = useRef<Mode>('scan')
@@ -220,26 +222,26 @@ export default function ScanClient() {
 
   // ══════════════════════════════════════════════════════════════════════════
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '24px 16px' }}>
+    <div style={{ maxWidth: 860, margin: '0 auto', padding: isMobile ? '16px 12px' : '24px 16px' }}>
 
       {toast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] bg-green-700 text-white font-bold rounded-xl px-6 py-3 shadow-xl">{toast}</div>
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className={`flex mb-5 ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`}>
         <div className="flex items-center gap-3">
           <svg viewBox="0 0 28 22" width="22" height="17" fill="#334155"><rect x="0" y="0" width="2" height="22"/><rect x="4" y="0" width="1" height="22"/><rect x="7" y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/><rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/><rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/></svg>
-          <h1 className="text-2xl font-black text-slate-800">{mode === 'count' ? '📦 ספירת מלאי' : 'סריקת ברקוד'}</h1>
+          <h1 className="font-black text-slate-800" style={{ fontSize: isMobile ? '20px' : '24px' }}>{mode === 'count' ? '📦 ספירת מלאי' : 'סריקת ברקוד'}</h1>
         </div>
         {mode === 'scan' ? (
-          <button onClick={startCount} className="bg-slate-800 text-white font-bold rounded-xl active:brightness-90 transition-all" style={{ padding: '10px 18px', fontSize: '14px' }}>
+          <button onClick={startCount} className={`bg-slate-800 text-white font-bold rounded-xl active:brightness-90 transition-all ${isMobile ? 'w-full' : ''}`} style={{ padding: '10px 18px', fontSize: '14px' }}>
             📦 התחל ספירת מלאי
           </button>
         ) : (
-          <div className="flex gap-2">
+          <div className={`flex gap-2 ${isMobile ? 'w-full' : ''}`}>
             <button onClick={() => setShowConfirm(true)} disabled={countEntries.length === 0}
-              className="bg-green-700 text-white font-bold rounded-xl active:brightness-90 disabled:opacity-40 transition-all" style={{ padding: '10px 18px', fontSize: '14px' }}>
+              className="flex-1 bg-green-700 text-white font-bold rounded-xl active:brightness-90 disabled:opacity-40 transition-all" style={{ padding: '10px 14px', fontSize: isMobile ? '13px' : '14px' }}>
               ✓ סיים ועדכן מלאי
             </button>
             <button onClick={cancelCount} className="border-2 border-slate-300 text-slate-600 font-bold rounded-xl active:bg-slate-50 transition-all" style={{ padding: '10px 14px', fontSize: '14px' }}>
@@ -287,7 +289,7 @@ export default function ScanClient() {
                 <thead style={{ position: 'sticky', top: 0, background: '#fffbeb', zIndex: 1 }}>
                   <tr>
                     <th style={thSt}>פריט</th>
-                    <th style={thSt}>סוג</th>
+                    {!isMobile && <th style={thSt}>סוג</th>}
                     <th style={{ ...thSt, textAlign: 'center' }}>נספר</th>
                     <th style={{ ...thSt, textAlign: 'center' }}>במלאי</th>
                     <th style={{ ...thSt, textAlign: 'center' }}>הפרש</th>
@@ -299,7 +301,7 @@ export default function ScanClient() {
                     return (
                       <tr key={e.item.id} style={{ borderBottom: '1px solid #fef3c7', background: i % 2 === 0 ? '#fff' : '#fffbeb' }}>
                         <td style={{ ...tdSt, fontWeight: 600 }}>{e.item.name}</td>
-                        <td style={tdSt}>{BADGE(e.item.type)}</td>
+                        {!isMobile && <td style={tdSt}>{BADGE(e.item.type)}</td>}
                         <td style={{ ...tdSt, textAlign: 'center', fontWeight: 800, fontSize: '16px', color: '#d97706' }}>{e.counted}</td>
                         <td style={{ ...tdSt, textAlign: 'center', color: '#64748b' }}>{e.item.qty}</td>
                         <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: diff > 0 ? '#16a34a' : diff < 0 ? '#ef4444' : '#94a3b8' }}>
@@ -318,12 +320,12 @@ export default function ScanClient() {
       {/* INVENTORY LIST (scan mode) */}
       {mode === 'scan' && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="flex items-center justify-between border-b border-slate-100" style={{ padding: '14px 18px' }}>
+          <div className={`border-b border-slate-100 ${isMobile ? 'flex flex-col gap-2' : 'flex items-center justify-between'}`} style={{ padding: '12px 14px' }}>
             <span className="font-bold text-slate-700">מלאי ({items.length} פריטים)</span>
             <input value={textFilter} onChange={e => setTextFilter(e.target.value)}
               placeholder="סנן לפי שם / מק״ט / ברקוד..."
               className="border border-slate-200 rounded-lg bg-slate-50 outline-none focus:border-blue-400 transition-colors"
-              style={{ padding: '6px 12px', fontSize: '13px', width: '220px' }} />
+              style={{ padding: '6px 12px', fontSize: '13px', width: isMobile ? '100%' : '220px' }} />
           </div>
           {loading ? (
             <div className="text-center text-slate-400 py-10">טוען...</div>
@@ -332,9 +334,9 @@ export default function ScanClient() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 1 }}>
                   <tr>
-                    <th style={thSt}>סוג</th>
-                    <th style={thSt}>מק״ט</th>
-                    <th style={thSt}>ברקוד</th>
+                    {!isMobile && <th style={thSt}>סוג</th>}
+                    {!isMobile && <th style={thSt}>מק״ט</th>}
+                    {!isMobile && <th style={thSt}>ברקוד</th>}
                     <th style={thSt}>פריט</th>
                     <th style={{ ...thSt, textAlign: 'center' }}>כמות</th>
                     <th style={thSt}></th>
@@ -343,10 +345,13 @@ export default function ScanClient() {
                 <tbody>
                   {filtered.map((item, i) => (
                     <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
-                      <td style={tdSt}>{BADGE(item.type)}</td>
-                      <td style={{ ...tdSt, fontFamily: 'monospace', color: '#64748b' }}>{item.sku || '—'}</td>
-                      <td style={{ ...tdSt, fontFamily: 'monospace', color: '#64748b' }}>{item.type === 'product' ? (item.barcode || '—') : '—'}</td>
-                      <td style={{ ...tdSt, fontWeight: 600 }}>{item.name}</td>
+                      {!isMobile && <td style={tdSt}>{BADGE(item.type)}</td>}
+                      {!isMobile && <td style={{ ...tdSt, fontFamily: 'monospace', color: '#64748b' }}>{item.sku || '—'}</td>}
+                      {!isMobile && <td style={{ ...tdSt, fontFamily: 'monospace', color: '#64748b' }}>{item.type === 'product' ? (item.barcode || '—') : '—'}</td>}
+                      <td style={{ ...tdSt, fontWeight: 600 }}>
+                        {item.name}
+                        {isMobile && <span style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{item.type === 'tire' ? 'צמיג' : 'מוצר'}{item.sku ? ` · ${item.sku}` : ''}</span>}
+                      </td>
                       <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: item.qty === 0 ? '#ef4444' : item.qty <= 2 ? '#f59e0b' : '#16a34a' }}>{item.qty}</td>
                       <td style={tdSt}>
                         <button onClick={() => openEdit(item)} className="text-blue-600 font-bold hover:underline" style={{ fontSize: '12px' }}>ערוך ←</button>
