@@ -156,7 +156,10 @@ export default function TireSearchClient({ session }: Props) {
   return (
     <div className="flex h-full" style={{ background: '#f0f4f8' }}>
       {showPicker && (
-        <TirePositionPicker onConfirm={submitWithPosition} />
+        <TirePositionPicker
+          onConfirm={submitWithPosition}
+          onBack={() => { setShowPicker(false); setShowKeyboard(true) }}
+        />
       )}
 
       {/* Keyboard — left side panel, opens/closes horizontally */}
