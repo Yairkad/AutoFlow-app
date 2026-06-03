@@ -76,6 +76,12 @@ export default function TireSearchClient({ session }: Props) {
     setTimeout(() => scanRef.current?.focus(), 50)
   }, [scanMode])
 
+  useEffect(() => {
+    if (!scanMode || !barcodeInput.trim()) return
+    const t = setTimeout(() => { handleBarcode(barcodeInput.trim()) }, 200)
+    return () => clearTimeout(t)
+  }, [barcodeInput, scanMode]) // eslint-disable-line
+
   async function handleBarcode(code: string) {
     setScanMode(false)
     setQuery(code)

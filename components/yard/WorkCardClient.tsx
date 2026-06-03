@@ -249,6 +249,12 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     if (scanMode) { setBarcodeInput(''); setTimeout(() => scanRef.current?.focus(), 50) }
   }, [scanMode])
 
+  useEffect(() => {
+    if (!scanMode || !barcodeInput.trim()) return
+    const t = setTimeout(() => { handleBarcodeScan(barcodeInput.trim()) }, 200)
+    return () => clearTimeout(t)
+  }, [barcodeInput, scanMode]) // eslint-disable-line
+
   async function handleBarcodeScan(code: string) {
     setScanMode(false)
     setBarcodeInput('')
