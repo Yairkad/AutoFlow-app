@@ -7,7 +7,6 @@ import type { YardSession, YardSessionItem, YardService, TirePosition } from '@/
 import { sessionTotal, formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
-import CameraScanner from '@/components/yard/CameraScanner'
 import type { SearchResult } from '@/app/api/yard/search/route'
 
 interface Props {
@@ -30,8 +29,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const [showHistory,   setShowHistory]   = useState(false)
   const [pickerForItem,  setPickerForItem]  = useState<YardSessionItem | null>(null)
   const [scanMode,       setScanMode]       = useState(false)
-  const [cameraOpen,     setCameraOpen]     = useState(false)
-  const [scanBuf,        setScanBuf]        = useState('')
+  const [barcodeInput,   setBarcodeInput]   = useState('')
   const [scanTireResult, setScanTireResult] = useState<SearchResult | null>(null)
   const scanRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
@@ -248,12 +246,12 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   // ── Barcode scan ──────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (scanMode) { setScanBuf(''); scanRef.current?.focus() }
+    if (scanMode) { setBarcodeInput(''); setTimeout(() => scanRef.current?.focus(), 50) }
   }, [scanMode])
 
   async function handleBarcodeScan(code: string) {
     setScanMode(false)
-    setScanBuf('')
+    setBarcodeInput('')
     const res  = await fetch(`/api/yard/barcode?code=${encodeURIComponent(code)}`)
     const item: SearchResult | null = await res.json()
 
@@ -478,39 +476,28 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
         <VehicleHistoryModal plate={session.plate} onClose={() => setShowHistory(false)} />
       )}
 
-      {/* Barcode scan — hidden input captures scanner keystrokes */}
+      {/* Barcode scan — visible input row */}
       {scanMode && (
-        <>
-          <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-4"
-            style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(3px)' }}
-            onClick={() => setScanMode(false)}>
-            <svg viewBox="0 0 56 44" width="72" height="56" fill="white" style={{ opacity: 0.9 }}>
-              <rect x="0"  y="0" width="4" height="44"/><rect x="8"  y="0" width="2" height="44"/>
-              <rect x="13" y="0" width="6" height="44"/><rect x="23" y="0" width="2" height="44"/>
-              <rect x="29" y="0" width="4" height="44"/><rect x="37" y="0" width="2" height="44"/>
-              <rect x="43" y="0" width="6" height="44"/><rect x="53" y="0" width="2" height="44"/>
-            </svg>
-            <p className="text-white font-bold text-xl">ממתין לסריקה...</p>
-            <p className="text-white/60 text-sm">לחץ לביטול</p>
-          </div>
+        <div className="flex items-center gap-2 flex-shrink-0" style={{ margin: '10px 14px 0' }}>
           <input
             ref={scanRef}
-            className="absolute opacity-0 w-0 h-0"
-            tabIndex={-1}
+            type="text"
             inputMode="none"
-            value={scanBuf}
-            onChange={e => setScanBuf(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && scanBuf.trim()) handleBarcodeScan(scanBuf.trim()) }}
+            value={barcodeInput}
+            onChange={e => setBarcodeInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && barcodeInput.trim()) handleBarcodeScan(barcodeInput.trim()) }}
+            placeholder="סרוק ברקוד..."
+            className="flex-1 border-2 border-blue-500 rounded-xl text-base font-bold bg-blue-50 outline-none"
+            style={{ padding: '10px 14px', letterSpacing: '2px', direction: 'ltr' }}
           />
-        </>
-      )}
-
-      {/* Camera barcode scanner */}
-      {cameraOpen && (
-        <CameraScanner
-          onScan={code => { setCameraOpen(false); handleBarcodeScan(code) }}
-          onClose={() => setCameraOpen(false)}
-        />
+          <button
+            onClick={() => setScanMode(false)}
+            className="rounded-xl border-2 border-slate-300 font-bold text-slate-600 bg-white flex-shrink-0 active:bg-slate-100 transition-colors"
+            style={{ padding: '0 14px', height: '44px', fontSize: '14px' }}
+          >
+            ביטול
+          </button>
+        </div>
       )}
 
       {/* Scanned tire — position picker */}
@@ -581,11 +568,11 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
               </button>
             )
           })}
-          {/* Barcode scan row — camera + physical scanner */}
+          {/* Barcode scan — single button, full width */}
           <button
-            onClick={() => setCameraOpen(true)}
-            className="text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-[.98] active:brightness-90 transition-all"
-            style={{ minHeight: '52px', fontSize: '16px', background: '#1e40af' }}
+            onClick={() => setScanMode(true)}
+            className="col-span-2 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-[.98] active:brightness-90 transition-all"
+            style={{ minHeight: '52px', fontSize: '16px', background: '#374151' }}
           >
             <svg viewBox="0 0 28 22" width="20" height="16" fill="white">
               <rect x="0"  y="0" width="2" height="22"/><rect x="4"  y="0" width="1" height="22"/>
@@ -593,14 +580,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
               <rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/>
               <rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/>
             </svg>
-            סרוק מצלמה
-          </button>
-          <button
-            onClick={() => setScanMode(true)}
-            className="text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm active:scale-[.98] active:brightness-90 transition-all"
-            style={{ minHeight: '52px', fontSize: '15px', background: '#374151' }}
-          >
-            🔌 סורק חיצוני
+            סרוק ברקוד
           </button>
         </div>
 
