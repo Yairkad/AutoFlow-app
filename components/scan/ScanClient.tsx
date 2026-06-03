@@ -13,68 +13,74 @@ interface InventoryItem {
 }
 
 interface EditForm {
-  name: string
-  sku: string
-  barcode: string
-  qty: string
-  sell_price: string
+  name: string; sku: string; barcode: string; qty: string; sell_price: string
+}
+
+interface CountEntry {
+  item: InventoryItem
+  counted: number
 }
 
 type NotFoundAction = 'link' | null
+type Mode = 'scan' | 'count'
 
 export default function ScanClient() {
   const sb = createClient()
-  const scanRef  = useRef<HTMLInputElement>(null)
+  const scanRef   = useRef<HTMLInputElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+  const modeRef   = useRef<Mode>('scan')
+  const countMapRef = useRef<Record<string, CountEntry>>({})
 
   const [barcodeInput, setBarcodeInput] = useState('')
   const [textFilter,   setTextFilter]   = useState('')
   const [items,        setItems]        = useState<InventoryItem[]>([])
   const [loading,      setLoading]      = useState(true)
+  const [mode,         setMode]         = useState<Mode>('scan')
 
-  // found
+  // scan mode
   const [foundItem,    setFoundItem]    = useState<InventoryItem | null>(null)
-
-  // not found
   const [notFoundCode, setNotFoundCode] = useState<string | null>(null)
   const [action,       setAction]       = useState<NotFoundAction>(null)
   const [linkSearch,   setLinkSearch]   = useState('')
   const [savingLink,   setSavingLink]   = useState(false)
 
   // edit
-  const [editItem,  setEditItem]  = useState<InventoryItem | null>(null)
-  const [editForm,  setEditForm]  = useState<EditForm>({ name: '', sku: '', barcode: '', qty: '', sell_price: '' })
-  const [saving,    setSaving]    = useState(false)
+  const [editItem, setEditItem] = useState<InventoryItem | null>(null)
+  const [editForm, setEditForm] = useState<EditForm>({ name: '', sku: '', barcode: '', qty: '', sell_price: '' })
+  const [saving,   setSaving]   = useState(false)
 
-  // toast
+  // count mode
+  const [countEntries, setCountEntries]   = useState<CountEntry[]>([])  // display list (ordered)
+  const [unknownCodes, setUnknownCodes]   = useState<string[]>([])
+  const [showConfirm,  setShowConfirm]    = useState(false)
+  const [savingCount,  setSavingCount]    = useState(false)
+  const [lastScanned,  setLastScanned]    = useState<string | null>(null)
+
   const [toast, setToast] = useState<string | null>(null)
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000) }
-
   const refocus = () => setTimeout(() => scanRef.current?.focus(), 120)
 
-  // ── Load inventory ─────────────────────────────────────────────────────────
+  // keep refs in sync
+  useEffect(() => { modeRef.current = mode }, [mode])
+
+  // ── Load ──────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true)
     const { data: { user } } = await sb.auth.getUser()
     if (!user) return
     const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.id).single()
     if (!profile) return
-
     const [{ data: tires }, { data: products }] = await Promise.all([
       sb.from('tires').select('id,brand,width,profile,rim,sku,qty').eq('tenant_id', profile.tenant_id).order('created_at', { ascending: false }),
       sb.from('products').select('id,name,sku,barcode,qty').eq('tenant_id', profile.tenant_id).order('created_at', { ascending: false }),
     ])
-
     const tireItems: InventoryItem[] = (tires ?? []).map(t => ({
-      id: t.id, type: 'tire',
-      name: `${t.brand ?? ''} ${t.width}/${t.profile}R${t.rim}`.trim(),
+      id: t.id, type: 'tire', name: `${t.brand ?? ''} ${t.width}/${t.profile}R${t.rim}`.trim(),
       sku: t.sku ?? null, barcode: t.sku ?? null, qty: t.qty,
     }))
     const prodItems: InventoryItem[] = (products ?? []).map(p => ({
-      id: p.id, type: 'product',
-      name: p.name, sku: p.sku ?? null, barcode: p.barcode ?? null, qty: p.qty,
+      id: p.id, type: 'product', name: p.name, sku: p.sku ?? null, barcode: p.barcode ?? null, qty: p.qty,
     }))
-
     setItems([...tireItems, ...prodItems])
     setLoading(false)
   }, [sb])
@@ -82,99 +88,117 @@ export default function ScanClient() {
   useEffect(() => { load() }, [load])
   useEffect(() => { scanRef.current?.focus() }, [])
 
-  // ── Debounce barcode trigger ───────────────────────────────────────────────
+  // ── Debounce trigger ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!barcodeInput.trim()) return
-    const t = setTimeout(() => handleScan(barcodeInput.trim()), 200)
+    const t = setTimeout(() => {
+      const code = barcodeInput.trim()
+      setBarcodeInput('')
+      if (modeRef.current === 'count') handleCountScan(code)
+      else handleScan(code)
+    }, 200)
     return () => clearTimeout(t)
   }, [barcodeInput]) // eslint-disable-line
 
-  // ── Scan handler ──────────────────────────────────────────────────────────
+  // ── Normal scan ───────────────────────────────────────────────────────────
+  function findItem(code: string) {
+    return items.find(i => (i.barcode && i.barcode === code) || (i.sku && i.sku === code))
+  }
+
   function handleScan(code: string) {
-    setBarcodeInput('')
-    const match = items.find(i => (i.barcode && i.barcode === code) || (i.sku && i.sku === code))
-    if (match) {
-      setFoundItem(match)
-      setNotFoundCode(null)
-    } else {
-      setFoundItem(null)
-      setNotFoundCode(code)
-      setAction(null)
-      setLinkSearch('')
-    }
+    const match = findItem(code)
+    if (match) { setFoundItem(match); setNotFoundCode(null) }
+    else { setFoundItem(null); setNotFoundCode(code); setAction(null); setLinkSearch('') }
     refocus()
   }
 
-  // ── Open edit ─────────────────────────────────────────────────────────────
+  // ── Count scan ────────────────────────────────────────────────────────────
+  function handleCountScan(code: string) {
+    const match = findItem(code)
+    setLastScanned(match ? match.name : `❓ ${code}`)
+    if (!match) {
+      setUnknownCodes(p => p.includes(code) ? p : [...p, code])
+      refocus()
+      return
+    }
+    const prev = countMapRef.current[match.id]
+    const newCount = (prev?.counted ?? 0) + 1
+    countMapRef.current[match.id] = { item: match, counted: newCount }
+    setCountEntries(Object.values(countMapRef.current).sort((a, b) => b.counted - a.counted))
+    refocus()
+  }
+
+  // ── Start / stop count mode ───────────────────────────────────────────────
+  function startCount() {
+    countMapRef.current = {}
+    setCountEntries([])
+    setUnknownCodes([])
+    setLastScanned(null)
+    setMode('count')
+    refocus()
+  }
+
+  function cancelCount() {
+    setMode('scan')
+    setShowConfirm(false)
+    refocus()
+  }
+
+  async function confirmCount() {
+    setSavingCount(true)
+    const entries = Object.values(countMapRef.current)
+    for (const entry of entries) {
+      if (entry.item.type === 'tire') {
+        await sb.from('tires').update({ qty: entry.counted }).eq('id', entry.item.id)
+      } else {
+        await sb.from('products').update({ qty: entry.counted }).eq('id', entry.item.id)
+      }
+    }
+    setSavingCount(false)
+    setShowConfirm(false)
+    setMode('scan')
+    showToast(`ספירה הושלמה — ${entries.length} פריטים עודכנו ✓`)
+    await load()
+    refocus()
+  }
+
+  // ── Edit ──────────────────────────────────────────────────────────────────
   async function openEdit(item: InventoryItem) {
-    setFoundItem(null)
-    setNotFoundCode(null)
+    setFoundItem(null); setNotFoundCode(null)
     if (item.type === 'tire') {
       const { data } = await sb.from('tires').select('brand,width,profile,rim,sku,qty,sell_price').eq('id', item.id).single()
-      setEditForm({
-        name: `${data?.brand ?? ''} ${data?.width}/${data?.profile}R${data?.rim}`.trim(),
-        sku: data?.sku ?? '',
-        barcode: data?.sku ?? '',
-        qty: String(data?.qty ?? 0),
-        sell_price: String(data?.sell_price ?? ''),
-      })
+      setEditForm({ name: `${data?.brand ?? ''} ${data?.width}/${data?.profile}R${data?.rim}`.trim(), sku: data?.sku ?? '', barcode: data?.sku ?? '', qty: String(data?.qty ?? 0), sell_price: String(data?.sell_price ?? '') })
     } else {
       const { data } = await sb.from('products').select('name,sku,barcode,qty,sell_price').eq('id', item.id).single()
-      setEditForm({
-        name: data?.name ?? '',
-        sku: data?.sku ?? '',
-        barcode: data?.barcode ?? '',
-        qty: String(data?.qty ?? 0),
-        sell_price: String(data?.sell_price ?? ''),
-      })
+      setEditForm({ name: data?.name ?? '', sku: data?.sku ?? '', barcode: data?.barcode ?? '', qty: String(data?.qty ?? 0), sell_price: String(data?.sell_price ?? '') })
     }
     setEditItem(item)
   }
 
-  // ── Save edit ─────────────────────────────────────────────────────────────
   async function saveEdit() {
     if (!editItem) return
     setSaving(true)
-    const qty        = parseInt(editForm.qty) || 0
+    const qty = parseInt(editForm.qty) || 0
     const sell_price = parseFloat(editForm.sell_price) || null
-
     if (editItem.type === 'tire') {
       await sb.from('tires').update({ sku: editForm.sku.trim() || null, qty, sell_price }).eq('id', editItem.id)
     } else {
-      await sb.from('products').update({
-        name: editForm.name.trim() || editItem.name,
-        sku: editForm.sku.trim() || null,
-        barcode: editForm.barcode.trim() || null,
-        qty, sell_price,
-      }).eq('id', editItem.id)
+      await sb.from('products').update({ name: editForm.name.trim() || editItem.name, sku: editForm.sku.trim() || null, barcode: editForm.barcode.trim() || null, qty, sell_price }).eq('id', editItem.id)
     }
-
-    setSaving(false)
-    setEditItem(null)
-    showToast('נשמר ✓')
-    await load()
-    refocus()
+    setSaving(false); setEditItem(null); showToast('נשמר ✓'); await load(); refocus()
   }
 
-  // ── Save barcode link ─────────────────────────────────────────────────────
+  // ── Link barcode ──────────────────────────────────────────────────────────
   async function saveBarcode(item: InventoryItem, code: string) {
     setSavingLink(true)
-    if (item.type === 'tire') {
-      await sb.from('tires').update({ sku: code }).eq('id', item.id)
-    } else {
-      await sb.from('products').update({ barcode: code }).eq('id', item.id)
-    }
-    setSavingLink(false)
-    setNotFoundCode(null)
-    setAction(null)
-    showToast(`ברקוד שויך ל-${item.name} ✓`)
-    await load()
-    // offer to edit
-    const updated = { ...item, barcode: code, sku: item.type === 'tire' ? code : item.sku }
-    openEdit(updated)
+    if (item.type === 'tire') await sb.from('tires').update({ sku: code }).eq('id', item.id)
+    else await sb.from('products').update({ barcode: code }).eq('id', item.id)
+    setSavingLink(false); setNotFoundCode(null); setAction(null)
+    showToast(`ברקוד שויך ל-${item.name} ✓`); await load(); refocus()
   }
 
   const closeModal = () => { setFoundItem(null); setNotFoundCode(null); setAction(null); refocus() }
+  const setEF = (k: keyof EditForm, v: string) => setEditForm(p => ({ ...p, [k]: v }))
 
   // ── Filters ───────────────────────────────────────────────────────────────
   const filtered = items.filter(i => {
@@ -188,98 +212,202 @@ export default function ScanClient() {
     return i.name.toLowerCase().includes(q) || (i.sku ?? '').toLowerCase().includes(q)
   }).slice(0, 30)
 
-  const setEF = (k: keyof EditForm, v: string) => setEditForm(p => ({ ...p, [k]: v }))
-
   const BADGE = (type: 'tire' | 'product') => (
-    <span style={{
-      fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px',
-      background: type === 'tire' ? '#1e293b' : '#fff7ed',
-      color: type === 'tire' ? '#fff' : '#c2410c',
-      border: type === 'product' ? '1px solid #fed7aa' : 'none',
-    }}>
+    <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', background: type === 'tire' ? '#1e293b' : '#fff7ed', color: type === 'tire' ? '#fff' : '#c2410c', border: type === 'product' ? '1px solid #fed7aa' : 'none' }}>
       {type === 'tire' ? 'צמיג' : 'מוצר'}
     </span>
   )
 
+  // ══════════════════════════════════════════════════════════════════════════
   return (
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '24px 16px' }}>
 
-      {/* Toast */}
       {toast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] bg-green-700 text-white font-bold rounded-xl px-6 py-3 shadow-xl">
-          {toast}
-        </div>
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] bg-green-700 text-white font-bold rounded-xl px-6 py-3 shadow-xl">{toast}</div>
       )}
 
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <svg viewBox="0 0 28 22" width="22" height="17" fill="#334155"><rect x="0" y="0" width="2" height="22"/><rect x="4" y="0" width="1" height="22"/><rect x="7" y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/><rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/><rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/></svg>
-        <h1 className="text-2xl font-black text-slate-800">סריקת ברקוד</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <svg viewBox="0 0 28 22" width="22" height="17" fill="#334155"><rect x="0" y="0" width="2" height="22"/><rect x="4" y="0" width="1" height="22"/><rect x="7" y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/><rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/><rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/></svg>
+          <h1 className="text-2xl font-black text-slate-800">{mode === 'count' ? '📦 ספירת מלאי' : 'סריקת ברקוד'}</h1>
+        </div>
+        {mode === 'scan' ? (
+          <button onClick={startCount} className="bg-slate-800 text-white font-bold rounded-xl active:brightness-90 transition-all" style={{ padding: '10px 18px', fontSize: '14px' }}>
+            📦 התחל ספירת מלאי
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button onClick={() => setShowConfirm(true)} disabled={countEntries.length === 0}
+              className="bg-green-700 text-white font-bold rounded-xl active:brightness-90 disabled:opacity-40 transition-all" style={{ padding: '10px 18px', fontSize: '14px' }}>
+              ✓ סיים ועדכן מלאי
+            </button>
+            <button onClick={cancelCount} className="border-2 border-slate-300 text-slate-600 font-bold rounded-xl active:bg-slate-50 transition-all" style={{ padding: '10px 14px', fontSize: '14px' }}>
+              ביטול
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Scan input */}
-      <div className="bg-white border-2 border-blue-400 rounded-2xl shadow-md mb-6" style={{ padding: '16px 20px' }}>
-        <label className="block text-sm font-bold text-blue-700 mb-2">סרוק ברקוד</label>
+      <div className={`rounded-2xl shadow-md mb-6 border-2 ${mode === 'count' ? 'border-amber-400 bg-amber-50' : 'border-blue-400 bg-white'}`} style={{ padding: '16px 20px' }}>
+        <label className={`block text-sm font-bold mb-2 ${mode === 'count' ? 'text-amber-700' : 'text-blue-700'}`}>
+          {mode === 'count' ? '📦 סורק לספירה — סרוק כל פריט בזה אחר זה' : 'סרוק ברקוד'}
+        </label>
         <input
           ref={scanRef}
           type="text" inputMode="none"
           value={barcodeInput}
           onChange={e => setBarcodeInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) handleScan(v) } }}
-          placeholder="הכנס פוקוס כאן וסרוק..."
-          className="w-full border-2 border-slate-200 rounded-xl font-bold bg-blue-50 outline-none focus:border-blue-500 transition-colors"
+          onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) { setBarcodeInput(''); if (modeRef.current === 'count') handleCountScan(v); else handleScan(v) } } }}
+          placeholder={mode === 'count' ? 'פוקוס כאן — סרוק...' : 'הכנס פוקוס כאן וסרוק...'}
+          className={`w-full border-2 rounded-xl font-bold outline-none transition-colors ${mode === 'count' ? 'border-amber-300 bg-amber-100 focus:border-amber-500' : 'border-slate-200 bg-blue-50 focus:border-blue-500'}`}
           style={{ padding: '12px 16px', fontSize: '18px', letterSpacing: '3px', direction: 'ltr' }}
         />
-        <p className="text-xs text-slate-400 mt-2">הסורק מזהה אוטומטית · אפשר גם להקליד ולחוץ Enter</p>
+        {mode === 'count' && lastScanned && (
+          <p className="text-sm font-semibold mt-2 text-amber-800">↳ נסרק: {lastScanned}</p>
+        )}
+        {mode !== 'count' && <p className="text-xs text-slate-400 mt-2">הסורק מזהה אוטומטית · אפשר גם להקליד ולחוץ Enter</p>}
       </div>
 
-      {/* Inventory list */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="flex items-center justify-between border-b border-slate-100" style={{ padding: '14px 18px' }}>
-          <span className="font-bold text-slate-700">מלאי ({items.length} פריטים)</span>
-          <input value={textFilter} onChange={e => setTextFilter(e.target.value)}
-            placeholder="סנן לפי שם / מק״ט / ברקוד..."
-            className="border border-slate-200 rounded-lg bg-slate-50 outline-none focus:border-blue-400 transition-colors"
-            style={{ padding: '6px 12px', fontSize: '13px', width: '220px' }} />
+      {/* COUNT MODE — running list */}
+      {mode === 'count' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden mb-6">
+          <div className="bg-amber-50 border-b border-amber-200 flex items-center justify-between" style={{ padding: '12px 18px' }}>
+            <span className="font-bold text-amber-800">פריטים שנספרו ({countEntries.length})</span>
+            {unknownCodes.length > 0 && (
+              <span className="text-red-500 font-semibold text-sm">⚠ {unknownCodes.length} ברקודים לא זוהו</span>
+            )}
+          </div>
+          {countEntries.length === 0 ? (
+            <div className="text-center text-slate-400 py-10">עדיין לא נסרקו פריטים</div>
+          ) : (
+            <div style={{ overflowY: 'auto', maxHeight: '40vh' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead style={{ position: 'sticky', top: 0, background: '#fffbeb', zIndex: 1 }}>
+                  <tr>
+                    <th style={thSt}>פריט</th>
+                    <th style={thSt}>סוג</th>
+                    <th style={{ ...thSt, textAlign: 'center' }}>נספר</th>
+                    <th style={{ ...thSt, textAlign: 'center' }}>במלאי</th>
+                    <th style={{ ...thSt, textAlign: 'center' }}>הפרש</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {countEntries.map((e, i) => {
+                    const diff = e.counted - e.item.qty
+                    return (
+                      <tr key={e.item.id} style={{ borderBottom: '1px solid #fef3c7', background: i % 2 === 0 ? '#fff' : '#fffbeb' }}>
+                        <td style={{ ...tdSt, fontWeight: 600 }}>{e.item.name}</td>
+                        <td style={tdSt}>{BADGE(e.item.type)}</td>
+                        <td style={{ ...tdSt, textAlign: 'center', fontWeight: 800, fontSize: '16px', color: '#d97706' }}>{e.counted}</td>
+                        <td style={{ ...tdSt, textAlign: 'center', color: '#64748b' }}>{e.item.qty}</td>
+                        <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: diff > 0 ? '#16a34a' : diff < 0 ? '#ef4444' : '#94a3b8' }}>
+                          {diff > 0 ? `+${diff}` : diff === 0 ? '—' : diff}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-        {loading ? (
-          <div className="text-center text-slate-400 py-10">טוען...</div>
-        ) : (
-          <div style={{ overflowY: 'auto', maxHeight: '55vh' }}>
+      )}
+
+      {/* INVENTORY LIST (scan mode) */}
+      {mode === 'scan' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between border-b border-slate-100" style={{ padding: '14px 18px' }}>
+            <span className="font-bold text-slate-700">מלאי ({items.length} פריטים)</span>
+            <input value={textFilter} onChange={e => setTextFilter(e.target.value)}
+              placeholder="סנן לפי שם / מק״ט / ברקוד..."
+              className="border border-slate-200 rounded-lg bg-slate-50 outline-none focus:border-blue-400 transition-colors"
+              style={{ padding: '6px 12px', fontSize: '13px', width: '220px' }} />
+          </div>
+          {loading ? (
+            <div className="text-center text-slate-400 py-10">טוען...</div>
+          ) : (
+            <div style={{ overflowY: 'auto', maxHeight: '55vh' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 1 }}>
+                  <tr>
+                    <th style={thSt}>סוג</th>
+                    <th style={thSt}>מק״ט</th>
+                    <th style={thSt}>ברקוד</th>
+                    <th style={thSt}>פריט</th>
+                    <th style={{ ...thSt, textAlign: 'center' }}>כמות</th>
+                    <th style={thSt}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((item, i) => (
+                    <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                      <td style={tdSt}>{BADGE(item.type)}</td>
+                      <td style={{ ...tdSt, fontFamily: 'monospace', color: '#64748b' }}>{item.sku || '—'}</td>
+                      <td style={{ ...tdSt, fontFamily: 'monospace', color: '#64748b' }}>{item.type === 'product' ? (item.barcode || '—') : '—'}</td>
+                      <td style={{ ...tdSt, fontWeight: 600 }}>{item.name}</td>
+                      <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: item.qty === 0 ? '#ef4444' : item.qty <= 2 ? '#f59e0b' : '#16a34a' }}>{item.qty}</td>
+                      <td style={tdSt}>
+                        <button onClick={() => openEdit(item)} className="text-blue-600 font-bold hover:underline" style={{ fontSize: '12px' }}>ערוך ←</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {filtered.length === 0 && <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>אין תוצאות</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── COUNT CONFIRM MODAL ── */}
+      {showConfirm && (
+        <Modal onClose={() => setShowConfirm(false)} width={520}>
+          <p className="font-black text-slate-800 text-xl mb-1">אישור ספירת מלאי</p>
+          <p className="text-slate-500 text-sm mb-4">הכמויות הבאות יעודכנו בבסיס הנתונים:</p>
+          <div style={{ maxHeight: '350px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px', marginBottom: '20px' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 1 }}>
+              <thead style={{ position: 'sticky', top: 0, background: '#f8fafc' }}>
                 <tr>
-                  <th style={thSt}>סוג</th>
-                  <th style={thSt}>מק״ט</th>
-                  <th style={thSt}>ברקוד</th>
-                  <th style={{ ...thSt }}>פריט</th>
-                  <th style={{ ...thSt, textAlign: 'center' }}>כמות</th>
-                  <th style={thSt}></th>
+                  <th style={thSt}>פריט</th>
+                  <th style={{ ...thSt, textAlign: 'center' }}>היה</th>
+                  <th style={{ ...thSt, textAlign: 'center' }}>נספר</th>
+                  <th style={{ ...thSt, textAlign: 'center' }}>הפרש</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((item, i) => (
-                  <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
-                    <td style={tdSt}>{BADGE(item.type)}</td>
-                    <td style={{ ...tdSt, fontFamily: 'monospace', color: '#64748b' }}>{item.sku || '—'}</td>
-                    <td style={{ ...tdSt, fontFamily: 'monospace', color: '#64748b' }}>
-                      {item.type === 'product' ? (item.barcode || '—') : '—'}
-                    </td>
-                    <td style={{ ...tdSt, fontWeight: 600 }}>{item.name}</td>
-                    <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: item.qty === 0 ? '#ef4444' : item.qty <= 2 ? '#f59e0b' : '#16a34a' }}>{item.qty}</td>
-                    <td style={tdSt}>
-                      <button onClick={() => openEdit(item)} className="text-blue-600 font-bold hover:underline" style={{ fontSize: '12px' }}>ערוך ←</button>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>אין תוצאות</td></tr>
-                )}
+                {countEntries.map((e, i) => {
+                  const diff = e.counted - e.item.qty
+                  return (
+                    <tr key={e.item.id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                      <td style={{ ...tdSt, fontWeight: 600 }}>{e.item.name}</td>
+                      <td style={{ ...tdSt, textAlign: 'center', color: '#64748b' }}>{e.item.qty}</td>
+                      <td style={{ ...tdSt, textAlign: 'center', fontWeight: 800, color: '#d97706' }}>{e.counted}</td>
+                      <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: diff > 0 ? '#16a34a' : diff < 0 ? '#ef4444' : '#94a3b8' }}>
+                        {diff > 0 ? `+${diff}` : diff === 0 ? '—' : diff}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+          {unknownCodes.length > 0 && (
+            <p className="text-red-500 text-sm font-semibold mb-4">⚠ {unknownCodes.length} ברקודים לא זוהו ולא יעודכנו</p>
+          )}
+          <div className="flex gap-3">
+            <button onClick={confirmCount} disabled={savingCount}
+              className="flex-1 bg-green-700 text-white rounded-xl font-bold disabled:opacity-50 active:brightness-90 transition-all" style={{ padding: '12px' }}>
+              {savingCount ? 'מעדכן...' : `✓ אשר ועדכן ${countEntries.length} פריטים`}
+            </button>
+            <button onClick={() => setShowConfirm(false)}
+              className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all" style={{ padding: '12px' }}>
+              חזרה
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {/* ── FOUND MODAL ── */}
       {foundItem && (
@@ -289,14 +417,8 @@ export default function ScanClient() {
           {foundItem.sku && <p className="text-slate-400 text-sm mb-1">מק״ט: {foundItem.sku}</p>}
           <p className="text-slate-500 text-sm mb-5">כמות: <span style={{ fontWeight: 700, color: foundItem.qty === 0 ? '#ef4444' : '#16a34a' }}>{foundItem.qty}</span></p>
           <div className="flex gap-3">
-            <button onClick={() => openEdit(foundItem)}
-              className="flex-1 bg-blue-600 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '11px' }}>
-              ✏️ ערוך כאן
-            </button>
-            <button onClick={closeModal}
-              className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all" style={{ padding: '11px' }}>
-              סגור
-            </button>
+            <button onClick={() => openEdit(foundItem)} className="flex-1 bg-blue-600 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '11px' }}>✏️ ערוך כאן</button>
+            <button onClick={closeModal} className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all" style={{ padding: '11px' }}>סגור</button>
           </div>
         </Modal>
       )}
@@ -319,9 +441,7 @@ export default function ScanClient() {
           )}
           {action === 'link' && (
             <>
-              <p className="font-bold text-slate-700 mb-3">
-                שייך ברקוד <span style={{ fontFamily: 'monospace', background: '#f1f5f9', padding: '2px 7px', borderRadius: '6px' }}>{notFoundCode}</span> לפריט:
-              </p>
+              <p className="font-bold text-slate-700 mb-3">שייך ברקוד <span style={{ fontFamily: 'monospace', background: '#f1f5f9', padding: '2px 7px', borderRadius: '6px' }}>{notFoundCode}</span> לפריט:</p>
               <input ref={searchRef} autoFocus value={linkSearch} onChange={e => setLinkSearch(e.target.value)}
                 placeholder="חפש לפי שם או מק״ט..."
                 className="w-full border-2 border-blue-300 rounded-xl outline-none focus:border-blue-500 transition-colors mb-3"
@@ -335,10 +455,7 @@ export default function ScanClient() {
                       <p className="font-bold text-slate-800 text-sm">{item.name}</p>
                       {item.sku && <p className="text-slate-400 text-xs">{item.sku}</p>}
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {BADGE(item.type)}
-                      <span className="text-blue-600 font-bold text-sm">שייך ←</span>
-                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">{BADGE(item.type)}<span className="text-blue-600 font-bold text-sm">שייך ←</span></div>
                   </button>
                 ))}
                 {linkFiltered.length === 0 && <p className="text-center text-slate-400 py-6 text-sm">לא נמצאו פריטים</p>}
@@ -353,46 +470,24 @@ export default function ScanClient() {
       {editItem && (
         <Modal onClose={() => { setEditItem(null); refocus() }} width={420}>
           <div className="flex items-center gap-2 mb-4">{BADGE(editItem.type)}<span className="font-bold text-slate-700">עריכת פריט</span></div>
-
-          {editItem.type === 'product' && (
-            <Field label="שם מוצר">
-              <input className="form-input" value={editForm.name} onChange={e => setEF('name', e.target.value)} />
-            </Field>
-          )}
-          {editItem.type === 'product' && (
-            <Field label="מק״ט">
-              <input className="form-input" value={editForm.sku} onChange={e => setEF('sku', e.target.value)} placeholder="קוד פנימי" />
-            </Field>
-          )}
+          {editItem.type === 'product' && <Field label="שם מוצר"><input className="form-input" value={editForm.name} onChange={e => setEF('name', e.target.value)} /></Field>}
+          {editItem.type === 'product' && <Field label="מק״ט"><input className="form-input" value={editForm.sku} onChange={e => setEF('sku', e.target.value)} placeholder="קוד פנימי" /></Field>}
           <Field label={editItem.type === 'tire' ? 'מקט / ברקוד יצרן' : 'ברקוד'}>
             <input className="form-input" value={editItem.type === 'tire' ? editForm.sku : editForm.barcode}
               onChange={e => setEF(editItem.type === 'tire' ? 'sku' : 'barcode', e.target.value)}
               placeholder="סרוק או הקלד ברקוד" style={{ fontFamily: 'monospace' }} />
           </Field>
-          <Field label="כמות במלאי">
-            <input className="form-input" type="number" min={0} value={editForm.qty} onChange={e => setEF('qty', e.target.value)} />
-          </Field>
-          <Field label="מחיר מכירה (₪)">
-            <input className="form-input" type="number" min={0} step={0.01} value={editForm.sell_price} onChange={e => setEF('sell_price', e.target.value)} />
-          </Field>
-
+          <Field label="כמות במלאי"><input className="form-input" type="number" min={0} value={editForm.qty} onChange={e => setEF('qty', e.target.value)} /></Field>
+          <Field label="מחיר מכירה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.sell_price} onChange={e => setEF('sell_price', e.target.value)} /></Field>
           <div className="flex gap-3 mt-5">
-            <button onClick={saveEdit} disabled={saving}
-              className="flex-1 bg-green-700 text-white rounded-xl font-bold disabled:opacity-50 active:brightness-90 transition-all" style={{ padding: '12px' }}>
-              {saving ? 'שומר...' : 'שמור'}
-            </button>
-            <button onClick={() => { setEditItem(null); refocus() }}
-              className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all" style={{ padding: '12px' }}>
-              ביטול
-            </button>
+            <button onClick={saveEdit} disabled={saving} className="flex-1 bg-green-700 text-white rounded-xl font-bold disabled:opacity-50 active:brightness-90 transition-all" style={{ padding: '12px' }}>{saving ? 'שומר...' : 'שמור'}</button>
+            <button onClick={() => { setEditItem(null); refocus() }} className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all" style={{ padding: '12px' }}>ביטול</button>
           </div>
         </Modal>
       )}
     </div>
   )
 }
-
-// ── Small helpers ──────────────────────────────────────────────────────────────
 
 function Modal({ children, onClose, width = 380 }: { children: React.ReactNode; onClose: () => void; width?: number }) {
   return (
