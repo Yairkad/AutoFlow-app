@@ -34,7 +34,6 @@ export default function TireSearchClient({ session }: Props) {
   const [detectedSize,  setDetectedSize]  = useState<string | null>(null)
   const [showPicker,    setShowPicker]    = useState(false)
   const [showKeyboard,  setShowKeyboard]  = useState(true)
-  const [showDropdown,  setShowDropdown]  = useState(false)
 
   const CACHE_TTL = 5 * 60 * 1000
 
@@ -67,7 +66,7 @@ export default function TireSearchClient({ session }: Props) {
   }, []) // eslint-disable-line
 
   useEffect(() => {
-    const t = setTimeout(() => { search(query); setShowDropdown(!!query.trim()) }, 300)
+    const t = setTimeout(() => { search(query) }, 300)
     return () => clearTimeout(t)
   }, [query, search])
 
@@ -86,22 +85,12 @@ export default function TireSearchClient({ session }: Props) {
   function confirmSearch() {
     search(query)
     setShowKeyboard(false)
-    setShowDropdown(false)
-  }
-
-  function selectSuggestion(r: TireResult) {
-    setQuery(r.name)
-    setSelected(r)
-    setPrice(r.price)
-    setShowDropdown(false)
-    setShowKeyboard(false)
   }
 
   function selectAndAdd(r: TireResult) {
     selectedRef.current = r
     setSelected(r)
     setPrice(r.price)
-    setShowDropdown(false)
     setShowKeyboard(false)
     setShowPicker(true)
   }
@@ -175,7 +164,7 @@ export default function TireSearchClient({ session }: Props) {
         <TireKeyboard
           side
           value={query}
-          onChange={v => { setQuery(v); setShowDropdown(true) }}
+          onChange={v => { setQuery(v) }}
           onConfirm={confirmSearch}
         />
       )}
@@ -249,26 +238,6 @@ export default function TireSearchClient({ session }: Props) {
               className="w-full border-2 border-blue-500 rounded-xl text-base font-bold bg-white outline-none"
               style={{ padding: '10px 14px', letterSpacing: '1px', direction: 'ltr' }}
             />
-            {/* Autocomplete dropdown */}
-            {showDropdown && results.length > 0 && (
-              <div className="absolute left-0 right-0 bg-white border-2 border-blue-300 rounded-xl shadow-xl overflow-hidden"
-                style={{ top: 'calc(100% + 4px)', zIndex: 40 }}>
-                {results.slice(0, 6).map((r, i) => (
-                  <button
-                    key={r.id}
-                    onPointerDown={e => { e.preventDefault(); selectSuggestion(r) }}
-                    className="w-full flex items-center justify-between active:bg-blue-50 transition-colors"
-                    style={{
-                      padding: '11px 14px',
-                      borderBottom: i < Math.min(results.length, 6) - 1 ? '1px solid #e2e8f0' : 'none',
-                    }}
-                  >
-                    <span className="font-bold text-slate-800" style={{ fontSize: '15px', direction: 'ltr' }}>{r.name}</span>
-                    <span className="font-black text-blue-600" style={{ fontSize: '14px' }}>{r.price.toLocaleString()}₪</span>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Scanner */}
@@ -297,8 +266,7 @@ export default function TireSearchClient({ session }: Props) {
         )}
 
         {/* Results */}
-        <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-slate-200" style={{ margin: '10px 14px 0' }}
-          onPointerDown={() => { setShowDropdown(false) }}>
+        <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-slate-200" style={{ margin: '10px 14px 0' }}>
           {results.length === 0 ? (
             <div className="p-6 text-center text-slate-400">
               {query ? 'לא נמצאו תוצאות' : 'הקלד מידת צמיג לחיפוש'}

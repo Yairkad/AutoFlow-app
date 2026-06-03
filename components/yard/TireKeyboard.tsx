@@ -20,7 +20,7 @@ export default function TireKeyboard({ value, onChange, onConfirm, disabled, sid
     return (
       <div
         className="bg-slate-100 border-l-2 border-slate-200 flex-shrink-0 flex flex-col justify-center self-stretch"
-        style={{ width: '190px', padding: '10px', gap: '7px' }}
+        style={{ width: '210px', padding: '10px', gap: '7px' }}
       >
         {ROWS.map((row, ri) => (
           <div key={ri} className="flex" style={{ gap: '7px' }}>
