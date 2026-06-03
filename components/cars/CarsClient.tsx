@@ -381,7 +381,7 @@ export default function CarsClient() {
 <table>
   ${row('סוג רכב', req.car_type)}
   ${row('סוג דלק', req.fuel)}
-  ${row('סוג ילוכים', req.transmission)}
+  ${row('סוג הילוכים', req.transmission)}
   ${row('יצרן / דגם מועדף', req.make_pref)}
   ${row('תקציב מקסימלי', req.budget ? '₪' + req.budget.toLocaleString('he-IL') : null)}
   ${row('שנת ייצור מינימלית', req.min_year ? String(req.min_year) : null)}
@@ -752,10 +752,12 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       notes:        reqForm.notes        || null,
     }
     if (editReqId) {
-      await sb.from('car_requests').update(payload).eq('id', editReqId)
+      const { error } = await sb.from('car_requests').update(payload).eq('id', editReqId)
+      if (error) { toast('שגיאה בעדכון: ' + error.message, 'error'); return }
       toast('הבקשה עודכנה ✓', 'success')
     } else {
-      await sb.from('car_requests').insert(payload)
+      const { error } = await sb.from('car_requests').insert(payload)
+      if (error) { toast('שגיאה בשמירה: ' + error.message, 'error'); return }
       toast('הבקשה נשמרה ✓', 'success')
     }
     setReqModal(false)
@@ -1744,7 +1746,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
                 {['בנזין','דיזל','היברידי','חשמלי'].map(t => <option key={t}>{t}</option>)}
               </select>
             </Field>
-            <Field label="סוג ילוכים">
+            <Field label="סוג הילוכים">
               <select value={reqForm.transmission} onChange={e => setReqForm(f=>({...f,transmission:e.target.value}))} style={inp()}>
                 <option value="">לא משנה</option>
                 <option value="אוטומט">אוטומט</option>
