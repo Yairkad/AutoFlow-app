@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 interface InventoryItem {
@@ -13,32 +12,47 @@ interface InventoryItem {
   qty: number
 }
 
-type FoundItem = InventoryItem & { found: true }
+interface EditForm {
+  name: string
+  sku: string
+  barcode: string
+  qty: string
+  sell_price: string
+}
 
-type NotFoundAction = 'link' | 'create' | null
+type NotFoundAction = 'link' | null
 
 export default function ScanClient() {
-  const router = useRouter()
   const sb = createClient()
-  const scanRef = useRef<HTMLInputElement>(null)
+  const scanRef  = useRef<HTMLInputElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const [barcodeInput, setBarcodeInput]   = useState('')
-  const [textFilter,   setTextFilter]     = useState('')
-  const [items,        setItems]          = useState<InventoryItem[]>([])
-  const [loading,      setLoading]        = useState(true)
-  const [foundItem,    setFoundItem]      = useState<FoundItem | null>(null)
-  const [notFoundCode, setNotFoundCode]   = useState<string | null>(null)
-  const [action,       setAction]         = useState<NotFoundAction>(null)
-  const [linkSearch,   setLinkSearch]     = useState('')
-  const [savingLink,   setSavingLink]     = useState(false)
-  const [toast,        setToast]          = useState<string | null>(null)
+  const [barcodeInput, setBarcodeInput] = useState('')
+  const [textFilter,   setTextFilter]   = useState('')
+  const [items,        setItems]        = useState<InventoryItem[]>([])
+  const [loading,      setLoading]      = useState(true)
 
-  const showToast = (msg: string) => {
-    setToast(msg)
-    setTimeout(() => setToast(null), 3000)
-  }
+  // found
+  const [foundItem,    setFoundItem]    = useState<InventoryItem | null>(null)
 
+  // not found
+  const [notFoundCode, setNotFoundCode] = useState<string | null>(null)
+  const [action,       setAction]       = useState<NotFoundAction>(null)
+  const [linkSearch,   setLinkSearch]   = useState('')
+  const [savingLink,   setSavingLink]   = useState(false)
+
+  // edit
+  const [editItem,  setEditItem]  = useState<InventoryItem | null>(null)
+  const [editForm,  setEditForm]  = useState<EditForm>({ name: '', sku: '', barcode: '', qty: '', sell_price: '' })
+  const [saving,    setSaving]    = useState(false)
+
+  // toast
+  const [toast, setToast] = useState<string | null>(null)
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000) }
+
+  const refocus = () => setTimeout(() => scanRef.current?.focus(), 120)
+
+  // ── Load inventory ─────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true)
     const { data: { user } } = await sb.auth.getUser()
@@ -47,32 +61,18 @@ export default function ScanClient() {
     if (!profile) return
 
     const [{ data: tires }, { data: products }] = await Promise.all([
-      sb.from('tires')
-        .select('id,brand,width,profile,rim,sku,qty')
-        .eq('tenant_id', profile.tenant_id)
-        .order('created_at', { ascending: false }),
-      sb.from('products')
-        .select('id,name,sku,barcode,qty')
-        .eq('tenant_id', profile.tenant_id)
-        .order('created_at', { ascending: false }),
+      sb.from('tires').select('id,brand,width,profile,rim,sku,qty').eq('tenant_id', profile.tenant_id).order('created_at', { ascending: false }),
+      sb.from('products').select('id,name,sku,barcode,qty').eq('tenant_id', profile.tenant_id).order('created_at', { ascending: false }),
     ])
 
     const tireItems: InventoryItem[] = (tires ?? []).map(t => ({
-      id:      t.id,
-      type:    'tire',
-      name:    `${t.brand ?? ''} ${t.width}/${t.profile}R${t.rim}`.trim(),
-      sku:     t.sku ?? null,
-      barcode: t.sku ?? null,
-      qty:     t.qty,
+      id: t.id, type: 'tire',
+      name: `${t.brand ?? ''} ${t.width}/${t.profile}R${t.rim}`.trim(),
+      sku: t.sku ?? null, barcode: t.sku ?? null, qty: t.qty,
     }))
-
     const prodItems: InventoryItem[] = (products ?? []).map(p => ({
-      id:      p.id,
-      type:    'product',
-      name:    p.name,
-      sku:     p.sku ?? null,
-      barcode: p.barcode ?? null,
-      qty:     p.qty,
+      id: p.id, type: 'product',
+      name: p.name, sku: p.sku ?? null, barcode: p.barcode ?? null, qty: p.qty,
     }))
 
     setItems([...tireItems, ...prodItems])
@@ -80,35 +80,83 @@ export default function ScanClient() {
   }, [sb])
 
   useEffect(() => { load() }, [load])
-
-  // Auto-focus scan input
   useEffect(() => { scanRef.current?.focus() }, [])
 
-  // Debounce barcode search (200ms — works with all scanner types)
+  // ── Debounce barcode trigger ───────────────────────────────────────────────
   useEffect(() => {
     if (!barcodeInput.trim()) return
     const t = setTimeout(() => handleScan(barcodeInput.trim()), 200)
     return () => clearTimeout(t)
   }, [barcodeInput]) // eslint-disable-line
 
+  // ── Scan handler ──────────────────────────────────────────────────────────
   function handleScan(code: string) {
     setBarcodeInput('')
-    const match = items.find(
-      i => (i.barcode && i.barcode === code) || (i.sku && i.sku === code)
-    )
+    const match = items.find(i => (i.barcode && i.barcode === code) || (i.sku && i.sku === code))
     if (match) {
-      setFoundItem({ ...match, found: true })
+      setFoundItem(match)
       setNotFoundCode(null)
-      setAction(null)
     } else {
       setFoundItem(null)
       setNotFoundCode(code)
       setAction(null)
       setLinkSearch('')
     }
-    setTimeout(() => scanRef.current?.focus(), 100)
+    refocus()
   }
 
+  // ── Open edit ─────────────────────────────────────────────────────────────
+  async function openEdit(item: InventoryItem) {
+    setFoundItem(null)
+    setNotFoundCode(null)
+    if (item.type === 'tire') {
+      const { data } = await sb.from('tires').select('brand,width,profile,rim,sku,qty,sell_price').eq('id', item.id).single()
+      setEditForm({
+        name: `${data?.brand ?? ''} ${data?.width}/${data?.profile}R${data?.rim}`.trim(),
+        sku: data?.sku ?? '',
+        barcode: data?.sku ?? '',
+        qty: String(data?.qty ?? 0),
+        sell_price: String(data?.sell_price ?? ''),
+      })
+    } else {
+      const { data } = await sb.from('products').select('name,sku,barcode,qty,sell_price').eq('id', item.id).single()
+      setEditForm({
+        name: data?.name ?? '',
+        sku: data?.sku ?? '',
+        barcode: data?.barcode ?? '',
+        qty: String(data?.qty ?? 0),
+        sell_price: String(data?.sell_price ?? ''),
+      })
+    }
+    setEditItem(item)
+  }
+
+  // ── Save edit ─────────────────────────────────────────────────────────────
+  async function saveEdit() {
+    if (!editItem) return
+    setSaving(true)
+    const qty        = parseInt(editForm.qty) || 0
+    const sell_price = parseFloat(editForm.sell_price) || null
+
+    if (editItem.type === 'tire') {
+      await sb.from('tires').update({ sku: editForm.sku.trim() || null, qty, sell_price }).eq('id', editItem.id)
+    } else {
+      await sb.from('products').update({
+        name: editForm.name.trim() || editItem.name,
+        sku: editForm.sku.trim() || null,
+        barcode: editForm.barcode.trim() || null,
+        qty, sell_price,
+      }).eq('id', editItem.id)
+    }
+
+    setSaving(false)
+    setEditItem(null)
+    showToast('נשמר ✓')
+    await load()
+    refocus()
+  }
+
+  // ── Save barcode link ─────────────────────────────────────────────────────
   async function saveBarcode(item: InventoryItem, code: string) {
     setSavingLink(true)
     if (item.type === 'tire') {
@@ -121,50 +169,51 @@ export default function ScanClient() {
     setAction(null)
     showToast(`ברקוד שויך ל-${item.name} ✓`)
     await load()
-    setTimeout(() => scanRef.current?.focus(), 100)
+    // offer to edit
+    const updated = { ...item, barcode: code, sku: item.type === 'tire' ? code : item.sku }
+    openEdit(updated)
   }
 
-  function closeModal() {
-    setFoundItem(null)
-    setNotFoundCode(null)
-    setAction(null)
-    setTimeout(() => scanRef.current?.focus(), 100)
-  }
+  const closeModal = () => { setFoundItem(null); setNotFoundCode(null); setAction(null); refocus() }
 
+  // ── Filters ───────────────────────────────────────────────────────────────
   const filtered = items.filter(i => {
     if (!textFilter.trim()) return true
     const q = textFilter.toLowerCase()
     return i.name.toLowerCase().includes(q) || (i.sku ?? '').toLowerCase().includes(q) || (i.barcode ?? '').toLowerCase().includes(q)
   })
-
   const linkFiltered = items.filter(i => {
     if (!linkSearch.trim()) return true
     const q = linkSearch.toLowerCase()
     return i.name.toLowerCase().includes(q) || (i.sku ?? '').toLowerCase().includes(q)
   }).slice(0, 30)
 
-  const BARCODE_ICON = (
-    <svg viewBox="0 0 28 22" width="22" height="17" fill="currentColor">
-      <rect x="0"  y="0" width="2" height="22"/><rect x="4"  y="0" width="1" height="22"/>
-      <rect x="7"  y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/>
-      <rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/>
-      <rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/>
-    </svg>
+  const setEF = (k: keyof EditForm, v: string) => setEditForm(p => ({ ...p, [k]: v }))
+
+  const BADGE = (type: 'tire' | 'product') => (
+    <span style={{
+      fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px',
+      background: type === 'tire' ? '#1e293b' : '#fff7ed',
+      color: type === 'tire' ? '#fff' : '#c2410c',
+      border: type === 'product' ? '1px solid #fed7aa' : 'none',
+    }}>
+      {type === 'tire' ? 'צמיג' : 'מוצר'}
+    </span>
   )
 
   return (
-    <div style={{ maxWidth: 820, margin: '0 auto', padding: '24px 16px' }}>
+    <div style={{ maxWidth: 860, margin: '0 auto', padding: '24px 16px' }}>
 
       {/* Toast */}
       {toast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-700 text-white font-bold rounded-xl px-6 py-3 shadow-xl">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] bg-green-700 text-white font-bold rounded-xl px-6 py-3 shadow-xl">
           {toast}
         </div>
       )}
 
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="text-slate-700">{BARCODE_ICON}</div>
+        <svg viewBox="0 0 28 22" width="22" height="17" fill="#334155"><rect x="0" y="0" width="2" height="22"/><rect x="4" y="0" width="1" height="22"/><rect x="7" y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/><rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/><rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/></svg>
         <h1 className="text-2xl font-black text-slate-800">סריקת ברקוד</h1>
       </div>
 
@@ -173,8 +222,7 @@ export default function ScanClient() {
         <label className="block text-sm font-bold text-blue-700 mb-2">סרוק ברקוד</label>
         <input
           ref={scanRef}
-          type="text"
-          inputMode="none"
+          type="text" inputMode="none"
           value={barcodeInput}
           onChange={e => setBarcodeInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) handleScan(v) } }}
@@ -182,22 +230,18 @@ export default function ScanClient() {
           className="w-full border-2 border-slate-200 rounded-xl font-bold bg-blue-50 outline-none focus:border-blue-500 transition-colors"
           style={{ padding: '12px 16px', fontSize: '18px', letterSpacing: '3px', direction: 'ltr' }}
         />
-        <p className="text-xs text-slate-400 mt-2">הסורק ימצא אוטומטית · אפשר גם להקליד ולחוץ Enter</p>
+        <p className="text-xs text-slate-400 mt-2">הסורק מזהה אוטומטית · אפשר גם להקליד ולחוץ Enter</p>
       </div>
 
       {/* Inventory list */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="flex items-center justify-between border-b border-slate-100" style={{ padding: '14px 18px' }}>
           <span className="font-bold text-slate-700">מלאי ({items.length} פריטים)</span>
-          <input
-            value={textFilter}
-            onChange={e => setTextFilter(e.target.value)}
+          <input value={textFilter} onChange={e => setTextFilter(e.target.value)}
             placeholder="סנן לפי שם / מק״ט / ברקוד..."
             className="border border-slate-200 rounded-lg bg-slate-50 outline-none focus:border-blue-400 transition-colors"
-            style={{ padding: '6px 12px', fontSize: '13px', width: '220px' }}
-          />
+            style={{ padding: '6px 12px', fontSize: '13px', width: '220px' }} />
         </div>
-
         {loading ? (
           <div className="text-center text-slate-400 py-10">טוען...</div>
         ) : (
@@ -208,40 +252,23 @@ export default function ScanClient() {
                   <th style={thSt}>סוג</th>
                   <th style={thSt}>מק״ט</th>
                   <th style={thSt}>ברקוד</th>
-                  <th style={{ ...thSt, flex: 1 }}>פריט</th>
+                  <th style={{ ...thSt }}>פריט</th>
                   <th style={{ ...thSt, textAlign: 'center' }}>כמות</th>
                   <th style={thSt}></th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((item, i) => (
-                  <tr key={item.id}
-                    style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
-                    <td style={tdSt}>
-                      <span style={{
-                        fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px',
-                        background: item.type === 'tire' ? '#1e293b' : '#fff7ed',
-                        color: item.type === 'tire' ? '#fff' : '#c2410c',
-                        border: item.type === 'product' ? '1px solid #fed7aa' : 'none',
-                      }}>
-                        {item.type === 'tire' ? 'צמיג' : 'מוצר'}
-                      </span>
-                    </td>
+                  <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                    <td style={tdSt}>{BADGE(item.type)}</td>
                     <td style={{ ...tdSt, fontFamily: 'monospace', color: '#64748b' }}>{item.sku || '—'}</td>
-                    <td style={{ ...tdSt, fontFamily: 'monospace', color: '#64748b' }}>{item.barcode && item.barcode !== item.sku ? item.barcode : (item.type === 'product' ? (item.barcode || '—') : '—')}</td>
-                    <td style={{ ...tdSt, fontWeight: 600 }}>{item.name}</td>
-                    <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700,
-                      color: item.qty === 0 ? '#ef4444' : item.qty <= 2 ? '#f59e0b' : '#16a34a' }}>
-                      {item.qty}
+                    <td style={{ ...tdSt, fontFamily: 'monospace', color: '#64748b' }}>
+                      {item.type === 'product' ? (item.barcode || '—') : '—'}
                     </td>
+                    <td style={{ ...tdSt, fontWeight: 600 }}>{item.name}</td>
+                    <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: item.qty === 0 ? '#ef4444' : item.qty <= 2 ? '#f59e0b' : '#16a34a' }}>{item.qty}</td>
                     <td style={tdSt}>
-                      <button
-                        onClick={() => router.push(item.type === 'tire' ? '/tires' : '/products')}
-                        className="text-blue-600 font-bold hover:underline"
-                        style={{ fontSize: '12px' }}
-                      >
-                        ערוך ←
-                      </button>
+                      <button onClick={() => openEdit(item)} className="text-blue-600 font-bold hover:underline" style={{ fontSize: '12px' }}>ערוך ←</button>
                     </td>
                   </tr>
                 ))}
@@ -256,135 +283,132 @@ export default function ScanClient() {
 
       {/* ── FOUND MODAL ── */}
       {foundItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-          <div className="bg-white rounded-2xl shadow-2xl" style={{ width: 360, padding: '28px 32px' }}>
-            <div className="flex items-center gap-2 mb-4">
-              <span style={{
-                fontSize: '12px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px',
-                background: foundItem.type === 'tire' ? '#1e293b' : '#fff7ed',
-                color: foundItem.type === 'tire' ? '#fff' : '#c2410c',
-              }}>
-                {foundItem.type === 'tire' ? 'צמיג' : 'מוצר'}
-              </span>
-              <span className="text-green-600 font-bold text-sm">✓ נמצא</span>
-            </div>
-            <p className="font-black text-slate-800 text-xl mb-1">{foundItem.name}</p>
-            {foundItem.sku && <p className="text-slate-400 text-sm mb-1">מק״ט: {foundItem.sku}</p>}
-            <p className="text-slate-500 text-sm mb-5">
-              כמות במלאי:&nbsp;
-              <span style={{ fontWeight: 700, color: foundItem.qty === 0 ? '#ef4444' : '#16a34a' }}>
-                {foundItem.qty}
-              </span>
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => router.push(foundItem.type === 'tire' ? '/tires' : '/products')}
-                className="flex-1 bg-blue-600 text-white rounded-xl font-bold active:brightness-90 transition-all"
-                style={{ padding: '11px' }}
-              >
-                עבור לעריכה ←
-              </button>
-              <button
-                onClick={closeModal}
-                className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all"
-                style={{ padding: '11px' }}
-              >
-                סגור
-              </button>
-            </div>
+        <Modal onClose={closeModal}>
+          <div className="flex items-center gap-2 mb-3">{BADGE(foundItem.type)}<span className="text-green-600 font-bold text-sm">✓ נמצא</span></div>
+          <p className="font-black text-slate-800 text-xl mb-1">{foundItem.name}</p>
+          {foundItem.sku && <p className="text-slate-400 text-sm mb-1">מק״ט: {foundItem.sku}</p>}
+          <p className="text-slate-500 text-sm mb-5">כמות: <span style={{ fontWeight: 700, color: foundItem.qty === 0 ? '#ef4444' : '#16a34a' }}>{foundItem.qty}</span></p>
+          <div className="flex gap-3">
+            <button onClick={() => openEdit(foundItem)}
+              className="flex-1 bg-blue-600 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '11px' }}>
+              ✏️ ערוך כאן
+            </button>
+            <button onClick={closeModal}
+              className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all" style={{ padding: '11px' }}>
+              סגור
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* ── NOT FOUND MODAL ── */}
       {notFoundCode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-          <div className="bg-white rounded-2xl shadow-2xl" style={{ width: action === 'link' ? 480 : 380, padding: '28px 32px' }}>
-
-            {action === null && (
-              <>
-                <p className="font-bold text-slate-500 text-sm mb-1">ברקוד:</p>
-                <p className="font-black text-slate-800 text-lg mb-1" style={{ fontFamily: 'monospace', letterSpacing: '2px' }}>{notFoundCode}</p>
-                <p className="text-red-500 font-semibold text-sm mb-6">לא נמצא במלאי</p>
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={() => setAction('link')}
-                    className="w-full bg-blue-600 text-white rounded-xl font-bold active:brightness-90 transition-all"
-                    style={{ padding: '13px' }}
-                  >
-                    שייך לפריט קיים
+        <Modal onClose={closeModal} width={action === 'link' ? 500 : 380}>
+          {action === null && (
+            <>
+              <p className="font-bold text-slate-500 text-sm mb-1">ברקוד:</p>
+              <p className="font-black text-slate-800 text-lg mb-1" style={{ fontFamily: 'monospace', letterSpacing: '2px' }}>{notFoundCode}</p>
+              <p className="text-red-500 font-semibold text-sm mb-6">לא נמצא במלאי</p>
+              <div className="flex flex-col gap-3">
+                <button onClick={() => setAction('link')} className="w-full bg-blue-600 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '13px' }}>שייך לפריט קיים</button>
+                <button onClick={() => { closeModal(); window.location.href = '/tires' }} className="w-full bg-slate-800 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '13px' }}>הקם צמיג חדש ←</button>
+                <button onClick={() => { closeModal(); window.location.href = '/products' }} className="w-full bg-orange-500 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '13px' }}>הקם מוצר חדש ←</button>
+                <button onClick={closeModal} className="text-slate-400 text-sm font-semibold mt-1 hover:text-slate-600">ביטול</button>
+              </div>
+            </>
+          )}
+          {action === 'link' && (
+            <>
+              <p className="font-bold text-slate-700 mb-3">
+                שייך ברקוד <span style={{ fontFamily: 'monospace', background: '#f1f5f9', padding: '2px 7px', borderRadius: '6px' }}>{notFoundCode}</span> לפריט:
+              </p>
+              <input ref={searchRef} autoFocus value={linkSearch} onChange={e => setLinkSearch(e.target.value)}
+                placeholder="חפש לפי שם או מק״ט..."
+                className="w-full border-2 border-blue-300 rounded-xl outline-none focus:border-blue-500 transition-colors mb-3"
+                style={{ padding: '10px 14px', fontSize: '14px' }} />
+              <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+                {linkFiltered.map(item => (
+                  <button key={item.id} disabled={savingLink} onClick={() => saveBarcode(item, notFoundCode!)}
+                    className="w-full flex items-center justify-between active:bg-blue-50 transition-colors disabled:opacity-50"
+                    style={{ padding: '10px 14px', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>
+                    <div className="text-right">
+                      <p className="font-bold text-slate-800 text-sm">{item.name}</p>
+                      {item.sku && <p className="text-slate-400 text-xs">{item.sku}</p>}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {BADGE(item.type)}
+                      <span className="text-blue-600 font-bold text-sm">שייך ←</span>
+                    </div>
                   </button>
-                  <button
-                    onClick={() => { closeModal(); router.push('/tires') }}
-                    className="w-full bg-slate-800 text-white rounded-xl font-bold active:brightness-90 transition-all"
-                    style={{ padding: '13px' }}
-                  >
-                    הקם צמיג חדש ←
-                  </button>
-                  <button
-                    onClick={() => { closeModal(); router.push('/products') }}
-                    className="w-full bg-orange-500 text-white rounded-xl font-bold active:brightness-90 transition-all"
-                    style={{ padding: '13px' }}
-                  >
-                    הקם מוצר חדש ←
-                  </button>
-                  <button onClick={closeModal} className="text-slate-400 text-sm font-semibold mt-1 hover:text-slate-600">
-                    ביטול
-                  </button>
-                </div>
-              </>
-            )}
-
-            {action === 'link' && (
-              <>
-                <p className="font-bold text-slate-700 mb-1">שייך ברקוד <span style={{ fontFamily: 'monospace', background: '#f1f5f9', padding: '1px 6px', borderRadius: '6px' }}>{notFoundCode}</span> לפריט:</p>
-                <input
-                  ref={searchRef}
-                  autoFocus
-                  value={linkSearch}
-                  onChange={e => setLinkSearch(e.target.value)}
-                  placeholder="חפש לפי שם או מק״ט..."
-                  className="w-full border-2 border-blue-300 rounded-xl outline-none focus:border-blue-500 transition-colors mt-3 mb-3"
-                  style={{ padding: '10px 14px', fontSize: '14px' }}
-                />
-                <div style={{ maxHeight: '280px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
-                  {linkFiltered.map(item => (
-                    <button
-                      key={item.id}
-                      disabled={savingLink}
-                      onClick={() => saveBarcode(item, notFoundCode!)}
-                      className="w-full flex items-center justify-between active:bg-blue-50 transition-colors disabled:opacity-50"
-                      style={{ padding: '10px 14px', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}
-                    >
-                      <div className="text-right">
-                        <p className="font-bold text-slate-800 text-sm">{item.name}</p>
-                        {item.sku && <p className="text-slate-400 text-xs">{item.sku}</p>}
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span style={{
-                          fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px',
-                          background: item.type === 'tire' ? '#1e293b' : '#fff7ed',
-                          color: item.type === 'tire' ? '#fff' : '#c2410c',
-                        }}>
-                          {item.type === 'tire' ? 'צמיג' : 'מוצר'}
-                        </span>
-                        <span className="text-blue-600 font-bold text-sm">שייך ←</span>
-                      </div>
-                    </button>
-                  ))}
-                  {linkFiltered.length === 0 && (
-                    <p className="text-center text-slate-400 py-6 text-sm">לא נמצאו פריטים</p>
-                  )}
-                </div>
-                <button onClick={() => setAction(null)} className="text-slate-400 text-sm font-semibold mt-3 hover:text-slate-600">
-                  ← חזרה
-                </button>
-              </>
-            )}
-
-          </div>
-        </div>
+                ))}
+                {linkFiltered.length === 0 && <p className="text-center text-slate-400 py-6 text-sm">לא נמצאו פריטים</p>}
+              </div>
+              <button onClick={() => setAction(null)} className="text-slate-400 text-sm font-semibold mt-3 hover:text-slate-600">← חזרה</button>
+            </>
+          )}
+        </Modal>
       )}
+
+      {/* ── EDIT MODAL ── */}
+      {editItem && (
+        <Modal onClose={() => { setEditItem(null); refocus() }} width={420}>
+          <div className="flex items-center gap-2 mb-4">{BADGE(editItem.type)}<span className="font-bold text-slate-700">עריכת פריט</span></div>
+
+          {editItem.type === 'product' && (
+            <Field label="שם מוצר">
+              <input className="form-input" value={editForm.name} onChange={e => setEF('name', e.target.value)} />
+            </Field>
+          )}
+          {editItem.type === 'product' && (
+            <Field label="מק״ט">
+              <input className="form-input" value={editForm.sku} onChange={e => setEF('sku', e.target.value)} placeholder="קוד פנימי" />
+            </Field>
+          )}
+          <Field label={editItem.type === 'tire' ? 'מקט / ברקוד יצרן' : 'ברקוד'}>
+            <input className="form-input" value={editItem.type === 'tire' ? editForm.sku : editForm.barcode}
+              onChange={e => setEF(editItem.type === 'tire' ? 'sku' : 'barcode', e.target.value)}
+              placeholder="סרוק או הקלד ברקוד" style={{ fontFamily: 'monospace' }} />
+          </Field>
+          <Field label="כמות במלאי">
+            <input className="form-input" type="number" min={0} value={editForm.qty} onChange={e => setEF('qty', e.target.value)} />
+          </Field>
+          <Field label="מחיר מכירה (₪)">
+            <input className="form-input" type="number" min={0} step={0.01} value={editForm.sell_price} onChange={e => setEF('sell_price', e.target.value)} />
+          </Field>
+
+          <div className="flex gap-3 mt-5">
+            <button onClick={saveEdit} disabled={saving}
+              className="flex-1 bg-green-700 text-white rounded-xl font-bold disabled:opacity-50 active:brightness-90 transition-all" style={{ padding: '12px' }}>
+              {saving ? 'שומר...' : 'שמור'}
+            </button>
+            <button onClick={() => { setEditItem(null); refocus() }}
+              className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all" style={{ padding: '12px' }}>
+              ביטול
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+// ── Small helpers ──────────────────────────────────────────────────────────────
+
+function Modal({ children, onClose, width = 380 }: { children: React.ReactNode; onClose: () => void; width?: number }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+      <div className="bg-white rounded-2xl shadow-2xl overflow-y-auto" style={{ width, maxWidth: '95vw', maxHeight: '90vh', padding: '28px 32px' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: '14px' }}>
+      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '5px' }}>{label}</label>
+      {children}
     </div>
   )
 }
