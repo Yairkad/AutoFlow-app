@@ -79,6 +79,12 @@ export default function TireSearchClient({ session }: Props) {
   async function handleBarcode(code: string) {
     setScanMode(false)
     setQuery(code)
+    const res = await fetch(`/api/yard/barcode?code=${encodeURIComponent(code)}`)
+    const match = await res.json()
+    if (match?.type === 'tire') {
+      selectAndAdd(match as TireResult)
+      return
+    }
     await search(code)
   }
 

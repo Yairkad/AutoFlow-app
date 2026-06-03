@@ -18,6 +18,7 @@ interface Product {
   tenant_id: string
   name: string
   sku: string | null
+  barcode: string | null
   category: string | null
   unit: string
   unit_qty: number
@@ -46,7 +47,7 @@ interface Supplier { id: string; name: string }
 const UNITS = ['יח׳', 'ליטר', 'ק״ג', 'מ״ל', 'זוג', 'קופסה']
 
 const emptyForm = {
-  name: '', sku: '', category: '', unit: 'יח׳', unit_qty: '1',
+  name: '', sku: '', barcode: '', category: '', unit: 'יח׳', unit_qty: '1',
   buy_price: '', margin: '', sell_price: '', qty: '0', min_qty: '0',
   supplier_id: '', notes: '',
 }
@@ -117,7 +118,7 @@ export default function ProductsClient() {
     progressStart()
     const [{ data: prods }, { data: sups }, { data: mvs }] = await Promise.all([
       sb.from('products')
-        .select('id,tenant_id,name,sku,category,unit,unit_qty,qty,buy_price,sell_price,margin,min_qty,supplier_id,notes,created_at')
+        .select('id,tenant_id,name,sku,barcode,category,unit,unit_qty,qty,buy_price,sell_price,margin,min_qty,supplier_id,notes,created_at')
         .eq('tenant_id', tenantId.current).order('created_at', { ascending: false }),
       sb.from('suppliers').select('id,name').eq('tenant_id', tenantId.current).order('name'),
       sb.from('product_sales')
@@ -188,7 +189,7 @@ export default function ProductsClient() {
     setEditId(null)
     setForm({
       name: p.name + ' (עותק)',
-      sku: p.sku || '', category: p.category || '',
+      sku: p.sku || '', barcode: p.barcode || '', category: p.category || '',
       unit: p.unit || 'יח׳', unit_qty: String(p.unit_qty ?? 1),
       buy_price: p.buy_price != null ? String(p.buy_price) : '',
       margin: p.margin ? String(p.margin) : '',
@@ -202,7 +203,7 @@ export default function ProductsClient() {
   function openEdit(p: Product) {
     setEditId(p.id)
     setForm({
-      name: p.name, sku: p.sku || '', category: p.category || '',
+      name: p.name, sku: p.sku || '', barcode: p.barcode || '', category: p.category || '',
       unit: p.unit || 'יח׳', unit_qty: String(p.unit_qty ?? 1),
       buy_price: p.buy_price != null ? String(p.buy_price) : '',
       margin: p.margin ? String(p.margin) : '',
@@ -219,6 +220,7 @@ export default function ProductsClient() {
     if (!form.name.trim()) return showToast('יש להזין שם מוצר', 'error')
     const payload = {
       name: form.name.trim(), sku: form.sku.trim() || null,
+      barcode: form.barcode.trim() || null,
       category: form.category.trim() || null, unit: form.unit,
       unit_qty: parseFloat(form.unit_qty) || 1,
       buy_price: form.buy_price !== '' ? parseFloat(form.buy_price) : null,
@@ -886,8 +888,12 @@ export default function ProductsClient() {
             </select>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <label className="form-label">ברקוד / מק״ט</label>
-            <input className="form-input" value={form.sku} onChange={e => setF('sku', e.target.value)} placeholder="מק״ט" />
+            <label className="form-label">מק״ט</label>
+            <input className="form-input" value={form.sku} onChange={e => setF('sku', e.target.value)} placeholder="קוד פנימי" />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label className="form-label">ברקוד</label>
+            <input className="form-input" value={form.barcode} onChange={e => setF('barcode', e.target.value)} placeholder="סרוק או הקלד ברקוד" />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gridColumn: '1 / -1' }}>
             <label className="form-label">הערות</label>

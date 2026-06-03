@@ -37,9 +37,9 @@ export async function GET(req: NextRequest) {
 
   const { data: prod } = await sb
     .from('products')
-    .select('id,name,sku,sell_price,qty')
+    .select('id,name,sku,barcode,sell_price,qty')
     .eq('tenant_id', tenantId)
-    .eq('sku', code)
+    .eq('barcode', code)
     .maybeSingle()
 
   if (prod) {
