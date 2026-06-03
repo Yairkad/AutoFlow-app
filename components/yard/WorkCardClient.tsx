@@ -508,7 +508,10 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
 
       {/* Scanned tire — position picker */}
       {scanTireResult && (
-        <TirePositionPicker onConfirm={addScannedTireWithPosition} />
+        <TirePositionPicker
+          onConfirm={addScannedTireWithPosition}
+          onBack={() => { setScanTireResult(null); setScanMode(true) }}
+        />
       )}
 
       {/* ── Plate header card ── */}
