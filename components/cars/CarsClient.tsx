@@ -66,9 +66,11 @@ interface CarRequest {
   budget: number | null
   min_year: number | null
   max_km: number | null
+  max_hand: number | null
   seats: string | null
   car_type: string | null
   fuel: string | null
+  transmission: string | null
   make_pref: string | null
   status: string        // open | handled | closed
   notes: string | null
@@ -144,8 +146,8 @@ const emptyCarForm = {
 
 const emptyReqForm = {
   name: '', phone: '', budget: '', min_year: '',
-  max_km: '', seats: '', car_type: '', fuel: '',
-  make_pref: '', status: 'open', notes: '',
+  max_km: '', max_hand: '', seats: '', car_type: '', fuel: '',
+  transmission: '', make_pref: '', status: 'open', notes: '',
 }
 
 const emptySaleReqForm = {
@@ -202,6 +204,7 @@ export default function CarsClient() {
   const [cars,     setCars]     = useState<Car[]>([])
   const [requests,      setRequests]      = useState<CarRequest[]>([])
   const [tenantName,    setTenantName]    = useState('')
+  const [logoBase64,    setLogoBase64]    = useState('')
   const [loading,       setLoading]       = useState(true)
   const [updatingReqId, setUpdatingReqId] = useState<string | null>(null)
 
@@ -280,9 +283,10 @@ export default function CarsClient() {
       sb.from('cars').select('*').eq('tenant_id', prof.tenant_id).order('created_at', { ascending: false }),
       sb.from('car_requests').select('*').eq('tenant_id', prof.tenant_id).order('created_at', { ascending: false }),
       sb.from('car_sale_requests').select('*').eq('tenant_id', prof.tenant_id).order('created_at', { ascending: false }),
-      sb.from('tenants').select('name').eq('id', prof.tenant_id).single(),
+      sb.from('tenants').select('name, logo_base64').eq('id', prof.tenant_id).single(),
     ])
     if (tn?.name) setTenantName(tn.name)
+    if (tn?.logo_base64) setLogoBase64(tn.logo_base64)
 
     setCars((c || []).map(x => ({
       ...x,
@@ -304,11 +308,31 @@ export default function CarsClient() {
 
   // ── Print buy request ─────────────────────────────────────────────
 
+  function buildYad2Url(req: CarRequest): string {
+    const base = 'https://www.yad2.co.il/vehicles/cars'
+    const params = new URLSearchParams()
+    const carTypeMap: Record<string, string> = { "פרטי": '2', "ג'יפ / SUV": '5', "ואן": '9', "מסחרי": '7' }
+    const fuelMap:    Record<string, string> = { 'בנזין': '1', 'דיזל': '2', 'היברידי': '5', 'חשמלי': '6' }
+    const gearMap:    Record<string, string> = { 'אוטומט': '102', 'ידני': '101' }
+    if (req.car_type     && carTypeMap[req.car_type])      params.set('carFamilyType', carTypeMap[req.car_type])
+    if (req.fuel         && fuelMap[req.fuel])              params.set('engineType',    fuelMap[req.fuel])
+    if (req.transmission && gearMap[req.transmission])      params.set('gearBox',       gearMap[req.transmission])
+    if (req.min_year)    params.set('year',  `${req.min_year}-${new Date().getFullYear()}`)
+    if (req.max_km)      params.set('km',    `-1-${req.max_km}`)
+    if (req.budget)      params.set('price', `-1-${req.budget}`)
+    if (req.seats)       params.set('seats', req.seats.replace('+', ''))
+    const qs = params.toString()
+    return qs ? `${base}?${qs}` : base
+  }
+
   function printBuyRequest(req: CarRequest) {
-    const biz = tenantName || 'בית העסק'
+    const biz  = tenantName || 'בית העסק'
     const date = new Date().toLocaleDateString('he-IL')
-    const row = (label: string, value: string | null | undefined) =>
+    const row  = (label: string, value: string | null | undefined) =>
       value ? `<tr><td class="lbl">${label}</td><td class="val">${value}</td></tr>` : ''
+    const logoHTML = logoBase64
+      ? `<img src="${logoBase64}" style="max-height:18mm;max-width:40mm;object-fit:contain;display:block;margin:0 auto 6pt"/>`
+      : `<div style="width:38mm;height:16mm;border:2px dashed #bbb;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9pt;color:#aaa;margin:0 auto 6pt">לוגו</div>`
 
     const html = `<!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -320,44 +344,58 @@ export default function CarsClient() {
   @page{size:A4;margin:18mm}
   body{font-family:'Heebo',Arial,sans-serif;direction:rtl;color:#1e293b;background:#fff}
   .header{text-align:center;border-bottom:3px solid #1a9e5c;padding-bottom:12pt;margin-bottom:16pt}
-  .biz-name{font-size:22pt;font-weight:900;color:#1a9e5c}
-  .form-title{font-size:14pt;font-weight:700;color:#334155;margin-top:6pt}
-  .date{font-size:9pt;color:#64748b;margin-top:4pt}
+  .biz-name{font-size:20pt;font-weight:900;color:#1a9e5c}
+  .form-title{font-size:14pt;font-weight:700;color:#334155;margin-top:4pt}
+  .date{font-size:9pt;color:#64748b;margin-top:3pt}
   .section-title{font-size:11pt;font-weight:700;color:#1a9e5c;border-right:3px solid #1a9e5c;padding-right:8pt;margin:14pt 0 8pt}
   table{width:100%;border-collapse:collapse;font-size:10pt}
   .lbl{font-weight:700;width:38%;padding:6pt 8pt;background:#f8fafc;border:1px solid #e2e8f0;color:#475569}
   .val{padding:6pt 8pt;border:1px solid #e2e8f0;color:#1e293b}
   tr:nth-child(even) .val{background:#fafafa}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:0;border-collapse:collapse}
+  .two-col .cell{border:1px solid #e2e8f0;padding:6pt 8pt;font-size:10pt}
+  .two-col .cell-lbl{font-weight:700;background:#f8fafc;color:#475569}
+  .two-col .cell-val{color:#1e293b}
   .notes-box{margin-top:14pt;border:1px solid #e2e8f0;border-radius:6pt;padding:10pt;min-height:50pt;font-size:10pt;color:#1e293b}
+  .sig-row{display:flex;gap:24pt;margin-top:20pt}
+  .sig-box{flex:1;border-top:1px solid #94a3b8;padding-top:6pt;font-size:9pt;color:#64748b;text-align:center}
   .footer{margin-top:24pt;border-top:1px solid #e2e8f0;padding-top:10pt;font-size:9pt;color:#94a3b8;text-align:center}
   @media print{body{padding:0}.footer{position:fixed;bottom:0;width:100%}}
 </style>
 </head>
 <body>
 <div class="header">
+  ${logoHTML}
   <div class="biz-name">${biz}</div>
   <div class="form-title">טופס בקשת איתור רכב</div>
   <div class="date">תאריך: ${date}</div>
 </div>
 
 <div class="section-title">פרטי הלקוח</div>
-<table>
-  ${row('שם מלא', req.name)}
-  ${row('טלפון', req.phone)}
-</table>
+<div class="two-col">
+  <div class="cell cell-lbl">שם מלא *</div><div class="cell cell-val">${req.name}</div>
+  <div class="cell cell-lbl">טלפון *</div><div class="cell cell-val">${req.phone || ''}</div>
+</div>
 
 <div class="section-title">דרישות הרכב</div>
 <table>
+  ${row('סוג רכב', req.car_type)}
+  ${row('סוג דלק', req.fuel)}
+  ${row('סוג ילוכים', req.transmission)}
   ${row('יצרן / דגם מועדף', req.make_pref)}
   ${row('תקציב מקסימלי', req.budget ? '₪' + req.budget.toLocaleString('he-IL') : null)}
   ${row('שנת ייצור מינימלית', req.min_year ? String(req.min_year) : null)}
   ${row('ק"מ מקסימלי', req.max_km ? req.max_km.toLocaleString('he-IL') + ' ק"מ' : null)}
+  ${row('מקסימום יד', req.max_hand ? String(req.max_hand) : null)}
   ${row('מספר מושבים', req.seats)}
-  ${row('סוג רכב', req.car_type)}
-  ${row('סוג דלק', req.fuel)}
 </table>
 
 ${req.notes ? `<div class="section-title">הערות ודגשים</div><div class="notes-box">${req.notes}</div>` : ''}
+
+<div class="sig-row">
+  <div class="sig-box">חתימת הלקוח</div>
+  <div class="sig-box">חתימת נציג העסק</div>
+</div>
 
 <div class="footer">${biz} · נוצר ב-${date} · אוטו ליין</div>
 <script>window.onload=function(){window.print()}<\/script>
@@ -463,17 +501,26 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     try {
       const res  = await fetch(`/api/drive/files?tenant_id=${tenantId.current}&sub_folder=${encodeURIComponent('רכבים')}&item_name=${encodeURIComponent(plate)}`)
       const data = await res.json()
+      if (data.error === 'token_expired') {
+        toast('חיבור Google Drive פג תוקף — יש להתחבר מחדש בהגדרות', 'error')
+        setCarDriveFiles([]); setCarDriveFolderId(null); return
+      }
       setCarDriveFiles(data.files || [])
       setCarDriveFolderId(data.folderId || null)
     } catch {
       setCarDriveFiles([])
+      setCarDriveFolderId(null)
+      toast('שגיאה בטעינת קבצי Drive', 'error')
     } finally {
       setCarDriveLoading(false)
     }
   }
 
   async function uploadCarDriveFile(file: File) {
-    if (!carDriveFolderId) return
+    if (!carDriveFolderId) {
+      toast('לא ניתן להעלות — יש להזין מספר לוחית רישוי לרכב תחילה', 'error')
+      return
+    }
     setCarDriveUploading(true)
     const fd = new FormData()
     fd.append('file', file)
@@ -662,17 +709,19 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     if (req) {
       setEditReqId(req.id)
       setReqForm({
-        name:      req.name           || '',
-        phone:     req.phone          || '',
-        budget:    req.budget         ? String(req.budget)   : '',
-        min_year:  req.min_year       ? String(req.min_year) : '',
-        max_km:    req.max_km         ? String(req.max_km)   : '',
-        seats:     req.seats          || '',
-        car_type:  req.car_type       || '',
-        fuel:      req.fuel           || '',
-        make_pref: req.make_pref      || '',
-        status:    req.status         || 'open',
-        notes:     req.notes          || '',
+        name:         req.name           || '',
+        phone:        req.phone          || '',
+        budget:       req.budget         ? String(req.budget)   : '',
+        min_year:     req.min_year       ? String(req.min_year) : '',
+        max_km:       req.max_km         ? String(req.max_km)   : '',
+        max_hand:     req.max_hand       ? String(req.max_hand) : '',
+        seats:        req.seats          || '',
+        car_type:     req.car_type       || '',
+        fuel:         req.fuel           || '',
+        transmission: req.transmission   || '',
+        make_pref:    req.make_pref      || '',
+        status:       req.status         || 'open',
+        notes:        req.notes          || '',
       })
     } else {
       setEditReqId(null)
@@ -682,20 +731,23 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
   }
 
   async function saveReq() {
-    if (!reqForm.name.trim()) { toast('יש להזין שם לקוח', 'error'); return }
+    if (!reqForm.name.trim())  { toast('יש להזין שם לקוח', 'error');  return }
+    if (!reqForm.phone.trim()) { toast('יש להזין טלפון',    'error');  return }
     const payload = {
-      tenant_id: tenantId.current,
-      name:      reqForm.name,
-      phone:     reqForm.phone     || null,
-      budget:    reqForm.budget    ? Number(reqForm.budget)   : null,
-      min_year:  reqForm.min_year  ? Number(reqForm.min_year) : null,
-      max_km:    reqForm.max_km    ? Number(reqForm.max_km)   : null,
-      seats:     reqForm.seats     || null,
-      car_type:  reqForm.car_type  || null,
-      fuel:      reqForm.fuel      || null,
-      make_pref: reqForm.make_pref || null,
-      status:    reqForm.status,
-      notes:     reqForm.notes     || null,
+      tenant_id:    tenantId.current,
+      name:         reqForm.name,
+      phone:        reqForm.phone        || null,
+      budget:       reqForm.budget       ? Number(reqForm.budget)   : null,
+      min_year:     reqForm.min_year     ? Number(reqForm.min_year) : null,
+      max_km:       reqForm.max_km       ? Number(reqForm.max_km)   : null,
+      max_hand:     reqForm.max_hand     ? Number(reqForm.max_hand) : null,
+      seats:        reqForm.seats        || null,
+      car_type:     reqForm.car_type     || null,
+      fuel:         reqForm.fuel         || null,
+      transmission: reqForm.transmission || null,
+      make_pref:    reqForm.make_pref    || null,
+      status:       reqForm.status,
+      notes:        reqForm.notes        || null,
     }
     if (editReqId) {
       await sb.from('car_requests').update(payload).eq('id', editReqId)
@@ -1239,12 +1291,14 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
                             {req.phone    && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>📞 {req.phone}</div>}
                             {req.budget   && <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--primary)' }}>עד {fmt(req.budget)}</div>}
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 2 }}>
-                              {req.min_year  && <Chip>📅 משנת {req.min_year}</Chip>}
-                              {req.max_km    && <Chip>📍 עד {req.max_km.toLocaleString('he-IL')} ק"מ</Chip>}
-                              {req.seats     && <Chip>🪑 {req.seats}</Chip>}
-                              {req.car_type  && <Chip>{req.car_type}</Chip>}
-                              {req.fuel      && <Chip>⛽ {req.fuel}</Chip>}
-                              {req.make_pref && <Chip>🚘 {req.make_pref}</Chip>}
+                              {req.car_type     && <Chip>{req.car_type}</Chip>}
+                              {req.fuel         && <Chip>⛽ {req.fuel}</Chip>}
+                              {req.transmission && <Chip>⚙️ {req.transmission}</Chip>}
+                              {req.make_pref    && <Chip>🚘 {req.make_pref}</Chip>}
+                              {req.min_year     && <Chip>📅 משנת {req.min_year}</Chip>}
+                              {req.max_km       && <Chip>📍 עד {req.max_km.toLocaleString('he-IL')} ק"מ</Chip>}
+                              {req.max_hand     && <Chip>🤝 עד יד {req.max_hand}</Chip>}
+                              {req.seats        && <Chip>🪑 {req.seats}</Chip>}
                             </div>
                             {req.notes && <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>{req.notes}</div>}
                             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{req.created_at?.slice(0,10)}</div>
@@ -1255,6 +1309,14 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
               style={{ flex: 1, padding: '7px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: '1.5px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', cursor: 'pointer', fontFamily: 'inherit' }}>
               🖨️ הדפס טופס
             </button>
+            <a
+              href={buildYad2Url(req)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              style={{ flex: 1, padding: '7px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: '1.5px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none', textAlign: 'center', display: 'block' }}>
+              🔍 חפש ביד2
+            </a>
           </div>
           {ReqActions({ curStatus: req.status, onEdit: () => openReqForm(req), onDelete: () => deleteReq(req.id), onStatus: (s) => changeReqStatus(req.id, s) })}
                         </div>
@@ -1665,7 +1727,28 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <Grid cols={2}>
             <Field label="שם לקוח *"><input value={reqForm.name} onChange={e => setReqForm(f=>({...f,name:e.target.value}))} style={inp()} autoFocus /></Field>
-            <Field label="טלפון"><input type="tel" value={reqForm.phone} onChange={e => setReqForm(f=>({...f,phone:e.target.value}))} style={inp()} /></Field>
+            <Field label="טלפון *"><input type="tel" value={reqForm.phone} onChange={e => setReqForm(f=>({...f,phone:e.target.value}))} style={inp()} /></Field>
+          </Grid>
+          <Grid cols={3}>
+            <Field label="סוג רכב">
+              <select value={reqForm.car_type} onChange={e => setReqForm(f=>({...f,car_type:e.target.value}))} style={inp()}>
+                <option value="">לא משנה</option>
+                {["פרטי","ג'יפ / SUV","ואן","מסחרי","אחר"].map(t => <option key={t}>{t}</option>)}
+              </select>
+            </Field>
+            <Field label="סוג דלק">
+              <select value={reqForm.fuel} onChange={e => setReqForm(f=>({...f,fuel:e.target.value}))} style={inp()}>
+                <option value="">לא משנה</option>
+                {['בנזין','דיזל','היברידי','חשמלי'].map(t => <option key={t}>{t}</option>)}
+              </select>
+            </Field>
+            <Field label="סוג ילוכים">
+              <select value={reqForm.transmission} onChange={e => setReqForm(f=>({...f,transmission:e.target.value}))} style={inp()}>
+                <option value="">לא משנה</option>
+                <option value="אוטומט">אוטומט</option>
+                <option value="ידני">ידני</option>
+              </select>
+            </Field>
           </Grid>
           <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 14px' }}>
             <Grid cols={2}>
@@ -1675,26 +1758,15 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           </div>
           <Grid cols={3}>
             <Field label="ק״מ מקסימלי"><input type="number" value={reqForm.max_km} onChange={e => setReqForm(f=>({...f,max_km:e.target.value}))} style={inp()} placeholder="150000" /></Field>
+            <Field label="מקס׳ יד"><input type="number" value={reqForm.max_hand} onChange={e => setReqForm(f=>({...f,max_hand:e.target.value}))} style={inp()} placeholder="3" min="1" max="9" /></Field>
             <Field label="מס׳ מושבים">
               <select value={reqForm.seats} onChange={e => setReqForm(f=>({...f,seats:e.target.value}))} style={inp()}>
                 <option value="">לא משנה</option>
                 {['2','4','5','7','8+'].map(n => <option key={n}>{n}</option>)}
               </select>
             </Field>
-            <Field label="סוג רכב">
-              <select value={reqForm.car_type} onChange={e => setReqForm(f=>({...f,car_type:e.target.value}))} style={inp()}>
-                <option value="">לא משנה</option>
-                {["פרטי","ג'יפ / SUV","ואן","מסחרי","אחר"].map(t => <option key={t}>{t}</option>)}
-              </select>
-            </Field>
           </Grid>
-          <Grid cols={3}>
-            <Field label="סוג דלק">
-              <select value={reqForm.fuel} onChange={e => setReqForm(f=>({...f,fuel:e.target.value}))} style={inp()}>
-                <option value="">לא משנה</option>
-                {['בנזין','דיזל','היברידי','חשמלי'].map(t => <option key={t}>{t}</option>)}
-              </select>
-            </Field>
+          <Grid cols={2}>
             <Field label="מותג מועדף"><input value={reqForm.make_pref} onChange={e => setReqForm(f=>({...f,make_pref:e.target.value}))} style={inp()} placeholder="טויוטה, יונדאי..." /></Field>
             <Field label="סטטוס">
               <select value={reqForm.status} onChange={e => setReqForm(f=>({...f,status:e.target.value}))} style={inp()}>
