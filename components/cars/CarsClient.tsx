@@ -452,6 +452,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
   function handleApiData(data: Partial<VehicleData>) {
     setCarForm(f => ({
       ...f,
+      plate:     data.plate     ? String(data.plate) : f.plate,
       make:      data.make      ? String(data.make)  : f.make,
       model:     data.model     ? String(data.model) : f.model,
       year:      data.year      ? String(data.year)  : f.year,
@@ -459,6 +460,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       fuel_type: data.fuel      ? String(data.fuel)  : f.fuel_type,
       seats:     data.seats     ? String(data.seats) : f.seats,
     }))
+    if (data.plate && driveConnected) loadCarDriveFiles(String(data.plate))
   }
 
   function handleSaleReqApiData(data: Partial<VehicleData>) {
