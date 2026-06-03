@@ -220,7 +220,7 @@ export default function TireSearchClient({ session }: Props) {
                   inputMode="none"
                   value={barcodeInput}
                   onChange={e => setBarcodeInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && barcodeInput.trim()) handleBarcode(barcodeInput.trim()) }}
+                  onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) handleBarcode(v) } }}
                   placeholder="סרוק ברקוד..."
                   className="w-full border-2 border-blue-500 rounded-xl text-base font-bold bg-blue-50 outline-none"
                   style={{ padding: '10px 14px', letterSpacing: '2px', direction: 'ltr' }}
