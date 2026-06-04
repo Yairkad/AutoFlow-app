@@ -1,8 +1,12 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
+
+const LOAD_INDICES = ['60','62','65','67','69','71','73','75','77','80','82','84','85','86','87','88','89','90','91','92','93','94','95','96','98','99','100','101','102','103','104','105','106','107','108','109','110','112','114','116','118','120','121','122','124','126']
+const SPEED_INDICES = ['B','C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','Y','ZR','Z']
 
 interface InventoryItem {
   id: string
@@ -14,7 +18,12 @@ interface InventoryItem {
 }
 
 interface EditForm {
-  name: string; sku: string; barcode: string; qty: string; sell_price: string
+  // shared
+  sku: string; qty: string; sell_price: string; cost_price: string; notes: string
+  // tires
+  brand: string; load_idx: string; speed_idx: string; location: string
+  // products
+  name: string; barcode: string; category: string; unit: string
 }
 
 interface CountEntry {
@@ -27,6 +36,7 @@ type Mode = 'scan' | 'count'
 
 export default function ScanClient() {
   const sb = createClient()
+  const router = useRouter()
   const isMobile = useIsMobile()
   const scanRef   = useRef<HTMLInputElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -48,7 +58,7 @@ export default function ScanClient() {
 
   // edit
   const [editItem, setEditItem] = useState<InventoryItem | null>(null)
-  const [editForm, setEditForm] = useState<EditForm>({ name: '', sku: '', barcode: '', qty: '', sell_price: '' })
+  const [editForm, setEditForm] = useState<EditForm>({ sku: '', qty: '', sell_price: '', cost_price: '', notes: '', brand: '', load_idx: '', speed_idx: '', location: '', name: '', barcode: '', category: '', unit: 'יח׳' })
   const [saving,   setSaving]   = useState(false)
 
   // count mode
@@ -168,11 +178,23 @@ export default function ScanClient() {
   async function openEdit(item: InventoryItem) {
     setFoundItem(null); setNotFoundCode(null)
     if (item.type === 'tire') {
-      const { data } = await sb.from('tires').select('brand,width,profile,rim,sku,qty,sell_price').eq('id', item.id).single()
-      setEditForm({ name: `${data?.brand ?? ''} ${data?.width}/${data?.profile}R${data?.rim}`.trim(), sku: data?.sku ?? '', barcode: data?.sku ?? '', qty: String(data?.qty ?? 0), sell_price: String(data?.sell_price ?? '') })
+      const { data } = await sb.from('tires').select('brand,width,profile,rim,sku,qty,sell_price,cost_price,load_idx,speed_idx,location,notes').eq('id', item.id).single()
+      setEditForm({
+        brand: data?.brand ?? '', sku: data?.sku ?? '', barcode: '',
+        load_idx: data?.load_idx ?? '', speed_idx: data?.speed_idx ?? '',
+        qty: String(data?.qty ?? 0), sell_price: String(data?.sell_price ?? ''),
+        cost_price: String(data?.cost_price ?? ''), location: data?.location ?? '',
+        notes: data?.notes ?? '', name: '', category: '', unit: 'יח׳',
+      })
     } else {
-      const { data } = await sb.from('products').select('name,sku,barcode,qty,sell_price').eq('id', item.id).single()
-      setEditForm({ name: data?.name ?? '', sku: data?.sku ?? '', barcode: data?.barcode ?? '', qty: String(data?.qty ?? 0), sell_price: String(data?.sell_price ?? '') })
+      const { data } = await sb.from('products').select('name,sku,barcode,qty,sell_price,buy_price,category,unit,notes').eq('id', item.id).single()
+      setEditForm({
+        name: data?.name ?? '', sku: data?.sku ?? '', barcode: data?.barcode ?? '',
+        category: data?.category ?? '', unit: data?.unit ?? 'יח׳',
+        qty: String(data?.qty ?? 0), sell_price: String(data?.sell_price ?? ''),
+        cost_price: String(data?.buy_price ?? ''), notes: data?.notes ?? '',
+        brand: '', load_idx: '', speed_idx: '', location: '',
+      })
     }
     setEditItem(item)
   }
@@ -180,12 +202,29 @@ export default function ScanClient() {
   async function saveEdit() {
     if (!editItem) return
     setSaving(true)
-    const qty = parseInt(editForm.qty) || 0
+    const qty        = parseInt(editForm.qty) || 0
     const sell_price = parseFloat(editForm.sell_price) || null
+    const cost_price = parseFloat(editForm.cost_price) || null
     if (editItem.type === 'tire') {
-      await sb.from('tires').update({ sku: editForm.sku.trim() || null, qty, sell_price }).eq('id', editItem.id)
+      await sb.from('tires').update({
+        brand: editForm.brand.trim() || null,
+        sku: editForm.sku.trim() || null,
+        load_idx: editForm.load_idx || null,
+        speed_idx: editForm.speed_idx || null,
+        qty, sell_price, cost_price,
+        location: editForm.location.trim() || null,
+        notes: editForm.notes.trim() || null,
+      }).eq('id', editItem.id)
     } else {
-      await sb.from('products').update({ name: editForm.name.trim() || editItem.name, sku: editForm.sku.trim() || null, barcode: editForm.barcode.trim() || null, qty, sell_price }).eq('id', editItem.id)
+      await sb.from('products').update({
+        name: editForm.name.trim() || editItem.name,
+        sku: editForm.sku.trim() || null,
+        barcode: editForm.barcode.trim() || null,
+        category: editForm.category.trim() || null,
+        unit: editForm.unit || 'יח׳',
+        qty, sell_price, buy_price: cost_price,
+        notes: editForm.notes.trim() || null,
+      }).eq('id', editItem.id)
     }
     setSaving(false); setEditItem(null); showToast('נשמר ✓'); await load(); refocus()
   }
@@ -231,6 +270,9 @@ export default function ScanClient() {
       {/* Header */}
       <div className={`flex mb-5 ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`}>
         <div className="flex items-center gap-3">
+          {isMobile && (
+            <button onClick={() => router.back()} className="text-slate-500 font-bold active:text-slate-800 transition-colors" style={{ fontSize: '20px', lineHeight: 1 }}>←</button>
+          )}
           <svg viewBox="0 0 28 22" width="22" height="17" fill="#334155"><rect x="0" y="0" width="2" height="22"/><rect x="4" y="0" width="1" height="22"/><rect x="7" y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/><rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/><rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/></svg>
           <h1 className="font-black text-slate-800" style={{ fontSize: isMobile ? '20px' : '24px' }}>{mode === 'count' ? '📦 ספירת מלאי' : 'סריקת ברקוד'}</h1>
         </div>
@@ -473,17 +515,55 @@ export default function ScanClient() {
 
       {/* ── EDIT MODAL ── */}
       {editItem && (
-        <Modal onClose={() => { setEditItem(null); refocus() }} width={420}>
+        <Modal onClose={() => { setEditItem(null); refocus() }} width={460}>
           <div className="flex items-center gap-2 mb-4">{BADGE(editItem.type)}<span className="font-bold text-slate-700">עריכת פריט</span></div>
-          {editItem.type === 'product' && <Field label="שם מוצר"><input className="form-input" value={editForm.name} onChange={e => setEF('name', e.target.value)} /></Field>}
-          {editItem.type === 'product' && <Field label="מק״ט"><input className="form-input" value={editForm.sku} onChange={e => setEF('sku', e.target.value)} placeholder="קוד פנימי" /></Field>}
-          <Field label={editItem.type === 'tire' ? 'מקט / ברקוד יצרן' : 'ברקוד'}>
-            <input className="form-input" value={editItem.type === 'tire' ? editForm.sku : editForm.barcode}
-              onChange={e => setEF(editItem.type === 'tire' ? 'sku' : 'barcode', e.target.value)}
-              placeholder="סרוק או הקלד ברקוד" style={{ fontFamily: 'monospace' }} />
-          </Field>
-          <Field label="כמות במלאי"><input className="form-input" type="number" min={0} value={editForm.qty} onChange={e => setEF('qty', e.target.value)} /></Field>
-          <Field label="מחיר מכירה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.sell_price} onChange={e => setEF('sell_price', e.target.value)} /></Field>
+
+          {editItem.type === 'tire' && <>
+            <Field label="מותג (חברה)"><input className="form-input" value={editForm.brand} onChange={e => setEF('brand', e.target.value)} placeholder="Michelin, Bridgestone..." /></Field>
+            <Field label="מקט / ברקוד יצרן"><input className="form-input" value={editForm.sku} onChange={e => setEF('sku', e.target.value)} placeholder="סרוק או הקלד" style={{ fontFamily: 'monospace' }} /></Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="אינדקס עומס">
+                <select className="form-input" value={editForm.load_idx} onChange={e => setEF('load_idx', e.target.value)}>
+                  <option value="">— ללא —</option>
+                  {LOAD_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </Field>
+              <Field label="אינדקס מהירות">
+                <select className="form-input" value={editForm.speed_idx} onChange={e => setEF('speed_idx', e.target.value)}>
+                  <option value="">— ללא —</option>
+                  {SPEED_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="כמות במלאי"><input className="form-input" type="number" min={0} value={editForm.qty} onChange={e => setEF('qty', e.target.value)} /></Field>
+              <Field label="מיקום במחסן"><input className="form-input" value={editForm.location} onChange={e => setEF('location', e.target.value)} placeholder="מדף A3" /></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="מחיר קנייה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.cost_price} onChange={e => setEF('cost_price', e.target.value)} /></Field>
+              <Field label="מחיר מכירה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.sell_price} onChange={e => setEF('sell_price', e.target.value)} /></Field>
+            </div>
+            <Field label="הערות"><input className="form-input" value={editForm.notes} onChange={e => setEF('notes', e.target.value)} /></Field>
+          </>}
+
+          {editItem.type === 'product' && <>
+            <Field label="שם מוצר"><input className="form-input" value={editForm.name} onChange={e => setEF('name', e.target.value)} /></Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="מק״ט"><input className="form-input" value={editForm.sku} onChange={e => setEF('sku', e.target.value)} placeholder="קוד פנימי" /></Field>
+              <Field label="ברקוד"><input className="form-input" value={editForm.barcode} onChange={e => setEF('barcode', e.target.value)} placeholder="סרוק" style={{ fontFamily: 'monospace' }} /></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="קטגוריה"><input className="form-input" value={editForm.category} onChange={e => setEF('category', e.target.value)} /></Field>
+              <Field label="יחידה"><input className="form-input" value={editForm.unit} onChange={e => setEF('unit', e.target.value)} /></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="כמות במלאי"><input className="form-input" type="number" min={0} value={editForm.qty} onChange={e => setEF('qty', e.target.value)} /></Field>
+              <Field label="מחיר קנייה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.cost_price} onChange={e => setEF('cost_price', e.target.value)} /></Field>
+            </div>
+            <Field label="מחיר מכירה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.sell_price} onChange={e => setEF('sell_price', e.target.value)} /></Field>
+            <Field label="הערות"><input className="form-input" value={editForm.notes} onChange={e => setEF('notes', e.target.value)} /></Field>
+          </>}
+
           <div className="flex gap-3 mt-5">
             <button onClick={saveEdit} disabled={saving} className="flex-1 bg-green-700 text-white rounded-xl font-bold disabled:opacity-50 active:brightness-90 transition-all" style={{ padding: '12px' }}>{saving ? 'שומר...' : 'שמור'}</button>
             <button onClick={() => { setEditItem(null); refocus() }} className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all" style={{ padding: '12px' }}>ביטול</button>
@@ -494,7 +574,7 @@ export default function ScanClient() {
   )
 }
 
-function Modal({ children, onClose, width = 380 }: { children: React.ReactNode; onClose: () => void; width?: number }) {
+function Modal({ children, width = 380 }: { children: React.ReactNode; onClose?: () => void; width?: number }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl overflow-y-auto" style={{ width, maxWidth: '95vw', maxHeight: '90vh', padding: '28px 32px' }}>
