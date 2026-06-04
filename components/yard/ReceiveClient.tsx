@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { SearchResult } from '@/app/api/yard/search/route'
-import CameraScanner from '@/components/yard/CameraScanner'
 
 type Stage = 'scan' | 'found' | 'notfound' | 'saving' | 'done'
 
@@ -16,7 +15,6 @@ export default function ReceiveClient() {
   const qtyRef     = useRef<HTMLInputElement>(null)
 
   const [stage,      setStage]      = useState<Stage>('scan')
-  const [cameraOpen, setCameraOpen] = useState(false)
   const [scanBuf,   setScanBuf]   = useState('')
   const [lastCode,  setLastCode]  = useState('')
   const [found,     setFound]     = useState<SearchResult | null>(null)
@@ -26,10 +24,16 @@ export default function ReceiveClient() {
   const [prodForm,  setProdForm]  = useState(emptyProdForm)
   const [toast,     setToast]     = useState<string | null>(null)
 
-  // Keep scan input focused when in scan stage
   useEffect(() => {
-    if (stage === 'scan') scanRef.current?.focus()
+    if (stage === 'scan') setTimeout(() => scanRef.current?.focus(), 50)
   }, [stage])
+
+  // Debounce barcode scan
+  useEffect(() => {
+    if (stage !== 'scan' || !scanBuf.trim()) return
+    const t = setTimeout(() => { handleScan(scanBuf.trim()) }, 200)
+    return () => clearTimeout(t)
+  }, [scanBuf, stage]) // eslint-disable-line
 
   // Auto-focus qty when item found
   useEffect(() => {
@@ -118,13 +122,6 @@ export default function ReceiveClient() {
   return (
     <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
 
-      {cameraOpen && (
-        <CameraScanner
-          onScan={code => { setCameraOpen(false); handleScan(code) }}
-          onClose={() => setCameraOpen(false)}
-        />
-      )}
-
       {/* Toast */}
       {toast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-700 text-white font-bold rounded-xl shadow-xl"
@@ -144,45 +141,25 @@ export default function ReceiveClient() {
         </button>
       </div>
 
-      {/* Hidden scan input — always capturing */}
-      <input
-        ref={scanRef}
-        className="absolute opacity-0 w-0 h-0"
-        value={scanBuf}
-        onChange={e => setScanBuf(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter' && scanBuf.trim()) handleScan(scanBuf.trim()) }}
-        onBlur={() => { if (stage === 'scan') setTimeout(() => scanRef.current?.focus(), 50) }}
-      />
-
       <div className="flex-1 overflow-y-auto" style={{ padding: '16px 14px' }}>
 
         {/* ── STAGE: scan ── */}
         {stage === 'scan' && (
-          <div className="flex flex-col items-center justify-center" style={{ minHeight: '60vh', gap: '20px' }}>
-            <svg viewBox="0 0 56 44" width="80" height="62" fill="#334155">
-              <rect x="0"  y="0" width="4" height="44"/><rect x="8"  y="0" width="2" height="44"/>
-              <rect x="13" y="0" width="6" height="44"/><rect x="23" y="0" width="2" height="44"/>
-              <rect x="29" y="0" width="4" height="44"/><rect x="37" y="0" width="2" height="44"/>
-              <rect x="43" y="0" width="6" height="44"/><rect x="53" y="0" width="2" height="44"/>
-            </svg>
-            <p className="font-bold text-slate-700 text-center" style={{ fontSize: '20px' }}>
-              סרוק ברקוד לקליטה
-            </p>
-            <p className="text-slate-400 text-sm text-center">
-              הסורק פעיל — כוון לברקוד על הקופסה / הצמיג
-            </p>
-            <button
-              onClick={() => setCameraOpen(true)}
-              className="bg-blue-600 text-white font-bold rounded-xl active:scale-95 transition-all"
-              style={{ padding: '14px 32px', fontSize: '16px' }}>
-              📷 סרוק עם מצלמה
-            </button>
-            <button
-              onClick={() => scanRef.current?.focus()}
-              className="bg-slate-600 text-white font-semibold rounded-xl active:scale-95 transition-all"
-              style={{ padding: '10px 24px', fontSize: '14px' }}>
-              🔌 סורק חיצוני
-            </button>
+          <div className="flex flex-col gap-4" style={{ maxWidth: 480, margin: '0 auto', paddingTop: '24px' }}>
+            <p className="font-bold text-slate-700 text-center" style={{ fontSize: '18px' }}>סרוק ברקוד לקליטה</p>
+            <input
+              ref={scanRef}
+              type="text"
+              inputMode="none"
+              value={scanBuf}
+              onChange={e => setScanBuf(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) handleScan(v) } }}
+              placeholder="הכנס פוקוס וסרוק..."
+              className="w-full border-2 border-blue-400 rounded-2xl font-bold bg-blue-50 outline-none focus:border-blue-600 transition-colors"
+              style={{ padding: '16px 18px', fontSize: '20px', letterSpacing: '3px', direction: 'ltr', textAlign: 'center' }}
+              autoFocus
+            />
+            <p className="text-slate-400 text-sm text-center">הסורק מזהה אוטומטית · Enter לחיפוש ידני</p>
           </div>
         )}
 

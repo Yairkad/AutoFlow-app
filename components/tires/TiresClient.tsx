@@ -156,8 +156,20 @@ export default function TiresClient() {
         setViewOnly(!admin && !hasFull && hasView)
       }
       await load()
+      // Auto-open edit if navigated from scan page
+      try {
+        const pending = sessionStorage.getItem('scan-edit')
+        if (pending) {
+          const { type, id } = JSON.parse(pending)
+          if (type === 'tire') {
+            sessionStorage.removeItem('scan-edit')
+            const { data: t } = await sb.from('tires').select('*').eq('id', id).single()
+            if (t) openEdit(t as Tire)
+          }
+        }
+      } catch {}
     })()
-  }, [sb, load])
+  }, [sb, load]) // eslint-disable-line
 
   // ── Stats ─────────────────────────────────────────────────────────────────────
 

@@ -254,7 +254,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
   async function runSearch(term: string) {
     const like = `%${term}%`
-    const [debts, suppliers, employees, quotes, alignments, inspections, cars, expenses] = await Promise.all([
+    const [debts, suppliers, employees, quotes, alignments, inspections, cars, expenses, products, tires] = await Promise.all([
       supabase.from('customer_debts').select('id, name, phone, plate, amount').or(`name.ilike.${like},phone.ilike.${like},plate.ilike.${like}`).limit(4),
       supabase.from('suppliers').select('id, name, phone, contact_name').or(`name.ilike.${like},phone.ilike.${like},contact_name.ilike.${like}`).limit(4),
       supabase.from('employees').select('id, full_name, phone').or(`full_name.ilike.${like},phone.ilike.${like}`).limit(4),
@@ -263,6 +263,8 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
       supabase.from('car_inspections').select('id, plate, owner_name, owner_phone').or(`plate.ilike.${like},owner_name.ilike.${like},owner_phone.ilike.${like}`).limit(4),
       supabase.from('cars').select('id, plate, make, model, owner_name, buyer_name').or(`plate.ilike.${like},make.ilike.${like},model.ilike.${like},owner_name.ilike.${like},buyer_name.ilike.${like}`).limit(4),
       supabase.from('expenses').select('id, description, amount').ilike('description', like).limit(4),
+      supabase.from('products').select('id, name, sku').or(`name.ilike.${like},sku.ilike.${like}`).limit(3),
+      supabase.from('tires').select('id, brand, width, profile, rim, sku').or(`brand.ilike.${like},sku.ilike.${like}`).limit(3),
     ])
 
     const all: SearchResult[] = []
@@ -274,6 +276,8 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
     inspections.data?.forEach(r => all.push({ id: r.id, icon: '📝', category: 'בדיקות', primary: r.plate, secondary: [r.owner_name, r.owner_phone].filter(Boolean).join(' · '), href: '/inspections' }))
     cars.data?.forEach(r => all.push({ id: r.id, icon: '🚗', category: 'רכבים', primary: [r.make, r.model, r.plate].filter(Boolean).join(' '), secondary: (r.owner_name || r.buyer_name) ?? undefined, href: '/cars' }))
     expenses.data?.forEach(r => all.push({ id: r.id, icon: '💰', category: 'הוצאות', primary: r.description ?? '—', secondary: r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : undefined, href: '/expenses' }))
+    products.data?.forEach(r => all.push({ id: r.id, icon: '📦', category: 'מוצרים', primary: r.name, secondary: r.sku ?? undefined, href: '/products' }))
+    tires.data?.forEach(r => all.push({ id: r.id, icon: '🏁', category: 'צמיגים', primary: `${r.brand ?? ''} ${r.width}/${r.profile}R${r.rim}`.trim(), secondary: r.sku ?? undefined, href: '/tires' }))
 
     setResults(all)
     setLoading(false)
