@@ -5,8 +5,13 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
 
-const LOAD_INDICES = ['60','62','65','67','69','71','73','75','77','80','82','84','85','86','87','88','89','90','91','92','93','94','95','96','98','99','100','101','102','103','104','105','106','107','108','109','110','112','114','116','118','120','121','122','124','126']
+const LOAD_INDICES  = ['60','62','65','67','69','71','73','75','77','80','82','84','85','86','87','88','89','90','91','92','93','94','95','96','98','99','100','101','102','103','104','105','106','107','108','109','110','112','114','116','118','120','121','122','124','126']
 const SPEED_INDICES = ['B','C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','Y','ZR','Z']
+const WIDTHS   = [145,155,165,175,185,195,205,215,225,235,245,255,265,275,285,295,305,315]
+const PROFILES = [25,30,35,40,45,50,55,60,65,70,75,80]
+const RIMS     = [13,14,15,16,17,18,19,20,21,22]
+
+const emptyNewTire = { brand: '', width: '', profile: '', rim: '', sku: '', load_idx: '', speed_idx: '', qty: '1', cost_price: '', sell_price: '', location: '', notes: '' }
 
 interface InventoryItem {
   id: string
@@ -31,17 +36,18 @@ interface CountEntry {
   counted: number
 }
 
-type NotFoundAction = 'link' | null
+type NotFoundAction = 'link' | 'newTire' | null
 type Mode = 'scan' | 'count'
 
 export default function ScanClient() {
   const sb = createClient()
   const router = useRouter()
   const isMobile = useIsMobile()
-  const scanRef   = useRef<HTMLInputElement>(null)
-  const searchRef = useRef<HTMLInputElement>(null)
-  const modeRef   = useRef<Mode>('scan')
+  const scanRef     = useRef<HTMLInputElement>(null)
+  const searchRef   = useRef<HTMLInputElement>(null)
+  const modeRef     = useRef<Mode>('scan')
   const countMapRef = useRef<Record<string, CountEntry>>({})
+  const tenantIdRef = useRef<string>('')
 
   const [barcodeInput, setBarcodeInput] = useState('')
   const [textFilter,   setTextFilter]   = useState('')
@@ -55,6 +61,8 @@ export default function ScanClient() {
   const [action,       setAction]       = useState<NotFoundAction>(null)
   const [linkSearch,   setLinkSearch]   = useState('')
   const [savingLink,   setSavingLink]   = useState(false)
+  const [newTireForm,  setNewTireForm]  = useState(emptyNewTire)
+  const [savingNew,    setSavingNew]    = useState(false)
 
   // edit
   const [editItem, setEditItem] = useState<InventoryItem | null>(null)
@@ -82,6 +90,7 @@ export default function ScanClient() {
     if (!user) return
     const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.id).single()
     if (!profile) return
+    tenantIdRef.current = profile.tenant_id
     const [{ data: tires }, { data: products }] = await Promise.all([
       sb.from('tires').select('id,brand,width,profile,rim,sku,qty').eq('tenant_id', profile.tenant_id).order('created_at', { ascending: false }),
       sb.from('products').select('id,name,sku,barcode,qty').eq('tenant_id', profile.tenant_id).order('created_at', { ascending: false }),
@@ -237,6 +246,38 @@ export default function ScanClient() {
     else await sb.from('products').update({ barcode: code }).eq('id', item.id)
     setSavingLink(false); setNotFoundCode(null); setAction(null)
     showToast(`ברקוד שויך ל-${item.name} ✓`); await load(); refocus()
+  }
+
+  function openNewTire(code: string) {
+    setNewTireForm({ ...emptyNewTire, sku: code })
+    setAction('newTire')
+  }
+
+  async function createTire() {
+    const f = newTireForm
+    if (!f.width || !f.profile || !f.rim) return
+    setSavingNew(true)
+    await sb.from('tires').insert({
+      tenant_id:  tenantIdRef.current,
+      brand:      f.brand.trim() || null,
+      width:      Number(f.width),
+      profile:    Number(f.profile),
+      rim:        Number(f.rim),
+      sku:        f.sku.trim() || null,
+      load_idx:   f.load_idx || null,
+      speed_idx:  f.speed_idx || null,
+      qty:        parseInt(f.qty) || 1,
+      cost_price: parseFloat(f.cost_price) || null,
+      sell_price: parseFloat(f.sell_price) || null,
+      location:   f.location.trim() || null,
+      notes:      f.notes.trim() || null,
+    })
+    setSavingNew(false)
+    setNotFoundCode(null)
+    setAction(null)
+    showToast('צמיג נוצר ✓')
+    await load()
+    refocus()
   }
 
   const closeModal = () => { setFoundItem(null); setNotFoundCode(null); setAction(null); refocus() }
@@ -473,7 +514,7 @@ export default function ScanClient() {
 
       {/* ── NOT FOUND MODAL ── */}
       {notFoundCode && (
-        <Modal onClose={closeModal} width={action === 'link' ? 500 : 380}>
+        <Modal onClose={closeModal} width={action === 'link' ? 500 : action === 'newTire' ? 480 : 380}>
           {action === null && (
             <>
               <p className="font-bold text-slate-500 text-sm mb-1">ברקוד:</p>
@@ -481,7 +522,7 @@ export default function ScanClient() {
               <p className="text-red-500 font-semibold text-sm mb-6">לא נמצא במלאי</p>
               <div className="flex flex-col gap-3">
                 <button onClick={() => setAction('link')} className="w-full bg-blue-600 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '13px' }}>שייך לפריט קיים</button>
-                <button onClick={() => { closeModal(); window.location.href = '/tires' }} className="w-full bg-slate-800 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '13px' }}>הקם צמיג חדש ←</button>
+                <button onClick={() => openNewTire(notFoundCode!)} className="w-full bg-slate-800 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '13px' }}>+ הקם צמיג חדש</button>
                 <button onClick={() => { closeModal(); window.location.href = '/products' }} className="w-full bg-orange-500 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '13px' }}>הקם מוצר חדש ←</button>
                 <button onClick={closeModal} className="text-slate-400 text-sm font-semibold mt-1 hover:text-slate-600">ביטול</button>
               </div>
@@ -511,6 +552,68 @@ export default function ScanClient() {
               <button onClick={() => setAction(null)} className="text-slate-400 text-sm font-semibold mt-3 hover:text-slate-600">← חזרה</button>
             </>
           )}
+
+          {action === 'newTire' && (() => {
+            const ntf = (k: keyof typeof emptyNewTire, v: string) => setNewTireForm(p => ({ ...p, [k]: v }))
+            return (
+              <>
+                <p className="font-bold text-slate-700 mb-3">
+                  צמיג חדש · ברקוד: <span style={{ fontFamily: 'monospace', background: '#f1f5f9', padding: '2px 7px', borderRadius: '6px' }}>{notFoundCode}</span>
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <Field label="רוחב *">
+                    <select className="form-input" value={newTireForm.width} onChange={e => ntf('width', e.target.value)}>
+                      <option value="">—</option>
+                      {WIDTHS.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="פרופיל *">
+                    <select className="form-input" value={newTireForm.profile} onChange={e => ntf('profile', e.target.value)}>
+                      <option value="">—</option>
+                      {PROFILES.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="חישוק *">
+                    <select className="form-input" value={newTireForm.rim} onChange={e => ntf('rim', e.target.value)}>
+                      <option value="">—</option>
+                      {RIMS.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </Field>
+                </div>
+                <Field label="מותג"><input className="form-input" value={newTireForm.brand} onChange={e => ntf('brand', e.target.value)} placeholder="Michelin..." /></Field>
+                <Field label="מקט / ברקוד">
+                  <input className="form-input" value={newTireForm.sku} onChange={e => ntf('sku', e.target.value)} style={{ fontFamily: 'monospace' }} />
+                </Field>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="אינדקס עומס">
+                    <select className="form-input" value={newTireForm.load_idx} onChange={e => ntf('load_idx', e.target.value)}>
+                      <option value="">— ללא —</option>
+                      {LOAD_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="אינדקס מהירות">
+                    <select className="form-input" value={newTireForm.speed_idx} onChange={e => ntf('speed_idx', e.target.value)}>
+                      <option value="">— ללא —</option>
+                      {SPEED_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </Field>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <Field label="כמות"><input className="form-input" type="number" min={1} value={newTireForm.qty} onChange={e => ntf('qty', e.target.value)} /></Field>
+                  <Field label="מחיר קנייה"><input className="form-input" type="number" min={0} value={newTireForm.cost_price} onChange={e => ntf('cost_price', e.target.value)} /></Field>
+                  <Field label="מחיר מכירה"><input className="form-input" type="number" min={0} value={newTireForm.sell_price} onChange={e => ntf('sell_price', e.target.value)} /></Field>
+                </div>
+                <Field label="הערות"><input className="form-input" value={newTireForm.notes} onChange={e => ntf('notes', e.target.value)} /></Field>
+                <div className="flex gap-3 mt-4">
+                  <button onClick={createTire} disabled={savingNew || !newTireForm.width || !newTireForm.profile || !newTireForm.rim}
+                    className="flex-1 bg-green-700 text-white rounded-xl font-bold disabled:opacity-40 active:brightness-90 transition-all" style={{ padding: '12px' }}>
+                    {savingNew ? 'שומר...' : '✓ צור צמיג'}
+                  </button>
+                  <button onClick={() => setAction(null)} className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all" style={{ padding: '12px' }}>← חזרה</button>
+                </div>
+              </>
+            )
+          })()}
         </Modal>
       )}
 
