@@ -156,20 +156,8 @@ export default function TiresClient() {
         setViewOnly(!admin && !hasFull && hasView)
       }
       await load()
-      // Auto-open edit if navigated from scan page
-      try {
-        const pending = sessionStorage.getItem('scan-edit')
-        if (pending) {
-          const { type, id } = JSON.parse(pending)
-          if (type === 'tire') {
-            sessionStorage.removeItem('scan-edit')
-            const { data: t } = await sb.from('tires').select('*').eq('id', id).single()
-            if (t) openEdit(t as Tire)
-          }
-        }
-      } catch {}
     })()
-  }, [sb, load]) // eslint-disable-line
+  }, [sb, load])
 
   // ── Stats ─────────────────────────────────────────────────────────────────────
 
@@ -1014,21 +1002,23 @@ export default function TiresClient() {
               </div>
               <div>
                 <label className="form-label">אינדקס עומס</label>
-                <select id="f-load" className="form-input" value={form.load_idx}
+                <input id="f-load" list="load-opts-modal" className="form-input" value={form.load_idx}
                   onChange={e => setF('load_idx', e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-speed') as HTMLSelectElement)?.focus() } }}>
-                  <option value="">—</option>
-                  {LOAD_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-speed') as HTMLInputElement)?.focus() } }}
+                  placeholder="בחר מרשימה או הקלד..." />
+                <datalist id="load-opts-modal">
+                  {LOAD_INDICES.map(v => <option key={v} value={v} />)}
+                </datalist>
               </div>
               <div>
                 <label className="form-label">אינדקס מהירות</label>
-                <select id="f-speed" className="form-input" value={form.speed_idx}
+                <input id="f-speed" list="speed-opts-modal" className="form-input" value={form.speed_idx}
                   onChange={e => setF('speed_idx', e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-cost') as HTMLInputElement)?.focus() } }}>
-                  <option value="">—</option>
-                  {SPEED_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-cost') as HTMLInputElement)?.focus() } }}
+                  placeholder="בחר מרשימה או הקלד..." />
+                <datalist id="speed-opts-modal">
+                  {SPEED_INDICES.map(v => <option key={v} value={v} />)}
+                </datalist>
               </div>
             </div>
           </div>

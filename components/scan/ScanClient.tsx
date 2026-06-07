@@ -178,20 +178,24 @@ export default function ScanClient() {
   async function openEdit(item: InventoryItem) {
     setFoundItem(null); setNotFoundCode(null)
     if (item.type === 'tire') {
-      // Navigate to TiresClient — it will auto-open the full edit modal
-      try { sessionStorage.setItem('scan-edit', JSON.stringify({ type: 'tire', id: item.id })) } catch {}
-      router.push('/tires')
-      return
+      const { data } = await sb.from('tires').select('brand,width,profile,rim,sku,qty,sell_price,cost_price,load_idx,speed_idx,location,notes').eq('id', item.id).single()
+      setEditForm({
+        brand: data?.brand ?? '', sku: data?.sku ?? '', barcode: '',
+        load_idx: data?.load_idx ?? '', speed_idx: data?.speed_idx ?? '',
+        qty: String(data?.qty ?? 0), sell_price: String(data?.sell_price ?? ''),
+        cost_price: String(data?.cost_price ?? ''), location: data?.location ?? '',
+        notes: data?.notes ?? '', name: '', category: '', unit: 'יח׳',
+      })
+    } else {
+      const { data } = await sb.from('products').select('name,sku,barcode,qty,sell_price,buy_price,category,unit,notes').eq('id', item.id).single()
+      setEditForm({
+        name: data?.name ?? '', sku: data?.sku ?? '', barcode: data?.barcode ?? '',
+        category: data?.category ?? '', unit: data?.unit ?? 'יח׳',
+        qty: String(data?.qty ?? 0), sell_price: String(data?.sell_price ?? ''),
+        cost_price: String(data?.buy_price ?? ''), notes: data?.notes ?? '',
+        brand: '', load_idx: '', speed_idx: '', location: '',
+      })
     }
-    // Products — open local modal
-    const { data } = await sb.from('products').select('name,sku,barcode,qty,sell_price,buy_price,category,unit,notes').eq('id', item.id).single()
-    setEditForm({
-      name: data?.name ?? '', sku: data?.sku ?? '', barcode: data?.barcode ?? '',
-      category: data?.category ?? '', unit: data?.unit ?? 'יח׳',
-      qty: String(data?.qty ?? 0), sell_price: String(data?.sell_price ?? ''),
-      cost_price: String(data?.buy_price ?? ''), notes: data?.notes ?? '',
-      brand: '', load_idx: '', speed_idx: '', location: '',
-    })
     setEditItem(item)
   }
 
@@ -511,25 +515,57 @@ export default function ScanClient() {
       )}
 
       {/* ── EDIT MODAL ── */}
-      {/* Edit modal — products only (tires navigate to /tires) */}
-      {editItem && editItem.type === 'product' && (
-        <Modal onClose={() => { setEditItem(null); refocus() }} width={440}>
-          <div className="flex items-center gap-2 mb-4">{BADGE('product')}<span className="font-bold text-slate-700">עריכת מוצר</span></div>
-          <Field label="שם מוצר"><input className="form-input" value={editForm.name} onChange={e => setEF('name', e.target.value)} /></Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="מק״ט"><input className="form-input" value={editForm.sku} onChange={e => setEF('sku', e.target.value)} placeholder="קוד פנימי" /></Field>
-            <Field label="ברקוד"><input className="form-input" value={editForm.barcode} onChange={e => setEF('barcode', e.target.value)} placeholder="סרוק" style={{ fontFamily: 'monospace' }} /></Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="קטגוריה"><input className="form-input" value={editForm.category} onChange={e => setEF('category', e.target.value)} /></Field>
-            <Field label="יחידה"><input className="form-input" value={editForm.unit} onChange={e => setEF('unit', e.target.value)} /></Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="כמות במלאי"><input className="form-input" type="number" min={0} value={editForm.qty} onChange={e => setEF('qty', e.target.value)} /></Field>
-            <Field label="מחיר קנייה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.cost_price} onChange={e => setEF('cost_price', e.target.value)} /></Field>
-          </div>
-          <Field label="מחיר מכירה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.sell_price} onChange={e => setEF('sell_price', e.target.value)} /></Field>
-          <Field label="הערות"><input className="form-input" value={editForm.notes} onChange={e => setEF('notes', e.target.value)} /></Field>
+      {/* Edit modal — tires + products */}
+      {editItem && (
+        <Modal onClose={() => { setEditItem(null); refocus() }} width={460}>
+          <div className="flex items-center gap-2 mb-4">{BADGE(editItem.type)}<span className="font-bold text-slate-700">עריכת {editItem.type === 'tire' ? 'צמיג' : 'מוצר'}</span></div>
+
+          {editItem.type === 'tire' && <>
+            <Field label="מותג"><input className="form-input" value={editForm.brand} onChange={e => setEF('brand', e.target.value)} placeholder="Michelin, Bridgestone..." /></Field>
+            <Field label="מקט / ברקוד יצרן"><input className="form-input" value={editForm.sku} onChange={e => setEF('sku', e.target.value)} placeholder="סרוק או הקלד" style={{ fontFamily: 'monospace' }} /></Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="אינדקס עומס">
+                <select className="form-input" value={editForm.load_idx} onChange={e => setEF('load_idx', e.target.value)}>
+                  <option value="">— ללא —</option>
+                  {LOAD_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </Field>
+              <Field label="אינדקס מהירות">
+                <select className="form-input" value={editForm.speed_idx} onChange={e => setEF('speed_idx', e.target.value)}>
+                  <option value="">— ללא —</option>
+                  {SPEED_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="כמות במלאי"><input className="form-input" type="number" min={0} value={editForm.qty} onChange={e => setEF('qty', e.target.value)} /></Field>
+              <Field label="מיקום במחסן"><input className="form-input" value={editForm.location} onChange={e => setEF('location', e.target.value)} placeholder="מדף A3" /></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="מחיר קנייה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.cost_price} onChange={e => setEF('cost_price', e.target.value)} /></Field>
+              <Field label="מחיר מכירה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.sell_price} onChange={e => setEF('sell_price', e.target.value)} /></Field>
+            </div>
+            <Field label="הערות"><input className="form-input" value={editForm.notes} onChange={e => setEF('notes', e.target.value)} /></Field>
+          </>}
+
+          {editItem.type === 'product' && <>
+            <Field label="שם מוצר"><input className="form-input" value={editForm.name} onChange={e => setEF('name', e.target.value)} /></Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="מק״ט"><input className="form-input" value={editForm.sku} onChange={e => setEF('sku', e.target.value)} placeholder="קוד פנימי" /></Field>
+              <Field label="ברקוד"><input className="form-input" value={editForm.barcode} onChange={e => setEF('barcode', e.target.value)} placeholder="סרוק" style={{ fontFamily: 'monospace' }} /></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="קטגוריה"><input className="form-input" value={editForm.category} onChange={e => setEF('category', e.target.value)} /></Field>
+              <Field label="יחידה"><input className="form-input" value={editForm.unit} onChange={e => setEF('unit', e.target.value)} /></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="כמות במלאי"><input className="form-input" type="number" min={0} value={editForm.qty} onChange={e => setEF('qty', e.target.value)} /></Field>
+              <Field label="מחיר קנייה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.cost_price} onChange={e => setEF('cost_price', e.target.value)} /></Field>
+            </div>
+            <Field label="מחיר מכירה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.sell_price} onChange={e => setEF('sell_price', e.target.value)} /></Field>
+            <Field label="הערות"><input className="form-input" value={editForm.notes} onChange={e => setEF('notes', e.target.value)} /></Field>
+          </>}
+
           <div className="flex gap-3 mt-5">
             <button onClick={saveEdit} disabled={saving} className="flex-1 bg-green-700 text-white rounded-xl font-bold disabled:opacity-50 active:brightness-90 transition-all" style={{ padding: '12px' }}>{saving ? 'שומר...' : 'שמור'}</button>
             <button onClick={() => { setEditItem(null); refocus() }} className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all" style={{ padding: '12px' }}>ביטול</button>
