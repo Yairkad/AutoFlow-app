@@ -134,7 +134,7 @@ export default function ReceiveClient() {
       <div className="bg-slate-800 text-white flex items-center justify-between flex-shrink-0"
         style={{ padding: '14px 18px' }}>
         <h2 className="text-xl font-bold">📦 קבלת סחורה</h2>
-        <button onClick={() => router.push('/yard')}
+        <button onClick={() => router.back()}
           className="bg-white/10 rounded-lg font-semibold text-sm active:bg-white/20"
           style={{ padding: '6px 14px' }}>
           ← חזור
