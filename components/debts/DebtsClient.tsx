@@ -30,6 +30,13 @@ interface SupplierDebt {
   invoices: { type: string; number: string; amount: number; description?: string }[] | null
 }
 
+interface ScheduledPayment {
+  id: string; tenant_id: string; description: string; amount: number
+  due_date: string; payment_method: 'check' | 'transfer'
+  supplier_id: string | null; category: string | null
+  is_paid: boolean; paid_date: string | null; expense_id: string | null; notes: string | null
+}
+
 interface Supplier {
   id: string; name: string; phone: string | null; contact_name: string | null
 }
@@ -112,6 +119,10 @@ export default function DebtsClient() {
   // WhatsApp edit modal
   const [waModal, setWaModal] = useState<{ phone: string; text: string } | null>(null)
 
+  // Scheduled payments (for monthly supplier view + auto-expense)
+  const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([])
+  const autoExpenseDoneRef = useRef(false)
+
   // ── Tenant ────────────────────────────────────────────────────────────────
 
   const resolveTenant = useCallback(async () => {
@@ -129,18 +140,48 @@ export default function DebtsClient() {
     const tid = await resolveTenant()
     if (!tid) return
     setLoading(true)
-    const [custRes, suppDebtRes, suppRes, tenantRes] = await Promise.all([
+    const [custRes, suppDebtRes, suppRes, tenantRes, paymentsRes] = await Promise.all([
       supabase.from('customer_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
       supabase.from('supplier_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
       supabase.from('suppliers').select('id,name,phone,contact_name').eq('tenant_id', tid).order('name'),
       supabase.from('tenants').select('name').eq('id', tid).single(),
+      supabase.from('scheduled_payments').select('*').eq('tenant_id', tid).order('due_date'),
     ])
     if (custRes.data)     setCustomerDebts(custRes.data)
     if (suppDebtRes.data) setSupplierDebts(suppDebtRes.data)
     if (suppRes.data)     setSuppliers(suppRes.data)
     if (tenantRes.data?.name) setTenantName(tenantRes.data.name)
+    const payments: ScheduledPayment[] = paymentsRes.data ?? []
+    setScheduledPayments(payments)
     setLoading(false)
-  }, [supabase, resolveTenant])
+
+    // Auto-expense overdue scheduled payments — runs once per session
+    if (!autoExpenseDoneRef.current) {
+      autoExpenseDoneRef.current = true
+      const today = new Date().toISOString().slice(0, 10)
+      const overdue = payments.filter(p => !p.is_paid && p.due_date <= today)
+      if (overdue.length > 0) {
+        for (const p of overdue) {
+          const expRes = await supabase.from('expenses').insert({
+            tenant_id: tid, date: p.due_date,
+            category: p.category || 'ספקים',
+            description: p.description, amount: p.amount,
+            supplier_id: p.supplier_id,
+            payment_method: p.payment_method === 'check' ? "צ'ק" : 'העברה',
+            payment_ref: p.notes || null,
+          }).select('id').single()
+          if (!expRes.error) {
+            await supabase.from('scheduled_payments').update({
+              is_paid: true, paid_date: today, expense_id: expRes.data.id,
+            }).eq('id', p.id)
+          }
+        }
+        showToast(`${overdue.length} תשלומים נרשמו אוטומטית כהוצאות ✓`, 'info')
+        const refreshed = await supabase.from('scheduled_payments').select('*').eq('tenant_id', tid).order('due_date')
+        setScheduledPayments(refreshed.data ?? [])
+      }
+    }
+  }, [supabase, resolveTenant, showToast])
 
   useEffect(() => { loadAll() }, [loadAll])
 
@@ -266,6 +307,11 @@ export default function DebtsClient() {
     showToast('נמחק', 'success'); setSelectedId(null); loadAll()
   }
 
+  const addDebtForSupplier = (suppId: string) => {
+    setEditSupp(null); setSSupplier(suppId); setSDate(todayISO()); setSNotes(''); setSInvoices([EMPTY_INV()])
+    setShowSuppModal(true)
+  }
+
   // ── Payment ───────────────────────────────────────────────────────────────
 
   const openPay = (id: string, type: 'customer' | 'supplier', debtBalance: number) => {
@@ -315,6 +361,13 @@ export default function DebtsClient() {
   const openCustTotal = customerDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
   const openSuppTotal = supplierDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
   const netOwed       = openSuppTotal - openCustTotal
+
+  // ── Monthly view helpers ───────────────────────────────────────────────────
+
+  const monthKeyOf = (iso: string) => iso.slice(0, 7)
+  const HEB_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
+  const fmtMonth = (key: string) => { const [y, m] = key.split('-'); return `${HEB_MONTHS[parseInt(m) - 1]} ${y}` }
+  const daysUntilDate = (iso: string) => { const t = new Date(); t.setHours(0,0,0,0); const d = new Date(iso + 'T00:00:00'); d.setHours(0,0,0,0); return Math.round((d.getTime()-t.getTime())/86400000) }
 
   // ── Selected item info ────────────────────────────────────────────────────
 
@@ -589,57 +642,170 @@ export default function DebtsClient() {
         </div>
       )}
 
-      {/* ── SUPPLIERS TAB ── */}
+      {/* ── SUPPLIERS TAB — monthly grouped view ── */}
       {tab === 'suppliers' && (
         <div>
           <Toolbar onAdd={() => openSuppModal()} />
           <SelectionBar />
-          {filteredSupp.length === 0 ? (
-            <EmptyState icon="🏭" text={`אין חובות לספקים ${filter === 'open' ? 'פתוחים' : filter === 'closed' ? 'סגורים' : ''}`} />
-          ) : (
-            <div style={{ overflowX: 'auto', background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                    {['ספק', 'חשבוניות', 'סכום', 'שולם', 'יתרה', 'תאריך', 'סטטוס'].map(h => (
-                      <th key={h} style={thSt}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSupp.map((d, i) => {
-                    const supp       = suppliers.find(s => s.id === d.supplier_id)
-                    const isSelected = selectedId === d.id
-                    return (
-                      <tr
-                        key={d.id}
-                        onClick={() => setSelectedId(isSelected ? null : d.id)}
-                        style={{
-                          borderBottom: '1px solid var(--border)',
-                          background: isSelected ? '#eff6ff' : d.is_closed ? '#fafafa' : i % 2 === 0 ? '#fff' : '#fdfefe',
-                          opacity: d.is_closed ? 0.65 : 1,
-                          cursor: 'pointer',
-                          outline: isSelected ? '2px solid #93c5fd' : undefined,
-                          outlineOffset: '-1px',
-                        }}
-                      >
-                        <td style={{ ...tdSt, fontWeight: 600 }}>
-                          {supp?.name ?? <span style={{ color: 'var(--text-muted)' }}>לא צוין</span>}
-                          {supp?.phone && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: 400 }}>{supp.phone}</div>}
-                        </td>
-                        <td style={{ ...tdSt, maxWidth: '220px' }}><InvoiceCell d={d} /></td>
-                        <td style={{ ...tdSt, fontWeight: 600 }}>{fmt(d.amount)}</td>
-                        <td style={{ ...tdSt, color: '#16a34a' }}>{fmt(d.paid)}</td>
-                        <td style={{ ...tdSt, fontWeight: 700, color: bal(d) > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(bal(d))}</td>
-                        <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
-                        <td style={tdSt}><StatusChip debt={d} /></td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+          {(() => {
+            // Build per-supplier groups with monthly breakdown
+            const allSuppIds = [...new Set(supplierDebts.map(d => d.supplier_id))]
+            const groups = allSuppIds.map(sid => {
+              const debts = supplierDebts.filter(d => d.supplier_id === sid)
+              const supp = suppliers.find(s => s.id === sid)
+              const totalBal = debts.reduce((s, d) => s + bal(d), 0)
+
+              // Apply search filter at supplier level
+              if (search.trim()) {
+                const q = search.toLowerCase()
+                const nameMatch = (supp?.name ?? '').toLowerCase().includes(q)
+                const descMatch = debts.some(d => d.description?.toLowerCase().includes(q))
+                if (!nameMatch && !descMatch) return null
+              }
+
+              // Apply open/closed filter
+              if (filter === 'open'   && totalBal === 0) return null
+              if (filter === 'closed' && totalBal > 0)  return null
+
+              // Group debts by month key (YYYY-MM)
+              const monthMap: Record<string, SupplierDebt[]> = {}
+              debts.forEach(d => {
+                const mk = monthKeyOf(d.date)
+                if (!monthMap[mk]) monthMap[mk] = []
+                monthMap[mk].push(d)
+              })
+              const months = Object.keys(monthMap).sort().reverse() // newest first
+              const suppPayments = scheduledPayments.filter(p => p.supplier_id === sid)
+
+              return { sid, supp, totalBal, monthMap, months, suppPayments }
+            }).filter(Boolean) as {
+              sid: string | null; supp: Supplier | undefined; totalBal: number
+              monthMap: Record<string, SupplierDebt[]>; months: string[]
+              suppPayments: ScheduledPayment[]
+            }[]
+
+            if (groups.length === 0) return (
+              <EmptyState icon="🏭" text={`אין חובות לספקים ${filter === 'open' ? 'פתוחים' : filter === 'closed' ? 'סגורים' : ''}`} />
+            )
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {groups.map(group => (
+                  <div key={group.sid ?? 'none'} style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
+
+                    {/* Supplier header */}
+                    <div style={{ background: '#f1f5f9', borderBottom: '2px solid var(--border)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: '15px' }}>🏭 {group.supp?.name ?? 'ללא ספק'}</span>
+                      {group.supp?.phone && <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{group.supp.phone}</span>}
+                      <span style={{ marginRight: 'auto', fontSize: '14px', fontWeight: 700, color: group.totalBal > 0 ? 'var(--danger)' : '#16a34a' }}>
+                        יתרה כוללת: {fmt(group.totalBal)}
+                      </span>
+                      {group.sid && (
+                        <button onClick={() => addDebtForSupplier(group.sid!)}
+                          style={{ padding: '4px 12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                          + הוסף חוב
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Months */}
+                    {group.months.map((mk, mIdx) => {
+                      const monthDebts = group.monthMap[mk]
+                      // Carry-over = balance of all months that are chronologically BEFORE this one (appear after in the desc-sorted array)
+                      const carryOver = group.months.slice(mIdx + 1).reduce(
+                        (s, m) => s + group.monthMap[m].reduce((ss, d) => ss + bal(d), 0), 0)
+                      const monthPayments = group.suppPayments.filter(p => p.due_date.slice(0, 7) === mk)
+                      const monthDebtTotal = monthDebts.reduce((s, d) => s + d.amount, 0)
+                      const monthPaidTotal = monthDebts.reduce((s, d) => s + d.paid, 0)
+                      const monthBalance   = monthDebts.reduce((s, d) => s + bal(d), 0)
+
+                      return (
+                        <div key={mk} style={{ borderBottom: mIdx < group.months.length - 1 ? '1px solid var(--border)' : 'none', padding: '14px 16px' }}>
+
+                          {/* Month header */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                            <span style={{ fontWeight: 700, fontSize: '14px', color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
+                            {monthBalance === 0
+                              ? <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>סגור ✓</span>
+                              : <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>פתוח</span>}
+                          </div>
+
+                          {/* Carry-over notice */}
+                          {carryOver > 0 && (
+                            <div style={{ padding: '7px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', marginBottom: '10px', fontSize: '13px', color: '#92400e', fontWeight: 600 }}>
+                              ↩ יתרת חוב מחודשים קודמים: {fmt(carryOver)}
+                            </div>
+                          )}
+
+                          {/* Debt records (invoices/karteset) — clickable for SelectionBar */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: monthPayments.length > 0 ? '10px' : '0' }}>
+                            {monthDebts.map(d => {
+                              const isSelected = selectedId === d.id
+                              return (
+                                <div key={d.id} onClick={() => setSelectedId(isSelected ? null : d.id)} style={{
+                                  display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px',
+                                  borderRadius: '8px', cursor: 'pointer', flexWrap: 'wrap',
+                                  background: isSelected ? '#eff6ff' : d.is_closed ? '#fafafa' : '#f8fafc',
+                                  border: `1.5px solid ${isSelected ? '#93c5fd' : 'var(--border)'}`,
+                                  opacity: d.is_closed ? 0.7 : 1,
+                                }}>
+                                  <div style={{ flex: 1, minWidth: 0 }}><InvoiceCell d={d} /></div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, flexWrap: 'wrap' }}>
+                                    <span style={{ fontWeight: 700, fontSize: '14px' }}>{fmt(d.amount)}</span>
+                                    {d.paid > 0 && <span style={{ color: '#16a34a', fontSize: '13px' }}>שולם: {fmt(d.paid)}</span>}
+                                    {bal(d) > 0 && <span style={{ fontWeight: 700, color: 'var(--danger)', fontSize: '13px' }}>יתרה: {fmt(bal(d))}</span>}
+                                    <StatusChip debt={d} />
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+
+                          {/* Scheduled payments linked to this month */}
+                          {monthPayments.length > 0 && (
+                            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px 12px', marginBottom: '10px' }}>
+                              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', marginBottom: '7px' }}>📅 תשלומים מתוזמנים:</div>
+                              {monthPayments.map((p, pi) => {
+                                const days = daysUntilDate(p.due_date)
+                                return (
+                                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 0', fontSize: '13px', borderTop: pi > 0 ? '1px solid #e0f2fe' : 'none', flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: '11px', background: p.payment_method === 'check' ? '#fef9c3' : '#eff6ff', color: p.payment_method === 'check' ? '#92400e' : '#1d4ed8', padding: '1px 6px', borderRadius: '4px', fontWeight: 600, flexShrink: 0 }}>
+                                      {p.payment_method === 'check' ? "צ'ק" : 'העברה'}
+                                    </span>
+                                    {p.description && <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{p.description}</span>}
+                                    <span style={{ fontWeight: 700 }}>{fmt(p.amount)}</span>
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '12px', whiteSpace: 'nowrap' }}>{p.due_date}</span>
+                                    {p.notes && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{p.notes}</span>}
+                                    <span style={{ marginRight: 'auto' }}>
+                                      {p.is_paid
+                                        ? <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700 }}>✓ שולם</span>
+                                        : <span style={{ fontSize: '11px', fontWeight: 600, color: days < 0 ? 'var(--danger)' : days <= 7 ? 'var(--warning)' : '#2563eb' }}>
+                                            {days < 0 ? `באיחור ${Math.abs(days)} ימים` : days === 0 ? 'היום!' : `עוד ${days} ימים`}
+                                          </span>}
+                                    </span>
+                                  </div>
+                                )
+                              })}
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                                סה&quot;כ: <strong style={{ marginRight: '4px', color: '#0369a1' }}>{fmt(monthPayments.reduce((s, p) => s + p.amount, 0))}</strong>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Month totals */}
+                          <div style={{ display: 'flex', gap: '20px', fontSize: '13px', flexWrap: 'wrap', color: 'var(--text-muted)' }}>
+                            <span>חוב חודש: <strong style={{ color: 'var(--text)' }}>{fmt(monthDebtTotal)}</strong></span>
+                            {monthPaidTotal > 0 && <span>שולם: <strong style={{ color: '#16a34a' }}>{fmt(monthPaidTotal)}</strong></span>}
+                            <span>יתרה: <strong style={{ color: monthBalance > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(monthBalance)}</strong></span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </div>
       )}
 

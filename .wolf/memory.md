@@ -3,6 +3,10 @@
 > Chronological action log. Hooks and AI append to this file automatically.
 > Old sessions are consolidated by the daemon weekly.
 
+| 14:42 | TiresClient: load_idx + speed_idx selects → input+datalist combobox (allows free text) | TiresClient.tsx | done | ~200 tok |
+| 14:42 | DebtsClient: added ScheduledPayment type, scheduledPayments state, auto-expense on load for overdue payments | DebtsClient.tsx | done | ~400 tok |
+| 14:42 | DebtsClient: supplier tab rewritten as monthly grouped view with carry-over, linked checks, month totals | DebtsClient.tsx | done | ~600 tok |
+
 ## Session: 2026-05-27 14:41
 
 | Time | Action | File(s) | Outcome | ~Tokens |
@@ -253,3 +257,91 @@
 | 17:27 | Created components/scan/ScanClient.tsx | — | ~5663 |
 | 17:27 | Edited components/scan/ScanClient.tsx | openEdit() → refocus() | ~42 |
 | 17:27 | Session end: 10 writes across 4 files (page.tsx, ScanClient.tsx, Sidebar.tsx, EmployeesClient.tsx) | 3 reads | ~58708 tok |
+| 17:28 | Session end: 10 writes across 4 files (page.tsx, ScanClient.tsx, Sidebar.tsx, EmployeesClient.tsx) | 3 reads | ~58708 tok |
+
+## Session: 2026-06-03 17:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:33 | Created components/scan/ScanClient.tsx | — | ~8050 |
+| 17:33 | Session end: 1 writes across 1 files (ScanClient.tsx) | 2 reads | ~26980 tok |
+| 17:34 | Edited components/dashboard/DashboardStats.tsx | modified for() | ~122 |
+| 17:34 | Session end: 2 writes across 2 files (ScanClient.tsx, DashboardStats.tsx) | 2 reads | ~27102 tok |
+| 17:34 | Edited components/yard/OfficeClient.tsx | 5→5 lines | ~66 |
+| 17:34 | fixed Supabase Disk IO — blanket schema subscription → specific tables, polling 8s → 60s | DashboardStats.tsx, OfficeClient.tsx | done | ~800 |
+| 17:35 | Session end: 3 writes across 3 files (ScanClient.tsx, DashboardStats.tsx, OfficeClient.tsx) | 2 reads | ~27168 tok |
+| 17:36 | Session end: 3 writes across 3 files (ScanClient.tsx, DashboardStats.tsx, OfficeClient.tsx) | 2 reads | ~27168 tok |
+| 17:37 | Session end: 3 writes across 3 files (ScanClient.tsx, DashboardStats.tsx, OfficeClient.tsx) | 2 reads | ~27168 tok |
+| 17:37 | Session end: 3 writes across 3 files (ScanClient.tsx, DashboardStats.tsx, OfficeClient.tsx) | 2 reads | ~27168 tok |
+| 17:38 | Session end: 3 writes across 3 files (ScanClient.tsx, DashboardStats.tsx, OfficeClient.tsx) | 2 reads | ~27168 tok |
+| 17:39 | Edited components/scan/ScanClient.tsx | added 1 import(s) | ~49 |
+| 17:39 | Edited components/scan/ScanClient.tsx | modified ScanClient() | ~43 |
+| 17:40 | Edited components/scan/ScanClient.tsx | 29→29 lines | ~590 |
+| 17:40 | Edited components/scan/ScanClient.tsx | 7→7 lines | ~183 |
+| 17:41 | Edited components/scan/ScanClient.tsx | CSS: display, marginTop | ~537 |
+| 17:41 | Edited components/scan/ScanClient.tsx | 24→24 lines | ~438 |
+| 17:41 | Session end: 9 writes across 3 files (ScanClient.tsx, DashboardStats.tsx, OfficeClient.tsx) | 3 reads | ~29098 tok |
+| 17:42 | Session end: 9 writes across 3 files (ScanClient.tsx, DashboardStats.tsx, OfficeClient.tsx) | 3 reads | ~29098 tok |
+
+## Session: 2026-06-04 12:03
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-06-04 12:03
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:07 | Edited components/scan/ScanClient.tsx | 3→7 lines | ~174 |
+| 12:07 | Edited components/scan/ScanClient.tsx | 3→8 lines | ~79 |
+| 12:07 | Edited components/scan/ScanClient.tsx | 2→2 lines | ~84 |
+| 12:08 | Edited components/scan/ScanClient.tsx | modified openEdit() | ~710 |
+| 12:08 | Edited components/scan/ScanClient.tsx | modified ScanClient() | ~37 |
+| 12:08 | Edited components/scan/ScanClient.tsx | CSS: active, fontSize, lineHeight | ~112 |
+| 12:09 | Edited components/scan/ScanClient.tsx | expanded (+38 lines) | ~1400 |
+| 12:09 | Edited components/scan/ScanClient.tsx | inline fix | ~32 |
+| 12:09 | Session end: 8 writes across 1 files (ScanClient.tsx) | 1 reads | ~10883 tok |
+| 13:00 | Edited components/layout/Header.tsx | 20→24 lines | ~1032 |
+| 13:00 | Edited components/yard/ReceiveClient.tsx | 6→5 lines | ~64 |
+| 13:01 | Edited components/yard/ReceiveClient.tsx | 3→2 lines | ~32 |
+| 13:01 | Edited components/yard/ReceiveClient.tsx | added 1 condition(s) | ~101 |
+| 13:01 | Edited components/yard/ReceiveClient.tsx | removed 8 lines | ~6 |
+| 13:01 | Edited components/yard/ReceiveClient.tsx | modified if() | ~337 |
+| 13:01 | Edited components/scan/ScanClient.tsx | added error handling | ~113 |
+| 13:02 | Edited components/tires/TiresClient.tsx | added error handling | ~148 |
+| 13:02 | Edited components/scan/ScanClient.tsx | — | ~0 |
+| 13:03 | Edited components/scan/ScanClient.tsx | added optional chaining | ~270 |
+| 13:03 | Edited components/scan/ScanClient.tsx | map() → only() | ~744 |
+| 13:04 | Session end: 19 writes across 4 files (ScanClient.tsx, Header.tsx, ReceiveClient.tsx, TiresClient.tsx) | 4 reads | ~46993 tok |
+| 13:17 | Session end: 19 writes across 4 files (ScanClient.tsx, Header.tsx, ReceiveClient.tsx, TiresClient.tsx) | 4 reads | ~46993 tok |
+| 13:24 | Session end: 19 writes across 4 files (ScanClient.tsx, Header.tsx, ReceiveClient.tsx, TiresClient.tsx) | 4 reads | ~46993 tok |
+| 14:06 | Session end: 19 writes across 4 files (ScanClient.tsx, Header.tsx, ReceiveClient.tsx, TiresClient.tsx) | 4 reads | ~46993 tok |
+| 17:21 | Edited components/yard/ReceiveClient.tsx | inline fix | ~13 |
+| 17:21 | Session end: 20 writes across 4 files (ScanClient.tsx, Header.tsx, ReceiveClient.tsx, TiresClient.tsx) | 4 reads | ~47006 tok |
+
+## Session: 2026-06-07 17:28
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-06-07 17:28
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-06-07 17:29
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:38 | Edited components/scan/ScanClient.tsx | modified openEdit() | ~371 |
+| 17:38 | Edited components/tires/TiresClient.tsx | modified if() | ~364 |
+| 17:38 | Edited components/scan/ScanClient.tsx | only() → map() | ~1414 |
+| 17:38 | Edited components/debts/DebtsClient.tsx | expanded (+7 lines) | ~186 |
+| 17:39 | Edited components/debts/DebtsClient.tsx | 5→9 lines | ~115 |
+| 17:39 | Edited components/tires/TiresClient.tsx | removed 15 lines | ~13 |
+| 17:39 | Edited components/debts/DebtsClient.tsx | added nullish coalescing | ~672 |
+| 17:39 | Session end: 7 writes across 3 files (ScanClient.tsx, TiresClient.tsx, DebtsClient.tsx) | 4 reads | ~44750 tok |
+| 17:39 | Edited components/debts/DebtsClient.tsx | expanded (+7 lines) | ~234 |
+| 17:39 | Edited components/debts/DebtsClient.tsx | CSS: suppId | ~119 |
+| 17:41 | Edited components/debts/DebtsClient.tsx | added 6 condition(s) | ~3298 |
+| 17:42 | Session end: 10 writes across 3 files (ScanClient.tsx, TiresClient.tsx, DebtsClient.tsx) | 4 reads | ~48401 tok |
