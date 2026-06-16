@@ -95,6 +95,7 @@ export default function TiresClient() {
   const [tires, setTires]         = useState<Tire[]>([])
   const [movements, setMovements] = useState<TireMovement[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [loading, setLoading]     = useState(true)
 
   const [tab, setTab] = useState<'tires' | 'movements'>('tires')
 
@@ -142,6 +143,7 @@ export default function TiresClient() {
     setTires(ts || [])
     setMovements(mvs || [])
     setSuppliers(sups || [])
+    setLoading(false)
   }, [sb])
 
   useEffect(() => {
@@ -656,7 +658,12 @@ export default function TiresClient() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.length === 0 ? (
+                  {loading ? (
+                    <tr><td colSpan={10} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: '36px', marginBottom: '8px' }}>🔘</div>
+                      <div>טוען...</div>
+                    </td></tr>
+                  ) : filtered.length === 0 ? (
                     <tr><td colSpan={10} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
                       <div style={{ fontSize: '36px', marginBottom: '8px' }}>🔘</div>
                       <div>אין צמיגים</div>
