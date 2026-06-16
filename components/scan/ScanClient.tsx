@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
 
 const LOAD_INDICES  = ['60','62','65','67','69','71','73','75','77','80','82','84','85','86','87','88','89','90','91','92','93','94','95','96','98','99','100','101','102','103','104','105','106','107','108','109','110','112','114','116','118','120','121','122','124','126']
@@ -11,7 +12,7 @@ const WIDTHS   = [145,155,165,175,185,195,205,215,225,235,245,255,265,275,285,29
 const PROFILES = [25,30,35,40,45,50,55,60,65,70,75,80]
 const RIMS     = [13,14,15,16,17,18,19,20,21,22]
 
-const emptyNewTire = { brand: '', width: '', profile: '', rim: '', sku: '', load_idx: '', speed_idx: '', qty: '1', cost_price: '', sell_price: '', location: '', notes: '' }
+const emptyNewTire = { brand: '', width: '', profile: '', rim: '', sku: '', load_idx: '', speed_idx: '', qty: '1', cost_price: '', sell_price: '', location: '', notes: '', condition: 'new' as 'new' | 'used', tire_type: 'regular' as 'regular' | 'reinforced' | 'commercial' }
 
 interface InventoryItem {
   id: string
@@ -27,6 +28,7 @@ interface EditForm {
   sku: string; qty: string; sell_price: string; cost_price: string; notes: string
   // tires
   brand: string; load_idx: string; speed_idx: string; location: string
+  condition: 'new' | 'used'; tire_type: 'regular' | 'reinforced' | 'commercial'
   // products
   name: string; barcode: string; category: string; unit: string
 }
@@ -41,6 +43,7 @@ type Mode = 'scan' | 'count'
 
 export default function ScanClient() {
   const sb = createClient()
+  const { profile } = useProfile()
   const router = useRouter()
   const isMobile = useIsMobile()
   const scanRef     = useRef<HTMLInputElement>(null)
@@ -66,7 +69,7 @@ export default function ScanClient() {
 
   // edit
   const [editItem, setEditItem] = useState<InventoryItem | null>(null)
-  const [editForm, setEditForm] = useState<EditForm>({ sku: '', qty: '', sell_price: '', cost_price: '', notes: '', brand: '', load_idx: '', speed_idx: '', location: '', name: '', barcode: '', category: '', unit: 'יח׳' })
+  const [editForm, setEditForm] = useState<EditForm>({ sku: '', qty: '', sell_price: '', cost_price: '', notes: '', brand: '', load_idx: '', speed_idx: '', location: '', condition: 'new', tire_type: 'regular', name: '', barcode: '', category: '', unit: 'יח׳' })
   const [saving,   setSaving]   = useState(false)
 
   // count mode
@@ -84,16 +87,11 @@ export default function ScanClient() {
   useEffect(() => { modeRef.current = mode }, [mode])
 
   // ── Load ──────────────────────────────────────────────────────────────────
-  const load = useCallback(async () => {
+  const load = useCallback(async (tenantId: string) => {
     setLoading(true)
-    const { data: { user } } = await sb.auth.getUser()
-    if (!user) return
-    const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.id).single()
-    if (!profile) return
-    tenantIdRef.current = profile.tenant_id
     const [{ data: tires }, { data: products }] = await Promise.all([
-      sb.from('tires').select('id,brand,width,profile,rim,sku,qty').eq('tenant_id', profile.tenant_id).order('created_at', { ascending: false }),
-      sb.from('products').select('id,name,sku,barcode,qty').eq('tenant_id', profile.tenant_id).order('created_at', { ascending: false }),
+      sb.from('tires').select('id,brand,width,profile,rim,sku,qty').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+      sb.from('products').select('id,name,sku,barcode,qty').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
     ])
     const tireItems: InventoryItem[] = (tires ?? []).map(t => ({
       id: t.id, type: 'tire', name: `${t.brand ?? ''} ${t.width}/${t.profile}R${t.rim}`.trim(),
@@ -106,7 +104,11 @@ export default function ScanClient() {
     setLoading(false)
   }, [sb])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    if (!profile) return
+    tenantIdRef.current = profile.tenantId
+    load(profile.tenantId)
+  }, [profile, load])
   useEffect(() => { scanRef.current?.focus() }, [])
 
   // ── Debounce trigger ──────────────────────────────────────────────────────
@@ -179,7 +181,7 @@ export default function ScanClient() {
     setShowConfirm(false)
     setMode('scan')
     showToast(`ספירה הושלמה — ${entries.length} פריטים עודכנו ✓`)
-    await load()
+    await load(tenantIdRef.current)
     refocus()
   }
 
@@ -187,13 +189,14 @@ export default function ScanClient() {
   async function openEdit(item: InventoryItem) {
     setFoundItem(null); setNotFoundCode(null)
     if (item.type === 'tire') {
-      const { data } = await sb.from('tires').select('brand,width,profile,rim,sku,qty,sell_price,cost_price,load_idx,speed_idx,location,notes').eq('id', item.id).single()
+      const { data } = await sb.from('tires').select('brand,width,profile,rim,sku,qty,sell_price,cost_price,load_idx,speed_idx,location,notes,condition,tire_type').eq('id', item.id).single()
       setEditForm({
         brand: data?.brand ?? '', sku: data?.sku ?? '', barcode: '',
         load_idx: data?.load_idx ?? '', speed_idx: data?.speed_idx ?? '',
         qty: String(data?.qty ?? 0), sell_price: String(data?.sell_price ?? ''),
         cost_price: String(data?.cost_price ?? ''), location: data?.location ?? '',
-        notes: data?.notes ?? '', name: '', category: '', unit: 'יח׳',
+        notes: data?.notes ?? '', condition: data?.condition ?? 'new', tire_type: data?.tire_type ?? 'regular',
+        name: '', category: '', unit: 'יח׳',
       })
     } else {
       const { data } = await sb.from('products').select('name,sku,barcode,qty,sell_price,buy_price,category,unit,notes').eq('id', item.id).single()
@@ -202,7 +205,7 @@ export default function ScanClient() {
         category: data?.category ?? '', unit: data?.unit ?? 'יח׳',
         qty: String(data?.qty ?? 0), sell_price: String(data?.sell_price ?? ''),
         cost_price: String(data?.buy_price ?? ''), notes: data?.notes ?? '',
-        brand: '', load_idx: '', speed_idx: '', location: '',
+        brand: '', load_idx: '', speed_idx: '', location: '', condition: 'new', tire_type: 'regular',
       })
     }
     setEditItem(item)
@@ -224,6 +227,8 @@ export default function ScanClient() {
         qty, sell_price, cost_price,
         location: editForm.location.trim() || null,
         notes: editForm.notes.trim() || null,
+        condition: editForm.condition,
+        tire_type: editForm.tire_type,
       }).eq('id', editItem.id)
     } else {
       await sb.from('products').update({
@@ -236,7 +241,7 @@ export default function ScanClient() {
         notes: editForm.notes.trim() || null,
       }).eq('id', editItem.id)
     }
-    setSaving(false); setEditItem(null); showToast('נשמר ✓'); await load(); refocus()
+    setSaving(false); setEditItem(null); showToast('נשמר ✓'); await load(tenantIdRef.current); refocus()
   }
 
   // ── Link barcode ──────────────────────────────────────────────────────────
@@ -245,7 +250,7 @@ export default function ScanClient() {
     if (item.type === 'tire') await sb.from('tires').update({ sku: code }).eq('id', item.id)
     else await sb.from('products').update({ barcode: code }).eq('id', item.id)
     setSavingLink(false); setNotFoundCode(null); setAction(null)
-    showToast(`ברקוד שויך ל-${item.name} ✓`); await load(); refocus()
+    showToast(`ברקוד שויך ל-${item.name} ✓`); await load(tenantIdRef.current); refocus()
   }
 
   function openNewTire(code: string) {
@@ -271,12 +276,14 @@ export default function ScanClient() {
       sell_price: parseFloat(f.sell_price) || null,
       location:   f.location.trim() || null,
       notes:      f.notes.trim() || null,
+      condition:  f.condition,
+      tire_type:  f.tire_type,
     })
     setSavingNew(false)
     setNotFoundCode(null)
     setAction(null)
     showToast('צמיג נוצר ✓')
-    await load()
+    await load(tenantIdRef.current)
     refocus()
   }
 
@@ -586,16 +593,16 @@ export default function ScanClient() {
                 </Field>
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="אינדקס עומס">
-                    <select className="form-input" value={newTireForm.load_idx} onChange={e => ntf('load_idx', e.target.value)}>
-                      <option value="">— ללא —</option>
-                      {LOAD_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
-                    </select>
+                    <input className="form-input" list="new-load-opts" value={newTireForm.load_idx} onChange={e => ntf('load_idx', e.target.value)} placeholder="בחר או הקלד..." />
+                    <datalist id="new-load-opts">
+                      {LOAD_INDICES.map(v => <option key={v} value={v} />)}
+                    </datalist>
                   </Field>
                   <Field label="אינדקס מהירות">
-                    <select className="form-input" value={newTireForm.speed_idx} onChange={e => ntf('speed_idx', e.target.value)}>
-                      <option value="">— ללא —</option>
-                      {SPEED_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
-                    </select>
+                    <input className="form-input" list="new-speed-opts" value={newTireForm.speed_idx} onChange={e => ntf('speed_idx', e.target.value)} placeholder="בחר או הקלד..." />
+                    <datalist id="new-speed-opts">
+                      {SPEED_INDICES.map(v => <option key={v} value={v} />)}
+                    </datalist>
                   </Field>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
@@ -603,6 +610,37 @@ export default function ScanClient() {
                   <Field label="מחיר קנייה"><input className="form-input" type="number" min={0} value={newTireForm.cost_price} onChange={e => ntf('cost_price', e.target.value)} /></Field>
                   <Field label="מחיר מכירה"><input className="form-input" type="number" min={0} value={newTireForm.sell_price} onChange={e => ntf('sell_price', e.target.value)} /></Field>
                 </div>
+                <Field label="מצב הצמיג">
+                  <div className="flex gap-2">
+                    {(['new', 'used'] as const).map(c => (
+                      <button key={c} type="button" onClick={() => ntf('condition', c)} style={{
+                        flex: 1, padding: '8px', border: `2px solid ${newTireForm.condition === c ? (c === 'used' ? '#f59e0b' : '#16a34a') : '#e2e8f0'}`,
+                        borderRadius: '8px', cursor: 'pointer', fontWeight: newTireForm.condition === c ? 700 : 400, fontSize: '13px',
+                        background: newTireForm.condition === c ? (c === 'used' ? '#fef3c7' : '#f0fdf4') : '#fff',
+                        color: newTireForm.condition === c ? (c === 'used' ? '#92400e' : '#16a34a') : '#64748b',
+                      }}>
+                        {c === 'new' ? '✓ חדש' : '♻ משומש'}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+                <Field label="סוג צמיג">
+                  <div className="flex gap-2">
+                    {([
+                      ['regular',    'רגיל',  '#e2e8f0', '#fff',    '#64748b'],
+                      ['reinforced', 'מחוזק', '#bfdbfe', '#eff6ff', '#1d4ed8'],
+                      ['commercial', 'מסחרי', '#fed7aa', '#fff7ed', '#c2410c'],
+                    ] as const).map(([val, label, borderColor, bg, color]) => (
+                      <button key={val} type="button" onClick={() => ntf('tire_type', val)} style={{
+                        flex: 1, padding: '8px', fontSize: '13px', cursor: 'pointer', borderRadius: '8px',
+                        border: `2px solid ${newTireForm.tire_type === val ? borderColor : '#e2e8f0'}`,
+                        background: newTireForm.tire_type === val ? bg : '#fff',
+                        color: newTireForm.tire_type === val ? color : '#64748b',
+                        fontWeight: newTireForm.tire_type === val ? 700 : 400,
+                      }}>{label}</button>
+                    ))}
+                  </div>
+                </Field>
                 <Field label="הערות"><input className="form-input" value={newTireForm.notes} onChange={e => ntf('notes', e.target.value)} /></Field>
                 <div className="flex gap-3 mt-4">
                   <button onClick={createTire} disabled={savingNew || !newTireForm.width || !newTireForm.profile || !newTireForm.rim}
@@ -628,16 +666,16 @@ export default function ScanClient() {
             <Field label="מקט / ברקוד יצרן"><input className="form-input" value={editForm.sku} onChange={e => setEF('sku', e.target.value)} placeholder="סרוק או הקלד" style={{ fontFamily: 'monospace' }} /></Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="אינדקס עומס">
-                <select className="form-input" value={editForm.load_idx} onChange={e => setEF('load_idx', e.target.value)}>
-                  <option value="">— ללא —</option>
-                  {LOAD_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
+                <input className="form-input" list="edit-load-opts" value={editForm.load_idx} onChange={e => setEF('load_idx', e.target.value)} placeholder="בחר או הקלד..." />
+                <datalist id="edit-load-opts">
+                  {LOAD_INDICES.map(v => <option key={v} value={v} />)}
+                </datalist>
               </Field>
               <Field label="אינדקס מהירות">
-                <select className="form-input" value={editForm.speed_idx} onChange={e => setEF('speed_idx', e.target.value)}>
-                  <option value="">— ללא —</option>
-                  {SPEED_INDICES.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
+                <input className="form-input" list="edit-speed-opts" value={editForm.speed_idx} onChange={e => setEF('speed_idx', e.target.value)} placeholder="בחר או הקלד..." />
+                <datalist id="edit-speed-opts">
+                  {SPEED_INDICES.map(v => <option key={v} value={v} />)}
+                </datalist>
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -648,6 +686,37 @@ export default function ScanClient() {
               <Field label="מחיר קנייה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.cost_price} onChange={e => setEF('cost_price', e.target.value)} /></Field>
               <Field label="מחיר מכירה (₪)"><input className="form-input" type="number" min={0} step={0.01} value={editForm.sell_price} onChange={e => setEF('sell_price', e.target.value)} /></Field>
             </div>
+            <Field label="מצב הצמיג">
+              <div className="flex gap-2">
+                {(['new', 'used'] as const).map(c => (
+                  <button key={c} type="button" onClick={() => setEF('condition', c)} style={{
+                    flex: 1, padding: '8px', border: `2px solid ${editForm.condition === c ? (c === 'used' ? '#f59e0b' : '#16a34a') : '#e2e8f0'}`,
+                    borderRadius: '8px', cursor: 'pointer', fontWeight: editForm.condition === c ? 700 : 400, fontSize: '13px',
+                    background: editForm.condition === c ? (c === 'used' ? '#fef3c7' : '#f0fdf4') : '#fff',
+                    color: editForm.condition === c ? (c === 'used' ? '#92400e' : '#16a34a') : '#64748b',
+                  }}>
+                    {c === 'new' ? '✓ חדש' : '♻ משומש'}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="סוג צמיג">
+              <div className="flex gap-2">
+                {([
+                  ['regular',    'רגיל',  '#e2e8f0', '#fff',    '#64748b'],
+                  ['reinforced', 'מחוזק', '#bfdbfe', '#eff6ff', '#1d4ed8'],
+                  ['commercial', 'מסחרי', '#fed7aa', '#fff7ed', '#c2410c'],
+                ] as const).map(([val, label, borderColor, bg, color]) => (
+                  <button key={val} type="button" onClick={() => setEF('tire_type', val)} style={{
+                    flex: 1, padding: '8px', fontSize: '13px', cursor: 'pointer', borderRadius: '8px',
+                    border: `2px solid ${editForm.tire_type === val ? borderColor : '#e2e8f0'}`,
+                    background: editForm.tire_type === val ? bg : '#fff',
+                    color: editForm.tire_type === val ? color : '#64748b',
+                    fontWeight: editForm.tire_type === val ? 700 : 400,
+                  }}>{label}</button>
+                ))}
+              </div>
+            </Field>
             <Field label="הערות"><input className="form-input" value={editForm.notes} onChange={e => setEF('notes', e.target.value)} /></Field>
           </>}
 
