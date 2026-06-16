@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useId } from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
@@ -197,6 +198,7 @@ function dateChipStyle(dateStr: string | null): { bg: string; color: string; lab
 
 export default function CarsClient() {
   const sb          = useRef(createClient()).current
+  const { profile } = useProfile()
   const tenantId    = useRef<string>('')
   const { showToast: toast } = useToast()
   const { confirm } = useConfirm()
@@ -266,27 +268,12 @@ export default function CarsClient() {
 
   // ── Load ──────────────────────────────────────────────────────────
 
-  const load = useCallback(async () => {
-    const { data: { user } } = await sb.auth.getUser()
-    if (!user) { setLoading(false); return }
-    const { data: prof } = await sb.from('profiles').select('tenant_id, role').eq('id', user.id).maybeSingle()
-    if (!prof) { setLoading(false); return }
-    tenantId.current = prof.tenant_id
-    const admin = prof.role === 'admin' || prof.role === 'super_admin'
-    setIsAdmin(admin)
-    if (admin) {
-      fetch(`/api/drive/status?tenant_id=${prof.tenant_id}`)
-        .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => {})
-    }
-
-    const [{ data: c }, { data: r }, { data: sr }, { data: tn }] = await Promise.all([
-      sb.from('cars').select('*').eq('tenant_id', prof.tenant_id).order('created_at', { ascending: false }),
-      sb.from('car_requests').select('*').eq('tenant_id', prof.tenant_id).order('created_at', { ascending: false }),
-      sb.from('car_sale_requests').select('*').eq('tenant_id', prof.tenant_id).order('created_at', { ascending: false }),
-      sb.from('tenants').select('name, logo_base64').eq('id', prof.tenant_id).single(),
+  const load = useCallback(async (tid: string) => {
+    const [{ data: c }, { data: r }, { data: sr }] = await Promise.all([
+      sb.from('cars').select('*').eq('tenant_id', tid).order('created_at', { ascending: false }),
+      sb.from('car_requests').select('*').eq('tenant_id', tid).order('created_at', { ascending: false }),
+      sb.from('car_sale_requests').select('*').eq('tenant_id', tid).order('created_at', { ascending: false }),
     ])
-    if (tn?.name) setTenantName(tn.name)
-    if (tn?.logo_base64) setLogoBase64(tn.logo_base64)
 
     setCars((c || []).map(x => ({
       ...x,
@@ -298,7 +285,18 @@ export default function CarsClient() {
     setLoading(false)
   }, [sb])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    if (!profile) return
+    tenantId.current = profile.tenantId
+    setIsAdmin(profile.isAdmin)
+    setTenantName((profile.tenant?.name as string | undefined) ?? '')
+    setLogoBase64((profile.tenant?.logo_base64 as string | undefined) ?? '')
+    if (profile.isAdmin) {
+      fetch(`/api/drive/status?tenant_id=${profile.tenantId}`)
+        .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => {})
+    }
+    load(profile.tenantId)
+  }, [profile, load])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedCarId(null) }
@@ -608,7 +606,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       toast('הרכב נוסף ✓', 'success')
     }
     setCarModal(false)
-    load()
+    load(tenantId.current)
   }
 
   async function deleteCar(id: string) {
@@ -616,12 +614,12 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     if (!ok) return
     await sb.from('cars').delete().eq('id', id)
     toast('הרכב נמחק', 'success')
-    load()
+    load(tenantId.current)
   }
 
   async function changeCarStatus(id: string, status: string) {
     await sb.from('cars').update({ status, updated_at: new Date().toISOString() }).eq('id', id)
-    load()
+    load(tenantId.current)
   }
 
   function openDeclineModal(id: string) {
@@ -637,7 +635,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     await sb.from('cars').update({ status: 'declined', notes: newNotes, updated_at: new Date().toISOString() }).eq('id', declineCarId!)
     setDeclineModal(false)
     toast('נשמר ✓', 'success')
-    load()
+    load(tenantId.current)
   }
 
   // ── Sell ──────────────────────────────────────────────────────────
@@ -665,7 +663,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     }).eq('id', sellTargetId!)
     setSellModal(false)
     toast('המכירה נרשמה ✓', 'success')
-    load()
+    load(tenantId.current)
   }
 
   // ── Interested buyers ─────────────────────────────────────────────
@@ -694,7 +692,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     await sb.from('cars').update({ interested_buyers: buyers, updated_at: new Date().toISOString() }).eq('id', buyerTargetId!)
     setBuyerModal(false)
     toast('מתעניין נוסף ✓', 'success')
-    load()
+    load(tenantId.current)
   }
 
   async function removeBuyer(carId: string, buyerId: string) {
@@ -702,7 +700,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     if (!car) return
     const buyers = car.interested_buyers.filter(b => b.id !== buyerId)
     await sb.from('cars').update({ interested_buyers: buyers, updated_at: new Date().toISOString() }).eq('id', carId)
-    load()
+    load(tenantId.current)
   }
 
   // ── Requests CRUD ─────────────────────────────────────────────────
@@ -761,7 +759,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       toast('הבקשה נשמרה ✓', 'success')
     }
     setReqModal(false)
-    load()
+    load(tenantId.current)
   }
 
   async function deleteReq(id: string) {
@@ -769,7 +767,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     if (!ok) return
     await sb.from('car_requests').delete().eq('id', id)
     toast('הבקשה נמחקה', 'success')
-    load()
+    load(tenantId.current)
   }
 
   async function changeReqStatus(id: string, status: string) {
@@ -842,7 +840,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       toast('הבקשה נשמרה ✓', 'success')
     }
     setSaleReqModal(false)
-    load()
+    load(tenantId.current)
   }
 
   async function deleteSaleReq(id: string) {
@@ -850,7 +848,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     if (!ok) return
     await sb.from('car_sale_requests').delete().eq('id', id)
     toast('הבקשה נמחקה', 'success')
-    load()
+    load(tenantId.current)
   }
 
   async function changeSaleReqStatus(id: string, status: string) {

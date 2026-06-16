@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import {
   ResponsiveContainer,
   BarChart, Bar,
@@ -74,6 +75,7 @@ function CurrencyTooltip({ active, payload, label }: { active?: boolean; payload
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function DashboardCharts() {
+  const { profile } = useProfile()
   const [monthData,    setMonthData]    = useState<MonthData[]>([])
   const [expCatData,   setExpCatData]   = useState<CategoryData[]>([])
   const [incCatData,   setIncCatData]   = useState<CategoryData[]>([])
@@ -83,21 +85,15 @@ export default function DashboardCharts() {
   const [canDebts,     setCanDebts]     = useState(false)
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { setLoading(false); return }
-      supabase.from('profiles').select('role, allowed_modules').eq('id', user.id).single()
-        .then(({ data: p }) => {
-          const admin = p?.role === 'admin' || p?.role === 'super_admin'
-          const mods: string[] = p?.allowed_modules ?? []
-          const finance = admin || mods.includes('expenses') || mods.includes('income')
-          const debts   = admin || mods.includes('debts')
-          setCanFinance(finance)
-          setCanDebts(debts)
-          load(finance, debts)
-        })
-    })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    if (!profile) return
+    const admin = profile.isAdmin
+    const mods  = profile.allowedModules
+    const finance = admin || mods.includes('expenses') || mods.includes('income')
+    const debts   = admin || mods.includes('debts')
+    setCanFinance(finance)
+    setCanDebts(debts)
+    load(finance, debts)
+  }, [profile]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function load(finance: boolean, debts: boolean) {
     const supabase = createClient()

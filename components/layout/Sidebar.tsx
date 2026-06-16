@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState } from 'react'
 import SidebarLayoutEditor, { SectionConfig, SIDEBAR_LAYOUT_KEY } from './SidebarLayoutEditor'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 
 // ─── צבע הבועה לכל פריט ───────────────────────────────────────────────────────
 const NAV_ITEMS = [
@@ -175,17 +175,11 @@ export default function Sidebar({
   onClose?: () => void
 }) {
   const pathname = usePathname()
-  const sb = useRef(createClient()).current
+  const { profile, loading: profileLoading } = useProfile()
   const [pressed, setPressed]           = useState<string | null>(null)
   const [brandPressed, setBrandPressed] = useState(false)
   const [pendingHref, setPendingHref]   = useState<string | null>(null)
-  const [isAdmin, setIsAdmin]           = useState(false)
-  const [modules, setModules]           = useState<string[]>([])
-  const [loaded, setLoaded]             = useState(false)
-  const [tenantName, setTenantName]     = useState<string | null>(null)
-  const [tenantLogo, setTenantLogo]     = useState<string | null>(null)
   const [editorOpen, setEditorOpen]     = useState(false)
-  const [tenantId, setTenantId]         = useState<string | null>(null)
   const [activeSections, setActiveSections] = useState<SectionConfig[]>(() => {
     if (typeof window === 'undefined') return SECTIONS
     try {
@@ -194,38 +188,21 @@ export default function Sidebar({
     } catch { return SECTIONS }
   })
 
+  const loaded     = !profileLoading
+  const isAdmin     = profile?.isAdmin ?? false
+  const modules     = profile?.allowedModules ?? []
+  const tenantId    = profile?.tenantId ?? null
+  const tenantName  = (profile?.tenant?.name as string | undefined) ?? null
+  const tenantLogo  = (profile?.tenant?.logo_base64 as string | undefined) ?? null
+
+  // Apply remote sidebar layout (saved per-tenant) once the profile/tenant loads
   useEffect(() => {
-    sb.auth.getSession().then(({ data: { session } }) => {
-      const uid = session?.user?.id
-      if (!uid) { setLoaded(true); return }
-      sb.from('profiles').select('role, allowed_modules, tenant_id').eq('id', uid).maybeSingle()
-        .then(({ data: p }) => {
-          if (p) {
-            setIsAdmin(p.role === 'admin' || p.role === 'super_admin')
-            setModules(p.allowed_modules ?? [])
-            if (p.tenant_id) {
-              setTenantId(p.tenant_id)
-              sb.from('tenants').select('name, logo_base64, ui_settings').eq('id', p.tenant_id).single()
-                .then(({ data: t }) => {
-                  if (t) {
-                    setTenantName(t.name || null)
-                    setTenantLogo(t.logo_base64 || null)
-                    const remote = (t.ui_settings as any)?.sidebar_layout
-                    if (remote) {
-                      const merged = mergeMissingSections(remote)
-                      setActiveSections(merged)
-                      localStorage.setItem(SIDEBAR_LAYOUT_KEY, JSON.stringify(merged))
-                    }
-                  }
-                })
-            }
-          } else {
-            setIsAdmin(true)
-          }
-          setLoaded(true)
-        })
-    })
-  }, [sb])
+    const remote = (profile?.tenant?.ui_settings as any)?.sidebar_layout
+    if (!remote) return
+    const merged = mergeMissingSections(remote)
+    setActiveSections(merged)
+    localStorage.setItem(SIDEBAR_LAYOUT_KEY, JSON.stringify(merged))
+  }, [profile?.tenant])
 
   // Clear pending state on route change
   useEffect(() => {

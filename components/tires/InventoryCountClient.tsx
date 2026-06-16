@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import Button from '@/components/ui/Button'
 
@@ -56,6 +57,7 @@ function tireLabel(t: TireRow) { return [t.brand, tireSize(t)].filter(Boolean).j
 export default function InventoryCountClient() {
   const router  = useRouter()
   const sb      = useRef(createClient()).current
+  const { profile } = useProfile()
   const { showToast } = useToast()
   const tenantId = useRef('')
 
@@ -78,18 +80,16 @@ export default function InventoryCountClient() {
   // ── Load ──────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
+    if (!profile) return
     ;(async () => {
-      const { data: { user } } = await sb.auth.getUser()
-      if (!user) return
-      const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.id).single()
-      if (!profile) { setLoading(false); return }
-      tenantId.current = profile.tenant_id
+      const tid = profile.tenantId
+      tenantId.current = tid
 
       const [{ data: ts }, { data: sessions }] = await Promise.all([
-        sb.from('tires').select('id, sku, brand, width, profile, rim, qty').eq('tenant_id', profile.tenant_id),
+        sb.from('tires').select('id, sku, brand, width, profile, rim, qty').eq('tenant_id', tid),
         sb.from('tire_inventory_count_sessions')
           .select('id, counted_at, notes, is_first')
-          .eq('tenant_id', profile.tenant_id)
+          .eq('tenant_id', tid)
           .order('counted_at', { ascending: false })
           .limit(1),
       ])
@@ -103,7 +103,7 @@ export default function InventoryCountClient() {
           sb.from('tire_inventory_count_entries').select('tire_id, sku, label, counted_qty, expected_qty').eq('session_id', last.id),
           sb.from('tire_sales')
             .select('tire_id, qty, movement_type')
-            .eq('tenant_id', profile.tenant_id)
+            .eq('tenant_id', tid)
             .gte('sold_date', last.counted_at.slice(0, 10)),
         ])
         setLastEntries(prevEntries ?? [])
@@ -112,7 +112,7 @@ export default function InventoryCountClient() {
 
       setLoading(false)
     })()
-  }, [sb])
+  }, [sb, profile])
 
   // ── Computed maps ─────────────────────────────────────────────────────────────
 

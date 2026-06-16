@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
@@ -90,6 +91,7 @@ function fmtDate(iso: string | null) { return iso ? new Date(iso).toLocaleDateSt
 
 export default function RemindersClient() {
   const supabase  = useRef(createClient()).current
+  const { profile } = useProfile()
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
   const tenantRef = useRef<string | null>(null)
@@ -106,19 +108,16 @@ export default function RemindersClient() {
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setLoading(false); return }
-    const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).maybeSingle()
-    if (!profile) { setLoading(false); return }
-    tenantRef.current = profile.tenant_id
+    if (!profile) return
+    tenantRef.current = profile.tenantId
     const { data } = await supabase
       .from('reminders')
       .select('*')
-      .eq('tenant_id', profile.tenant_id)
+      .eq('tenant_id', profile.tenantId)
       .order('created_at', { ascending: false })
     setItems((data ?? []) as ReminderItem[])
     setLoading(false)
-  }, [supabase])
+  }, [supabase, profile])
 
   useEffect(() => {
     load()

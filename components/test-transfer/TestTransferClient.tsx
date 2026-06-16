@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Button from '@/components/ui/Button'
@@ -248,6 +249,7 @@ function ExtraChargesSection({ charges, onChange }: ExtraChargesSectionProps) {
 
 export default function TestTransferClient() {
   const supabase   = useRef(createClient()).current
+  const { profile } = useProfile()
   const tenantId   = useRef<string | null>(null)
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
@@ -282,18 +284,14 @@ export default function TestTransferClient() {
   }, [supabase])
 
   useEffect(() => {
+    if (!profile) return
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: profile } = await supabase
-        .from('profiles').select('tenant_id').eq('id', user.id).single()
-      if (!profile) { setLoading(false); return }
-      tenantId.current = profile.tenant_id
+      tenantId.current = profile.tenantId
       await loadTransfers()
       setLoading(false)
     }
     init()
-  }, [supabase, loadTransfers])
+  }, [profile, loadTransfers])
 
   // ── Plate search ─────────────────────────────────────────────────────────────
 

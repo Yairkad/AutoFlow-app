@@ -345,3 +345,133 @@
 | 17:39 | Edited components/debts/DebtsClient.tsx | CSS: suppId | ~119 |
 | 17:41 | Edited components/debts/DebtsClient.tsx | added 6 condition(s) | ~3298 |
 | 17:42 | Session end: 10 writes across 3 files (ScanClient.tsx, TiresClient.tsx, DebtsClient.tsx) | 4 reads | ~48401 tok |
+| 17:49 | Session end: 10 writes across 3 files (ScanClient.tsx, TiresClient.tsx, DebtsClient.tsx) | 4 reads | ~49171 tok |
+| 17:49 | Edited components/scan/ScanClient.tsx | 2→7 lines | ~217 |
+| 17:49 | Edited components/scan/ScanClient.tsx | inline fix | ~14 |
+| 17:50 | Edited components/scan/ScanClient.tsx | 4→5 lines | ~72 |
+| 17:50 | Edited components/scan/ScanClient.tsx | 6→8 lines | ~136 |
+| 17:50 | Edited components/scan/ScanClient.tsx | 2→3 lines | ~49 |
+| 17:51 | Edited components/scan/ScanClient.tsx | added 1 condition(s) | ~304 |
+| 17:51 | Edited components/scan/ScanClient.tsx | 4→4 lines | ~232 |
+| 17:51 | Edited components/scan/ScanClient.tsx | expanded (+62 lines) | ~1288 |
+| 17:52 | Edited components/scan/ScanClient.tsx | inline fix | ~30 |
+| 17:52 | Session end: 19 writes across 3 files (ScanClient.tsx, TiresClient.tsx, DebtsClient.tsx) | 4 reads | ~51671 tok |
+| 17:54 | Session end: 19 writes across 3 files (ScanClient.tsx, TiresClient.tsx, DebtsClient.tsx) | 6 reads | ~54772 tok |
+| 17:57 | Session end: 19 writes across 3 files (ScanClient.tsx, TiresClient.tsx, DebtsClient.tsx) | 6 reads | ~54772 tok |
+| 18:02 | Created components/yard/ReceiveClient.tsx | — | ~6788 |
+| 18:03 | Session end: 20 writes across 4 files (ScanClient.tsx, TiresClient.tsx, DebtsClient.tsx, ReceiveClient.tsx) | 7 reads | ~66339 tok |
+
+## Session: 2026-06-16 07:44
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-06-16 07:46
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-06-16 07:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-06-16 07:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:52 | Edited lib/supabase/client.ts | modified createClient() | ~50 |
+| 07:52 | Edited components/scan/ScanClient.tsx | 14→14 lines | ~260 |
+| 07:53 | Edited components/scan/ScanClient.tsx | 14→14 lines | ~244 |
+| 07:55 | Edited components/scan/ScanClient.tsx | 19→20 lines | ~222 |
+| 07:56 | Edited components/scan/ScanClient.tsx | expanded (+31 lines) | ~861 |
+| 07:57 | Created lib/contexts/ProfileContext.tsx | — | ~662 |
+| 07:57 | Edited components/scan/ScanClient.tsx | inline fix | ~75 |
+| 07:57 | Edited components/layout/AppShell.tsx | added 1 import(s) | ~307 |
+| 07:57 | Edited components/scan/ScanClient.tsx | modified if() | ~378 |
+| 07:58 | Edited components/scan/ScanClient.tsx | CSS: condition, tire_type | ~132 |
+| 07:58 | Edited components/layout/Header.tsx | added 1 import(s) | ~68 |
+| 07:58 | Edited components/layout/Header.tsx | added optional chaining | ~161 |
+| 07:58 | Edited components/scan/ScanClient.tsx | CSS: condition, tire_type | ~86 |
+| 07:58 | Edited components/layout/Header.tsx | reduced (-16 lines) | ~230 |
+| 07:59 | Edited components/scan/ScanClient.tsx | expanded (+31 lines) | ~726 |
+| 07:59 | Edited components/layout/Sidebar.tsx | 3→3 lines | ~57 |
+| 08:00 | Edited components/layout/Sidebar.tsx | CSS: loading | ~396 |
+| 08:00 | Edited components/tires/TiresClient.tsx | added 1 import(s) | ~65 |
+| 08:00 | Edited components/tires/TiresClient.tsx | 3→4 lines | ~44 |
+| 08:00 | Edited components/tires/TiresClient.tsx | reduced (-7 lines) | ~96 |
+| 08:01 | Edited components/scan/ScanClient.tsx | added 1 import(s) | ~79 |
+| 08:01 | Edited components/scan/ScanClient.tsx | modified ScanClient() | ~38 |
+| 08:01 | Edited components/scan/ScanClient.tsx | CSS: tenantId | ~300 |
+| 08:02 | Edited components/scan/ScanClient.tsx | inline fix | ~9 |
+| 08:03 | Edited components/cars/CarsClient.tsx | added 1 import(s) | ~46 |
+| 08:03 | Edited components/cars/CarsClient.tsx | 3→4 lines | ~49 |
+| 08:03 | Edited components/cars/CarsClient.tsx | added nullish coalescing | ~352 |
+| 08:03 | Edited components/cars/CarsClient.tsx | inline fix | ~8 |
+| 08:04 | Edited components/employees/EmployeesClient.tsx | added 1 import(s) | ~117 |
+| 08:04 | Edited components/employees/EmployeesClient.tsx | 3→4 lines | ~41 |
+| 08:04 | Edited components/employees/EmployeesClient.tsx | 13→10 lines | ~79 |
+| 08:14 | Session end: 31 writes across 9 files (client.ts, ScanClient.tsx, ProfileContext.tsx, AppShell.tsx, Header.tsx) | 8 reads | ~110800 tok |
+| 08:38 | Edited components/debts/DebtsClient.tsx | added 1 import(s) | ~60 |
+| 08:39 | Edited components/debts/DebtsClient.tsx | 3→4 lines | ~50 |
+| 08:39 | Edited components/debts/DebtsClient.tsx | 8→6 lines | ~65 |
+| 08:39 | Edited components/debts/DebtsClient.tsx | 12→11 lines | ~220 |
+| 08:39 | Edited components/debts/DebtsClient.tsx | inline fix | ~15 |
+| 08:40 | Edited components/billing/BillingClient.tsx | added 1 import(s) | ~59 |
+| 08:40 | Edited components/billing/BillingClient.tsx | 3→4 lines | ~51 |
+| 08:40 | Edited components/billing/BillingClient.tsx | modified init() | ~112 |
+| 08:41 | Edited components/documents/DocumentsClient.tsx | added 1 import(s) | ~63 |
+| 08:41 | Edited components/documents/DocumentsClient.tsx | 2→3 lines | ~36 |
+| 08:42 | Edited components/documents/DocumentsClient.tsx | modified if() | ~236 |
+| 08:42 | Edited components/alignment/AlignmentClient.tsx | added 1 import(s) | ~63 |
+| 08:42 | Edited components/alignment/AlignmentClient.tsx | 2→3 lines | ~41 |
+| 08:42 | Edited components/alignment/AlignmentClient.tsx | modified if() | ~199 |
+| 08:43 | Edited components/inspections/InspectionsClient.tsx | added 1 import(s) | ~63 |
+| 08:43 | Edited components/inspections/InspectionsClient.tsx | 2→3 lines | ~40 |
+| 08:43 | Edited components/inspections/InspectionsClient.tsx | modified if() | ~277 |
+| 08:45 | Edited components/products/ProductsClient.tsx | added 1 import(s) | ~63 |
+| 08:45 | Edited components/products/ProductsClient.tsx | 3→4 lines | ~44 |
+| 08:45 | Edited components/products/ProductsClient.tsx | 17→12 lines | ~118 |
+| 08:46 | Edited components/tires/InventoryCountClient.tsx | added 1 import(s) | ~59 |
+| 08:46 | Edited components/tires/InventoryCountClient.tsx | 4→5 lines | ~51 |
+| 08:46 | Edited components/tires/InventoryCountClient.tsx | modified if() | ~332 |
+| 08:47 | Edited components/settings/SettingsClient.tsx | added 1 import(s) | ~61 |
+| 08:47 | Edited components/settings/SettingsClient.tsx | added optional chaining | ~157 |
+| 08:48 | Edited components/quotes/QuotesClient.tsx | added 1 import(s) | ~63 |
+| 08:48 | Edited components/quotes/QuotesClient.tsx | 3→4 lines | ~45 |
+| 08:48 | Edited components/quotes/QuotesClient.tsx | 9→5 lines | ~34 |
+| 08:49 | Edited components/expenses/ExpensesClient.tsx | added 1 import(s) | ~46 |
+| 08:50 | Edited components/expenses/ExpensesClient.tsx | 4→5 lines | ~62 |
+| 08:50 | Edited components/expenses/ExpensesClient.tsx | 8→6 lines | ~58 |
+| 08:50 | Edited components/expenses/ExpensesClient.tsx | 3→3 lines | ~35 |
+| 08:50 | Edited components/expenses/ExpensesClient.tsx | modified if() | ~103 |
+| 08:50 | Edited components/expenses/ExpensesClient.tsx | 2→2 lines | ~21 |
+| 08:52 | Edited components/expenses/ExpensesClient.tsx | 3→3 lines | ~10 |
+| 08:52 | Edited components/expenses/ExpensesClient.tsx | 5→5 lines | ~12 |
+| 08:52 | Edited components/expenses/ExpensesClient.tsx | 2→1 lines | ~13 |
+| 08:52 | Created app/expenses/page.tsx | — | ~67 |
+| 08:52 | Created app/income/page.tsx | — | ~66 |
+| 08:54 | Edited components/suppliers/SuppliersClient.tsx | added 1 import(s) | ~60 |
+| 08:54 | Edited components/suppliers/SuppliersClient.tsx | 3→4 lines | ~49 |
+| 08:54 | Edited components/suppliers/SuppliersClient.tsx | 8→6 lines | ~65 |
+| 08:55 | Edited components/reminders/RemindersClient.tsx | added 1 import(s) | ~63 |
+| 08:55 | Edited components/reminders/RemindersClient.tsx | 2→3 lines | ~35 |
+| 08:55 | Edited components/reminders/RemindersClient.tsx | 14→11 lines | ~106 |
+| 08:56 | Edited components/test-transfer/TestTransferClient.tsx | added 1 import(s) | ~63 |
+| 08:56 | Edited components/test-transfer/TestTransferClient.tsx | 3→4 lines | ~49 |
+| 08:56 | Edited components/test-transfer/TestTransferClient.tsx | 13→9 lines | ~62 |
+| 08:57 | Created app/dashboard/page.tsx | — | ~1031 |
+| 08:58 | Edited components/dashboard/DashboardCharts.tsx | added 1 import(s) | ~47 |
+| 08:59 | Edited components/dashboard/DashboardCharts.tsx | modified DashboardCharts() | ~272 |
+| 08:59 | Edited components/dashboard/DashboardStats.tsx | added 1 import(s) | ~74 |
+| 09:00 | Edited components/dashboard/DashboardStats.tsx | modified DashboardStats() | ~187 |
+| 09:00 | Edited components/dashboard/DashboardStats.tsx | modified if() | ~113 |
+| 09:01 | Edited components/dashboard/DashboardStats.tsx | 2→3 lines | ~47 |
+| 09:01 | Edited components/dashboard/DashboardStats.tsx | 3→3 lines | ~44 |
+| 09:05 | Perf fix: enabled proxyFetch (/api/store) in production too, not just dev — browser Supabase calls were bypassing the Netfree-evasion proxy in prod | lib/supabase/client.ts | done | ~50 |
+| 09:05 | Created shared ProfileProvider/useProfile context to dedupe session+profile+tenant fetch (was repeated 2-4x per page across Header/Sidebar/page client) | lib/contexts/ProfileContext.tsx | done | ~600 |
+| 09:05 | Migrated 20 Client components + Header/Sidebar/AppShell + dashboard to consume shared profile context instead of independent auth.getUser()+profiles queries | components/**, app/dashboard/page.tsx | done | ~4000 |
+| 09:05 | Fixed ExpensesClient self-wrapping AppShell bug found during migration (useProfile() was called above its own AppShell/Provider in the tree — moved AppShell to app/expenses+income page.tsx) | ExpensesClient.tsx, app/expenses/page.tsx, app/income/page.tsx | done | ~80 |
+| 09:05 | Fixed latent bug in ExpensesClient.importExcel: profiles.select('tenant_id').single() with no .eq(id) filter would break for any tenant with >1 employee (RLS returns all tenant profiles) | ExpensesClient.tsx | done | ~30 |
+| 09:05 | tsc --noEmit passed clean after full refactor; next build blocked only by sandbox lacking network access to fonts.googleapis.com (unrelated to changes) | - | verified | ~10 |
+| 09:09 | Session end: 87 writes across 25 files (client.ts, ScanClient.tsx, ProfileContext.tsx, AppShell.tsx, Header.tsx) | 27 reads | ~301513 tok |

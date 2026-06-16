@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 
 // ── Hebrew numeral conversion ──────────────────────────────────────────────
 
@@ -171,12 +172,13 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const now      = useClock()
   const router   = useRouter()
   const supabase = useRef(createClient()).current
+  const { profile } = useProfile()
 
-  const [userName,     setUserName]     = useState('')
-  const [userEmail,    setUserEmail]    = useState('')
+  const userName     = profile?.fullName ?? ''
+  const userEmail    = profile?.email ?? ''
+  const tenantName   = (profile?.tenant?.name as string | undefined) ?? null
+  const tenantLogo   = (profile?.tenant?.logo_base64 as string | undefined) ?? null
   const [showDropdown, setShowDropdown] = useState(false)
-  const [tenantName,   setTenantName]   = useState<string | null>(null)
-  const [tenantLogo,   setTenantLogo]   = useState<string | null>(null)
 
   // Notification bell
   const [pendingQuotes,       setPendingQuotes]       = useState(0)
@@ -197,36 +199,20 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchRef   = useRef<HTMLDivElement>(null)
 
-  // Load user profile + tenant branding + pending counts
+  // Pending counts for the notification bell — depends only on tenant id from shared profile context
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user) return
-      setUserEmail(session.user.email ?? '')
-      supabase.from('profiles').select('full_name, tenant_id').eq('id', session.user.id).single()
-        .then(({ data: p }) => {
-          if (p?.full_name) setUserName(p.full_name)
-          if (p?.tenant_id) {
-            const tid = p.tenant_id
-            supabase.from('tenants').select('name, logo_base64').eq('id', tid).single()
-              .then(({ data: t }) => {
-                if (t) {
-                  setTenantName(t.name || null)
-                  setTenantLogo(t.logo_base64 || null)
-                }
-              })
-            Promise.all([
-              supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'open'),
-              supabase.from('alignment_jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'waiting'),
-              supabase.from('test_transfers').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'ממתין'),
-            ]).then(([pq, pa, pt]) => {
-              setPendingQuotes(pq.count ?? 0)
-              setPendingAlignment(pa.count ?? 0)
-              setPendingTestTransfer(pt.count ?? 0)
-            })
-          }
-        })
+    const tid = profile?.tenantId
+    if (!tid) return
+    Promise.all([
+      supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'open'),
+      supabase.from('alignment_jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'waiting'),
+      supabase.from('test_transfers').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'ממתין'),
+    ]).then(([pq, pa, pt]) => {
+      setPendingQuotes(pq.count ?? 0)
+      setPendingAlignment(pa.count ?? 0)
+      setPendingTestTransfer(pt.count ?? 0)
     })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [profile?.tenantId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ctrl+K focus
   useEffect(() => {

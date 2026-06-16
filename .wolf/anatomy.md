@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-06-07T14:41:01.882Z
-> Files: 243 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-06-16T06:01:18.144Z
+> Files: 244 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/
 
@@ -183,7 +183,7 @@
 
 ## app/dashboard/
 
-- `page.tsx` — DashboardPage (~1099 tok)
+- `page.tsx` — DashboardPage (~1031 tok)
 
 ## app/debts/
 
@@ -199,11 +199,11 @@
 
 ## app/expenses/
 
-- `page.tsx` — ExpensesPage (~48 tok)
+- `page.tsx` — ExpensesPage (~67 tok)
 
 ## app/income/
 
-- `page.tsx` — IncomePage (~46 tok)
+- `page.tsx` — IncomePage (~66 tok)
 
 ## app/inspections/
 
@@ -323,46 +323,46 @@
 
 ## components/alignment/
 
-- `AlignmentClient.tsx` — STATUSES (~8818 tok)
+- `AlignmentClient.tsx` — STATUSES (~8745 tok)
 
 ## components/billing/
 
-- `BillingClient.tsx` — fmt — uses useRef, useState, useEffect, useCallback (~19004 tok)
+- `BillingClient.tsx` — fmt (~18970 tok)
 
 ## components/cars/
 
-- `CarsClient.tsx` — CONDITIONS (~29333 tok)
+- `CarsClient.tsx` — CONDITIONS (~29318 tok)
 
 ## components/dashboard/
 
 - `AlertsPanel.tsx` — fmt — uses useState, useRef, useEffect (~4023 tok)
-- `DashboardCharts.tsx` — toMonthStr — renders chart — uses useState, useEffect (~3437 tok)
-- `DashboardStats.tsx` — DEFAULT_LAYOUT (~8144 tok)
+- `DashboardCharts.tsx` — toMonthStr (~3368 tok)
+- `DashboardStats.tsx` — DEFAULT_LAYOUT (~7951 tok)
 - `ModuleGrid.tsx` — INITIAL_GROUPS — uses useRef, useEffect, useState (~4328 tok)
 - `RemindersPanel.tsx` — useIsMobile — uses useState, useEffect (~3205 tok)
 
 ## components/debts/
 
-- `DebtsClient.tsx` — fmt (~17037 tok)
+- `DebtsClient.tsx` — fmt (~16998 tok)
 
 ## components/documents/
 
-- `DocumentsClient.tsx` — emptyForm — renders table (~18901 tok)
+- `DocumentsClient.tsx` — emptyForm — renders table (~18852 tok)
 
 ## components/employees/
 
-- `EmployeesClient.tsx` — Convert "MM/YYYY" → "YYYY-MM" for date comparisons (~18559 tok)
+- `EmployeesClient.tsx` — Convert "MM/YYYY" → "YYYY-MM" for date comparisons (~18532 tok)
 
 ## components/expenses/
 
-- `ExpensesClient.tsx` — DEFAULT_EXPENSE_CATS — uses useState (~19114 tok)
+- `ExpensesClient.tsx` — DEFAULT_EXPENSE_CATS (~19039 tok)
 - `RecurringTab.tsx` — EXPENSE_CATS — renders table, modal — uses useState (~3516 tok)
 - `ScheduledPaymentsModal.tsx` — fmt — renders table, modal — uses useState, useCallback, useEffect (~5760 tok)
 
 ## components/inspections/
 
 - `InspectionChecklistModal.tsx` — INSPECTION_SYSTEMS (~12236 tok)
-- `InspectionsClient.tsx` — emptyForm (~15763 tok)
+- `InspectionsClient.tsx` — emptyForm (~15692 tok)
 
 ## components/landing/
 
@@ -374,44 +374,44 @@
 
 ## components/layout/
 
-- `AppShell.tsx` — AppShell — uses useState (~285 tok)
+- `AppShell.tsx` — AppShell (~312 tok)
 - `Footer.tsx` — Footer (~378 tok)
-- `Header.tsx` — HEB_ONES (~9628 tok)
-- `Sidebar.tsx` — NAV_ITEMS (~5305 tok)
+- `Header.tsx` — HEB_ONES (~9463 tok)
+- `Sidebar.tsx` — NAV_ITEMS (~5036 tok)
 - `SidebarLayoutEditor.tsx` — SIDEBAR_LAYOUT_KEY — uses useEffect (~2777 tok)
 
 ## components/products/
 
-- `ProductsClient.tsx` — UNITS (~16441 tok)
+- `ProductsClient.tsx` — UNITS (~16382 tok)
 
 ## components/quotes/
 
-- `QuotesClient.tsx` — WIDTHS — uses useState (~16753 tok)
+- `QuotesClient.tsx` — WIDTHS (~16720 tok)
 
 ## components/reminders/
 
-- `RemindersClient.tsx` — PRIORITY_LABEL — renders form, modal — uses useRef, useState, useCallback, useEffect (~7139 tok)
+- `RemindersClient.tsx` — PRIORITY_LABEL — renders form, modal (~7098 tok)
 
 ## components/scan/
 
-- `ScanClient.tsx` — LOAD_INDICES (~9686 tok)
+- `ScanClient.tsx` — LOAD_INDICES (~12692 tok)
 
 ## components/settings/
 
-- `SettingsClient.tsx` — ALL_MODULES — uses useState, useCallback, useEffect (~30406 tok)
+- `SettingsClient.tsx` — ALL_MODULES (~30241 tok)
 
 ## components/suppliers/
 
-- `SuppliersClient.tsx` — ISRAELI_BANKS — uses useRef, useState, useCallback, useEffect (~9984 tok)
+- `SuppliersClient.tsx` — ISRAELI_BANKS (~9964 tok)
 
 ## components/test-transfer/
 
-- `TestTransferClient.tsx` — ALL_STATUSES — uses useState, useRef, useCallback, useEffect (~10708 tok)
+- `TestTransferClient.tsx` — ALL_STATUSES (~10668 tok)
 
 ## components/tires/
 
-- `InventoryCountClient.tsx` — tireSize (~7625 tok)
-- `TiresClient.tsx` — WIDTHS — renders table (~18797 tok)
+- `InventoryCountClient.tsx` — tireSize (~7588 tok)
+- `TiresClient.tsx` — WIDTHS — renders table (~18723 tok)
 
 ## components/ui/
 
@@ -438,7 +438,7 @@
 - `KeyboardDismiss.tsx` — KeyboardDismiss — uses useState, useEffect (~359 tok)
 - `NewCarClient.tsx` — NewCarClient — uses useRouter, useState, useRef, useCallback (~2164 tok)
 - `OfficeClient.tsx` — VAT (~10860 tok)
-- `ReceiveClient.tsx` — emptyTireForm (~4779 tok)
+- `ReceiveClient.tsx` — emptyTireForm (~6788 tok)
 - `ServiceGridClient.tsx` — ServiceGridClient — uses useRouter, useState (~1613 tok)
 - `TireDiagram.tsx` — TIRE_RECTS (~1299 tok)
 - `TireKeyboard.tsx` — ROWS (~968 tok)
@@ -459,6 +459,10 @@
 - `require.ts` — Server-side auth check for API routes. (~568 tok)
 - `yard-token.ts` — Exports getYardTenantId (~28 tok)
 
+## lib/contexts/
+
+- `ProfileContext.tsx` — ProfileProvider/useProfile — fetches session+profile+full tenant row ONCE per page, shared by Header/Sidebar/all *Client components instead of each refetching (~662 tok)
+
 ## lib/hooks/
 
 - `useIsMobile.ts` — Returns true only on touch devices (phones/tablets). Avoids SSR mismatch. (~90 tok)
@@ -466,7 +470,7 @@
 
 ## lib/supabase/
 
-- `client.ts` — Exports createClient (~310 tok)
+- `client.ts` — Exports createClient (~297 tok)
 - `server.ts` — Exports createClient (~202 tok)
 - `service.ts` — Service-role client – bypasses RLS. Use only in server-side code. (~81 tok)
 

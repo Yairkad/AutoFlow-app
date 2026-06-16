@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
@@ -409,6 +410,7 @@ function JobForm({
 
 export default function AlignmentClient() {
   const supabase      = useRef(createClient()).current
+  const { profile }   = useProfile()
   const tenantId      = useRef<string | null>(null)
   const bizInfo       = useRef<BizInfo>({ name: 'AutoFlow', sub_title: null, logo: null, phone: null, address: null, license_number: null })
   const { showToast } = useToast()
@@ -443,36 +445,25 @@ export default function AlignmentClient() {
   }, [supabase])
 
   useEffect(() => {
+    if (!profile) return
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: profile } = await supabase
-        .from('profiles').select('tenant_id').eq('id', user.id).single()
-      if (profile) {
-        tenantId.current = profile.tenant_id
-
-        const { data: tenant } = await supabase
-          .from('tenants')
-          .select('name, sub_title, logo_base64, phone, address, license_number')
-          .eq('id', profile.tenant_id)
-          .maybeSingle()
-        if (tenant) {
-          bizInfo.current = {
-            name:           tenant.name ?? 'AutoFlow',
-            sub_title:      tenant.sub_title ?? null,
-            logo:           tenant.logo_base64 ?? null,
-            phone:          tenant.phone ?? null,
-            address:        tenant.address ?? null,
-            license_number: tenant.license_number ?? null,
-          }
+      tenantId.current = profile.tenantId
+      const tenant = profile.tenant
+      if (tenant) {
+        bizInfo.current = {
+          name:           (tenant.name as string) ?? 'AutoFlow',
+          sub_title:      (tenant.sub_title as string) ?? null,
+          logo:           (tenant.logo_base64 as string) ?? null,
+          phone:          (tenant.phone as string) ?? null,
+          address:        (tenant.address as string) ?? null,
+          license_number: (tenant.license_number as string) ?? null,
         }
-
-        await loadJobs()
       }
+      await loadJobs()
       setLoading(false)
     }
     init()
-  }, [supabase, loadJobs])
+  }, [profile, loadJobs])
 
   // ── Status change ─────────────────────────────────────────────────────────────
 

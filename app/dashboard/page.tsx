@@ -6,28 +6,26 @@ import DashboardCharts from '@/components/dashboard/DashboardCharts'
 import RemindersPanel from '@/components/dashboard/RemindersPanel'
 import AlertsPanel from '@/components/dashboard/AlertsPanel'
 import Footer from '@/components/layout/Footer'
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 
 type DashTab = 'stats' | 'charts'
 
 export default function DashboardPage() {
-  const [tab, setTab] = useState<DashTab>('stats')
-  const [isAdmin, setIsAdmin] = useState(false)
-
-  useEffect(() => {
-    const sb = createClient()
-    sb.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user) return
-      sb.from('profiles').select('role').eq('id', session.user.id).single()
-        .then(({ data }) => {
-          setIsAdmin(data?.role === 'admin' || data?.role === 'super_admin')
-        })
-    })
-  }, [])
-
   return (
     <AppShell noFooter>
+      <DashboardContent />
+    </AppShell>
+  )
+}
+
+function DashboardContent() {
+  const [tab, setTab] = useState<DashTab>('stats')
+  const { profile } = useProfile()
+  const isAdmin = profile?.isAdmin ?? false
+
+  return (
+    <>
       <div style={{ width: '100%' }}>
 
         {/* Tab bar */}
@@ -104,6 +102,6 @@ export default function DashboardPage() {
         )}
       </div>
       <div className="dash-footer-area"><Footer inner /></div>
-    </AppShell>
+    </>
   )
 }

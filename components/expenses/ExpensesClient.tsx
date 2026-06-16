@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import * as XLSX from 'xlsx'
-import AppShell from '@/components/layout/AppShell'
 import Button from '@/components/ui/Button'
 import PageHeader from '@/components/ui/PageHeader'
 import Input from '@/components/ui/Input'
@@ -11,6 +10,7 @@ import ExcelMenu from '@/components/ui/ExcelMenu'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { RecurringExpense } from './RecurringTab'
 import ScheduledPaymentsModal from './ScheduledPaymentsModal'
 
@@ -281,6 +281,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   const { confirm }   = useConfirm()
   const { showToast } = useToast()
   const supabase      = useRef(createClient()).current
+  const { profile }   = useProfile()
   const tenantIdRef   = useRef<string | null>(null)
   const currentMonth  = toMonthStr(new Date())
 
@@ -300,10 +301,8 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
 
   const resolveTenant = async () => {
     if (tenantIdRef.current) return tenantIdRef.current
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
-    const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
-    tenantIdRef.current = profile?.tenant_id ?? null
+    if (!profile) return null
+    tenantIdRef.current = profile.tenantId
     return tenantIdRef.current
   }
 
@@ -391,7 +390,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         setExpenses(fresh.data ?? [])
       }
     }
-  }, [month]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [month, profile]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -720,15 +719,14 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     const wb   = XLSX.read(data)
     const rows = XLSX.utils.sheet_to_json<Record<string, string>>(wb.Sheets[wb.SheetNames[0]])
     if (!rows.length) { showToast('הקובץ ריק', 'error'); return }
-    const supabase = createClient()
-    const { data: profile } = await supabase.from('profiles').select('tenant_id').single()
-    if (!profile) return
+    const tid = await resolveTenant()
+    if (!tid) return
     let imported = 0
     for (const r of rows) {
       if (tab === 'expenses') {
         const sup = r['ספק'] ? suppliers.find(s => s.name === r['ספק']) : null
         await supabase.from('expenses').insert({
-          tenant_id: profile.tenant_id,
+          tenant_id: tid,
           date: r['תאריך'] || new Date().toISOString().slice(0, 10),
           category: r['קטגוריה'] || 'אחר',
           description: r['תיאור'] || '',
@@ -739,7 +737,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         })
       } else {
         await supabase.from('income').insert({
-          tenant_id: profile.tenant_id,
+          tenant_id: tid,
           date: r['תאריך'] || new Date().toISOString().slice(0, 10),
           category: r['קטגוריה'] || 'אחר',
           description: r['תיאור'] || '',
@@ -755,7 +753,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <AppShell>
+    <>
       <PageHeader
         icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
         iconBg="linear-gradient(135deg,#1a9e5c,#4ade80)"
@@ -1351,6 +1349,6 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           </div>
         </Modal>
       )}
-    </AppShell>
+    </>
   )
 }

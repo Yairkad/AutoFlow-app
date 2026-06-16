@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
@@ -401,6 +402,7 @@ function MultiPartTotal({ partItems }: { partItems: PartItem[] }) {
 
 export default function QuotesClient() {
   const sb       = useRef(createClient()).current
+  const { profile } = useProfile()
   const tenantId = useRef<string>('')
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
@@ -454,14 +456,10 @@ export default function QuotesClient() {
   }, [])
 
   useEffect(() => {
-    ;(async () => {
-      const { data: { user } } = await sb.auth.getUser()
-      if (!user) return
-      const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.id).single()
-      if (profile) tenantId.current = profile.tenant_id
-      await load()
-    })()
-  }, [sb, load])
+    if (!profile) return
+    tenantId.current = profile.tenantId
+    load()
+  }, [profile, load])
 
   // Auto-open quote from ?open=<id> URL param
   useEffect(() => {

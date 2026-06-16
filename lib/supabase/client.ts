@@ -23,6 +23,6 @@ export function createClient() {
   return createBrowserClient(
     SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    process.env.NODE_ENV === 'development' ? { global: { fetch: proxyFetch } } : {}
+    { global: { fetch: proxyFetch } }
   )
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
@@ -463,6 +464,7 @@ function printWarranty(copies: number, bizNameStr: string, logoBase64: string, s
 
 export default function DocumentsClient() {
   const sb         = useRef(createClient()).current
+  const { profile } = useProfile()
   const tenantId   = useRef<string>('')
   const bizName    = useRef<string>('')
   const bizSubTitle    = useRef<string>('')
@@ -533,27 +535,24 @@ export default function DocumentsClient() {
   }, [sb])
 
   useEffect(() => {
+    if (!profile) return
     const init = async () => {
-      const { data: { user } } = await sb.auth.getUser()
-      if (!user) return
-      const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.id).single()
-      if (!profile) { setLoading(false); return }
-      tenantId.current = profile.tenant_id
-      const { data: tenant } = await sb.from('tenants').select('name, sub_title, phone, address, license_number, logo_base64').eq('id', profile.tenant_id).single()
+      tenantId.current = profile.tenantId
+      const tenant = profile.tenant
       if (tenant) {
-        bizName.current     = tenant.name            || ''
-        bizSubTitle.current = tenant.sub_title       || ''
-        bizPhone.current    = tenant.phone           || ''
-        bizAddress.current  = tenant.address         || ''
-        bizLicense.current  = tenant.license_number  || ''
-        logoBase64.current  = tenant.logo_base64     || ''
+        bizName.current     = (tenant.name as string)            || ''
+        bizSubTitle.current = (tenant.sub_title as string)       || ''
+        bizPhone.current    = (tenant.phone as string)           || ''
+        bizAddress.current  = (tenant.address as string)         || ''
+        bizLicense.current  = (tenant.license_number as string)  || ''
+        logoBase64.current  = (tenant.logo_base64 as string)     || ''
       }
-      fetch(`/api/drive/status?tenant_id=${profile.tenant_id}`)
+      fetch(`/api/drive/status?tenant_id=${profile.tenantId}`)
         .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => {})
       await fetchAll()
     }
     init()
-  }, [sb, fetchAll])
+  }, [profile, fetchAll])
 
   // ── Drive file helpers ────────────────────────────────────────────────────────
 

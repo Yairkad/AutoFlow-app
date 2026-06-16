@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Button from '@/components/ui/Button'
@@ -302,6 +303,7 @@ function ActionBtn({ onClick, title, children }: { onClick: () => void; title: s
 
 export default function InspectionsClient() {
   const supabase    = useRef(createClient()).current
+  const { profile } = useProfile()
   const tenantId    = useRef<string | null>(null)
   const bizInfo     = useRef<BusinessInfo>({ name: 'אוטו ליין', sub_title: null, logo: null, phone: null, address: null, license_number: null, tax_id: null })
   const { showToast } = useToast()
@@ -345,32 +347,24 @@ export default function InspectionsClient() {
   }, [])
 
   useEffect(() => {
+    if (!profile) return
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: profile } = await supabase
-        .from('profiles').select('tenant_id, role').eq('id', user.id).single()
-      if (!profile) { setLoading(false); return }
-      tenantId.current = profile.tenant_id
+      tenantId.current = profile.tenantId
       setIsAdmin(profile.role === 'admin')
 
-      fetch(`/api/drive/status?tenant_id=${profile.tenant_id}`)
+      fetch(`/api/drive/status?tenant_id=${profile.tenantId}`)
         .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => {})
 
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('name, sub_title, logo_base64, phone, address, license_number, tax_id')
-        .eq('id', profile.tenant_id)
-        .maybeSingle()
+      const tenant = profile.tenant
       if (tenant) {
         bizInfo.current = {
-          name:           tenant.name ?? 'אוטו ליין',
-          sub_title:      tenant.sub_title ?? null,
-          logo:           tenant.logo_base64 ?? null,
-          phone:          tenant.phone ?? null,
-          address:        tenant.address ?? null,
-          license_number: tenant.license_number ?? null,
-          tax_id:         tenant.tax_id ?? null,
+          name:           (tenant.name as string) ?? 'אוטו ליין',
+          sub_title:      (tenant.sub_title as string) ?? null,
+          logo:           (tenant.logo_base64 as string) ?? null,
+          phone:          (tenant.phone as string) ?? null,
+          address:        (tenant.address as string) ?? null,
+          license_number: (tenant.license_number as string) ?? null,
+          tax_id:         (tenant.tax_id as string) ?? null,
         }
       }
 
@@ -378,7 +372,7 @@ export default function InspectionsClient() {
       setLoading(false)
     }
     init()
-  }, [supabase, loadInspections])
+  }, [profile, loadInspections])
 
   // ── Plate search ────────────────────────────────────────────────────────────
 

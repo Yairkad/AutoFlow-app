@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
@@ -88,6 +89,7 @@ const waUrl = (phone: string, text: string) => {
 
 export default function SuppliersClient() {
   const supabase = useRef(createClient()).current
+  const { profile } = useProfile()
   const tenantIdRef = useRef<string | null>(null)
   const { showToast } = useToast()
   const didAutoOpen = useRef(false)
@@ -124,12 +126,10 @@ export default function SuppliersClient() {
 
   const resolveTenant = useCallback(async () => {
     if (tenantIdRef.current) return tenantIdRef.current
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
-    const { data } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
-    if (data) tenantIdRef.current = data.tenant_id
+    if (!profile) return null
+    tenantIdRef.current = profile.tenantId
     return tenantIdRef.current
-  }, [supabase])
+  }, [profile])
 
   // ── Load ───────────────────────────────────────────────────────────────────
 

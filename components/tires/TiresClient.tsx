@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
@@ -84,6 +85,7 @@ function thisMonthStart() {
 
 export default function TiresClient() {
   const sb = useRef(createClient()).current
+  const { profile } = useProfile()
   const tenantId = useRef<string>('')
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
@@ -143,21 +145,14 @@ export default function TiresClient() {
   }, [sb])
 
   useEffect(() => {
-    ;(async () => {
-      const { data: { user } } = await sb.auth.getUser()
-      if (!user) return
-      const { data: profile } = await sb.from('profiles').select('tenant_id, role, allowed_modules').eq('id', user.id).single()
-      if (profile) {
-        tenantId.current = profile.tenant_id
-        const admin   = profile.role === 'admin' || profile.role === 'super_admin'
-        setIsAdmin(admin)
-        const hasFull = (profile.allowed_modules ?? []).includes('tires')
-        const hasView = (profile.allowed_modules ?? []).includes('tires_view')
-        setViewOnly(!admin && !hasFull && hasView)
-      }
-      await load()
-    })()
-  }, [sb, load])
+    if (!profile) return
+    tenantId.current = profile.tenantId
+    setIsAdmin(profile.isAdmin)
+    const hasFull = profile.allowedModules.includes('tires')
+    const hasView = profile.allowedModules.includes('tires_view')
+    setViewOnly(!profile.isAdmin && !hasFull && hasView)
+    load()
+  }, [profile, load])
 
   // ── Stats ─────────────────────────────────────────────────────────────────────
 

@@ -4,12 +4,13 @@ import { useState } from 'react'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import Footer from './Footer'
+import { ProfileProvider } from '@/lib/contexts/ProfileContext'
 
 export default function AppShell({ children, noFooter }: { children: React.ReactNode; noFooter?: boolean }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   return (
-    <>
+    <ProfileProvider>
       <Header onMenuToggle={() => setMobileNavOpen(v => !v)} />
       <Sidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
 
@@ -32,6 +33,6 @@ export default function AppShell({ children, noFooter }: { children: React.React
         {children}
       </main>
       {!noFooter && <Footer />}
-    </>
+    </ProfileProvider>
   )
 }

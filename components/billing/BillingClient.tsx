@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import Button from '@/components/ui/Button'
 import PageHeader from '@/components/ui/PageHeader'
@@ -161,6 +162,7 @@ const tdSt: React.CSSProperties = { padding: '10px 12px', fontSize: '13px', vert
 
 export default function BillingClient() {
   const supabase      = useRef(createClient()).current
+  const { profile }   = useProfile()
   const tenantIdRef   = useRef<string | null>(null)
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
@@ -234,18 +236,15 @@ export default function BillingClient() {
 
   // ── Init ───────────────────────────────────────────────────────────────
   useEffect(() => {
+    if (!profile) return
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
-      if (!profile) { setLoading(false); return }
-      tenantIdRef.current = profile.tenant_id
+      tenantIdRef.current = profile!.tenantId
       await Promise.all([loadContacts(), loadItems(), loadEntries(monthISO())])
       setLoading(false)
     }
     init()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [profile])
 
   // ── Data loaders ───────────────────────────────────────────────────────
 

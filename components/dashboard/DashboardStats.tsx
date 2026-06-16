@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { saveUiSettings } from '@/lib/uiSettings'
 
 type Section = 'finance' | 'tires' | 'cars'
@@ -240,6 +241,8 @@ function CarsCard({ inInventory, openRequests, href }: { inInventory: number; op
 
 export default function DashboardStats() {
   const cached = _cache && (Date.now() - _cache.ts < CACHE_TTL) ? _cache : null
+  const { profile } = useProfile()
+  const supabase = useRef(createClient()).current
 
   const [stats, setStats]     = useState<Stats>(cached?.stats ?? EMPTY)
   const [loading, setLoading] = useState(!cached)
@@ -247,7 +250,7 @@ export default function DashboardStats() {
   const [modules, setModules] = useState<string[]>(cached?.modules ?? [])
   const [editLayout, setEditLayout] = useState(false)
   const [layout, setLayout]         = useState<Record<CardId, Section>>(DEFAULT_LAYOUT)
-  const [tenantId, setTenantId]     = useState<string | null>(null)
+  const tenantId = profile?.tenantId ?? null
   const dragCard = useRef<CardId | null>(null)
 
   useEffect(() => { setLayout(loadLayout()) }, [])
@@ -316,36 +319,20 @@ export default function DashboardStats() {
   }
 
   useEffect(() => {
-    const supabase = createClient()
-    let admin = cached?.admin ?? false
-    let mods  = cached?.modules ?? []
+    if (!profile) return
+    const admin = profile.isAdmin
+    const mods  = profile.allowedModules
+    setIsAdmin(admin)
+    setModules(mods)
 
-    // getSession() reads from localStorage — no network round trip
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const user = session?.user
-      if (!user) { setLoading(false); return }
+    const remote = (profile.tenant?.ui_settings as any)?.dashboard_layout
+    if (remote) {
+      const merged = { ...DEFAULT_LAYOUT, ...remote }
+      setLayout(merged)
+      saveLayout(merged)
+    }
 
-      supabase.from('profiles').select('role, allowed_modules, tenant_id').eq('id', user.id).single()
-        .then(({ data: p }) => {
-          admin = p?.role === 'admin' || p?.role === 'super_admin'
-          mods  = p?.allowed_modules ?? []
-          setIsAdmin(admin)
-          setModules(mods)
-          if (p?.tenant_id) {
-            setTenantId(p.tenant_id)
-            supabase.from('tenants').select('ui_settings').eq('id', p.tenant_id).single()
-              .then(({ data: t }) => {
-                const remote = (t?.ui_settings as any)?.dashboard_layout
-                if (remote) {
-                  const merged = { ...DEFAULT_LAYOUT, ...remote }
-                  setLayout(merged)
-                  saveLayout(merged)
-                }
-              })
-          }
-          fetchStats(admin, mods)
-        })
-    })
+    fetchStats(admin, mods)
 
     const tables = ['expenses', 'income', 'customer_debts', 'supplier_debts',
       'employees', 'products', 'tires', 'quotes', 'cars', 'car_requests',
@@ -356,7 +343,7 @@ export default function DashboardStats() {
     }
     const channel = ch.subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [profile]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return (
     <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: 'minmax(90px, 130px)', gap: '16px', alignContent: 'start' }}>

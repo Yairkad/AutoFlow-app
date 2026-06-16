@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
@@ -71,6 +72,7 @@ const tdSt: React.CSSProperties = { padding: '11px 12px', verticalAlign: 'middle
 
 export default function DebtsClient() {
   const supabase    = useRef(createClient()).current
+  const { profile } = useProfile()
   const tenantIdRef = useRef<string | null>(null)
   const { showToast } = useToast()
 
@@ -127,12 +129,10 @@ export default function DebtsClient() {
 
   const resolveTenant = useCallback(async () => {
     if (tenantIdRef.current) return tenantIdRef.current
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
-    const { data } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single()
-    if (data) tenantIdRef.current = data.tenant_id
+    if (!profile) return null
+    tenantIdRef.current = profile.tenantId
     return tenantIdRef.current
-  }, [supabase])
+  }, [profile])
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
@@ -140,17 +140,16 @@ export default function DebtsClient() {
     const tid = await resolveTenant()
     if (!tid) return
     setLoading(true)
-    const [custRes, suppDebtRes, suppRes, tenantRes, paymentsRes] = await Promise.all([
+    const [custRes, suppDebtRes, suppRes, paymentsRes] = await Promise.all([
       supabase.from('customer_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
       supabase.from('supplier_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
       supabase.from('suppliers').select('id,name,phone,contact_name').eq('tenant_id', tid).order('name'),
-      supabase.from('tenants').select('name').eq('id', tid).single(),
       supabase.from('scheduled_payments').select('*').eq('tenant_id', tid).order('due_date'),
     ])
     if (custRes.data)     setCustomerDebts(custRes.data)
     if (suppDebtRes.data) setSupplierDebts(suppDebtRes.data)
     if (suppRes.data)     setSuppliers(suppRes.data)
-    if (tenantRes.data?.name) setTenantName(tenantRes.data.name)
+    if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
     const payments: ScheduledPayment[] = paymentsRes.data ?? []
     setScheduledPayments(payments)
     setLoading(false)
@@ -181,7 +180,7 @@ export default function DebtsClient() {
         setScheduledPayments(refreshed.data ?? [])
       }
     }
-  }, [supabase, resolveTenant, showToast])
+  }, [supabase, resolveTenant, showToast, profile])
 
   useEffect(() => { loadAll() }, [loadAll])
 

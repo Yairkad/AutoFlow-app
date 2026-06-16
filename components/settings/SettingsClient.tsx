@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
@@ -1660,27 +1661,13 @@ function BackupTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typ
 export default function SettingsClient() {
   const supabase      = useRef(createClient()).current
   const { showToast } = useToast()
+  const { profile, loading } = useProfile()
   const [tab,            setTab]            = useState<Tab | null>(null)
-  const [tenantId,       setTenantId]       = useState<string | null>(null)
-  const [myId,           setMyId]           = useState<string | null>(null)
-  const [myRole,         setMyRole]         = useState<string>('employee')
-  const [myModules,      setMyModules]      = useState<string[]>([])
-  const [loading,        setLoading]        = useState(true)
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) return
-      setMyId(data.user.id)
-      supabase.from('profiles').select('tenant_id, role, allowed_modules').eq('id', data.user.id).single().then(({ data: p }) => {
-        if (p) {
-          setTenantId(p.tenant_id)
-          setMyRole(p.role ?? 'employee')
-          setMyModules(p.allowed_modules ?? [])
-        }
-        setLoading(false)
-      })
-    })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const tenantId  = profile?.tenantId ?? null
+  const myId      = profile?.userId ?? null
+  const myRole    = profile?.role ?? 'employee'
+  const myModules = profile?.allowedModules ?? []
 
   const isAdmin  = myRole === 'admin' || myRole === 'super_admin'
   const canVault = myRole === 'super_admin'

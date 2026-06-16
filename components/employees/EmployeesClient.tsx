@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
@@ -169,6 +170,7 @@ const EMPTY_FORM = {
 
 export default function EmployeesClient() {
   const sb = useRef(createClient()).current
+  const { profile } = useProfile()
   const tenantId = useRef('')
   const { showToast } = useToast()
   const { confirm } = useConfirm()
@@ -250,18 +252,15 @@ export default function EmployeesClient() {
   }, [sb])
 
   useEffect(() => {
-    (async () => {
-      const { data: { user } } = await sb.auth.getUser()
-      if (!user) return
-      const { data: profile } = await sb.from('profiles').select('tenant_id, role').eq('id', user.id).single()
-      if (!profile) return
-      tenantId.current = profile.tenant_id
+    if (!profile) return
+    ;(async () => {
+      tenantId.current = profile.tenantId
       setMyRole(profile.role ?? '')
       setRoleReady(true)
       await loadEmployees()
       await loadSalaries()
     })()
-  }, [sb, loadEmployees, loadSalaries])
+  }, [profile, loadEmployees, loadSalaries])
 
   // Sync netMap from DB when period or salaries change
   useEffect(() => {
