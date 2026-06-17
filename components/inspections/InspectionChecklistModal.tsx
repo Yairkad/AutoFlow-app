@@ -29,6 +29,9 @@ export const INSPECTION_SYSTEMS = [
   'מחוונים',
 ]
 
+// Indices of systems relevant to skeleton-only inspection
+export const SKELETON_SYSTEM_INDICES = new Set([16, 17]) // שלדת מרכב, מרכב (פחחות)
+
 // ── Common faults per system — official MOT list (נספח 5) ─────────────────────
 
 const COMMON_FAULTS: Record<string, string[]> = {
@@ -195,7 +198,7 @@ const COMMON_FAULTS: Record<string, string[]> = {
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface ChecklistItem {
-  status: 'ok' | 'fail' | ''
+  status: 'ok' | 'fail' | '' | 'na'
   faults: string[]
 }
 
@@ -241,38 +244,42 @@ interface Props {
 
 // ── Parse / default ────────────────────────────────────────────────────────────
 
-export function parseFindings(raw: string | null): { items: ChecklistItem[], notes: string } {
-  const blank = INSPECTION_SYSTEMS.map(() => ({ status: '' as const, faults: [] }))
-  if (!raw) return { items: blank, notes: '' }
-  try {
-    const parsed = JSON.parse(raw)
-    // New format: { items: [...], notes: string }
-    if (parsed && !Array.isArray(parsed) && Array.isArray(parsed.items)) {
-      const items = parsed.items.length === INSPECTION_SYSTEMS.length
-        ? parsed.items.map((p: ChecklistItem & { notes?: string }) => ({
-            status: p.status ?? '',
-            faults: Array.isArray(p.faults) && p.faults.length > 0 ? p.faults : p.notes ? [p.notes] : [],
-          }))
-        : blank
-      return { items, notes: parsed.notes ?? '' }
-    }
-    // Old format: plain array
-    if (Array.isArray(parsed) && parsed.length === INSPECTION_SYSTEMS.length) {
-      return {
-        items: parsed.map((p: ChecklistItem & { notes?: string }) => ({
-          status: p.status ?? '',
+export function parseFindings(raw: string | null): { items: ChecklistItem[], notes: string, skeletonOnly: boolean } {
+  let skeletonOnly = false
+  let parsedItems: ChecklistItem[] | null = null
+  let notes = ''
+
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw)
+      skeletonOnly = !!parsed.skeleton_only
+
+      if (parsed && !Array.isArray(parsed) && Array.isArray(parsed.items) && parsed.items.length === INSPECTION_SYSTEMS.length) {
+        parsedItems = parsed.items.map((p: ChecklistItem & { notes?: string }) => ({
+          status: (p.status ?? '') as ChecklistItem['status'],
           faults: Array.isArray(p.faults) && p.faults.length > 0 ? p.faults : p.notes ? [p.notes] : [],
-        })),
-        notes: '',
+        }))
+        notes = parsed.notes ?? ''
+      } else if (Array.isArray(parsed) && parsed.length === INSPECTION_SYSTEMS.length) {
+        parsedItems = parsed.map((p: ChecklistItem & { notes?: string }) => ({
+          status: (p.status ?? '') as ChecklistItem['status'],
+          faults: Array.isArray(p.faults) && p.faults.length > 0 ? p.faults : p.notes ? [p.notes] : [],
+        }))
       }
-    }
-  } catch {}
-  return { items: blank, notes: '' }
+    } catch {}
+  }
+
+  const items: ChecklistItem[] = INSPECTION_SYSTEMS.map((_, i) => {
+    if (skeletonOnly && !SKELETON_SYSTEM_INDICES.has(i)) return { status: 'na', faults: [] }
+    return parsedItems ? parsedItems[i] : { status: '', faults: [] }
+  })
+
+  return { items, notes, skeletonOnly }
 }
 
 // ── Print ──────────────────────────────────────────────────────────────────────
 
-export function printChecklist(inspection: InspectionBasic, business: BusinessBasic, items: ChecklistItem[], inspectorNotes = '', inspectorName = '') {
+export function printChecklist(inspection: InspectionBasic, business: BusinessBasic, items: ChecklistItem[], inspectorNotes = '', inspectorName = '', skeletonOnly = false) {
   const date = inspection.date || new Date().toLocaleDateString('he-IL')
   const time = inspection.time || ''
   const dateTime = time ? `${date} ${time}` : date
@@ -281,17 +288,20 @@ export function printChecklist(inspection: InspectionBasic, business: BusinessBa
     const item = items[i]
     const isOk   = item.status === 'ok'
     const isFail = item.status === 'fail'
-    const notesText = item.faults.filter(Boolean).join(' | ')
-    return `<tr style="${isFail ? 'background:#fff0f0' : isOk ? 'background:#f0fff4' : ''}">
-      <td style="text-align:center;width:26px">${i + 1}</td>
-      <td style="text-align:right;padding-right:8px;font-weight:700;width:165px">${name}</td>
-      <td style="text-align:center;font-size:15px;color:#16a34a;font-weight:700">${isOk ? '✓' : ''}</td>
-      <td style="text-align:center;font-size:15px;color:#dc2626;font-weight:700">${isFail ? '✗' : ''}</td>
-      <td style="text-align:right;padding:2px 6px;font-size:10.5px">${notesText}</td>
+    const isNa   = item.status === 'na'
+    const notesText = isNa ? 'לא נבדק' : item.faults.filter(Boolean).join(' | ')
+    const rowStyle = isNa ? 'background:#f5f5f5' : isFail ? 'background:#fff0f0' : isOk ? 'background:#f0fff4' : ''
+    const naCell = `<span style="text-decoration:line-through;color:#bbb">—</span>`
+    return `<tr style="${rowStyle}">
+      <td style="text-align:center;width:26px;${isNa ? 'color:#aaa' : ''}">${i + 1}</td>
+      <td style="text-align:right;padding-right:8px;font-weight:700;width:165px;${isNa ? 'color:#aaa' : ''}">${name}</td>
+      <td style="text-align:center;font-size:15px;color:#16a34a;font-weight:700">${isNa ? naCell : isOk ? '✓' : ''}</td>
+      <td style="text-align:center;font-size:15px;color:#dc2626;font-weight:700">${isNa ? naCell : isFail ? '✗' : ''}</td>
+      <td style="text-align:right;padding:2px 6px;font-size:10.5px;${isNa ? 'color:#aaa;font-style:italic' : ''}">${notesText}</td>
     </tr>`
   }
 
-  // Split 21 systems: first 11 on page 1, remaining 10 on page 2
+  // Split 21 systems: first 13 on page 1, remaining 8 on page 2
   const rows1 = INSPECTION_SYSTEMS.slice(0, 13).map((n, i) => makeRow(n, i)).join('')
   const rows2 = INSPECTION_SYSTEMS.slice(13).map((n, i) => makeRow(n, i + 13)).join('')
 
@@ -373,9 +383,9 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 <div class="page">
   ${banner}
   <div class="title-box">
-    <h1>טופס סיכום אחיד של בדיקה כללית</h1>
-    <h1>ללא מערכות אלקטרוניות וממוחשבות</h1>
-    <p>(ע"פ הוראות משרד התחבורה)</p>
+    ${skeletonOnly
+      ? `<h1>טופס סיכום בדיקת שלדה בלבד</h1><p>פחחות ושלדת מרכב · ע"פ הוראות משרד התחבורה</p>`
+      : `<h1>טופס סיכום אחיד של בדיקה כללית</h1><h1>ללא מערכות אלקטרוניות וממוחשבות</h1><p>(ע"פ הוראות משרד התחבורה)</p>`}
   </div>
   <div class="insp-num">מס׳ בדיקה: <b>${inspection.inspection_number ?? inspection.id.slice(0, 8).toUpperCase()}</b>${inspectorName ? ` &nbsp;|&nbsp; בוחן: <b>${inspectorName}</b>` : ''} &nbsp;|&nbsp; תאריך: <b>${dateTime}</b></div>
   <div class="info-panels">
@@ -443,8 +453,9 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function InspectionChecklistModal({ inspection, business, inspectors, onClose, onSave, onClearFindings }: Props) {
-  const [items,          setItems]          = useState<ChecklistItem[]>(() => parseFindings(inspection.findings).items)
-  const [inspectorNotes, setInspectorNotes] = useState(() => parseFindings(inspection.findings).notes)
+  const { items: initItems, notes: initNotes, skeletonOnly } = parseFindings(inspection.findings)
+  const [items,          setItems]          = useState<ChecklistItem[]>(initItems)
+  const [inspectorNotes, setInspectorNotes] = useState(initNotes)
   const [inspector,      setInspector]      = useState(inspection.inspector ?? (inspectors[0] ?? ''))
   const [step,           setStep]           = useState(0)
   const [saving,         setSaving]         = useState(false)
@@ -473,9 +484,11 @@ export default function InspectionChecklistModal({ inspection, business, inspect
   function goNext() {
     if (step < TOTAL) {
       const cur = items[step]
-      const hasFaults = cur.faults.filter(Boolean).length > 0
-      const newStatus = hasFaults ? 'fail' : 'ok'
-      setItems(prev => prev.map((item, i) => i === step ? { ...item, status: newStatus } : item))
+      if (cur.status !== 'na') {
+        const hasFaults = cur.faults.filter(Boolean).length > 0
+        const newStatus: ChecklistItem['status'] = hasFaults ? 'fail' : 'ok'
+        setItems(prev => prev.map((item, i) => i === step ? { ...item, status: newStatus } : item))
+      }
     }
     setStep(s => Math.min(s + 1, TOTAL))
   }
@@ -488,9 +501,9 @@ export default function InspectionChecklistModal({ inspection, business, inspect
 
   async function handleSave(andPrint: boolean) {
     setSaving(true)
-    await onSave(inspection.id, JSON.stringify({ items, notes: inspectorNotes }), inspector || undefined)
+    await onSave(inspection.id, JSON.stringify({ items, notes: inspectorNotes, skeleton_only: skeletonOnly }), inspector || undefined)
     setSaving(false)
-    if (andPrint) printChecklist(inspection, business, items, inspectorNotes, inspector)
+    if (andPrint) printChecklist(inspection, business, items, inspectorNotes, inspector, skeletonOnly)
     onClose()
   }
 
@@ -560,22 +573,25 @@ export default function InspectionChecklistModal({ inspection, business, inspect
           {INSPECTION_SYSTEMS.map((name, i) => {
             const it = items[i]
             const isActive = i === step && !isSummary
-            const bg = it.status === 'ok' ? '#f0fdf4' : it.status === 'fail' ? '#fef2f2' : isActive ? '#eff6ff' : '#f1f5f9'
-            const color = it.status === 'ok' ? 'var(--primary)' : it.status === 'fail' ? 'var(--danger)' : isActive ? 'var(--accent)' : 'var(--text-muted)'
+            const isNaPill = it.status === 'na'
+            const bg = isNaPill ? '#f1f5f9' : it.status === 'ok' ? '#f0fdf4' : it.status === 'fail' ? '#fef2f2' : isActive ? '#eff6ff' : '#f1f5f9'
+            const color = isNaPill ? '#ccc' : it.status === 'ok' ? 'var(--primary)' : it.status === 'fail' ? 'var(--danger)' : isActive ? 'var(--accent)' : 'var(--text-muted)'
             return (
               <button
                 key={i}
                 onClick={() => jumpTo(i)}
-                title={name}
+                title={isNaPill ? `${name} — לא נבדק` : name}
                 style={{
                   flexShrink: 0, width: 28, height: 28, borderRadius: '50%',
                   border: isActive ? '2px solid var(--accent)' : '2px solid transparent',
                   background: bg, color, cursor: 'pointer',
                   fontSize: 10, fontWeight: 700, transition: 'all .15s',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  textDecoration: isNaPill ? 'line-through' : undefined,
+                  opacity: isNaPill ? 0.5 : 1,
                 }}
               >
-                {it.status === 'ok' ? '✓' : it.status === 'fail' ? '✗' : i + 1}
+                {it.status === 'ok' ? '✓' : it.status === 'fail' ? '✗' : it.status === 'na' ? '—' : i + 1}
               </button>
             )
           })}
@@ -600,7 +616,29 @@ export default function InspectionChecklistModal({ inspection, business, inspect
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px' }}>
 
           {/* ════ SYSTEM STEP ════ */}
-          {!isSummary && (
+          {!isSummary && cur.status === 'na' ? (
+            /* Non-skeleton system in skeleton-only mode */
+            <div>
+              <div style={{
+                marginBottom: 20, padding: '14px 18px', borderRadius: 12,
+                background: '#f9fafb', border: '2px solid #e5e7eb',
+              }}>
+                <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  מערכת {step + 1} מתוך {TOTAL}
+                </div>
+                <h2 style={{ fontSize: 28, fontWeight: 900, color: '#9ca3af', margin: 0, lineHeight: 1.1, textDecoration: 'line-through' }}>{sysName}</h2>
+              </div>
+              <div style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+                padding: '32px 20px', background: '#f9fafb', borderRadius: 12,
+                border: '1.5px dashed #d1d5db',
+              }}>
+                <span style={{ fontSize: 36 }}>🚫</span>
+                <div style={{ fontSize: 16, fontWeight: 900, color: '#6b7280' }}>לא נבדק</div>
+                <div style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center' }}>מערכת זו אינה כלולה בבדיקת שלדה בלבד</div>
+              </div>
+            </div>
+          ) : !isSummary && (
             <div>
               {/* System title */}
               <div style={{
@@ -629,7 +667,6 @@ export default function InspectionChecklistModal({ inspection, business, inspect
                         placeholder="תאר ליקוי או השאר ריק אם תקין..."
                         value={cur.faults[fi] ?? ''}
                         onChange={e => {
-                          // sync back into real items array
                           setItems(prev => prev.map((item, i) => {
                             if (i !== step) return item
                             const faults = item.faults.length > 0 ? [...item.faults] : ['']
@@ -643,7 +680,6 @@ export default function InspectionChecklistModal({ inspection, business, inspect
                         {suggestions.map(s => <option key={s} value={s} />)}
                       </datalist>
                     </div>
-                    {/* Remove only if there's more than one row */}
                     {cur.faults.length > 1 && (
                       <button
                         onClick={() => removeFault(fi)}
@@ -765,17 +801,29 @@ export default function InspectionChecklistModal({ inspection, business, inspect
                     <tbody>
                       {INSPECTION_SYSTEMS.map((name, i) => {
                         const it = items[i]
+                        const isNaRow = it.status === 'na'
                         return (
                           <tr
                             key={i}
-                            style={{ borderBottom: '1px solid var(--border)', background: it.status === 'fail' ? '#fef2f2' : it.status === 'ok' ? '#f0fdf4' : undefined, cursor: 'pointer' }}
-                            onClick={() => jumpTo(i)}
+                            style={{
+                              borderBottom: '1px solid var(--border)',
+                              background: isNaRow ? '#f9fafb' : it.status === 'fail' ? '#fef2f2' : it.status === 'ok' ? '#f0fdf4' : undefined,
+                              cursor: isNaRow ? 'default' : 'pointer',
+                              opacity: isNaRow ? 0.65 : 1,
+                            }}
+                            onClick={() => !isNaRow && jumpTo(i)}
                           >
                             <td style={{ padding: '6px 10px', color: 'var(--text-muted)', fontSize: 11 }}>{i + 1}</td>
-                            <td style={{ padding: '6px 10px', fontWeight: 600 }}>{name}</td>
-                            <td style={{ padding: '6px 10px', textAlign: 'center', fontSize: 14, color: 'var(--primary)', fontWeight: 700 }}>{it.status === 'ok' ? '✓' : ''}</td>
-                            <td style={{ padding: '6px 10px', textAlign: 'center', fontSize: 14, color: 'var(--danger)', fontWeight: 700 }}>{it.status === 'fail' ? '✗' : ''}</td>
-                            <td style={{ padding: '6px 10px', fontSize: 11, color: 'var(--text-muted)' }}>{it.faults.filter(Boolean).join(' | ')}</td>
+                            <td style={{ padding: '6px 10px', fontWeight: 600, color: isNaRow ? '#9ca3af' : undefined }}>{name}</td>
+                            <td style={{ padding: '6px 10px', textAlign: 'center', fontSize: 14, fontWeight: 700, color: isNaRow ? '#d1d5db' : 'var(--primary)', textDecoration: isNaRow ? 'line-through' : undefined }}>
+                              {isNaRow ? '—' : it.status === 'ok' ? '✓' : ''}
+                            </td>
+                            <td style={{ padding: '6px 10px', textAlign: 'center', fontSize: 14, fontWeight: 700, color: isNaRow ? '#d1d5db' : 'var(--danger)', textDecoration: isNaRow ? 'line-through' : undefined }}>
+                              {isNaRow ? '—' : it.status === 'fail' ? '✗' : ''}
+                            </td>
+                            <td style={{ padding: '6px 10px', fontSize: 11, color: 'var(--text-muted)', fontStyle: isNaRow ? 'italic' : undefined }}>
+                              {isNaRow ? 'לא נבדק' : it.faults.filter(Boolean).join(' | ')}
+                            </td>
                           </tr>
                         )
                       })}
