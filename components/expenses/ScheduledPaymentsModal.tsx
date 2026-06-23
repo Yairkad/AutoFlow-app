@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -96,6 +96,7 @@ export default function ScheduledPaymentsModal({
 }: Props) {
   const [rows,    setRows]    = useState<ScheduledPayment[]>([])
   const [loading, setLoading] = useState(false)
+  const importRef = useRef<HTMLInputElement>(null)
 
   // Form modal
   const [formOpen,  setFormOpen]  = useState(false)
@@ -279,6 +280,71 @@ export default function ScheduledPaymentsModal({
     XLSX.writeFile(wb, 'תחזית-תשלומים.xlsx')
   }
 
+  // ── Excel import ───────────────────────────────────────────────────────────
+
+  async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+
+    const buf = await file.arrayBuffer()
+    const wb  = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true })
+    const ws  = wb.Sheets[wb.SheetNames[0]]
+    const raw = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1 })
+
+    // Deduplicate against existing rows (description|due_date|amount)
+    const existing = new Set(rows.map(r => `${r.description}|${r.due_date}|${r.amount}`))
+
+    type NewPayment = {
+      tenant_id: string; description: string; amount: number
+      due_date: string; payment_method: 'check' | 'transfer'; notes: string | null
+    }
+    const toInsert: NewPayment[] = []
+
+    for (const row of raw) {
+      const r = row as unknown[]
+      const description = String(r[2] ?? '').trim()
+      const rawAmount   = Number(r[6])
+
+      if (!description || isNaN(rawAmount) || rawAmount <= 0) continue
+      if (description === 'תיאור') continue                          // header row
+      if (String(r[1] ?? '').includes('סה"כ')) continue             // subtotal rows
+      if (String(r[0] ?? '') === 'שולם') continue                   // column header row
+
+      // Parse date from col B — Date object (cellDates:true), string "DD/MM/YYYY", or Excel serial
+      let isoDate = ''
+      const rd = r[1]
+      if (rd instanceof Date) {
+        isoDate = rd.toISOString().slice(0, 10)
+      } else if (typeof rd === 'string') {
+        const m = rd.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+        if (m) isoDate = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
+      } else if (typeof rd === 'number') {
+        const d = new Date(Math.round((rd - 25569) * 86400000))
+        isoDate = d.toISOString().slice(0, 10)
+      }
+      if (!isoDate) continue
+
+      const notes  = String(r[3] ?? '').trim() || null
+      const method: 'check' | 'transfer' = String(r[5] ?? '').includes("צ'ק") ? 'check' : 'transfer'
+      const key    = `${description}|${isoDate}|${rawAmount}`
+      if (existing.has(key)) continue  // skip duplicate
+
+      toInsert.push({ tenant_id: tenantId, description, amount: rawAmount, due_date: isoDate, payment_method: method, notes })
+    }
+
+    if (toInsert.length === 0) {
+      showToast('לא נמצאו שורות חדשות לייבוא', 'info')
+      return
+    }
+
+    const { error } = await supabase.from('scheduled_payments').insert(toInsert)
+    if (error) { showToast('שגיאה: ' + error.message, 'error'); return }
+    showToast(`יובאו ${toInsert.length} תשלומים חדשים ✓`, 'success')
+    fetch()
+    onRefresh?.()
+  }
+
   // ── Derived ────────────────────────────────────────────────────────────────
 
   const unpaid  = rows.filter(r => !r.is_paid)
@@ -308,6 +374,18 @@ export default function ScheduledPaymentsModal({
               )}
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input ref={importRef} type="file" accept=".xlsx,.xls" onChange={importExcel} style={{ display: 'none' }} />
+              <button
+                onClick={() => importRef.current?.click()}
+                title="ייבא מאקסל"
+                style={{
+                  padding: '6px 12px', borderRadius: '8px', border: '1px solid #2563eb',
+                  background: '#eff6ff', color: '#2563eb', fontSize: '13px', fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                📥 ייבא Excel
+              </button>
               {rows.length > 0 && (
                 <button
                   onClick={exportExcel}
@@ -315,7 +393,7 @@ export default function ScheduledPaymentsModal({
                   style={{
                     padding: '6px 12px', borderRadius: '8px', border: '1px solid #16a34a',
                     background: '#f0fdf4', color: '#16a34a', fontSize: '13px', fontWeight: 600,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+                    cursor: 'pointer',
                   }}
                 >
                   📊 ייצא Excel
