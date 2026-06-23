@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import * as XLSX from 'xlsx'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
@@ -228,6 +229,56 @@ export default function ScheduledPaymentsModal({
     onRefresh?.()
   }
 
+  // ── Excel export ───────────────────────────────────────────────────────────
+
+  function exportExcel() {
+    const aoa: unknown[][] = []
+
+    const today = new Date().toISOString().slice(0, 10)
+    aoa.push(['ריכוז ותחזית תשלומים עתידיים'])
+    aoa.push([`תאריך הדפסה: ${fmtDate(today)}`])
+    aoa.push([])
+    aoa.push(["שולם", "תאריך פירעון", "תיאור", "מספר צ'ק", "ספק", "אמצעי תשלום", "סכום"])
+
+    // Group by due_date, sorted ascending
+    const grouped = rows.reduce<Record<string, ScheduledPayment[]>>((acc, r) => {
+      if (!acc[r.due_date]) acc[r.due_date] = []
+      acc[r.due_date].push(r)
+      return acc
+    }, {})
+
+    let grandTotal = 0
+
+    for (const [date, payments] of Object.entries(grouped).sort()) {
+      aoa.push([`תאריך: ${fmtDate(date)}`, '', '', '', '', '', ''])
+      for (const p of payments) {
+        const supplierName = suppliers.find(s => s.id === p.supplier_id)?.name ?? ''
+        aoa.push([
+          p.is_paid ? '✓' : '',
+          fmtDate(p.due_date),
+          p.description,
+          p.notes ?? '',
+          supplierName,
+          p.payment_method === 'check' ? "צ'ק" : 'העברה',
+          Number(p.amount),
+        ])
+        grandTotal += Number(p.amount)
+      }
+      const dateTotal = payments.reduce((s, p) => s + Number(p.amount), 0)
+      aoa.push(['', `סה"כ ${fmtDate(date)}`, '', '', '', '', dateTotal])
+      aoa.push([])
+    }
+
+    aoa.push(['', 'סה"כ כולל', '', '', '', '', grandTotal])
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa)
+    // Set column widths
+    ws['!cols'] = [{ wch: 8 }, { wch: 14 }, { wch: 28 }, { wch: 16 }, { wch: 20 }, { wch: 14 }, { wch: 12 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'תשלומים')
+    XLSX.writeFile(wb, 'תחזית-תשלומים.xlsx')
+  }
+
   // ── Derived ────────────────────────────────────────────────────────────────
 
   const unpaid  = rows.filter(r => !r.is_paid)
@@ -256,7 +307,22 @@ export default function ScheduledPaymentsModal({
                 </>
               )}
             </div>
-            <Button size="sm" onClick={openAdd}>+ הוסף תשלום</Button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {rows.length > 0 && (
+                <button
+                  onClick={exportExcel}
+                  title="ייצא לאקסל"
+                  style={{
+                    padding: '6px 12px', borderRadius: '8px', border: '1px solid #16a34a',
+                    background: '#f0fdf4', color: '#16a34a', fontSize: '13px', fontWeight: 600,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+                  }}
+                >
+                  📊 ייצא Excel
+                </button>
+              )}
+              <Button size="sm" onClick={openAdd}>+ הוסף תשלום</Button>
+            </div>
           </div>
 
           {loading ? (
