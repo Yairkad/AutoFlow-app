@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -94,8 +94,10 @@ function todayIso() { return new Date().toISOString().slice(0, 10) }
 export default function ScheduledPaymentsModal({
   open, onClose, suppliers, tenantId, supabase, onRefresh, showToast, expenseCats,
 }: Props) {
-  const [rows,    setRows]    = useState<ScheduledPayment[]>([])
-  const [loading, setLoading] = useState(false)
+  const [rows,      setRows]      = useState<ScheduledPayment[]>([])
+  const [loading,   setLoading]   = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const importRef = useRef<HTMLInputElement>(null)
 
   // Form modal
   const [formOpen,  setFormOpen]  = useState(false)
@@ -229,54 +231,223 @@ export default function ScheduledPaymentsModal({
     onRefresh?.()
   }
 
-  // ── Excel export ───────────────────────────────────────────────────────────
+  // ── Excel export (exceljs – matches user's exact design) ────────────────────
 
-  function exportExcel() {
-    const aoa: unknown[][] = []
+  async function exportExcel() {
+    setExporting(true)
+    try {
+      const { default: ExcelJS } = await import('exceljs')
+      const wb = new ExcelJS.Workbook()
+      wb.creator = 'AutoFlow'
+      const ws = wb.addWorksheet('תשלומים', { views: [{ rightToLeft: true }] })
 
-    const today = new Date().toISOString().slice(0, 10)
-    aoa.push(['ריכוז ותחזית תשלומים עתידיים'])
-    aoa.push([`תאריך הדפסה: ${fmtDate(today)}`])
-    aoa.push([])
-    aoa.push(["שולם", "תאריך פירעון", "תיאור", "מספר צ'ק", "ספק", "אמצעי תשלום", "סכום"])
+      // RTL column order A=right: שולם | תאריך פירעון | תיאור | מספר צ'ק | ספק | סכום
+      ws.columns = [
+        { width: 7.53  }, // A: שולם
+        { width: 14.83 }, // B: תאריך פירעון
+        { width: 19.66 }, // C: תיאור
+        { width: 10.45 }, // D: מספר צ'ק
+        { width: 25.96 }, // E: ספק
+        { width: 15.51 }, // F: סכום
+      ]
 
-    // Group by due_date, sorted ascending
-    const grouped = rows.reduce<Record<string, ScheduledPayment[]>>((acc, r) => {
-      if (!acc[r.due_date]) acc[r.due_date] = []
-      acc[r.due_date].push(r)
-      return acc
-    }, {})
+      const NAVY  = '1F497D'
+      const LBLUE = 'DCE6F1'
+      const LGRAY = 'F2F5F8'
+      const WHITE = 'FFFFFF'
+      const BLACK = '000000'
 
-    let grandTotal = 0
+      const fill = (hex: string) => ({ type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: hex } })
+      const fnt  = (hex: string, bold = false, sz = 11) => ({ bold, size: sz, color: { argb: hex }, name: 'Arial' })
+      const aln  = (h: 'left' | 'center' | 'right' = 'right') => ({ horizontal: h, vertical: 'middle' as const })
 
-    for (const [date, payments] of Object.entries(grouped).sort()) {
-      aoa.push([`תאריך: ${fmtDate(date)}`, '', '', '', '', '', ''])
-      for (const p of payments) {
-        const supplierName = suppliers.find(s => s.id === p.supplier_id)?.name ?? ''
-        aoa.push([
-          p.is_paid ? '✓' : '',
-          fmtDate(p.due_date),
-          p.description,
-          p.notes ?? '',
-          supplierName,
-          p.payment_method === 'check' ? "צ'ק" : 'העברה',
-          Number(p.amount),
-        ])
-        grandTotal += Number(p.amount)
+      // ── Row 1: Title — no bg fill, NAVY text, bold, size 16, height 21
+      const titleRow = ws.addRow(['ריכוז ותחזית תשלומים עתידיים', '', '', '', '', ''])
+      titleRow.height = 21
+      ws.mergeCells('A1:F1')
+      titleRow.getCell(1).font      = fnt(NAVY, true, 16)
+      titleRow.getCell(1).alignment = aln('center')
+
+      // ── Row 2: Print date in col F only, size 12
+      const dateRow = ws.addRow(['', '', '', '', '', `תאריך הדפסה: ${new Date().toLocaleDateString('he-IL')}`])
+      dateRow.height = 15
+      dateRow.getCell(6).font      = fnt(BLACK, false, 12)
+      dateRow.getCell(6).alignment = aln('center')
+
+      // ── Row 3: Empty
+      ws.addRow(['', '', '', '', '', ''])
+
+      // ── Row 4: Column headers — NAVY bg, white bold size 11, height 15
+      const hdrRow = ws.addRow(['שולם', 'תאריך פירעון', 'תיאור', "מספר צ'ק", 'ספק', 'סכום'])
+      hdrRow.height = 15
+      for (let col = 1; col <= 6; col++) {
+        hdrRow.getCell(col).fill      = fill(NAVY)
+        hdrRow.getCell(col).font      = fnt(WHITE, true, 11)
+        hdrRow.getCell(col).alignment = aln('center')
       }
-      const dateTotal = payments.reduce((s, p) => s + Number(p.amount), 0)
-      aoa.push(['', `סה"כ ${fmtDate(date)}`, '', '', '', '', dateTotal])
-      aoa.push([])
+
+      // ── Group by YYYY-MM
+      const HMONTHS = ['', 'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
+
+      const grouped = rows.reduce<Record<string, ScheduledPayment[]>>((acc, r) => {
+        const ym = r.due_date.slice(0, 7)
+        if (!acc[ym]) acc[ym] = []
+        acc[ym].push(r)
+        return acc
+      }, {})
+
+      let grandTotal = 0
+      const allYears = Object.keys(grouped).map(ym => ym.slice(0, 4)).sort()
+      const maxYear  = allYears[allYears.length - 1] ?? String(new Date().getFullYear())
+
+      for (const [ym, payments] of Object.entries(grouped).sort()) {
+        const [yyyy, mm] = ym.split('-')
+        const monthName  = HMONTHS[parseInt(mm, 10)]
+
+        // Month header: merged A:F, LBLUE bg, NAVY bold size 11, height 15
+        const mhRn  = ws.rowCount + 1
+        const mhRow = ws.addRow([`${monthName} ${yyyy}`, '', '', '', '', ''])
+        mhRow.height = 15
+        ws.mergeCells(`A${mhRn}:F${mhRn}`)
+        mhRow.getCell(1).fill      = fill(LBLUE)
+        mhRow.getCell(1).font      = fnt(NAVY, true, 11)
+        mhRow.getCell(1).alignment = aln('right')
+
+        // Data rows: no fill, size 12, sorted by supplier so same-supplier rows are consecutive
+        const sortedPayments = [...payments].sort((a, b) => {
+          const na = suppliers.find(s => s.id === a.supplier_id)?.name ?? ''
+          const nb = suppliers.find(s => s.id === b.supplier_id)?.name ?? ''
+          return na.localeCompare(nb, 'he')
+        })
+        for (const p of sortedPayments) {
+          const supplier = suppliers.find(s => s.id === p.supplier_id)?.name ?? ''
+          const dataRow  = ws.addRow([
+            p.is_paid ? '✓' : '',
+            fmtDate(p.due_date),
+            p.description,
+            p.notes ?? '',
+            supplier,
+            Number(p.amount),
+          ])
+          dataRow.height = 15
+          for (let col = 1; col <= 6; col++) {
+            dataRow.getCell(col).font      = { size: 12, name: 'Arial' }
+            dataRow.getCell(col).alignment = aln('right')
+          }
+          dataRow.getCell(1).alignment = aln('center')
+          dataRow.getCell(6).numFmt    = '#,##0.00'
+          dataRow.getCell(6).alignment = aln('center')
+          grandTotal += Number(p.amount)
+        }
+
+        // Subtotal: A:B merged with label (LGRAY), C:E empty (LGRAY), F amount (LGRAY, BLACK bold 11)
+        const monthTotal = payments.reduce((s, p) => s + Number(p.amount), 0)
+        const subRn      = ws.rowCount + 1
+        const subRow     = ws.addRow([`סה"כ לחודש ${monthName} ${yyyy}`, '', '', '', '', monthTotal])
+        subRow.height    = 15.75
+        ws.mergeCells(`A${subRn}:B${subRn}`)
+        for (let col = 1; col <= 6; col++) {
+          subRow.getCell(col).fill = fill(LGRAY)
+        }
+        subRow.getCell(1).font      = fnt(BLACK, true, 11)
+        subRow.getCell(1).alignment = aln('right')
+        subRow.getCell(6).font      = fnt(BLACK, true, 11)
+        subRow.getCell(6).numFmt    = '#,##0.00'
+        subRow.getCell(6).alignment = aln('center')
+
+        // Empty separator
+        ws.addRow(['', '', '', '', '', ''])
+      }
+
+      // ── Grand total: A empty (no bg), B:E merged label (LGRAY bold 14), F amount (LGRAY bold 14)
+      const gtRn  = ws.rowCount + 1
+      const gtRow = ws.addRow(['', `סה"כ כולל לשנת ${maxYear}`, '', '', '', grandTotal])
+      gtRow.height = 28.5
+      ws.mergeCells(`B${gtRn}:E${gtRn}`)
+      for (let col = 2; col <= 6; col++) {
+        gtRow.getCell(col).fill = fill(LGRAY)
+      }
+      gtRow.getCell(2).font      = fnt(BLACK, true, 14)
+      gtRow.getCell(2).alignment = aln('center')
+      gtRow.getCell(6).font      = fnt(BLACK, true, 14)
+      gtRow.getCell(6).numFmt    = '#,##0.00'
+      gtRow.getCell(6).alignment = aln('center')
+
+      // ── Download
+      const buf  = await wb.xlsx.writeBuffer()
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url; a.download = 'תחזית-תשלומים.xlsx'; a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  // ── Excel import ───────────────────────────────────────────────────────────
+
+  async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+
+    const buf = await file.arrayBuffer()
+    const wb  = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true })
+    const ws  = wb.Sheets[wb.SheetNames[0]]
+    const raw = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1 })
+
+    // Deduplicate against existing rows (description|due_date|amount)
+    const existing = new Set(rows.map(r => `${r.description}|${r.due_date}|${r.amount}`))
+
+    type NewPayment = {
+      tenant_id: string; description: string; amount: number
+      due_date: string; payment_method: 'check' | 'transfer'; notes: string | null
+    }
+    const toInsert: NewPayment[] = []
+
+    for (const row of raw) {
+      const r = row as unknown[]
+      const description = String(r[2] ?? '').trim()
+      const rawAmount   = Number(r[5]) // col F = סכום
+
+      if (!description || isNaN(rawAmount) || rawAmount <= 0) continue
+      if (description === 'תיאור') continue                          // column header row
+      if (String(r[0] ?? '').startsWith('סה"כ')) continue           // subtotal / grand total rows
+      if (String(r[0] ?? '') === 'שולם') continue                   // column header row (alt check)
+
+      // Parse date from col B — Date object (cellDates:true), string "DD/MM/YYYY", or Excel serial
+      let isoDate = ''
+      const rd = r[1]
+      if (rd instanceof Date) {
+        isoDate = rd.toISOString().slice(0, 10)
+      } else if (typeof rd === 'string') {
+        const m = rd.match(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/)
+        if (m) isoDate = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
+      } else if (typeof rd === 'number') {
+        const d = new Date(Math.round((rd - 25569) * 86400000))
+        isoDate = d.toISOString().slice(0, 10)
+      }
+      if (!isoDate) continue
+
+      const notes  = String(r[3] ?? '').trim() || null   // col D = מספר צ'ק
+      const method: 'check' | 'transfer' = notes ? 'check' : 'transfer'
+      const key    = `${description}|${isoDate}|${rawAmount}`
+      if (existing.has(key)) continue  // skip duplicate
+
+      toInsert.push({ tenant_id: tenantId, description, amount: rawAmount, due_date: isoDate, payment_method: method, notes })
     }
 
-    aoa.push(['', 'סה"כ כולל', '', '', '', '', grandTotal])
+    if (toInsert.length === 0) {
+      showToast('לא נמצאו שורות חדשות לייבוא', 'info')
+      return
+    }
 
-    const ws = XLSX.utils.aoa_to_sheet(aoa)
-    // Set column widths
-    ws['!cols'] = [{ wch: 8 }, { wch: 14 }, { wch: 28 }, { wch: 16 }, { wch: 20 }, { wch: 14 }, { wch: 12 }]
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'תשלומים')
-    XLSX.writeFile(wb, 'תחזית-תשלומים.xlsx')
+    const { error } = await supabase.from('scheduled_payments').insert(toInsert)
+    if (error) { showToast('שגיאה: ' + error.message, 'error'); return }
+    showToast(`יובאו ${toInsert.length} תשלומים חדשים ✓`, 'success')
+    fetch()
+    onRefresh?.()
   }
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -308,17 +479,30 @@ export default function ScheduledPaymentsModal({
               )}
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input ref={importRef} type="file" accept=".xlsx,.xls" onChange={importExcel} style={{ display: 'none' }} />
+              <button
+                onClick={() => importRef.current?.click()}
+                title="ייבא מאקסל"
+                style={{
+                  padding: '6px 12px', borderRadius: '8px', border: '1px solid #2563eb',
+                  background: '#eff6ff', color: '#2563eb', fontSize: '13px', fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                📥 ייבא Excel
+              </button>
               {rows.length > 0 && (
                 <button
                   onClick={exportExcel}
+                  disabled={exporting}
                   title="ייצא לאקסל"
                   style={{
                     padding: '6px 12px', borderRadius: '8px', border: '1px solid #16a34a',
                     background: '#f0fdf4', color: '#16a34a', fontSize: '13px', fontWeight: 600,
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+                    cursor: exporting ? 'wait' : 'pointer', opacity: exporting ? 0.6 : 1,
                   }}
                 >
-                  📊 ייצא Excel
+                  {exporting ? 'מכין...' : '📊 ייצא Excel'}
                 </button>
               )}
               <Button size="sm" onClick={openAdd}>+ הוסף תשלום</Button>
