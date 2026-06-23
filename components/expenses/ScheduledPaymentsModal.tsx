@@ -422,7 +422,7 @@ export default function ScheduledPaymentsModal({
       if (rd instanceof Date) {
         isoDate = rd.toISOString().slice(0, 10)
       } else if (typeof rd === 'string') {
-        const m = rd.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+        const m = rd.match(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/)
         if (m) isoDate = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
       } else if (typeof rd === 'number') {
         const d = new Date(Math.round((rd - 25569) * 86400000))
