@@ -231,7 +231,7 @@ export default function ScheduledPaymentsModal({
     onRefresh?.()
   }
 
-  // ── Excel export (exceljs – full styling) ─────────────────────────────────
+  // ── Excel export (exceljs – matches user's exact design) ────────────────────
 
   async function exportExcel() {
     setExporting(true)
@@ -241,108 +241,137 @@ export default function ScheduledPaymentsModal({
       wb.creator = 'AutoFlow'
       const ws = wb.addWorksheet('תשלומים', { views: [{ rightToLeft: true }] })
 
-      // Column widths (A = rightmost in RTL view)
+      // RTL column order A=right: שולם | תאריך פירעון | תיאור | מספר צ'ק | ספק | סכום
       ws.columns = [
-        { width: 14 }, // A: סכום
-        { width: 14 }, // B: תאריך פירעון
-        { width: 16 }, // C: מספר צ'ק
-        { width: 30 }, // D: תיאור
-        { width: 22 }, // E: ספק
-        { width: 14 }, // F: אמצעי תשלום
-        { width: 8  }, // G: שולם
+        { width: 7.53  }, // A: שולם
+        { width: 14.83 }, // B: תאריך פירעון
+        { width: 19.66 }, // C: תיאור
+        { width: 10.45 }, // D: מספר צ'ק
+        { width: 25.96 }, // E: ספק
+        { width: 15.51 }, // F: סכום
       ]
 
-      const C = {
-        navy:  '1E3A5F', blue:  '2D5986', lblue: 'DCE9F8',
-        white: 'FFFFFF', lgray: 'F0F5FB', text:  '1E293B',
-        red:   'DC2626', green: '16A34A', border:'CBD5E1',
+      const NAVY  = '1F497D'
+      const LBLUE = 'DCE6F1'
+      const LGRAY = 'F2F5F8'
+      const WHITE = 'FFFFFF'
+      const BLACK = '000000'
+
+      const fill = (hex: string) => ({ type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: hex } })
+      const fnt  = (hex: string, bold = false, sz = 11) => ({ bold, size: sz, color: { argb: hex }, name: 'Arial' })
+      const aln  = (h: 'left' | 'center' | 'right' = 'right') => ({ horizontal: h, vertical: 'middle' as const })
+
+      // ── Row 1: Title — no bg fill, NAVY text, bold, size 16, height 21
+      const titleRow = ws.addRow(['ריכוז ותחזית תשלומים עתידיים', '', '', '', '', ''])
+      titleRow.height = 21
+      ws.mergeCells('A1:F1')
+      titleRow.getCell(1).font      = fnt(NAVY, true, 16)
+      titleRow.getCell(1).alignment = aln('center')
+
+      // ── Row 2: Print date in col F only, size 12
+      const dateRow = ws.addRow(['', '', '', '', '', `תאריך הדפסה: ${new Date().toLocaleDateString('he-IL')}`])
+      dateRow.height = 15
+      dateRow.getCell(6).font      = fnt(BLACK, false, 12)
+      dateRow.getCell(6).alignment = aln('center')
+
+      // ── Row 3: Empty
+      ws.addRow(['', '', '', '', '', ''])
+
+      // ── Row 4: Column headers — NAVY bg, white bold size 11, height 15
+      const hdrRow = ws.addRow(['שולם', 'תאריך פירעון', 'תיאור', "מספר צ'ק", 'ספק', 'סכום'])
+      hdrRow.height = 15
+      for (let col = 1; col <= 6; col++) {
+        hdrRow.getCell(col).fill      = fill(NAVY)
+        hdrRow.getCell(col).font      = fnt(WHITE, true, 11)
+        hdrRow.getCell(col).alignment = aln('center')
       }
-      const NCOLS = 7
-      const fill  = (hex: string) => ({ type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: hex } })
-      const fnt   = (hex: string, bold = false, sz = 11) => ({ bold, size: sz, color: { argb: hex }, name: 'Arial' })
-      const aln   = (h: 'left' | 'center' | 'right' = 'right') => ({ horizontal: h, vertical: 'middle' as const })
-      const bdr   = (hex = C.border) => { const s = { style: 'thin' as const, color: { argb: hex } }; return { top: s, bottom: s, left: s, right: s } }
-      const merge = (r: { number: number }) => ws.mergeCells(`A${r.number}:G${r.number}`)
 
-      // ── Title
-      const titleRow = ws.addRow(['ריכוז ותחזית תשלומים עתידיים', ...Array(NCOLS - 1).fill('')])
-      titleRow.height = 32; merge(titleRow)
-      Object.assign(titleRow.getCell(1), { fill: fill(C.navy), font: fnt(C.white, true, 16), alignment: aln('center') })
+      // ── Group by YYYY-MM
+      const HMONTHS = ['', 'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
 
-      // ── Print date
-      const dateSubRow = ws.addRow([`תאריך הדפסה: ${new Date().toLocaleDateString('he-IL')}`, ...Array(NCOLS - 1).fill('')])
-      dateSubRow.height = 18; merge(dateSubRow)
-      Object.assign(dateSubRow.getCell(1), { font: fnt(C.text, false, 10), alignment: aln('center') })
-
-      // ── Empty spacer
-      ws.addRow(Array(NCOLS).fill(''))
-
-      // ── Column headers
-      const hdrs = ['סכום', 'תאריך פירעון', "מספר צ'ק", 'תיאור', 'ספק', 'אמצעי תשלום', 'שולם']
-      const hdrRow = ws.addRow(hdrs); hdrRow.height = 22
-      hdrRow.eachCell(c => { c.fill = fill(C.navy); c.font = fnt(C.white, true); c.alignment = aln('center'); c.border = bdr(C.blue) })
-
-      // ── Group by due_date
       const grouped = rows.reduce<Record<string, ScheduledPayment[]>>((acc, r) => {
-        if (!acc[r.due_date]) acc[r.due_date] = []
-        acc[r.due_date].push(r)
+        const ym = r.due_date.slice(0, 7)
+        if (!acc[ym]) acc[ym] = []
+        acc[ym].push(r)
         return acc
       }, {})
 
       let grandTotal = 0
-      let alt = false
+      const allYears = Object.keys(grouped).map(ym => ym.slice(0, 4)).sort()
+      const maxYear  = allYears[allYears.length - 1] ?? String(new Date().getFullYear())
 
-      for (const [date, payments] of Object.entries(grouped).sort()) {
-        // Date group header
-        const grpRow = ws.addRow([fmtDate(date), ...Array(NCOLS - 1).fill('')])
-        grpRow.height = 20; merge(grpRow)
-        Object.assign(grpRow.getCell(1), {
-          fill: fill(C.blue), font: fnt(C.white, true, 12),
-          alignment: { horizontal: 'right', vertical: 'middle', indent: 1 },
+      for (const [ym, payments] of Object.entries(grouped).sort()) {
+        const [yyyy, mm] = ym.split('-')
+        const monthName  = HMONTHS[parseInt(mm, 10)]
+
+        // Month header: merged A:F, LBLUE bg, NAVY bold size 11, height 15
+        const mhRn  = ws.rowCount + 1
+        const mhRow = ws.addRow([`${monthName} ${yyyy}`, '', '', '', '', ''])
+        mhRow.height = 15
+        ws.mergeCells(`A${mhRn}:F${mhRn}`)
+        mhRow.getCell(1).fill      = fill(LBLUE)
+        mhRow.getCell(1).font      = fnt(NAVY, true, 11)
+        mhRow.getCell(1).alignment = aln('right')
+
+        // Data rows: no fill, size 12, sorted by supplier so same-supplier rows are consecutive
+        const sortedPayments = [...payments].sort((a, b) => {
+          const na = suppliers.find(s => s.id === a.supplier_id)?.name ?? ''
+          const nb = suppliers.find(s => s.id === b.supplier_id)?.name ?? ''
+          return na.localeCompare(nb, 'he')
         })
-
-        // Data rows
-        for (const p of payments) {
+        for (const p of sortedPayments) {
           const supplier = suppliers.find(s => s.id === p.supplier_id)?.name ?? ''
-          const dataRow = ws.addRow([
-            Number(p.amount), fmtDate(p.due_date), p.notes ?? '',
-            p.description, supplier,
-            p.payment_method === 'check' ? "צ'ק" : 'העברה',
+          const dataRow  = ws.addRow([
             p.is_paid ? '✓' : '',
+            fmtDate(p.due_date),
+            p.description,
+            p.notes ?? '',
+            supplier,
+            Number(p.amount),
           ])
-          dataRow.height = 18
-          const bg = alt ? C.lgray : C.white
-          dataRow.eachCell((c, col) => {
-            c.fill = fill(bg); c.border = bdr(); c.alignment = aln()
-            c.font = fnt(C.text)
-            if (col === 1) { c.numFmt = '#,##0.00'; c.font = fnt(C.red, true) }
-            if (col === 7 && p.is_paid) { c.font = fnt(C.green, true, 12); c.alignment = aln('center') }
-          })
+          dataRow.height = 15
+          for (let col = 1; col <= 6; col++) {
+            dataRow.getCell(col).font      = { size: 12, name: 'Arial' }
+            dataRow.getCell(col).alignment = aln('right')
+          }
+          dataRow.getCell(1).alignment = aln('center')
+          dataRow.getCell(6).numFmt    = '#,##0.00'
+          dataRow.getCell(6).alignment = aln('center')
           grandTotal += Number(p.amount)
-          alt = !alt
         }
 
-        // Subtotal row
-        const dateTotal = payments.reduce((s, p) => s + Number(p.amount), 0)
-        const subRow = ws.addRow([dateTotal, `סה"כ ${fmtDate(date)}`, ...Array(NCOLS - 2).fill('')])
-        subRow.height = 20
-        ws.mergeCells(`B${subRow.number}:G${subRow.number}`)
-        subRow.eachCell((c, col) => {
-          c.fill = fill(C.lblue); c.font = fnt(C.navy, true); c.border = bdr('93C5FD'); c.alignment = aln()
-          if (col === 1) c.numFmt = '#,##0.00'
-        })
+        // Subtotal: A:B merged with label (LGRAY), C:E empty (LGRAY), F amount (LGRAY, BLACK bold 11)
+        const monthTotal = payments.reduce((s, p) => s + Number(p.amount), 0)
+        const subRn      = ws.rowCount + 1
+        const subRow     = ws.addRow([`סה"כ לחודש ${monthName} ${yyyy}`, '', '', '', '', monthTotal])
+        subRow.height    = 15.75
+        ws.mergeCells(`A${subRn}:B${subRn}`)
+        for (let col = 1; col <= 6; col++) {
+          subRow.getCell(col).fill = fill(LGRAY)
+        }
+        subRow.getCell(1).font      = fnt(BLACK, true, 11)
+        subRow.getCell(1).alignment = aln('right')
+        subRow.getCell(6).font      = fnt(BLACK, true, 11)
+        subRow.getCell(6).numFmt    = '#,##0.00'
+        subRow.getCell(6).alignment = aln('center')
 
-        ws.addRow(Array(NCOLS).fill(''))
+        // Empty separator
+        ws.addRow(['', '', '', '', '', ''])
       }
 
-      // ── Grand total
-      const gtRow = ws.addRow([grandTotal, 'סה"כ כולל', ...Array(NCOLS - 2).fill('')])
-      gtRow.height = 26
-      ws.mergeCells(`B${gtRow.number}:G${gtRow.number}`)
-      gtRow.eachCell((c, col) => {
-        c.fill = fill(C.navy); c.font = fnt(C.white, true, 13); c.border = bdr(C.navy); c.alignment = aln()
-        if (col === 1) c.numFmt = '#,##0.00'
-      })
+      // ── Grand total: A empty (no bg), B:E merged label (LGRAY bold 14), F amount (LGRAY bold 14)
+      const gtRn  = ws.rowCount + 1
+      const gtRow = ws.addRow(['', `סה"כ כולל לשנת ${maxYear}`, '', '', '', grandTotal])
+      gtRow.height = 28.5
+      ws.mergeCells(`B${gtRn}:E${gtRn}`)
+      for (let col = 2; col <= 6; col++) {
+        gtRow.getCell(col).fill = fill(LGRAY)
+      }
+      gtRow.getCell(2).font      = fnt(BLACK, true, 14)
+      gtRow.getCell(2).alignment = aln('center')
+      gtRow.getCell(6).font      = fnt(BLACK, true, 14)
+      gtRow.getCell(6).numFmt    = '#,##0.00'
+      gtRow.getCell(6).alignment = aln('center')
 
       // ── Download
       const buf  = await wb.xlsx.writeBuffer()
@@ -380,12 +409,12 @@ export default function ScheduledPaymentsModal({
     for (const row of raw) {
       const r = row as unknown[]
       const description = String(r[2] ?? '').trim()
-      const rawAmount   = Number(r[6])
+      const rawAmount   = Number(r[5]) // col F = סכום
 
       if (!description || isNaN(rawAmount) || rawAmount <= 0) continue
-      if (description === 'תיאור') continue                          // header row
-      if (String(r[1] ?? '').includes('סה"כ')) continue             // subtotal rows
-      if (String(r[0] ?? '') === 'שולם') continue                   // column header row
+      if (description === 'תיאור') continue                          // column header row
+      if (String(r[0] ?? '').startsWith('סה"כ')) continue           // subtotal / grand total rows
+      if (String(r[0] ?? '') === 'שולם') continue                   // column header row (alt check)
 
       // Parse date from col B — Date object (cellDates:true), string "DD/MM/YYYY", or Excel serial
       let isoDate = ''
@@ -401,8 +430,8 @@ export default function ScheduledPaymentsModal({
       }
       if (!isoDate) continue
 
-      const notes  = String(r[3] ?? '').trim() || null
-      const method: 'check' | 'transfer' = String(r[5] ?? '').includes("צ'ק") ? 'check' : 'transfer'
+      const notes  = String(r[3] ?? '').trim() || null   // col D = מספר צ'ק
+      const method: 'check' | 'transfer' = notes ? 'check' : 'transfer'
       const key    = `${description}|${isoDate}|${rawAmount}`
       if (existing.has(key)) continue  // skip duplicate
 
