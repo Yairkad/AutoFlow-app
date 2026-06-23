@@ -1,0 +1,14 @@
+[
+  {
+    "id": "bug-001",
+    "timestamp": "2026-06-23T00:00:00.000Z",
+    "error_message": "Scan tab shows no inventory — tires/products never load, stuck on 'טוען...'",
+    "file": "app/scan/page.tsx",
+    "root_cause": "ScanPage rendered <ScanClient /> without AppShell wrapper. useProfile() returns null because ProfileProvider lives inside AppShell. The useEffect guard `if (!profile) return` prevented load() from ever running, leaving items=[] and loading=true indefinitely.",
+    "fix": "Added AppShell to app/scan/page.tsx: return <AppShell><ScanClient /></AppShell>",
+    "tags": ["AppShell", "ProfileContext", "scan", "useProfile", "missing-wrapper"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-06-23"
+  }
+]

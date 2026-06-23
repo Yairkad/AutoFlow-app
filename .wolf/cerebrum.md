@@ -22,6 +22,7 @@
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->
 <!-- Format: [YYYY-MM-DD] Description of what went wrong and what to do instead. -->
+- [2026-06-23] Every page that renders a `*Client.tsx` component using `useProfile()` MUST wrap it in `<AppShell>...</AppShell>`. If AppShell is missing, `ProfileProvider` is absent, `useProfile()` returns null, and data never loads. Pattern: `return <AppShell><XxxClient /></AppShell>`. Scan page was missing this.
 
 ## Key Learnings
 
