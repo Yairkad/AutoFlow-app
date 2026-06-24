@@ -365,9 +365,9 @@ export default function ProductsClient() {
 
   function exportExcel() {
     if (products.length === 0) return showToast('אין נתונים לייצוא', 'error')
-    const headers = ['מק"ט', 'שם מוצר', 'קטגוריה', 'יחידה', 'מחיר קנייה', 'מחיר מכירה', '% רווח', 'כמות', 'מינימום', 'ספק', 'הערות']
+    const headers = ['מק"ט', 'ברקוד', 'שם מוצר', 'קטגוריה', 'יחידה', 'מחיר קנייה', 'מחיר מכירה', '% רווח', 'כמות', 'מינימום', 'ספק', 'הערות']
     const rows = products.map(p => [
-      p.sku || '', p.name, p.category || '', p.unit,
+      p.sku || '', p.barcode || '', p.name, p.category || '', p.unit,
       p.buy_price ?? '', p.sell_price ?? '', p.margin || '',
       p.qty, p.min_qty,
       suppliers.find(s => s.id === p.supplier_id)?.name || '',
@@ -391,19 +391,20 @@ export default function ProductsClient() {
       if (rows.length < 2) return showToast('הקובץ ריק', 'error')
 
       const inserts = rows.slice(1)
-        .filter(r => r[1])
+        .filter(r => r[2])
         .map(r => ({
           tenant_id:   tenantId.current,
           sku:         r[0] ? String(r[0]) : null,
-          name:        String(r[1]),
-          category:    r[2] ? String(r[2]) : null,
-          unit:        r[3] ? String(r[3]) : 'יח׳',
-          buy_price:   parseFloat(String(r[4])) || null,
-          sell_price:  parseFloat(String(r[5])) || null,
-          margin:      parseFloat(String(r[6])) || 0,
-          qty:         parseInt(String(r[7])) || 0,
-          min_qty:     parseInt(String(r[8])) || 0,
-          notes:       r[10] ? String(r[10]) : null,
+          barcode:     r[1] ? String(r[1]) : null,
+          name:        String(r[2]),
+          category:    r[3] ? String(r[3]) : null,
+          unit:        r[4] ? String(r[4]) : 'יח׳',
+          buy_price:   parseFloat(String(r[5])) || null,
+          sell_price:  parseFloat(String(r[6])) || null,
+          margin:      parseFloat(String(r[7])) || 0,
+          qty:         parseInt(String(r[8])) || 0,
+          min_qty:     parseInt(String(r[9])) || 0,
+          notes:       r[11] ? String(r[11]) : null,
         }))
 
       if (inserts.length === 0) return showToast('לא נמצאו שורות תקינות', 'error')
