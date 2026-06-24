@@ -10,5 +10,29 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-06-23"
+  },
+  {
+    "id": "bug-002",
+    "timestamp": "2026-06-24T00:00:00.000Z",
+    "error_message": "בהצעות מחיר לא ניתן לבחור רוחב צמיג 125",
+    "file": "components/quotes/QuotesClient.tsx",
+    "root_cause": "WIDTHS array started at 145, missing 125 and 135",
+    "fix": "Added 125 and 135 to the beginning of the WIDTHS array",
+    "tags": ["quotes", "tire", "width", "select"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-06-24"
+  },
+  {
+    "id": "bug-003",
+    "timestamp": "2026-06-24T00:00:00.000Z",
+    "error_message": "ייצוא אקסל של מוצרים לא כולל עמודת ברקוד, וייבוא לא מקלוט ברקוד",
+    "file": "components/products/ProductsClient.tsx",
+    "root_cause": "exportExcel() headers and rows did not include barcode. importExcel() did not map barcode column and had no column slot for it.",
+    "fix": "Added 'ברקוד' as second column in export headers+rows. Updated import to read r[1] as barcode and shifted all subsequent column indices by 1 (name r[1]→r[2], category r[2]→r[3], etc.)",
+    "tags": ["products", "barcode", "excel", "export", "import"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-06-24"
   }
 ]
