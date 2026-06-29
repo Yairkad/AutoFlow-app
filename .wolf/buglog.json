@@ -34,5 +34,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-06-24"
+  },
+  {
+    "id": "bug-004",
+    "timestamp": "2026-06-29T00:00:00.000Z",
+    "error_message": "בחיפוש מוצרים לפי מספר ברקוד לא מוצא את הפריט",
+    "file": "components/products/ProductsClient.tsx, app/api/yard/search/route.ts",
+    "root_cause": "1) ProductsClient: hay variable in filter didn't include p.barcode. 2) yard/search route: products OR filter searched name+sku but not barcode column.",
+    "fix": "1) Added p.barcode to the hay join in ProductsClient.tsx line 172. 2) Added barcode to select and barcode.ilike to the OR filter in yard/search/route.ts.",
+    "tags": ["products", "barcode", "search", "filter", "yard-search"],
+    "related_bugs": ["bug-003"],
+    "occurrences": 1,
+    "last_seen": "2026-06-29"
   }
 ]

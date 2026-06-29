@@ -75,12 +75,12 @@ export async function GET(req: NextRequest) {
   if (type === 'all' || type === 'product') {
     let prodQuery = supabase
       .from('products')
-      .select('id, name, sku, sell_price, qty')
+      .select('id, name, sku, barcode, sell_price, qty')
       .eq('tenant_id', profile.tenant_id)
       .gt('qty', 0)
 
     if (q) {
-      prodQuery = prodQuery.or(`name.ilike.${search},sku.ilike.${search}`)
+      prodQuery = prodQuery.or(`name.ilike.${search},sku.ilike.${search},barcode.ilike.${search}`)
     }
 
     const { data: products } = await prodQuery.order('name').limit(30)
