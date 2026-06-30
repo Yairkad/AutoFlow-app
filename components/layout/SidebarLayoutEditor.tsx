@@ -5,6 +5,7 @@ import { saveUiSettings } from '@/lib/uiSettings'
 
 export type SectionConfig = { label: string | null; hrefs: string[] }
 export const SIDEBAR_LAYOUT_KEY = 'autoflow-sidebar-layout'
+export const SIDEBAR_HIDDEN_KEY  = 'autoflow-sidebar-hidden'
 
 type ItemMeta = { href: string; label: string; color: string }
 
@@ -13,15 +14,20 @@ type Props = {
   onClose: () => void
   defaultSections: SectionConfig[]
   allItems: ItemMeta[]
+  hiddenHrefs: string[]
   tenantId: string | null
-  onSave: (sections: SectionConfig[]) => void
+  onSave: (sections: SectionConfig[], hidden: string[]) => void
 }
 
-export default function SidebarLayoutEditor({ open, onClose, defaultSections, allItems, tenantId, onSave }: Props) {
+export default function SidebarLayoutEditor({ open, onClose, defaultSections, allItems, hiddenHrefs, tenantId, onSave }: Props) {
   const [sections, setSections] = useState<SectionConfig[]>([])
+  const [hidden, setHidden]     = useState<string[]>([])
 
   useEffect(() => {
-    if (open) setSections(defaultSections.map(s => ({ ...s, hrefs: [...s.hrefs] })))
+    if (open) {
+      setSections(defaultSections.map(s => ({ ...s, hrefs: [...s.hrefs] })))
+      setHidden([...hiddenHrefs])
+    }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!open) return null
@@ -76,17 +82,34 @@ export default function SidebarLayoutEditor({ open, onClose, defaultSections, al
     if (next.length > 0) next[0].hrefs = [...orphans, ...next[0].hrefs]
     setSections(next)
   }
+  function hideItem(href: string) {
+    const next = clone()
+    for (const s of next) s.hrefs = s.hrefs.filter(h => h !== href)
+    setSections(next)
+    setHidden(prev => [...prev, href])
+  }
+  function unhideItem(href: string) {
+    setHidden(prev => prev.filter(h => h !== href))
+    // restore to first section
+    setSections(prev => {
+      const next = prev.map(s => ({ ...s, hrefs: [...s.hrefs] }))
+      if (next.length > 0) next[0].hrefs.push(href)
+      return next
+    })
+  }
 
   function save() {
     localStorage.setItem(SIDEBAR_LAYOUT_KEY, JSON.stringify(sections))
-    if (tenantId) saveUiSettings(tenantId, { sidebar_layout: sections })
-    onSave(sections)
+    localStorage.setItem(SIDEBAR_HIDDEN_KEY, JSON.stringify(hidden))
+    if (tenantId) saveUiSettings(tenantId, { sidebar_layout: sections, sidebar_hidden: hidden })
+    onSave(sections, hidden)
     onClose()
   }
   function reset() {
     localStorage.removeItem(SIDEBAR_LAYOUT_KEY)
-    if (tenantId) saveUiSettings(tenantId, { sidebar_layout: undefined })
-    onSave(defaultSections)
+    localStorage.removeItem(SIDEBAR_HIDDEN_KEY)
+    if (tenantId) saveUiSettings(tenantId, { sidebar_layout: undefined, sidebar_hidden: undefined })
+    onSave(defaultSections, [])
     onClose()
   }
 
@@ -154,6 +177,17 @@ export default function SidebarLayoutEditor({ open, onClose, defaultSections, al
     btnDanger: {
       padding: '8px 16px', background: 'transparent', color: '#ef4444',
       border: '1px solid #fca5a5', borderRadius: '8px', fontSize: '13px', cursor: 'pointer',
+    },
+    btnHide: {
+      padding: '2px 7px', background: 'transparent', color: '#9ca3af',
+      border: '1px solid #e5e7eb', borderRadius: '5px', fontSize: '10px', cursor: 'pointer',
+      flexShrink: 0,
+    } as React.CSSProperties,
+    hiddenCard: { border: '1px dashed #e5e7eb', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 },
+    hiddenHead: {
+      background: '#f9fafb', padding: '8px 12px',
+      display: 'flex', alignItems: 'center', gap: '8px',
+      borderBottom: '1px dashed #e5e7eb',
     },
   }
 
@@ -224,6 +258,7 @@ export default function SidebarLayoutEditor({ open, onClose, defaultSections, al
 
                       <button style={S.iconBtn} onClick={() => moveItemUp(si, ii)} title="העלה">↑</button>
                       <button style={S.iconBtn} onClick={() => moveItemDown(si, ii)} title="הורד">↓</button>
+                      <button style={S.btnHide} onClick={() => hideItem(href)} title="הסתר לשונית">הסתר</button>
                     </div>
                   )
                 })}
@@ -238,6 +273,33 @@ export default function SidebarLayoutEditor({ open, onClose, defaultSections, al
           >
             + הוסף קטגוריה
           </button>
+
+          {/* Hidden items */}
+          {hidden.length > 0 && (
+            <div style={S.hiddenCard}>
+              <div style={S.hiddenHead}>
+                <span style={{ flex: 1, fontWeight: 600, fontSize: '12px', color: '#9ca3af' }}>
+                  מוסתרים ({hidden.length})
+                </span>
+                <span style={{ fontSize: '10px', color: '#d1d5db' }}>לחץ "הצג" להחזרה לתפריט</span>
+              </div>
+              <div style={S.sectionBody}>
+                {hidden.map(href => {
+                  const item = itemByHref[href]
+                  if (!item) return null
+                  return (
+                    <div key={href} style={{ ...S.row, opacity: 0.55 }}>
+                      <div style={{ ...S.iconBubble(item.color), filter: 'grayscale(0.7)' }} />
+                      <span style={{ flex: 1, textDecoration: 'line-through' }}>{item.label}</span>
+                      <button style={{ ...S.btnHide, color: 'var(--primary)', borderColor: 'var(--primary)' }} onClick={() => unhideItem(href)}>
+                        הצג
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import SidebarLayoutEditor, { SectionConfig, SIDEBAR_LAYOUT_KEY } from './SidebarLayoutEditor'
+import SidebarLayoutEditor, { SectionConfig, SIDEBAR_LAYOUT_KEY, SIDEBAR_HIDDEN_KEY } from './SidebarLayoutEditor'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 
 // ─── צבע הבועה לכל פריט ───────────────────────────────────────────────────────
@@ -61,12 +61,13 @@ const ICONS: Record<string, React.ReactNode> = {
 }
 
 // ─── Merge helper: adds any new hrefs (from SECTIONS) missing in saved layout ──
-function mergeMissingSections(saved: SectionConfig[]): SectionConfig[] {
+function mergeMissingSections(saved: SectionConfig[], hiddenHrefs: string[] = []): SectionConfig[] {
   const allSavedHrefs = new Set(saved.flatMap(s => s.hrefs))
+  const hiddenSet = new Set(hiddenHrefs)
   let result = saved.map(s => ({ ...s, hrefs: [...s.hrefs] }))
   for (const defaultSection of SECTIONS) {
     for (const href of defaultSection.hrefs) {
-      if (!allSavedHrefs.has(href)) {
+      if (!allSavedHrefs.has(href) && !hiddenSet.has(href)) {
         // Find matching section by label, or append to last section
         const target = result.find(s => s.label === defaultSection.label) ?? result[result.length - 1]
         target.hrefs.push(href)
@@ -187,6 +188,13 @@ export default function Sidebar({
       return saved ? mergeMissingSections(JSON.parse(saved)) : SECTIONS
     } catch { return SECTIONS }
   })
+  const [hiddenHrefs, setHiddenHrefs] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const saved = localStorage.getItem(SIDEBAR_HIDDEN_KEY)
+      return saved ? JSON.parse(saved) : []
+    } catch { return [] }
+  })
 
   const loaded     = !profileLoading
   const isAdmin     = profile?.isAdmin ?? false
@@ -197,11 +205,17 @@ export default function Sidebar({
 
   // Apply remote sidebar layout (saved per-tenant) once the profile/tenant loads
   useEffect(() => {
-    const remote = (profile?.tenant?.ui_settings as any)?.sidebar_layout
-    if (!remote) return
-    const merged = mergeMissingSections(remote)
-    setActiveSections(merged)
-    localStorage.setItem(SIDEBAR_LAYOUT_KEY, JSON.stringify(merged))
+    const ui = profile?.tenant?.ui_settings as any
+    if (!ui) return
+    if (ui.sidebar_layout) {
+      const merged = mergeMissingSections(ui.sidebar_layout, ui.sidebar_hidden ?? [])
+      setActiveSections(merged)
+      localStorage.setItem(SIDEBAR_LAYOUT_KEY, JSON.stringify(merged))
+    }
+    if (ui.sidebar_hidden) {
+      setHiddenHrefs(ui.sidebar_hidden)
+      localStorage.setItem(SIDEBAR_HIDDEN_KEY, JSON.stringify(ui.sidebar_hidden))
+    }
   }, [profile?.tenant])
 
   // Clear pending state on route change
@@ -211,12 +225,15 @@ export default function Sidebar({
     onClose?.()
   }, [pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function isVisible(item: NavItem) {
+  function isModuleVisible(item: NavItem) {
     if (!loaded) return false
     if (isAdmin && item.href !== '/my-profile') return true
     if (item.module === null) return true
     const required = Array.isArray(item.module) ? item.module : [item.module]
     return required.some(m => modules.includes(m))
+  }
+  function isVisible(item: NavItem) {
+    return isModuleVisible(item) && !hiddenHrefs.includes(item.href)
   }
 
   const itemsByHref = Object.fromEntries(NAV_ITEMS.map(i => [i.href, i]))
@@ -364,9 +381,13 @@ export default function Sidebar({
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
         defaultSections={SECTIONS}
-        allItems={NAV_ITEMS.filter(isVisible).map(({ href, label, color }) => ({ href, label, color }))}
+        allItems={NAV_ITEMS.filter(isModuleVisible).map(({ href, label, color }) => ({ href, label, color }))}
+        hiddenHrefs={hiddenHrefs}
         tenantId={tenantId}
-        onSave={setActiveSections}
+        onSave={(sections, hidden) => {
+          setActiveSections(sections)
+          setHiddenHrefs(hidden)
+        }}
       />
     </>
   )

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/client'
 
 export type UiSettings = {
   sidebar_layout?: { label: string | null; hrefs: string[] }[]
+  sidebar_hidden?: string[]
   dashboard_layout?: Record<string, string>
 }
 
