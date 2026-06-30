@@ -501,54 +501,73 @@ function printSellerWaiver(bizNameStr: string, logoBase64: string, subTitle: str
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;900&display=swap');
     * { box-sizing:border-box; margin:0; padding:0; }
-    @page { size:A4 portrait; margin:0; }
-    body { font-family:'Heebo',Arial,sans-serif; direction:rtl; background:#fff; }
-    .pp { width:210mm; height:296mm; padding:10mm 15mm; display:flex; flex-direction:column; }
-    .pp-bsd { text-align:right; font-weight:bold; font-size:11px; margin-bottom:3px; }
-    .pp-hdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:5mm; padding-bottom:4mm; border-bottom:2px solid #000; flex-shrink:0; }
-    .pp-biz { font-weight:bold; font-size:13px; line-height:1.4; }
-    .pp-biz-name { font-size:16px; font-weight:900; }
+    body { font-family:'Heebo',Arial,sans-serif; direction:rtl; background:#e5e7eb; }
+
+    /* ══ SCREEN — נוח למילוי ══ */
+    .wrap { max-width:740px; margin:0 auto; padding:30px 20px; display:flex; flex-direction:column; gap:20px; }
+    .pp-bsd { text-align:right; font-weight:bold; font-size:12px; }
+    .pp-hdr { display:flex; justify-content:space-between; align-items:center; padding-bottom:16px; border-bottom:2px solid #000; }
+    .pp-biz { font-weight:bold; font-size:14px; line-height:1.6; }
+    .pp-biz-name { font-size:20px; font-weight:900; }
     .pp-logo-wrap { text-align:center; }
-    .pp-logo-img { max-height:110px; max-width:240px; object-fit:contain; display:block; margin:0 auto; }
-    .pp-logo-svc { font-size:9px; text-align:center; font-weight:bold; margin-top:4px; letter-spacing:0.5px; color:#333; }
-    /* ── Title ── */
-    .doc-title { text-align:center; font-size:17px; font-weight:900; border-bottom:2px solid #1a56db; padding-bottom:3mm; margin-bottom:5mm; flex-shrink:0; }
-    /* ── Sections ── */
-    .two-cols { display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin-bottom:4mm; }
-    .sec { border:1px solid #d0d7e3; border-radius:6px; padding:4mm 5mm; background:#f8f9fb; }
-    .sec-title { font-size:11px; font-weight:700; color:#1a56db; margin-bottom:3mm; }
-    .row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:3mm; }
-    .field { display:flex; flex-direction:column; gap:1.5mm; }
-    label { font-size:11px; font-weight:600; color:#555; }
-    input { padding:5px 8px; border:1px solid #bbb; border-radius:4px; font-size:13px; font-family:inherit; background:#fff; width:100%; }
-    input:focus { outline:none; border-color:#1a56db; }
-    /* ── Declaration ── */
-    .decl { border:1px solid #d0d7e3; border-radius:6px; padding:4mm 5mm; background:#f8f9fb; flex:1; margin-bottom:4mm; }
-    .decl-title { font-size:11px; font-weight:700; color:#1a56db; margin-bottom:3mm; }
-    .decl ul { padding-right:5mm; font-size:12px; line-height:1.75; text-align:justify; }
-    .decl li { margin-bottom:2.5mm; }
-    /* ── Signatures ── */
-    .sigs { display:flex; justify-content:space-around; padding-top:4mm; border-top:1px solid #ddd; flex-shrink:0; }
-    .sig-box { text-align:center; width:38%; font-size:13px; font-weight:600; }
-    .sig-line { margin-top:12mm; border-top:1.5px solid #333; }
-    /* ── Print button (screen only) ── */
-    .print-btn { display:block; width:180px; margin:5mm auto 0; padding:10px; background:#1a56db; color:#fff; border:none; border-radius:6px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; flex-shrink:0; }
-    @media screen { body { background:#e5e7eb; padding:30px; } .pp { box-shadow:0 4px 32px rgba(0,0,0,.18); } }
+    .pp-logo-img { max-height:110px; max-width:220px; object-fit:contain; display:block; margin:0 auto; }
+    .pp-logo-svc { font-size:10px; font-weight:bold; margin-top:5px; color:#444; letter-spacing:0.5px; }
+    .doc-title { text-align:center; font-size:20px; font-weight:900; border-bottom:2.5px solid #1a56db; padding-bottom:10px; }
+    .two-cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .sec { background:#fff; border:1px solid #d0d7e3; border-radius:10px; padding:16px 18px; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+    .sec-title { font-size:13px; font-weight:700; color:#1a56db; margin-bottom:12px; }
+    .row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+    .field { display:flex; flex-direction:column; gap:5px; }
+    label { font-size:12px; font-weight:600; color:#555; }
+    input { padding:9px 12px; border:1.5px solid #ccc; border-radius:7px; font-size:15px; font-family:inherit; background:#fafafa; width:100%; transition:border-color .15s; }
+    input:focus { outline:none; border-color:#1a56db; background:#fff; }
+    .decl { background:#fff; border:1px solid #d0d7e3; border-radius:10px; padding:16px 18px; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+    .decl-title { font-size:13px; font-weight:700; color:#1a56db; margin-bottom:10px; }
+    .decl ul { padding-right:18px; font-size:14px; line-height:1.8; color:#222; text-align:justify; }
+    .decl li { margin-bottom:6px; }
+    .sigs { display:flex; justify-content:space-around; padding-top:16px; border-top:1px solid #ddd; }
+    .sig-box { text-align:center; width:38%; font-size:14px; font-weight:600; }
+    .sig-line { margin-top:40px; border-top:1.5px solid #333; }
+    .print-btn { display:block; width:200px; margin:0 auto; padding:12px; background:#1a56db; color:#fff; border:none; border-radius:8px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; }
+    .print-btn:hover { background:#1e40af; }
+
+    /* ══ PRINT — עמוד A4 אחד ══ */
+    @page { size:A4 portrait; margin:10mm 12mm; }
     @media print {
+      body { background:#fff; }
+      .wrap { max-width:100%; padding:0; gap:5mm; }
+      .pp-bsd { font-size:10px; }
+      .pp-hdr { padding-bottom:4mm; margin-bottom:0; }
+      .pp-biz { font-size:11px; }
+      .pp-biz-name { font-size:15px; }
+      .pp-logo-img { max-height:80px; max-width:160px; }
+      .pp-logo-svc { font-size:8px; }
+      .doc-title { font-size:15px; padding-bottom:3mm; }
+      .two-cols { gap:4mm; }
+      .sec { padding:3mm 4mm; border-radius:5px; box-shadow:none; background:none; border-color:#bbb; }
+      .sec-title { font-size:10px; margin-bottom:2mm; }
+      .row-3 { gap:3mm; }
+      label { font-size:9px; }
+      input { padding:2px 5px; font-size:11px; border:none; border-bottom:1px dashed #555; border-radius:0; background:transparent; }
+      .decl { padding:3mm 4mm; border-radius:5px; box-shadow:none; background:none; border-color:#bbb; }
+      .decl-title { font-size:10px; margin-bottom:2mm; }
+      .decl ul { font-size:10px; line-height:1.6; }
+      .decl li { margin-bottom:1.5mm; }
+      .sigs { padding-top:4mm; }
+      .sig-box { font-size:11px; }
+      .sig-line { margin-top:12mm; }
       .print-btn { display:none; }
-      .sec, .decl { background:none; border-color:#bbb; }
-      input { border:none; border-bottom:1px dashed #555; border-radius:0; padding:2px 4px; background:transparent; }
     }
   </style>
 </head>
 <body>
-<div class="pp">
+<div class="wrap">
   <div class="pp-bsd">בס"ד</div>
 
   <div class="pp-hdr">
     <div class="pp-biz">
       <div class="pp-biz-name">${bizNameStr}</div>
-      ${subTitle ? `<div style="font-size:12px">${subTitle}</div>` : ''}
+      ${subTitle ? `<div style="font-size:13px">${subTitle}</div>` : ''}
       ${address  ? `<div>${address}</div>`    : ''}
       ${phone    ? `<div>טל׳: ${phone}</div>` : ''}
       ${license  ? `<div>מס׳ רישיון מוסך: ${license}</div>` : ''}
