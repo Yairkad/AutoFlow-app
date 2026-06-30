@@ -22,6 +22,11 @@
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->
 <!-- Format: [YYYY-MM-DD] Description of what went wrong and what to do instead. -->
+- [2026-06-23] Every page that renders a `*Client.tsx` component using `useProfile()` MUST wrap it in `<AppShell>...</AppShell>`. If AppShell is missing, `ProfileProvider` is absent, `useProfile()` returns null, and data never loads. Pattern: `return <AppShell><XxxClient /></AppShell>`. Scan page was missing this.
+
+## Key Learnings
+
+- **Inspection checklist skeleton_only (2026-06-17):** skeleton_only flag stored in `findings` JSON as `{ skeleton_only: true, items: [...], notes: '' }`. No DB column needed. SKELETON_SYSTEM_INDICES = Set([16, 17]) — שלדת מרכב, מרכב (פחחות). Status 'na' added to ChecklistItem for non-skeleton systems. parseFindings() auto-applies 'na' when skeleton_only=true.
 
 ## Decision Log
 

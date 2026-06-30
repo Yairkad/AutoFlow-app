@@ -1,0 +1,50 @@
+[
+  {
+    "id": "bug-001",
+    "timestamp": "2026-06-23T00:00:00.000Z",
+    "error_message": "Scan tab shows no inventory — tires/products never load, stuck on 'טוען...'",
+    "file": "app/scan/page.tsx",
+    "root_cause": "ScanPage rendered <ScanClient /> without AppShell wrapper. useProfile() returns null because ProfileProvider lives inside AppShell. The useEffect guard `if (!profile) return` prevented load() from ever running, leaving items=[] and loading=true indefinitely.",
+    "fix": "Added AppShell to app/scan/page.tsx: return <AppShell><ScanClient /></AppShell>",
+    "tags": ["AppShell", "ProfileContext", "scan", "useProfile", "missing-wrapper"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-06-23"
+  },
+  {
+    "id": "bug-002",
+    "timestamp": "2026-06-24T00:00:00.000Z",
+    "error_message": "בהצעות מחיר לא ניתן לבחור רוחב צמיג 125",
+    "file": "components/quotes/QuotesClient.tsx",
+    "root_cause": "WIDTHS array started at 145, missing 125 and 135",
+    "fix": "Added 125 and 135 to the beginning of the WIDTHS array",
+    "tags": ["quotes", "tire", "width", "select"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-06-24"
+  },
+  {
+    "id": "bug-003",
+    "timestamp": "2026-06-24T00:00:00.000Z",
+    "error_message": "ייצוא אקסל של מוצרים לא כולל עמודת ברקוד, וייבוא לא מקלוט ברקוד",
+    "file": "components/products/ProductsClient.tsx",
+    "root_cause": "exportExcel() headers and rows did not include barcode. importExcel() did not map barcode column and had no column slot for it.",
+    "fix": "Added 'ברקוד' as second column in export headers+rows. Updated import to read r[1] as barcode and shifted all subsequent column indices by 1 (name r[1]→r[2], category r[2]→r[3], etc.)",
+    "tags": ["products", "barcode", "excel", "export", "import"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-06-24"
+  },
+  {
+    "id": "bug-004",
+    "timestamp": "2026-06-29T00:00:00.000Z",
+    "error_message": "בחיפוש מוצרים לפי מספר ברקוד לא מוצא את הפריט",
+    "file": "components/products/ProductsClient.tsx, app/api/yard/search/route.ts",
+    "root_cause": "1) ProductsClient: hay variable in filter didn't include p.barcode. 2) yard/search route: products OR filter searched name+sku but not barcode column.",
+    "fix": "1) Added p.barcode to the hay join in ProductsClient.tsx line 172. 2) Added barcode to select and barcode.ilike to the OR filter in yard/search/route.ts.",
+    "tags": ["products", "barcode", "search", "filter", "yard-search"],
+    "related_bugs": ["bug-003"],
+    "occurrences": 1,
+    "last_seen": "2026-06-29"
+  }
+]

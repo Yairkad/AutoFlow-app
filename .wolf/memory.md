@@ -475,3 +475,12 @@
 | 09:05 | Fixed latent bug in ExpensesClient.importExcel: profiles.select('tenant_id').single() with no .eq(id) filter would break for any tenant with >1 employee (RLS returns all tenant profiles) | ExpensesClient.tsx | done | ~30 |
 | 09:05 | tsc --noEmit passed clean after full refactor; next build blocked only by sandbox lacking network access to fonts.googleapis.com (unrelated to changes) | - | verified | ~10 |
 | 09:09 | Session end: 87 writes across 25 files (client.ts, ScanClient.tsx, ProfileContext.tsx, AppShell.tsx, Header.tsx) | 27 reads | ~301513 tok |
+| 14:30 | Added skeleton-only inspection checkbox to entry form and edit modal | InspectionsClient.tsx, InspectionChecklistModal.tsx | success — pushed to claude/skeleton-inspection-checkbox-t5f9iw | ~4500 |
+
+## Session: 2026-06-23
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:00 | fix(scan): added AppShell to scan page — useProfile() returned null, inventory never loaded | app/scan/page.tsx | done | ~80 tok |
+| 12:00 | feat(expenses): added Excel export to ScheduledPaymentsModal — grouped by date, מספר צ'ק from notes | components/expenses/ScheduledPaymentsModal.tsx | done | ~300 tok |
+| 12:00 | Created buglog.json, logged scan bug (missing AppShell) | .wolf/buglog.json | done | ~50 tok |

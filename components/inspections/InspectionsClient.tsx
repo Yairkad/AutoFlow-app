@@ -106,6 +106,7 @@ function Section({ icon, title, children }: { icon: string; title: string; child
 // ── Print Report (new window, same pattern as printChecklist) ─────────────────
 
 function printReport(ins: Inspection, biz: BusinessInfo) {
+  const { skeletonOnly } = parseFindings(ins.findings)
   const dateStr = ins.date || todayStr()
   const makeModel = [ins.make, ins.model].filter(Boolean).join(' ')
   const emptyLines = Array.from({ length: 18 }).map(() => '<div class="pp-empty-line"></div>').join('')
@@ -183,7 +184,7 @@ body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #fff
   ${banner}
   <div class="pp-doc-titles">
     <h2>הצהרה על-פי הוראת נוהל מחייבת (2/98) של משרד התחבורה למדדים לבדיקת רכב לצרכי קניה ומכירה</h2>
-    <h1>דו"ח קליטה – בדיקת רכב</h1>
+    <h1>דו"ח קליטה – ${skeletonOnly ? 'בדיקת שלדה בלבד' : 'בדיקת רכב'}</h1>
   </div>
   <div class="pp-info-grid">
     <div class="pp-info-section">
@@ -204,7 +205,7 @@ body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #fff
   </div>
   <div class="pp-legal">
     <ol class="pp-legal-list">
-      <li>אני <span class="pp-fill">${ins.owner_name}</span> בעל ת.ז. <span class="pp-fill">${ins.owner_id || ''}</span> אשר צילומו לוטה, מזמין בזאת את בדיקת הרכב אשר פרטיו מפורטים ברישיון הרכב, אשר צילומו לוטה. ידוע לי, כי הבדיקה הינה בדיקה כללית הכוללת בדיקה <strong>מכנית וממוחשבת / מכנית בלבד ללא בדיקת מערכות אלקטרוניות וממוחשבות</strong></li>
+      <li>אני <span class="pp-fill">${ins.owner_name}</span> בעל ת.ז. <span class="pp-fill">${ins.owner_id || ''}</span> אשר צילומו לוטה, מזמין בזאת את בדיקת הרכב אשר פרטיו מפורטים ברישיון הרכב, אשר צילומו לוטה. ידוע לי, כי הבדיקה הינה ${skeletonOnly ? '<strong>בדיקת שלדה בלבד</strong> (פחחות ושלדת מרכב בלבד, ללא בדיקת מנוע, מערכות הנעה ומערכות אחרות)' : 'בדיקה כללית הכוללת בדיקה <strong>מכנית וממוחשבת / מכנית בלבד ללא בדיקת מערכות אלקטרוניות וממוחשבות</strong>'}</li>
       <li>ידוע לי, כי אחריות על הבדיקה הינה לתקופה של שלושה חודשים או 6,000 ק"מ, לפי המוקדם מבניהם.</li>
       <li>ידוע לי, כי מכון הבדיקה אינו אחראי בכל דרך שהיא לזיופים או שינויים כלשהם בנתונים ו/או במספרים כלשהם ברכב ו/או במסמכיו, לרבות ברישיון הרכב ולתוצאותיהם של הללו, וכי מכון הבדיקה מבצע הבדיקה בכפוף ובהסתמך על הצהרתי זו.</li>
     </ol>
@@ -326,6 +327,8 @@ export default function InspectionsClient() {
   const [editModalOpen,  setEditModalOpen]  = useState(false)
   const [checklistIns,   setChecklistIns]  = useState<Inspection | null>(null)
   const [findingsMenuId, setFindingsMenuId] = useState<string | null>(null)
+  const [skeletonOnly,   setSkeletonOnly]   = useState(false)
+  const [editingInspection, setEditingInspection] = useState<Inspection | null>(null)
   const inspectorNames = ['שרון מועלם']
 
   // ── Load ────────────────────────────────────────────────────────────────────
@@ -403,10 +406,14 @@ export default function InspectionsClient() {
     setForm({ ...emptyForm })
     setFieldErrors(new Set())
     setEditModalOpen(false)
+    setSkeletonOnly(false)
+    setEditingInspection(null)
   }
 
   const openEdit = (ins: Inspection) => {
     setEditingId(ins.id)
+    setEditingInspection(ins)
+    setSkeletonOnly(parseFindings(ins.findings).skeletonOnly)
     setForm({
       plate:          ins.plate,
       make:           ins.make           ?? '',
@@ -442,7 +449,14 @@ export default function InspectionsClient() {
     setFieldErrors(new Set())
     setSaving(true)
 
-    const payload = {
+    // Compute findings update to store skeleton_only flag
+    const existingFindings = parseFindings(editingInspection?.findings ?? null)
+    const needsFindingsUpdate = skeletonOnly !== existingFindings.skeletonOnly || skeletonOnly
+    const findingsPayload = needsFindingsUpdate
+      ? JSON.stringify({ skeleton_only: skeletonOnly, items: existingFindings.items, notes: existingFindings.notes })
+      : undefined
+
+    const payload: Record<string, unknown> = {
       tenant_id:    tenantId.current,
       plate:        form.plate.trim(),
       make:         form.make.trim()      || null,
@@ -462,6 +476,7 @@ export default function InspectionsClient() {
       time:         nowTimeStr(),
       date:         todayStr(),
       status:       'completed' as const,
+      ...(findingsPayload !== undefined ? { findings: findingsPayload } : {}),
     }
 
     let saved: Inspection | null = null
@@ -500,7 +515,13 @@ export default function InspectionsClient() {
     setFieldErrors(new Set())
     setSaving(true)
 
-    const payload = {
+    const existingFindings2 = parseFindings(editingInspection?.findings ?? null)
+    const needsFindingsUpdate2 = skeletonOnly !== existingFindings2.skeletonOnly || skeletonOnly
+    const findingsPayload2 = needsFindingsUpdate2
+      ? JSON.stringify({ skeleton_only: skeletonOnly, items: existingFindings2.items, notes: existingFindings2.notes })
+      : undefined
+
+    const payload: Record<string, unknown> = {
       tenant_id:    tenantId.current,
       plate:        form.plate.trim(),
       make:         form.make.trim()      || null,
@@ -520,6 +541,7 @@ export default function InspectionsClient() {
       time:         nowTimeStr(),
       date:         todayStr(),
       status:       'completed' as const,
+      ...(findingsPayload2 !== undefined ? { findings: findingsPayload2 } : {}),
     }
 
     if (editingId) {
@@ -565,8 +587,8 @@ export default function InspectionsClient() {
   // ── Print checklist (direct from list) ──────────────────────────────────────
 
   const printChecklistFromList = (ins: Inspection) => {
-    const { items, notes } = parseFindings(ins.findings)
-    printChecklist(ins, bizInfo.current, items, notes, ins.inspector ?? '')
+    const { items, notes, skeletonOnly: so } = parseFindings(ins.findings)
+    printChecklist(ins, bizInfo.current, items, notes, ins.inspector ?? '', so)
   }
 
   // ── Clear findings ───────────────────────────────────────────────────────────
@@ -783,13 +805,31 @@ export default function InspectionsClient() {
             display: 'flex', gap: 10, alignItems: 'center',
             background: 'var(--bg-card)', border: '1px solid var(--border)',
             borderRadius: 'var(--radius)', padding: '12px 18px',
-            flexShrink: 0,
+            flexShrink: 0, flexWrap: 'wrap',
           }}>
+            {/* Skeleton-only checkbox */}
+            <label style={{
+              display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+              padding: '6px 12px', borderRadius: 8, flexShrink: 0, whiteSpace: 'nowrap',
+              border: `1.5px solid ${skeletonOnly ? 'var(--primary)' : 'var(--border)'}`,
+              background: skeletonOnly ? 'var(--primary-light, #e8f7f0)' : 'var(--bg)',
+            }}>
+              <input
+                type="checkbox"
+                checked={skeletonOnly}
+                onChange={e => setSkeletonOnly(e.target.checked)}
+                style={{ width: 15, height: 15, accentColor: 'var(--primary)', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: 13, fontWeight: 700, color: skeletonOnly ? 'var(--primary)' : 'var(--text)' }}>
+                בדיקת שלדה בלבד
+              </span>
+            </label>
+
             <Button
               fullWidth
               onClick={handlePrintAndSave}
               disabled={saving}
-              style={{ fontSize: 15, fontWeight: 800, padding: '10px 0' }}
+              style={{ fontSize: 15, fontWeight: 800, padding: '10px 0', minWidth: 180 }}
             >
               {saving ? 'שומר...' : '🖨️ הדפס מסמך ושמור'}
             </Button>
@@ -1146,10 +1186,28 @@ export default function InspectionsClient() {
                 display: 'flex', gap: 10, alignItems: 'center',
                 background: 'var(--bg-card)', border: '1px solid var(--border)',
                 borderRadius: 'var(--radius)', padding: '12px 18px',
-                position: 'sticky', bottom: 0,
+                position: 'sticky', bottom: 0, flexWrap: 'wrap',
               }}>
+                {/* Skeleton-only checkbox */}
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                  padding: '6px 12px', borderRadius: 8, flexShrink: 0, whiteSpace: 'nowrap',
+                  border: `1.5px solid ${skeletonOnly ? 'var(--primary)' : 'var(--border)'}`,
+                  background: skeletonOnly ? 'var(--primary-light, #e8f7f0)' : 'var(--bg)',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={skeletonOnly}
+                    onChange={e => setSkeletonOnly(e.target.checked)}
+                    style={{ width: 15, height: 15, accentColor: 'var(--primary)', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: skeletonOnly ? 'var(--primary)' : 'var(--text)' }}>
+                    בדיקת שלדה בלבד
+                  </span>
+                </label>
+
                 <Button fullWidth onClick={handlePrintAndSave} disabled={saving}
-                  style={{ fontSize: 15, fontWeight: 800, padding: '10px 0' }}>
+                  style={{ fontSize: 15, fontWeight: 800, padding: '10px 0', minWidth: 160 }}>
                   {saving ? 'שומר...' : '🖨️ הדפס ושמור'}
                 </Button>
                 <Button variant="secondary" onClick={handleSaveOnly} disabled={saving}
