@@ -169,7 +169,7 @@ export default function ProductsClient() {
     if (filterStock === 'out' && p.qty !== 0) return false
     if (filterStock === 'low' && !(p.min_qty > 0 && p.qty <= p.min_qty && p.qty > 0)) return false
     if (search) {
-      const hay = [p.name, p.category, p.sku, p.notes, p.unit].join(' ').toLowerCase()
+      const hay = [p.name, p.category, p.sku, p.barcode, p.notes, p.unit].join(' ').toLowerCase()
       if (!hay.includes(search.toLowerCase())) return false
     }
     return true
