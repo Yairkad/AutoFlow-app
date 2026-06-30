@@ -488,117 +488,148 @@ function printWarranty(copies: number, bizNameStr: string, logoBase64: string, s
   w.document.close()
 }
 
-function printSellerWaiver() {
+function printSellerWaiver(bizName: string, logo: string, subTitle: string, phone: string, address: string, license: string) {
+  const logoHTML = logo
+    ? `<img src="${logo}" style="max-height:70px;max-width:160px;object-fit:contain;display:block">`
+    : `<div style="width:80px;height:50px;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:10px;color:#aaa">לוגו</div>`
+
   const html = `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>טופס הסרת אחריות מוכר בעת קניית רכב</title>
+  <title>הסרת אחריות מוכר</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;900&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    @page { size: A4 portrait; margin: 15mm; }
-    body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #f4f6f9; color: #333; padding: 20px; }
-    .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-    h1 { text-align: center; color: #2c3e50; font-size: 22pt; font-weight: 900; margin-bottom: 8mm; border-bottom: 2.5px solid #2980b9; padding-bottom: 5mm; }
-    .section { margin-bottom: 6mm; padding: 4mm 5mm; border: 1px solid #dde; border-radius: 6px; background: #fafafa; }
-    .section-title { font-weight: 700; color: #2980b9; margin-bottom: 4mm; font-size: 14pt; }
-    .form-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 4mm; }
-    .field { display: flex; flex-direction: column; }
-    label { font-size: 11pt; margin-bottom: 2mm; color: #555; font-weight: 600; }
-    input[type="text"], input[type="tel"], input[type="datetime-local"] {
-      padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13pt;
-      background: #fff; outline: none; transition: border-color 0.2s; font-family: inherit;
+    @page { size: A4 portrait; margin: 10mm; }
+    body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #f0f0f0; }
+    .page {
+      width: 190mm; background: #fff;
+      padding: 6mm 8mm;
+      display: flex; flex-direction: column; gap: 3mm;
     }
-    input:focus { border-color: #3498db; }
-    .declaration-text { line-height: 1.9; text-align: justify; font-size: 13pt; }
-    .declaration-text ul { padding-right: 6mm; margin: 3mm 0; }
-    .declaration-text li { margin-bottom: 4mm; }
-    .signature-section { display: flex; justify-content: space-around; margin-top: 12mm; padding-top: 6mm; border-top: 1px solid #e0e0e0; }
-    .signature-box { text-align: center; width: 40%; }
-    .signature-line { margin-top: 14mm; border-top: 1.5px solid #333; width: 100%; }
-    .print-btn { display: block; width: 200px; margin: 8mm auto 0; padding: 12px; background-color: #2ecc71; color: white; border: none; border-radius: 5px; font-size: 15pt; font-weight: bold; cursor: pointer; text-align: center; font-family: inherit; }
-    .print-btn:hover { background-color: #27ae60; }
+    /* ── Business header ── */
+    .biz-hdr { display: flex; justify-content: space-between; align-items: center; padding-bottom: 3mm; border-bottom: 2px solid #000; }
+    .biz-info { font-size: 9px; line-height: 1.4; }
+    .biz-name { font-size: 13px; font-weight: 900; }
+    /* ── Page title ── */
+    .doc-title { text-align: center; font-size: 13px; font-weight: 900; border-bottom: 2px solid #1a56db; padding-bottom: 1.5mm; }
+    /* ── Sections ── */
+    .sec { border: 1px solid #d0d7e3; border-radius: 4px; padding: 2mm 3mm; background: #f8f9fb; }
+    .sec-title { font-size: 8px; font-weight: 700; color: #1a56db; margin-bottom: 1.5mm; text-transform: uppercase; letter-spacing: 0.3px; }
+    .row { display: grid; gap: 2mm; }
+    .row-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .row-2 { grid-template-columns: 1fr 1fr; }
+    .two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm; }
+    .field { display: flex; flex-direction: column; gap: 1mm; }
+    label { font-size: 8px; font-weight: 600; color: #555; }
+    input {
+      padding: 2px 5px; border: 1px solid #bbb; border-radius: 3px;
+      font-size: 10px; font-family: inherit; background: #fff; width: 100%;
+    }
+    input:focus { outline: none; border-color: #1a56db; }
+    /* ── Declaration ── */
+    .decl { font-size: 8.5px; line-height: 1.55; text-align: justify; }
+    .decl ul { padding-right: 4mm; }
+    .decl li { margin-bottom: 1mm; }
+    /* ── Signatures ── */
+    .sigs { display: flex; justify-content: space-around; margin-top: 1mm; }
+    .sig-box { text-align: center; width: 38%; font-size: 9px; font-weight: 600; }
+    .sig-line { margin-top: 8mm; border-top: 1.5px solid #333; }
+    /* ── Print button ── */
+    .print-btn {
+      display: block; width: 160px; margin: 4mm auto 0; padding: 8px;
+      background: #1a56db; color: #fff; border: none; border-radius: 5px;
+      font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    }
+    @media screen {
+      body { padding: 20px; }
+      .page { box-shadow: 0 4px 24px rgba(0,0,0,.15); margin: 0 auto; border-radius: 4px; }
+    }
     @media print {
-      body { background: #fff; padding: 0; }
-      .container { box-shadow: none; padding: 0; max-width: 100%; }
+      body { background: #fff; }
+      .page { width: 100%; padding: 0; box-shadow: none; }
       .print-btn { display: none; }
-      input { border: none; border-bottom: 1px dashed #000; border-radius: 0; padding: 2px; background: transparent; }
-      .section { background: none; border: none; padding: 0; margin-bottom: 5mm; }
+      .sec { background: none; border-color: #bbb; }
+      input { border: none; border-bottom: 1px dashed #555; border-radius: 0; padding: 1px 2px; background: transparent; }
     }
-    @media screen { body { padding: 20px; } }
   </style>
 </head>
 <body>
-<div class="container">
-  <h1>טופס הסרת אחריות מוכר בעת קניית רכב</h1>
+<div class="page">
 
-  <div class="section">
-    <div class="section-title">מועד מסירת הרכב</div>
-    <div class="field" style="max-width:300px">
-      <label>תאריך ושעה מדויקים של העברת החזקה:</label>
-      <input type="datetime-local">
+  <div class="biz-hdr">
+    ${logoHTML}
+    <div class="biz-info">
+      ${bizName ? `<div class="biz-name">${bizName}</div>` : ''}
+      ${subTitle  ? `<div>${subTitle}</div>`  : ''}
+      ${phone     ? `<div>טל׳: ${phone}</div>` : ''}
+      ${address   ? `<div>${address}</div>`   : ''}
+      ${license   ? `<div>רישיון מוסך: ${license}</div>` : ''}
+    </div>
+    <div style="text-align:left;font-size:9px;color:#777">בס"ד</div>
+  </div>
+
+  <div class="doc-title">טופס הסרת אחריות מוכר בעת קניית רכב</div>
+
+  <div class="two-cols">
+    <div class="sec">
+      <div class="sec-title">מועד מסירת הרכב</div>
+      <div class="field">
+        <label>תאריך ושעה מדויקים:</label>
+        <input type="datetime-local">
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-title">פרטי הרכב</div>
+      <div class="row row-3">
+        <div class="field"><label>יצרן ודגם:</label><input type="text" placeholder="מאזדה 3"></div>
+        <div class="field"><label>שנת ייצור:</label><input type="text"></div>
+        <div class="field"><label>מספר רישוי:</label><input type="text" placeholder="00-000-00"></div>
+      </div>
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-title">פרטי הרכב</div>
-    <div class="form-group">
-      <div class="field"><label>יצרן ודגם:</label><input type="text" placeholder="למשל: מאזדה 3"></div>
-      <div class="field"><label>שנת ייצור:</label><input type="text" placeholder="למשל: 2018"></div>
-      <div class="field"><label>מספר רישוי:</label><input type="text" placeholder="00-000-00"></div>
+  <div class="two-cols">
+    <div class="sec">
+      <div class="sec-title">פרטי המוכר</div>
+      <div class="row row-3">
+        <div class="field"><label>שם מלא:</label><input type="text"></div>
+        <div class="field"><label>ת.ז.:</label><input type="text" maxlength="9"></div>
+        <div class="field"><label>טלפון:</label><input type="tel"></div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-title">פרטי הקונה</div>
+      <div class="row row-3">
+        <div class="field"><label>שם מלא:</label><input type="text"></div>
+        <div class="field"><label>ת.ז.:</label><input type="text" maxlength="9"></div>
+        <div class="field"><label>טלפון:</label><input type="tel"></div>
+      </div>
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-title">פרטי המוכר</div>
-    <div class="form-group">
-      <div class="field"><label>שם מלא:</label><input type="text"></div>
-      <div class="field"><label>תעודת זהות:</label><input type="text" maxlength="9"></div>
-      <div class="field"><label>טלפון:</label><input type="tel"></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">פרטי הקונה</div>
-    <div class="form-group">
-      <div class="field"><label>שם מלא:</label><input type="text"></div>
-      <div class="field"><label>תעודת זהות:</label><input type="text" maxlength="9"></div>
-      <div class="field"><label>טלפון:</label><input type="tel"></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">הצהרת הקונה ונטילת אחריות</div>
-    <div class="declaration-text">
+  <div class="sec">
+    <div class="sec-title">הצהרת הקונה ונטילת אחריות</div>
+    <div class="decl">
       <ul>
-        <li>הקונה מאשר בזאת כי בתאריך ובשעה המצוינים בראש מסמך זה, קיבל לידיו את החזקה הבלעדית ברכב, לרבות מפתחות הרכב ומסמכיו.</li>
-        <li>הקונה מצהיר ומתחייב כי החל ממועד ושעת מסירת הרכב המצוינים לעיל, הוא ורק הוא יישא בכל אחריות (אזרחית, פלילית, תעבורתית או אחרת) בקשר עם השימוש ברכב, החזקתו או נהיגתו.</li>
-        <li>הקונה מתחייב לשלם ולשאת בכל הדוחות, הקנסות, אגרות כבישי האגרה (כביש 6, הנתיב המהיר וכד׳), צילומי מהירות, דוחות חניה או כל חיוב אחר שיופקו בגין הרכב החל משעת המסירה ואילך.</li>
-        <li>במידה ויגיע למוכר חיוב או דוח כלשהו המתייחס לתקופה שלאחר מועד ושעת המסירה, הקונה מתחייב לפעול מיד להסבת הדוח/החיוב על שמו ולשפות את המוכר בגין כל הוצאה או נזק שייגרמו לו עקב כך.</li>
-        <li>הצדדים מתחייבים להשלים את העברת הבעלות הרשמית במשרד הרישוי/בדואר/באופן מקוון בהקדם האפשרי.</li>
+        <li>הקונה מאשר כי קיבל לידיו את החזקה הבלעדית ברכב, לרבות מפתחות ומסמכיו, במועד ובשעה המצוינים לעיל.</li>
+        <li>הקונה מתחייב כי החל ממועד המסירה, הוא ורק הוא יישא בכל אחריות (אזרחית, פלילית, תעבורתית או אחרת) בקשר עם השימוש ברכב, החזקתו או נהיגתו.</li>
+        <li>הקונה מתחייב לשאת בכל הדוחות, הקנסות, אגרות כבישי האגרה (כביש 6, הנתיב המהיר), צילומי מהירות, דוחות חניה וכל חיוב אחר שיופקו בגין הרכב החל משעת המסירה.</li>
+        <li>אם יגיע למוכר חיוב המתייחס לתקופה שלאחר המסירה — הקונה מתחייב להסב את הדוח/החיוב על שמו ולשפות את המוכר בגין כל נזק שייגרם.</li>
+        <li>הצדדים מתחייבים להשלים את העברת הבעלות הרשמית במשרד הרישוי בהקדם האפשרי.</li>
       </ul>
     </div>
   </div>
 
-  <div class="signature-section">
-    <div class="signature-box">
-      <strong>חתימת המוכר</strong>
-      <div class="signature-line"></div>
-    </div>
-    <div class="signature-box">
-      <strong>חתימת הקונה</strong>
-      <div class="signature-line"></div>
-    </div>
+  <div class="sigs">
+    <div class="sig-box">חתימת המוכר<div class="sig-line"></div></div>
+    <div class="sig-box">חתימת הקונה<div class="sig-line"></div></div>
   </div>
 
   <button class="print-btn" onclick="window.print()">🖨️ הדפסה / PDF</button>
 </div>
-<script>
-  // Auto-focus first input for quick filling
-  document.querySelector('input')?.focus()
-<\/script>
+<script>document.querySelector('input')?.focus()<\/script>
 </body>
 </html>`
 
@@ -1283,7 +1314,7 @@ export default function DocumentsClient() {
             פרטי רכב · מוכר · קונה · הצהרה משפטית · חתימות
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <Button variant="primary" style={{ marginRight: 'auto' }} onClick={() => printSellerWaiver()}>
+            <Button variant="primary" style={{ marginRight: 'auto' }} onClick={() => printSellerWaiver(bizName.current, logoBase64.current, bizSubTitle.current, bizPhone.current, bizAddress.current, bizLicense.current)}>
               📝 מלא והדפס
             </Button>
           </div>
