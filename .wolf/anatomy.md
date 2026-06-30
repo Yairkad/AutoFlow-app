@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-06-16T06:01:18.144Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-06-16T07:43:30.358Z
 > Files: 244 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/
@@ -411,7 +411,7 @@
 ## components/tires/
 
 - `InventoryCountClient.tsx` — tireSize (~7588 tok)
-- `TiresClient.tsx` — WIDTHS — renders table (~18723 tok)
+- `TiresClient.tsx` — WIDTHS — renders table (~18835 tok)
 
 ## components/ui/
 

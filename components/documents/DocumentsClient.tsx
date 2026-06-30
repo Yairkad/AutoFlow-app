@@ -37,6 +37,16 @@ interface FormDoc {
   created_at: string
 }
 
+interface HtmlDoc {
+  id: string
+  tenant_id: string
+  name: string
+  icon: string
+  type: 'html_template'
+  content: { html: string }
+  created_at: string
+}
+
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const emptyForm = {
@@ -50,6 +60,24 @@ const emptyCol: FormColumn = { label: '', width: 'medium' }
 
 const WIDTH_LABEL: Record<string, string>  = { narrow: 'צרה', medium: 'בינונית', wide: 'רחבה' }
 const WIDTH_WEIGHT: Record<string, number> = { narrow: 1, medium: 2, wide: 3 }
+
+// ── Template variable replacement ──────────────────────────────────────────────
+
+function replaceTemplateVars(html: string, vars: {
+  logo: string; bizName: string; bizSubTitle: string
+  bizPhone: string; bizAddress: string; bizLicense: string
+}) {
+  const logoTag = vars.logo
+    ? `<img src="${vars.logo}" style="max-height:80px;max-width:200px;object-fit:contain;display:block">`
+    : ''
+  return html
+    .replace(/\{\{logo\}\}/g,        logoTag)
+    .replace(/\{\{bizName\}\}/g,     vars.bizName)
+    .replace(/\{\{bizSubTitle\}\}/g, vars.bizSubTitle)
+    .replace(/\{\{bizPhone\}\}/g,    vars.bizPhone)
+    .replace(/\{\{bizAddress\}\}/g,  vars.bizAddress)
+    .replace(/\{\{bizLicense\}\}/g,  vars.bizLicense)
+}
 
 // ── Print helpers ──────────────────────────────────────────────────────────────
 
@@ -460,6 +488,126 @@ function printWarranty(copies: number, bizNameStr: string, logoBase64: string, s
   w.document.close()
 }
 
+function printSellerWaiver() {
+  const html = `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>טופס הסרת אחריות מוכר בעת קניית רכב</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;900&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    @page { size: A4 portrait; margin: 15mm; }
+    body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #f4f6f9; color: #333; padding: 20px; }
+    .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    h1 { text-align: center; color: #2c3e50; font-size: 22pt; font-weight: 900; margin-bottom: 8mm; border-bottom: 2.5px solid #2980b9; padding-bottom: 5mm; }
+    .section { margin-bottom: 6mm; padding: 4mm 5mm; border: 1px solid #dde; border-radius: 6px; background: #fafafa; }
+    .section-title { font-weight: 700; color: #2980b9; margin-bottom: 4mm; font-size: 14pt; }
+    .form-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 4mm; }
+    .field { display: flex; flex-direction: column; }
+    label { font-size: 11pt; margin-bottom: 2mm; color: #555; font-weight: 600; }
+    input[type="text"], input[type="tel"], input[type="datetime-local"] {
+      padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 13pt;
+      background: #fff; outline: none; transition: border-color 0.2s; font-family: inherit;
+    }
+    input:focus { border-color: #3498db; }
+    .declaration-text { line-height: 1.9; text-align: justify; font-size: 13pt; }
+    .declaration-text ul { padding-right: 6mm; margin: 3mm 0; }
+    .declaration-text li { margin-bottom: 4mm; }
+    .signature-section { display: flex; justify-content: space-around; margin-top: 12mm; padding-top: 6mm; border-top: 1px solid #e0e0e0; }
+    .signature-box { text-align: center; width: 40%; }
+    .signature-line { margin-top: 14mm; border-top: 1.5px solid #333; width: 100%; }
+    .print-btn { display: block; width: 200px; margin: 8mm auto 0; padding: 12px; background-color: #2ecc71; color: white; border: none; border-radius: 5px; font-size: 15pt; font-weight: bold; cursor: pointer; text-align: center; font-family: inherit; }
+    .print-btn:hover { background-color: #27ae60; }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .container { box-shadow: none; padding: 0; max-width: 100%; }
+      .print-btn { display: none; }
+      input { border: none; border-bottom: 1px dashed #000; border-radius: 0; padding: 2px; background: transparent; }
+      .section { background: none; border: none; padding: 0; margin-bottom: 5mm; }
+    }
+    @media screen { body { padding: 20px; } }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>טופס הסרת אחריות מוכר בעת קניית רכב</h1>
+
+  <div class="section">
+    <div class="section-title">מועד מסירת הרכב</div>
+    <div class="field" style="max-width:300px">
+      <label>תאריך ושעה מדויקים של העברת החזקה:</label>
+      <input type="datetime-local">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">פרטי הרכב</div>
+    <div class="form-group">
+      <div class="field"><label>יצרן ודגם:</label><input type="text" placeholder="למשל: מאזדה 3"></div>
+      <div class="field"><label>שנת ייצור:</label><input type="text" placeholder="למשל: 2018"></div>
+      <div class="field"><label>מספר רישוי:</label><input type="text" placeholder="00-000-00"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">פרטי המוכר</div>
+    <div class="form-group">
+      <div class="field"><label>שם מלא:</label><input type="text"></div>
+      <div class="field"><label>תעודת זהות:</label><input type="text" maxlength="9"></div>
+      <div class="field"><label>טלפון:</label><input type="tel"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">פרטי הקונה</div>
+    <div class="form-group">
+      <div class="field"><label>שם מלא:</label><input type="text"></div>
+      <div class="field"><label>תעודת זהות:</label><input type="text" maxlength="9"></div>
+      <div class="field"><label>טלפון:</label><input type="tel"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">הצהרת הקונה ונטילת אחריות</div>
+    <div class="declaration-text">
+      <ul>
+        <li>הקונה מאשר בזאת כי בתאריך ובשעה המצוינים בראש מסמך זה, קיבל לידיו את החזקה הבלעדית ברכב, לרבות מפתחות הרכב ומסמכיו.</li>
+        <li>הקונה מצהיר ומתחייב כי החל ממועד ושעת מסירת הרכב המצוינים לעיל, הוא ורק הוא יישא בכל אחריות (אזרחית, פלילית, תעבורתית או אחרת) בקשר עם השימוש ברכב, החזקתו או נהיגתו.</li>
+        <li>הקונה מתחייב לשלם ולשאת בכל הדוחות, הקנסות, אגרות כבישי האגרה (כביש 6, הנתיב המהיר וכד׳), צילומי מהירות, דוחות חניה או כל חיוב אחר שיופקו בגין הרכב החל משעת המסירה ואילך.</li>
+        <li>במידה ויגיע למוכר חיוב או דוח כלשהו המתייחס לתקופה שלאחר מועד ושעת המסירה, הקונה מתחייב לפעול מיד להסבת הדוח/החיוב על שמו ולשפות את המוכר בגין כל הוצאה או נזק שייגרמו לו עקב כך.</li>
+        <li>הצדדים מתחייבים להשלים את העברת הבעלות הרשמית במשרד הרישוי/בדואר/באופן מקוון בהקדם האפשרי.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="signature-section">
+    <div class="signature-box">
+      <strong>חתימת המוכר</strong>
+      <div class="signature-line"></div>
+    </div>
+    <div class="signature-box">
+      <strong>חתימת הקונה</strong>
+      <div class="signature-line"></div>
+    </div>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">🖨️ הדפסה / PDF</button>
+</div>
+<script>
+  // Auto-focus first input for quick filling
+  document.querySelector('input')?.focus()
+<\/script>
+</body>
+</html>`
+
+  const w = window.open('', '_blank')
+  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
+  w.document.write(html)
+  w.document.close()
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function DocumentsClient() {
@@ -475,8 +623,11 @@ export default function DocumentsClient() {
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
 
-  const [forms,   setForms]   = useState<FormDoc[]>([])
-  const [loading, setLoading] = useState(true)
+  const [forms,     setForms]     = useState<FormDoc[]>([])
+  const [htmlForms, setHtmlForms] = useState<HtmlDoc[]>([])
+  const [loading,   setLoading]   = useState(true)
+  const htmlUploadRef = useRef<HTMLInputElement>(null)
+  const [htmlMenuOpen, setHtmlMenuOpen] = useState<string | null>(null)
 
   // ── Template modal ────────────────────────────────────────────────────────────
   const [formOpen, setFormOpen] = useState(false)
@@ -521,6 +672,13 @@ export default function DocumentsClient() {
     return () => window.removeEventListener('click', close)
   }, [menuOpen])
 
+  useEffect(() => {
+    if (!htmlMenuOpen) return
+    const close = () => setHtmlMenuOpen(null)
+    window.addEventListener('click', close)
+    return () => window.removeEventListener('click', close)
+  }, [htmlMenuOpen])
+
   // ── Fetch ─────────────────────────────────────────────────────────────────────
 
   const fetchAll = useCallback(async () => {
@@ -528,9 +686,11 @@ export default function DocumentsClient() {
       .from('documents')
       .select('*')
       .eq('tenant_id', tenantId.current)
-      .eq('type', 'form_template')
+      .in('type', ['form_template', 'html_template'])
       .order('created_at', { ascending: true })
-    setForms((data ?? []) as FormDoc[])
+    const all = data ?? []
+    setForms(all.filter(d => d.type === 'form_template') as FormDoc[])
+    setHtmlForms(all.filter(d => d.type === 'html_template') as HtmlDoc[])
     setLoading(false)
   }, [sb])
 
@@ -745,6 +905,53 @@ export default function DocumentsClient() {
     fetchAll()
   }
 
+  // ── HTML template helpers ─────────────────────────────────────────────────────
+
+  const uploadHtmlTemplate = async (file: File) => {
+    const text = await file.text()
+    const name = file.name.replace(/\.html?$/i, '')
+    await sb.from('documents').insert({
+      tenant_id: tenantId.current,
+      name,
+      icon: '🎨',
+      type: 'html_template',
+      content: { html: text },
+    })
+    showToast('מסמך HTML נשמר ✓', 'success')
+    fetchAll()
+  }
+
+  const printHtmlDoc = (doc: HtmlDoc) => {
+    const html = replaceTemplateVars(doc.content.html, {
+      logo:       logoBase64.current,
+      bizName:    bizName.current,
+      bizSubTitle: bizSubTitle.current,
+      bizPhone:   bizPhone.current,
+      bizAddress: bizAddress.current,
+      bizLicense: bizLicense.current,
+    })
+    const w = window.open('', '_blank')
+    if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
+    w.document.write(html)
+    w.document.close()
+  }
+
+  const deleteHtmlTemplate = async (doc: HtmlDoc) => {
+    const ok = await confirm({ msg: `למחוק את "${doc.name}"?`, variant: 'danger' })
+    if (!ok) return
+    await sb.from('documents').delete().eq('id', doc.id)
+    showToast('מסמך נמחק')
+    fetchAll()
+  }
+
+  const renameHtmlTemplate = async (doc: HtmlDoc) => {
+    const newName = window.prompt('שם חדש למסמך:', doc.name)
+    if (!newName || newName.trim() === doc.name) return
+    await sb.from('documents').update({ name: newName.trim() }).eq('id', doc.id)
+    showToast('שם עודכן ✓', 'success')
+    fetchAll()
+  }
+
   // ── Column helpers ────────────────────────────────────────────────────────────
 
   const setColLabel = (i: number, label: string) =>
@@ -774,7 +981,20 @@ export default function DocumentsClient() {
         iconShadow="#06b6d444"
         title="מסמכים"
         actions={docTab === 'templates'
-          ? <Button variant="primary" onClick={openAdd}>➕ תבנית חדשה</Button>
+          ? <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                ref={htmlUploadRef}
+                type="file"
+                accept=".html,.htm"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  if (e.target.files?.[0]) uploadHtmlTemplate(e.target.files[0])
+                  e.currentTarget.value = ''
+                }}
+              />
+              <Button variant="secondary" onClick={() => htmlUploadRef.current?.click()}>📤 העלה HTML</Button>
+              <Button variant="primary" onClick={openAdd}>➕ תבנית חדשה</Button>
+            </div>
           : driveConnected
             ? <>
                 <input type="file" id="doc-drive-upload" style={{ display: 'none' }} multiple
@@ -1047,7 +1267,93 @@ export default function DocumentsClient() {
           </div>
         </div>
 
+        {/* ── Built-in: הסרת אחריות מוכר ── */}
+        <div style={{
+          background: '#fff', borderRadius: 'var(--radius)',
+          boxShadow: 'var(--shadow)', borderRight: '5px solid var(--primary)',
+          padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+              🤝 הסרת אחריות מוכר
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: '#f0fdf4', color: 'var(--primary)', border: '1px solid var(--primary)' }}>מובנה</span>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            פרטי רכב · מוכר · קונה · הצהרה משפטית · חתימות
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            <Button variant="primary" style={{ marginRight: 'auto' }} onClick={() => printSellerWaiver()}>
+              📝 מלא והדפס
+            </Button>
+          </div>
         </div>
+
+        </div>
+
+        {/* ── HTML templates ── */}
+        {htmlForms.length > 0 && (
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+              מסמכים בעיצוב אישי
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+              {htmlForms.map(doc => (
+                <div key={doc.id} style={{
+                  background: '#fff', borderRadius: 'var(--radius)',
+                  boxShadow: 'var(--shadow)', borderRight: '5px solid #7c3aed',
+                  padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span>{doc.icon || '🎨'}</span>
+                      <span style={{ wordBreak: 'break-word' }}>{doc.name}</span>
+                    </div>
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <button
+                        onClick={e => { e.stopPropagation(); setHtmlMenuOpen(htmlMenuOpen === doc.id ? null : doc.id) }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--text-muted)', padding: '2px 6px', borderRadius: 6, lineHeight: 1 }}
+                      >⋮</button>
+                      {htmlMenuOpen === doc.id && (
+                        <div style={{
+                          position: 'absolute', top: '100%', left: 0,
+                          background: '#fff', borderRadius: 10,
+                          boxShadow: '0 4px 20px rgba(0,0,0,.15)',
+                          border: '1px solid var(--border)',
+                          zIndex: 100, minWidth: 130, overflow: 'hidden',
+                        }}>
+                          {[
+                            { label: '✏️ שינוי שם', action: () => { renameHtmlTemplate(doc); setHtmlMenuOpen(null) } },
+                            { label: '🗑️ מחיקה',    action: () => { deleteHtmlTemplate(doc); setHtmlMenuOpen(null) }, danger: true },
+                          ].map(item => (
+                            <button key={item.label} onClick={item.action} style={{
+                              display: 'block', width: '100%', padding: '10px 14px',
+                              background: 'none', border: 'none', textAlign: 'right',
+                              fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
+                              color: item.danger ? 'var(--danger)' : 'var(--text)',
+                              borderBottom: '1px solid var(--border)',
+                            }}>{item.label}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600, display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <span>HTML</span>
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· עיצוב אישי</span>
+                  </div>
+                  <Button
+                    variant="primary"
+                    style={{ marginTop: 4, background: '#7c3aed', borderColor: '#7c3aed' }}
+                    onClick={() => printHtmlDoc(doc)}
+                  >
+                    🖨️ פתח והדפס
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 16 }}>
         {/* ── Custom templates ── */}

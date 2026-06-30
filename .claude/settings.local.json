@@ -92,7 +92,17 @@
       "Bash(Select-Object Name, FullName)",
       "Bash(del \"c:\\\\Users\\\\יאיר קדוש\\\\Desktop\\\\projects\\\\autoline-app\\\\middleware.ts\")",
       "Bash(sed -i -e 's|import { requireAuth } from '\\\\''@/lib/auth/require'\\\\''|import { getYardTenantId } from '\\\\''@/lib/auth/yard-token'\\\\''|g' app/api/yard/sessions/route.ts)",
-      "Bash(python3 -)"
+      "Bash(python3 -)",
+      "Bash(git commit *)",
+      "WebFetch(domain:www.yad2.co.il)",
+      "WebSearch",
+      "WebFetch(domain:apify.com)",
+      "Bash(python3 -c \"import sys,json; bugs=json.load\\(sys.stdin\\); [print\\(b['id'],b['error_message'][:80]\\) for b in bugs[-10:]]\")",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const ts = require\\('fs'\\).readFileSync\\('components/employees/EmployeesClient.tsx','utf8'\\); console.log\\('Lines:', ts.split\\('\\\\n'\\).length, '| OK'\\)\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);const log=JSON.parse\\(fs.readFileSync\\('.wolf/buglog.json','utf8'\\)\\);const lastId=log[log.length-1].id;const num=parseInt\\(lastId.replace\\('bug-',''\\)\\)+1;const newBug={id:'bug-'+String\\(num\\).padStart\\(3,'0'\\),timestamp:new Date\\(\\).toISOString\\(\\),error_message:'Supabase Disk IO budget depleted — project receiving high IO warning',file:'components/dashboard/DashboardStats.tsx, components/yard/OfficeClient.tsx',root_cause:'DashboardStats subscribed to entire public schema \\(.on postgres_changes schema:public\\) forcing WAL tracking on all tables. OfficeClient polled every 8s in addition to realtime subscription.',fix:'DashboardStats: changed blanket schema subscription to 12 specific table subscriptions. OfficeClient: increased polling interval from 8s to 60s \\(realtime handles updates\\).',tags:['supabase','realtime','disk-io','performance','polling'],related_bugs:[],occurrences:1,last_seen:new Date\\(\\).toISOString\\(\\)};log.push\\(newBug\\);fs.writeFileSync\\('.wolf/buglog.json',JSON.stringify\\(log,null,2\\)\\);console.log\\('done'\\)\")",
+      "Bash(grep -v \"^$\")",
+      "Bash(node -e \"const d = new Date\\(\\).toISOString\\(\\); console.log\\(d.slice\\(11,16\\)\\)\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\יאיר קדוש\\.claude\\projects\\c--Users-----------Desktop-------------\\memory",
@@ -100,7 +110,8 @@
       "C:\\Users\\יאיר קדוש\\Downloads\\autoline-app\\app\\track",
       "C:\\Users\\יאיר קדוש\\Downloads",
       "c:\\Users\\יאיר קדוש\\Desktop\\ניהול-פנצריה",
-      "c:\\Users\\יאיר קדוש\\Downloads\\autoline-app\\components\\cars"
+      "c:\\Users\\יאיר קדוש\\Downloads\\autoline-app\\components\\cars",
+      "c:\\Users\\יאיר קדוש\\.claude\\projects\\c--Users-----------Desktop-projects-autoline-app\\memory"
     ]
   }
 }
