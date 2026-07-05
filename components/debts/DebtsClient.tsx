@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
+import { reconcileSupplierPayment } from '@/lib/debts/reconcileSupplierPayment'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,13 +37,18 @@ interface ScheduledPayment {
   due_date: string; payment_method: 'check' | 'transfer'
   supplier_id: string | null; category: string | null
   is_paid: boolean; paid_date: string | null; expense_id: string | null; notes: string | null
+  check_number: string | null; series_id: string | null
+}
+
+interface SupplierDebtPayment {
+  id: string; supplier_debt_id: string; scheduled_payment_id: string | null; amount: number
 }
 
 interface Supplier {
   id: string; name: string; phone: string | null; contact_name: string | null
 }
 
-type Tab    = 'customers' | 'suppliers' | 'summary'
+type Tab    = 'customers' | 'suppliers' | 'summary' | 'calendar'
 type Filter = 'open' | 'closed' | 'all'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -123,6 +129,7 @@ export default function DebtsClient() {
 
   // Scheduled payments (for monthly supplier view + auto-expense)
   const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([])
+  const [debtPayments, setDebtPayments] = useState<SupplierDebtPayment[]>([])
   const autoExpenseDoneRef = useRef(false)
 
   // ── Tenant ────────────────────────────────────────────────────────────────
@@ -140,11 +147,12 @@ export default function DebtsClient() {
     const tid = await resolveTenant()
     if (!tid) return
     setLoading(true)
-    const [custRes, suppDebtRes, suppRes, paymentsRes] = await Promise.all([
+    const [custRes, suppDebtRes, suppRes, paymentsRes, debtPaymentsRes] = await Promise.all([
       supabase.from('customer_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
       supabase.from('supplier_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
       supabase.from('suppliers').select('id,name,phone,contact_name').eq('tenant_id', tid).order('name'),
       supabase.from('scheduled_payments').select('*').eq('tenant_id', tid).order('due_date'),
+      supabase.from('supplier_debt_payments').select('*').eq('tenant_id', tid),
     ])
     if (custRes.data)     setCustomerDebts(custRes.data)
     if (suppDebtRes.data) setSupplierDebts(suppDebtRes.data)
@@ -152,6 +160,7 @@ export default function DebtsClient() {
     if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
     const payments: ScheduledPayment[] = paymentsRes.data ?? []
     setScheduledPayments(payments)
+    setDebtPayments(debtPaymentsRes.data ?? [])
     setLoading(false)
 
     // Auto-expense overdue scheduled payments — runs once per session
@@ -323,16 +332,26 @@ export default function DebtsClient() {
     const amount = parseFloat(payAmount)
     if (isNaN(amount) || amount <= 0) { showToast('סכום לא תקין', 'error'); return }
     setPaySaving(true)
-    const table = payItem.type === 'customer' ? 'customer_debts' : 'supplier_debts'
-    const debt  = payItem.type === 'customer'
-      ? customerDebts.find(d => d.id === payItem.id)
-      : supplierDebts.find(d => d.id === payItem.id)
-    if (!debt) { setPaySaving(false); return }
-    const newPaid  = Math.min(Number(debt.amount), Number(debt.paid) + amount)
-    const isClosed = newPaid >= Number(debt.amount)
-    const { error } = await supabase.from(table).update({ paid: newPaid, is_closed: isClosed }).eq('id', payItem.id)
-    if (error) { showToast('שגיאה בתשלום', 'error'); setPaySaving(false); return }
-    showToast(isClosed ? 'שולם במלואו ✓' : 'תשלום נרשם ✓', 'success')
+
+    if (payItem.type === 'customer') {
+      const debt = customerDebts.find(d => d.id === payItem.id)
+      if (!debt) { setPaySaving(false); return }
+      const newPaid  = Math.min(Number(debt.amount), Number(debt.paid) + amount)
+      const isClosed = newPaid >= Number(debt.amount)
+      const { error } = await supabase.from('customer_debts').update({ paid: newPaid, is_closed: isClosed }).eq('id', payItem.id)
+      if (error) { showToast('שגיאה בתשלום', 'error'); setPaySaving(false); return }
+      showToast(isClosed ? 'שולם במלואו ✓' : 'תשלום נרשם ✓', 'success')
+      setPaySaving(false); setPayItem(null); loadAll()
+      return
+    }
+
+    // Supplier debt — route through the same reconciler used by checks, so a
+    // direct payment also leaves a supplier_debt_payments trail.
+    const tid = tenantIdRef.current
+    if (!tid) { setPaySaving(false); return }
+    const { error } = await reconcileSupplierPayment(supabase, tid, [{ supplier_debt_id: payItem.id, amount }], null)
+    if (error) { showToast('שגיאה בתשלום: ' + error, 'error'); setPaySaving(false); return }
+    showToast('תשלום נרשם ✓', 'success')
     setPaySaving(false); setPayItem(null); loadAll()
   }
 
@@ -559,6 +578,13 @@ export default function DebtsClient() {
       const rows = supplierDebts.map(d => ({ ספק: suppliers.find(s => s.id === d.supplier_id)?.name ?? '', סכום: d.amount, שולם: d.paid, יתרה: bal(d), תאריך: d.date, סטטוס: d.is_closed ? 'סגור' : 'פתוח', תיאור: d.description ?? '' }))
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'חובות ספקים')
     }
+    if (tab === 'calendar') {
+      const rows = scheduledPayments.filter(p => !p.is_paid).map(p => ({
+        ספק: suppliers.find(s => s.id === p.supplier_id)?.name ?? '', תיאור: p.description, סכום: p.amount,
+        'תאריך פירעון': p.due_date, אמצעי: p.payment_method === 'check' ? "צ'ק" : 'העברה', 'מספר צ׳ק': p.check_number ?? '',
+      }))
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'יומן צ׳קים')
+    }
     XLSX.writeFile(wb, 'חובות.xlsx')
   }
 
@@ -579,6 +605,7 @@ export default function DebtsClient() {
         <div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
           <TabBtn t="customers" label="💳 לקוחות" count={customerDebts.filter(d => !d.is_closed).length} />
           <TabBtn t="suppliers" label="🏭 ספקים"  count={supplierDebts.filter(d => !d.is_closed).length} />
+          <TabBtn t="calendar"  label="📅 יומן צ׳קים" count={scheduledPayments.filter(p => !p.is_paid).length} />
           <TabBtn t="summary"   label="📊 סיכום" />
         </div>
       </div>
@@ -676,11 +703,19 @@ export default function DebtsClient() {
               const months = Object.keys(monthMap).sort().reverse() // newest first
               const suppPayments = scheduledPayments.filter(p => p.supplier_id === sid)
 
-              return { sid, supp, totalBal, monthMap, months, suppPayments }
+              // Checks not (yet) allocated to any of this supplier's debts
+              const debtIds = new Set(debts.map(d => d.id))
+              const linkedIds = new Set(
+                debtPayments.filter(dp => debtIds.has(dp.supplier_debt_id) && dp.scheduled_payment_id)
+                  .map(dp => dp.scheduled_payment_id!)
+              )
+              const unlinkedPayments = suppPayments.filter(p => !p.is_paid && !linkedIds.has(p.id))
+
+              return { sid, supp, totalBal, monthMap, months, suppPayments, unlinkedPayments }
             }).filter(Boolean) as {
               sid: string | null; supp: Supplier | undefined; totalBal: number
               monthMap: Record<string, SupplierDebt[]>; months: string[]
-              suppPayments: ScheduledPayment[]
+              suppPayments: ScheduledPayment[]; unlinkedPayments: ScheduledPayment[]
             }[]
 
             if (groups.length === 0) return (
@@ -707,13 +742,28 @@ export default function DebtsClient() {
                       )}
                     </div>
 
+                    {/* Checks issued but not yet allocated to any specific month */}
+                    {group.unlinkedPayments.length > 0 && (
+                      <div style={{ background: '#fffbeb', borderBottom: '1px solid #fde68a', padding: '10px 16px', fontSize: '12px', color: '#92400e' }}>
+                        ⚠ {group.unlinkedPayments.length} צ׳קים/תשלומים לספק זה לא שובצו מול חודש חוב ספציפי:{' '}
+                        {group.unlinkedPayments.map(p => `${fmt(p.amount)} (${p.due_date})`).join(', ')}
+                      </div>
+                    )}
+
                     {/* Months */}
                     {group.months.map((mk, mIdx) => {
                       const monthDebts = group.monthMap[mk]
                       // Carry-over = balance of all months that are chronologically BEFORE this one (appear after in the desc-sorted array)
                       const carryOver = group.months.slice(mIdx + 1).reduce(
                         (s, m) => s + group.monthMap[m].reduce((ss, d) => ss + bal(d), 0), 0)
-                      const monthPayments = group.suppPayments.filter(p => p.due_date.slice(0, 7) === mk)
+                      // Real linkage via supplier_debt_payments (which check actually settled which debt),
+                      // not a due-date guess — a check dated far in the future can still close an old month.
+                      const monthDebtIds = new Set(monthDebts.map(d => d.id))
+                      const linkedPaymentIds = new Set(
+                        debtPayments.filter(dp => monthDebtIds.has(dp.supplier_debt_id) && dp.scheduled_payment_id)
+                          .map(dp => dp.scheduled_payment_id!)
+                      )
+                      const monthPayments = group.suppPayments.filter(p => linkedPaymentIds.has(p.id))
                       const monthDebtTotal = monthDebts.reduce((s, d) => s + d.amount, 0)
                       const monthPaidTotal = monthDebts.reduce((s, d) => s + d.paid, 0)
                       const monthBalance   = monthDebts.reduce((s, d) => s + bal(d), 0)
@@ -807,6 +857,63 @@ export default function DebtsClient() {
           })()}
         </div>
       )}
+
+      {/* ── CALENDAR TAB — all future checks/transfers across all suppliers, by due date ── */}
+      {tab === 'calendar' && (() => {
+        const upcoming = scheduledPayments.filter(p => !p.is_paid).sort((a, b) => a.due_date.localeCompare(b.due_date))
+        const monthGroups: Record<string, ScheduledPayment[]> = {}
+        upcoming.forEach(p => {
+          const mk = monthKeyOf(p.due_date)
+          if (!monthGroups[mk]) monthGroups[mk] = []
+          monthGroups[mk].push(p)
+        })
+        const months = Object.keys(monthGroups).sort()
+        const grandTotal = upcoming.reduce((s, p) => s + Number(p.amount), 0)
+
+        if (upcoming.length === 0) return <EmptyState icon="📅" text="אין צ׳קים או תשלומים עתידיים" />
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)' }}>סה״כ עתידי לתשלום — כל הספקים</span>
+              <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(grandTotal)}</span>
+            </div>
+
+            {months.map(mk => {
+              const items = monthGroups[mk]
+              const monthTotal = items.reduce((s, p) => s + Number(p.amount), 0)
+              return (
+                <div key={mk} style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
+                  <div style={{ background: '#f1f5f9', borderBottom: '2px solid var(--border)', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, fontSize: '14px', color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
+                    <span style={{ fontWeight: 700, fontSize: '14px' }}>{fmt(monthTotal)}</span>
+                  </div>
+                  <div>
+                    {items.map((p, i) => {
+                      const days = daysUntilDate(p.due_date)
+                      const supName = suppliers.find(s => s.id === p.supplier_id)?.name
+                      return (
+                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderBottom: i < items.length - 1 ? '1px solid #f1f5f9' : 'none', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '11px', background: p.payment_method === 'check' ? '#fef9c3' : '#eff6ff', color: p.payment_method === 'check' ? '#92400e' : '#1d4ed8', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, flexShrink: 0 }}>
+                            {p.payment_method === 'check' ? "צ'ק" : 'העברה'}{p.check_number ? ` #${p.check_number}` : ''}
+                          </span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '90px' }}>{supName ?? '—'}</span>
+                          <span style={{ fontSize: '13px', flex: 1 }}>{p.description}</span>
+                          <span style={{ fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{p.due_date}</span>
+                          <span style={{ fontWeight: 700, minWidth: '90px', textAlign: 'left' }}>{fmt(p.amount)}</span>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: days < 0 ? 'var(--danger)' : days <= 7 ? 'var(--warning)' : '#2563eb', whiteSpace: 'nowrap' }}>
+                            {days < 0 ? `באיחור ${Math.abs(days)} ימים` : days === 0 ? 'היום!' : `עוד ${days} ימים`}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
 
       {/* ── SUMMARY TAB ── */}
       {tab === 'summary' && (

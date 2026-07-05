@@ -34,6 +34,7 @@ interface BillingItem {
   type: 'fixed' | 'meter'
   amount: number | null
   price_per_unit: number | null
+  fixed_addon: number | null
   valid_from: string
   active: boolean
   created_at: string
@@ -54,6 +55,9 @@ interface BillingEntry {
   meter_prev: number | null
   meter_curr: number | null
   price_per_unit: number | null
+  fixed_addon: number | null
+  period_start: string | null
+  period_end: string | null
   notes: string | null
   created_at: string
   payments: EntryPayment[]
@@ -206,6 +210,7 @@ export default function BillingClient() {
   const [iType,    setIType]    = useState<'fixed' | 'meter'>('fixed')
   const [iAmt,     setIAmt]     = useState('')
   const [iPpu,     setIPpu]     = useState('')
+  const [iFixedAddon, setIFixedAddon] = useState('')
   const [iFrom,    setIFrom]    = useState(monthISO)
   const [iActive,  setIActive]  = useState(true)
   const [iVat,     setIVat]     = useState<'before' | 'after'>('after')
@@ -221,6 +226,9 @@ export default function BillingClient() {
   const [ePrev,    setEPrev]    = useState('')
   const [eCurr,    setECurr]    = useState('')
   const [ePpu,     setEPpu]     = useState('')
+  const [eFixedAddon, setEFixedAddon] = useState('')
+  const [ePeriodStart, setEPeriodStart] = useState('')
+  const [ePeriodEnd,   setEPeriodEnd]   = useState('')
   const [eType,    setEType]    = useState<'fixed' | 'meter'>('fixed')
   const [eNotes,   setENotes]   = useState('')
   const [eVat,     setEVat]     = useState<'before' | 'after'>('after')
@@ -335,6 +343,7 @@ export default function BillingClient() {
         name:             it.name,
         amount:           it.type === 'fixed' ? (it.amount ?? 0) : 0,
         price_per_unit:   it.price_per_unit,
+        fixed_addon:      it.fixed_addon ?? null,
       }))
       const { error } = await supabase.from('billing_entries').insert(rows)
       if (error) throw error
@@ -495,11 +504,12 @@ export default function BillingClient() {
       setIName(item.name); setIContact(item.contact_id ?? ''); setIDir(item.direction)
       setIType(item.type); setIAmt(item.amount != null ? String(item.amount) : '')
       setIPpu(item.price_per_unit != null ? String(item.price_per_unit) : '')
+      setIFixedAddon(item.fixed_addon != null ? String(item.fixed_addon) : '')
       setIFrom(item.valid_from); setIActive(item.active); setIVat('after')
     } else {
       setEditItem(null)
       setIName(''); setIContact(''); setIDir('expense'); setIType('fixed')
-      setIAmt(''); setIPpu(''); setIFrom(monthISO()); setIActive(true); setIVat('after')
+      setIAmt(''); setIPpu(''); setIFixedAddon(''); setIFrom(monthISO()); setIActive(true); setIVat('after')
     }
     setShowItemModal(true)
   }
@@ -510,14 +520,16 @@ export default function BillingClient() {
     if (!tid) return
     setSaving(true)
     try {
+      const rawAmt = iType === 'fixed' && iAmt ? parseFloat(iAmt) : null
       const row = {
         tenant_id:      tid,
         name:           iName.trim(),
         contact_id:     iContact || null,
         direction:      iDir,
         type:           iType,
-        amount:         iType === 'fixed' && iAmt ? parseFloat(iAmt) : null,
+        amount:         rawAmt != null ? (iVat === 'before' ? withVat(rawAmt) : rawAmt) : null,
         price_per_unit: iType === 'meter' && iPpu  ? (parseFloat(iPpu) / (iPpuUnit === 'agorot' ? 100 : 1)) : null,
+        fixed_addon:    iType === 'meter' && iFixedAddon ? parseFloat(iFixedAddon) : null,
         valid_from:     iFrom,
         active:         iActive,
       }
@@ -543,7 +555,7 @@ export default function BillingClient() {
 
   // ── Entry CRUD ─────────────────────────────────────────────────────────
 
-  const openEntryModal = (entry?: BillingEntry) => {
+  const openEntryModal = async (entry?: BillingEntry) => {
     if (entry) {
       setEditEntry(entry)
       setEName(entry.name); setEContact(entry.contact_id ?? ''); setEDir(entry.direction)
@@ -557,13 +569,41 @@ export default function BillingClient() {
       // pre-fill price_per_unit from the linked billing item if not on entry
       const ppu = entry.price_per_unit ?? linkedItem?.price_per_unit ?? null
       setEPpu(ppu != null ? String(ppu) : '')
+      setEFixedAddon(entry.fixed_addon != null ? String(entry.fixed_addon) : (linkedItem?.fixed_addon != null ? String(linkedItem.fixed_addon) : ''))
       setENotes(entry.notes ?? ''); setEVat('after')
       // pre-fill unit: if ppu < 1 assume agorot
       setEPpuUnit(ppu != null && ppu < 1 ? 'ils' : 'agorot')
+
+      setEPeriodEnd(entry.period_end ?? '')
+      if (entry.period_start) {
+        setEPeriodStart(entry.period_start)
+      } else if (isMeter && entry.billing_item_id) {
+        // Default period_start to the day after the previous reading's period_end,
+        // so a ~2-month gap between readings is visible instead of hidden in notes.
+        const { data: prev } = await supabase
+          .from('billing_entries')
+          .select('period_end')
+          .eq('billing_item_id', entry.billing_item_id)
+          .not('period_end', 'is', null)
+          .neq('id', entry.id)
+          .order('period_end', { ascending: false })
+          .limit(1)
+        const prevEnd = prev?.[0]?.period_end
+        if (prevEnd) {
+          const d = new Date(prevEnd + 'T00:00:00'); d.setDate(d.getDate() + 1)
+          setEPeriodStart(d.toISOString().slice(0, 10))
+        } else {
+          setEPeriodStart('')
+        }
+      } else {
+        setEPeriodStart('')
+      }
     } else {
       setEditEntry(null)
       setEName(''); setEContact(''); setEDir('income'); setEType('fixed')
-      setEAmt(''); setEPrev(''); setECurr(''); setEPpu(''); setENotes(''); setEVat('after')
+      setEAmt(''); setEPrev(''); setECurr(''); setEPpu(''); setEFixedAddon('')
+      setEPeriodStart(''); setEPeriodEnd('')
+      setENotes(''); setEVat('after')
       setEPpuUnit('agorot')
     }
     setShowEntryModal(true)
@@ -576,7 +616,9 @@ export default function BillingClient() {
     let finalAmt = parseFloat(eAmt) || 0
     if (eType === 'meter') {
       const ppu = (parseFloat(ePpu) || 0) / (ePpuUnit === 'agorot' ? 100 : 1)
-      finalAmt = ((parseFloat(eCurr) || 0) - (parseFloat(ePrev) || 0)) * ppu
+      finalAmt = ((parseFloat(eCurr) || 0) - (parseFloat(ePrev) || 0)) * ppu + (parseFloat(eFixedAddon) || 0)
+    } else if (eVat === 'before') {
+      finalAmt = withVat(finalAmt)
     }
     setSaving(true)
     try {
@@ -591,6 +633,9 @@ export default function BillingClient() {
         meter_prev:      eType === 'meter' && ePrev ? parseFloat(ePrev) : null,
         meter_curr:      eType === 'meter' && eCurr ? parseFloat(eCurr) : null,
         price_per_unit:  eType === 'meter' && ePpu  ? parseFloat(ePpu)  : null,
+        fixed_addon:     eType === 'meter' && eFixedAddon ? parseFloat(eFixedAddon) : null,
+        period_start:    eType === 'meter' && ePeriodStart ? ePeriodStart : null,
+        period_end:      eType === 'meter' && ePeriodEnd   ? ePeriodEnd   : null,
         notes:           eNotes.trim() || null,
       }
       if (editEntry) {
@@ -791,6 +836,12 @@ export default function BillingClient() {
                           {e.meter_prev != null && (
                             <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                               🔌 {e.meter_prev} → {e.meter_curr} ({((e.meter_curr ?? 0) - (e.meter_prev ?? 0)).toFixed(0)} יח&apos;)
+                              {e.fixed_addon ? ` + תוספת קבועה ${fmt(e.fixed_addon)}` : ''}
+                            </div>
+                          )}
+                          {e.period_start && e.period_end && (
+                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                              🗓 {e.period_start}–{e.period_end}
                             </div>
                           )}
                         </td>
@@ -1265,6 +1316,9 @@ export default function BillingClient() {
                     : `כולל מע"מ: ₪${withVat(parseFloat(iPpu) / (iPpuUnit === 'agorot' ? 100 : 1)).toFixed(4)}`}
                 </div>
               )}
+              <div style={{ marginTop: '8px' }}>
+                <Input label="תוספת קבועה (רכיב קבוע בחשבון, מעבר לצריכה)" type="number" value={iFixedAddon} onChange={e => setIFixedAddon(e.target.value)} placeholder="0.00 — אופציונלי" />
+              </div>
             </div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
@@ -1356,12 +1410,24 @@ export default function BillingClient() {
                 <Input type="number" value={ePpu} onChange={e => setEPpu(e.target.value)}
                   placeholder={ePpuUnit === 'agorot' ? '54.33' : '0.0000'} />
               </div>
+              <div style={{ gridColumn: '1/-1' }}>
+                <Input label="תוספת קבועה (אופציונלי, מעבר לצריכה)" type="number" value={eFixedAddon} onChange={e => setEFixedAddon(e.target.value)} placeholder="0.00" />
+              </div>
+              <div style={{ gridColumn: '1/-1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <Input label="תחילת תקופת הקריאה" type="date" value={ePeriodStart} onChange={e => setEPeriodStart(e.target.value)} />
+                <Input label="סוף תקופת הקריאה" type="date" value={ePeriodEnd} onChange={e => setEPeriodEnd(e.target.value)} />
+              </div>
               {ePrev && eCurr && ePpu && (
                 <div style={{ gridColumn: '1/-1', fontSize: '12px', color: 'var(--primary)', fontWeight: 600 }}>
-                  סה&quot;כ: {fmt((parseFloat(eCurr) - parseFloat(ePrev)) * (parseFloat(ePpu) / (ePpuUnit === 'agorot' ? 100 : 1)))}
+                  סה&quot;כ: {fmt((parseFloat(eCurr) - parseFloat(ePrev)) * (parseFloat(ePpu) / (ePpuUnit === 'agorot' ? 100 : 1)) + (parseFloat(eFixedAddon) || 0))}
                   {ePpuUnit === 'agorot' && (
                     <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginRight: '8px' }}>
                       (₪{(parseFloat(ePpu) / 100).toFixed(4)}/יח&apos;)
+                    </span>
+                  )}
+                  {parseFloat(eFixedAddon) > 0 && (
+                    <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginRight: '8px' }}>
+                      (כולל תוספת קבועה {fmt(parseFloat(eFixedAddon))})
                     </span>
                   )}
                 </div>

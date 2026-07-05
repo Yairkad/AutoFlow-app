@@ -1,11 +1,15 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-06-30T17:06:15.072Z
-> Files: 6 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-05T23:12:59.535Z
+> Files: 16 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
 - `citycell_prices.csv` (~1175 tok)
+
+## ../../../.claude/plans/
+
+- `lively-imagining-tarjan.md` — תכנון: שיפור הוצאות, חובות ספקים/צ'קים, וחשבונות (שכירות/חשמל) (~3398 tok)
 
 ## ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/
 
@@ -238,6 +242,7 @@
 
 ## components/billing/
 
+- `BillingClient.tsx` — fmt (~20062 tok)
 
 ## components/cars/
 
@@ -247,6 +252,7 @@
 
 ## components/debts/
 
+- `DebtsClient.tsx` — fmt (~19040 tok)
 
 ## components/documents/
 
@@ -257,6 +263,8 @@
 
 ## components/expenses/
 
+- `ExpensesClient.tsx` — DEFAULT_EXPENSE_CATS (~21193 tok)
+- `ScheduledPaymentsModal.tsx` — monthKeyOf (~13333 tok)
 
 ## components/inspections/
 
@@ -286,6 +294,7 @@
 
 ## components/suppliers/
 
+- `SuppliersClient.tsx` — ISRAELI_BANKS (~10628 tok)
 
 ## components/test-transfer/
 
@@ -309,6 +318,10 @@
 ## lib/contexts/
 
 
+## lib/debts/
+
+- `reconcileSupplierPayment.ts` — Exports DebtAllocation, reconcileSupplierPayment (~439 tok)
+
 ## lib/hooks/
 
 
@@ -329,6 +342,9 @@
 
 ## supabase/migrations/
 
+- `061_expenses_amortization_and_recurring_link.sql` — Link a materialized expense back to the recurring template it came from, (~92 tok)
+- `062_supplier_check_reconciliation.sql` — Check number/series bookkeeping, and an explicit (user-chosen) ledger of which (~273 tok)
+- `063_billing_vat_period_fixed_addon.sql` — Optional multi-month period for irregular meter readings, and an optional (~184 tok)
 
 ## tests/
 

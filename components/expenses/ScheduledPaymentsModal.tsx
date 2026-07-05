@@ -7,6 +7,7 @@ import Input from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { SupabaseClient } from '@supabase/supabase-js'
+import { reconcileSupplierPayment, DebtAllocation } from '@/lib/debts/reconcileSupplierPayment'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,21 @@ export interface ScheduledPayment {
   paid_date: string | null
   expense_id: string | null
   notes: string | null
+  check_number: string | null
+  series_id: string | null
+}
+
+interface OpenSupplierDebt {
+  id: string
+  date: string
+  amount: number
+  paid: number
+}
+
+function monthKeyOf(iso: string) { return iso.slice(0, 7) }
+function fmtMonthShort(ym: string) {
+  const [y, m] = ym.split('-')
+  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })
 }
 
 interface Props {
@@ -111,6 +127,21 @@ export default function ScheduledPaymentsModal({
   const [fMethod,  setFMethod]  = useState<'check' | 'transfer'>('check')
   const [fSupplier, setFSupplier] = useState('')
   const [fNotes,   setFNotes]   = useState('')
+  const [fCheckNumber, setFCheckNumber] = useState('')
+
+  // Series creation mode
+  const [fSeriesMode,     setFSeriesMode]     = useState(false)
+  const [fSeriesCount,    setFSeriesCount]    = useState('3')
+  const [fSeriesInterval, setFSeriesInterval] = useState<'month' | 'days'>('month')
+  const [fSeriesDays,     setFSeriesDays]     = useState('30')
+  const [fSeriesSplit,    setFSeriesSplit]    = useState<'equal' | 'round'>('equal')
+  const [fSeriesRoundAmt, setFSeriesRoundAmt] = useState('')
+  const [fSeriesRemainderPos, setFSeriesRemainderPos] = useState<'first' | 'last'>('last')
+
+  // Debt-month allocation (which open supplier debts this check/series settles)
+  const [openDebts,      setOpenDebts]      = useState<OpenSupplierDebt[]>([])
+  const [selectedDebtIds, setSelectedDebtIds] = useState<Set<string>>(new Set())
+  const [debtAllocAmounts, setDebtAllocAmounts] = useState<Record<string, string>>({})
 
   // Pay modal
   const [payOpen,   setPayOpen]   = useState(false)
@@ -136,12 +167,49 @@ export default function ScheduledPaymentsModal({
 
   useEffect(() => { if (open) fetch() }, [open, fetch])
 
+  // ── Open debts for the selected supplier (for debt-month allocation) ───────
+
+  const fetchOpenDebts = useCallback(async (supplierId: string) => {
+    if (!supplierId) { setOpenDebts([]); return }
+    const { data } = await supabase
+      .from('supplier_debts')
+      .select('id, date, amount, paid')
+      .eq('supplier_id', supplierId)
+      .eq('is_closed', false)
+      .order('date', { ascending: true })
+    setOpenDebts(data ?? [])
+  }, [supabase])
+
+  useEffect(() => {
+    setSelectedDebtIds(new Set()); setDebtAllocAmounts({})
+    if (formOpen) fetchOpenDebts(fSupplier)
+  }, [fSupplier, formOpen, fetchOpenDebts])
+
+  const toggleDebtSelected = (debt: OpenSupplierDebt) => {
+    setSelectedDebtIds(prev => {
+      const next = new Set(prev)
+      if (next.has(debt.id)) {
+        next.delete(debt.id)
+        setDebtAllocAmounts(a => { const c = { ...a }; delete c[debt.id]; return c })
+      } else {
+        next.add(debt.id)
+        const balance = Number(debt.amount) - Number(debt.paid)
+        setDebtAllocAmounts(a => ({ ...a, [debt.id]: a[debt.id] ?? String(balance.toFixed(2)) }))
+      }
+      return next
+    })
+  }
+
+  const totalAllocated = Array.from(selectedDebtIds).reduce((s, id) => s + (parseFloat(debtAllocAmounts[id] ?? '0') || 0), 0)
+
   // ── Form open ──────────────────────────────────────────────────────────────
 
   const openAdd = () => {
     setEditItem(null)
     setFDesc(''); setFAmount(''); setFDue(todayIso())
-    setFMethod('check'); setFSupplier(''); setFNotes('')
+    setFMethod('check'); setFSupplier(''); setFNotes(''); setFCheckNumber('')
+    setFSeriesMode(false); setFSeriesCount('3'); setFSeriesInterval('month'); setFSeriesDays('30')
+    setFSeriesSplit('equal'); setFSeriesRoundAmt(''); setFSeriesRemainderPos('last')
     setFormOpen(true)
   }
 
@@ -149,10 +217,17 @@ export default function ScheduledPaymentsModal({
     setEditItem(p)
     setFDesc(p.description); setFAmount(String(p.amount)); setFDue(p.due_date)
     setFMethod(p.payment_method); setFSupplier(p.supplier_id ?? ''); setFNotes(p.notes ?? '')
+    setFCheckNumber(p.check_number ?? '')
+    setFSeriesMode(false)
     setFormOpen(true)
   }
 
   // ── Save ───────────────────────────────────────────────────────────────────
+
+  const buildAllocations = (): DebtAllocation[] =>
+    Array.from(selectedDebtIds)
+      .map(id => ({ supplier_debt_id: id, amount: parseFloat(debtAllocAmounts[id] ?? '0') || 0 }))
+      .filter(a => a.amount > 0)
 
   const save = async () => {
     if (!fDesc || !fAmount || !fDue) return
@@ -160,24 +235,94 @@ export default function ScheduledPaymentsModal({
     if (isNaN(amount) || amount <= 0) return
     setSaving(true)
 
+    // ── Editing an existing single payment: simple field update, no reconciliation ──
+    if (editItem) {
+      const payload = {
+        description: fDesc, amount, due_date: fDue,
+        payment_method: fMethod, supplier_id: fSupplier || null,
+        notes: fNotes || null, check_number: fCheckNumber || null,
+      }
+      const res = await supabase.from('scheduled_payments').update(payload).eq('id', editItem.id)
+      setSaving(false)
+      if (res.error) { showToast('שגיאה: ' + res.error.message, 'error'); return }
+      showToast('עודכן', 'success')
+      setFormOpen(false)
+      fetch(); onRefresh?.()
+      return
+    }
+
+    // ── New series of checks ─────────────────────────────────────────────────
+    if (fSeriesMode) {
+      const n = parseInt(fSeriesCount, 10)
+      if (!n || n < 1) { setSaving(false); showToast('מספר צ׳קים לא תקין', 'error'); return }
+      const baseCheckNum = fCheckNumber.trim() && /^\d+$/.test(fCheckNumber.trim()) ? parseInt(fCheckNumber.trim(), 10) : null
+      const seriesId = crypto.randomUUID()
+      const rowsToInsert = []
+      for (let i = 0; i < n; i++) {
+        let amt: number
+        if (fSeriesSplit === 'equal') {
+          amt = Math.round((amount / n) * 100) / 100
+        } else {
+          const roundAmt = parseFloat(fSeriesRoundAmt) || 0
+          const isRemainderCheck = fSeriesRemainderPos === 'first' ? i === 0 : i === n - 1
+          amt = isRemainderCheck ? Math.round((amount - roundAmt * (n - 1)) * 100) / 100 : roundAmt
+        }
+        const dueDate = new Date(fDue + 'T00:00:00')
+        if (fSeriesInterval === 'month') dueDate.setMonth(dueDate.getMonth() + i)
+        else dueDate.setDate(dueDate.getDate() + (parseInt(fSeriesDays, 10) || 30) * i)
+        rowsToInsert.push({
+          tenant_id: tenantId, description: fDesc, amount: amt,
+          due_date: dueDate.toISOString().slice(0, 10),
+          payment_method: fMethod, supplier_id: fSupplier || null, notes: fNotes || null,
+          check_number: baseCheckNum !== null ? String(baseCheckNum + i) : null,
+          series_id: seriesId,
+        })
+      }
+      // Fix rounding drift in equal-split mode so the sum is exact
+      if (fSeriesSplit === 'equal') {
+        const sum = rowsToInsert.reduce((s, r) => s + r.amount, 0)
+        rowsToInsert[rowsToInsert.length - 1].amount = Math.round((rowsToInsert[rowsToInsert.length - 1].amount + (amount - sum)) * 100) / 100
+      }
+
+      const insRes = await supabase.from('scheduled_payments').insert(rowsToInsert).select('id')
+      if (insRes.error) { setSaving(false); showToast('שגיאה: ' + insRes.error.message, 'error'); return }
+
+      const allocations = buildAllocations()
+      if (allocations.length > 0) {
+        const primaryId = insRes.data?.[0]?.id ?? null
+        const { error: reconErr } = await reconcileSupplierPayment(supabase, tenantId, allocations, primaryId)
+        if (reconErr) { showToast('הצ׳קים נשמרו, אך שיבוץ החוב נכשל: ' + reconErr, 'error') }
+      }
+
+      setSaving(false)
+      showToast(`${n} צ׳קים נוצרו ✓`, 'success')
+      setFormOpen(false)
+      fetch(); onRefresh?.()
+      return
+    }
+
+    // ── New single payment ───────────────────────────────────────────────────
     const payload = {
       tenant_id: tenantId,
       description: fDesc, amount, due_date: fDue,
       payment_method: fMethod,
       supplier_id: fSupplier || null,
       notes: fNotes || null,
+      check_number: fCheckNumber || null,
+    }
+    const insRes = await supabase.from('scheduled_payments').insert(payload).select('id').single()
+    if (insRes.error) { setSaving(false); showToast('שגיאה: ' + insRes.error.message, 'error'); return }
+
+    const allocations = buildAllocations()
+    if (allocations.length > 0) {
+      const { error: reconErr } = await reconcileSupplierPayment(supabase, tenantId, allocations, insRes.data.id)
+      if (reconErr) { showToast('התשלום נשמר, אך שיבוץ החוב נכשל: ' + reconErr, 'error') }
     }
 
-    const res = editItem
-      ? await supabase.from('scheduled_payments').update(payload).eq('id', editItem.id)
-      : await supabase.from('scheduled_payments').insert(payload)
-
     setSaving(false)
-    if (res.error) { showToast('שגיאה: ' + res.error.message, 'error'); return }
-    showToast(editItem ? 'עודכן' : 'נוסף', 'success')
+    showToast('נוסף', 'success')
     setFormOpen(false)
-    fetch()
-    onRefresh?.()
+    fetch(); onRefresh?.()
   }
 
   // ── Delete ─────────────────────────────────────────────────────────────────
@@ -456,6 +601,17 @@ export default function ScheduledPaymentsModal({
   const paid    = rows.filter(r => r.is_paid)
   const totalUnpaid = unpaid.reduce((s, r) => s + Number(r.amount), 0)
 
+  const formAmount = parseFloat(fAmount) || 0
+  const debtsByMonth = (() => {
+    const map: Record<string, OpenSupplierDebt[]> = {}
+    openDebts.forEach(d => {
+      const mk = monthKeyOf(d.date)
+      if (!map[mk]) map[mk] = []
+      map[mk].push(d)
+    })
+    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]))
+  })()
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -539,6 +695,8 @@ export default function ScheduledPaymentsModal({
                       <tr key={p.id} className="tr-hover" style={{ borderBottom: '1px solid var(--border)' }}>
                         <td style={{ ...TD, fontWeight: 500 }}>
                           {p.description}
+                          {p.check_number && <span style={{ marginRight: 6, fontSize: '11px', color: 'var(--text-muted)' }}>#{p.check_number}</span>}
+                          {p.series_id && <span title="חלק מסדרת צ׳קים" style={{ marginRight: 6, fontSize: '11px' }}>📚</span>}
                           {p.notes && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{p.notes}</div>}
                         </td>
                         <td style={{ ...TD, fontWeight: 700, color: 'var(--danger)' }}>{fmt(Number(p.amount))}</td>
@@ -615,8 +773,8 @@ export default function ScheduledPaymentsModal({
       <Modal
         open={formOpen}
         onClose={() => setFormOpen(false)}
-        title={editItem ? 'עריכת תשלום מתוזמן' : 'תשלום מתוזמן חדש'}
-        maxWidth={460}
+        title={editItem ? 'עריכת תשלום מתוזמן' : fSeriesMode ? 'סדרת צ׳קים חדשה' : 'תשלום מתוזמן חדש'}
+        maxWidth={520}
         footer={
           <>
             <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
@@ -625,9 +783,89 @@ export default function ScheduledPaymentsModal({
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {!editItem && (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {([[false, '📝 צ׳ק בודד'], [true, '📚 סדרת צ׳קים']] as [boolean, string][]).map(([v, label]) => (
+                <button key={String(v)} type="button" onClick={() => setFSeriesMode(v)} style={{
+                  flex: 1, padding: '8px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 500,
+                  border: `2px solid ${fSeriesMode === v ? '#0369a1' : 'var(--border)'}`,
+                  background: fSeriesMode === v ? '#e0f2fe' : '#fff',
+                  color: fSeriesMode === v ? '#0369a1' : 'var(--text-muted)',
+                }}>{label}</button>
+              ))}
+            </div>
+          )}
+
           <Input label="תיאור" placeholder="לדוג׳: צ'ק לספק, העברת שכירות..." value={fDesc} onChange={e => setFDesc(e.target.value)} />
-          <Input label="סכום" type="number" prefix="₪" placeholder="0.00" min="0" step="0.01" value={fAmount} onChange={e => setFAmount(e.target.value)} />
-          <Input label="תאריך פירעון" type="date" value={fDue} onChange={e => setFDue(e.target.value)} />
+          <Input label={fSeriesMode ? 'סכום כולל לסדרה' : 'סכום'} type="number" prefix="₪" placeholder="0.00" min="0" step="0.01" value={fAmount} onChange={e => setFAmount(e.target.value)} />
+
+          {fSeriesMode ? (
+            <>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <Input label="מספר צ׳קים" type="number" min="1" step="1" value={fSeriesCount} onChange={e => setFSeriesCount(e.target.value)} />
+                <Input label="תאריך פירעון ראשון" type="date" value={fDue} onChange={e => setFDue(e.target.value)} />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 500 }}>מרווח בין צ׳קים</label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {(['month', 'days'] as const).map(iv => (
+                    <button key={iv} type="button" onClick={() => setFSeriesInterval(iv)} style={{
+                      padding: '7px 12px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 500,
+                      border: `1px solid ${fSeriesInterval === iv ? 'var(--primary)' : 'var(--border)'}`,
+                      background: fSeriesInterval === iv ? '#f0fdf4' : '#f8fafc',
+                      color: fSeriesInterval === iv ? 'var(--primary)' : 'var(--text-muted)',
+                    }}>{iv === 'month' ? 'כל חודש' : 'כל X ימים'}</button>
+                  ))}
+                  {fSeriesInterval === 'days' && (
+                    <input type="number" min="1" value={fSeriesDays} onChange={e => setFSeriesDays(e.target.value)} style={{ ...SEL, width: 80 }} />
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '13px', fontWeight: 500 }}>חלוקת הסכום</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {(['equal', 'round'] as const).map(sp => (
+                    <button key={sp} type="button" onClick={() => setFSeriesSplit(sp)} style={{
+                      flex: 1, padding: '7px 8px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 500,
+                      border: `1px solid ${fSeriesSplit === sp ? 'var(--primary)' : 'var(--border)'}`,
+                      background: fSeriesSplit === sp ? '#f0fdf4' : '#f8fafc',
+                      color: fSeriesSplit === sp ? 'var(--primary)' : 'var(--text-muted)',
+                    }}>{sp === 'equal' ? 'חלוקה שווה' : 'סכום עגול + שארית'}</button>
+                  ))}
+                </div>
+              </div>
+
+              {fSeriesSplit === 'round' && (
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+                  <Input label="סכום קבוע לצ׳ק" type="number" prefix="₪" step="0.01" value={fSeriesRoundAmt} onChange={e => setFSeriesRoundAmt(e.target.value)} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 500 }}>השארית ב-</label>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {(['first', 'last'] as const).map(pos => (
+                        <button key={pos} type="button" onClick={() => setFSeriesRemainderPos(pos)} style={{
+                          padding: '7px 10px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 500,
+                          border: `1px solid ${fSeriesRemainderPos === pos ? 'var(--primary)' : 'var(--border)'}`,
+                          background: fSeriesRemainderPos === pos ? '#f0fdf4' : '#f8fafc',
+                          color: fSeriesRemainderPos === pos ? 'var(--primary)' : 'var(--text-muted)',
+                        }}>{pos === 'first' ? 'ראשון' : 'אחרון'}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <Input label="מספר צ׳ק ראשון (אופציונלי, מספרי → ממשיך אוטומטית)" value={fCheckNumber} onChange={e => setFCheckNumber(e.target.value)} />
+            </>
+          ) : (
+            <>
+              <Input label="תאריך פירעון" type="date" value={fDue} onChange={e => setFDue(e.target.value)} />
+              {fMethod === 'check' && (
+                <Input label="מספר צ׳ק (אופציונלי)" value={fCheckNumber} onChange={e => setFCheckNumber(e.target.value)} />
+              )}
+            </>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <label style={{ fontSize: '13px', fontWeight: 500 }}>אמצעי תשלום</label>
@@ -663,6 +901,43 @@ export default function ScheduledPaymentsModal({
               style={{ ...SEL }}
             />
           </div>
+
+          {/* ── Debt-month allocation: which open debts does this check/series settle ── */}
+          {!editItem && fSupplier && openDebts.length > 0 && (
+            <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, background: '#fafafa', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>שיבוץ מול חובות פתוחים של הספק (אופציונלי)</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>סמן אילו חודשים התשלום הזה סוגר. חודש שלא תסמן לא ייגע כלל.</div>
+              {debtsByMonth.map(([mk, debts]) => (
+                <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', marginBottom: 4 }}>{fmtMonthShort(mk)}</div>
+                  {debts.map(d => {
+                    const balance = Number(d.amount) - Number(d.paid)
+                    const checked = selectedDebtIds.has(d.id)
+                    return (
+                      <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <input type="checkbox" checked={checked} onChange={() => toggleDebtSelected(d)} />
+                        <span style={{ fontSize: 12, flex: 1, color: 'var(--text-muted)' }}>יתרה פתוחה: {fmt(balance)}</span>
+                        {checked && (
+                          <input
+                            type="number" step="0.01"
+                            value={debtAllocAmounts[d.id] ?? ''}
+                            onChange={e => setDebtAllocAmounts(a => ({ ...a, [d.id]: e.target.value }))}
+                            style={{ width: 90, padding: '4px 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 6 }}
+                          />
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+              {selectedDebtIds.size > 0 && (
+                <div style={{ fontSize: 12, fontWeight: 600, color: Math.abs(totalAllocated - formAmount) > 0.01 ? 'var(--warning)' : 'var(--text-muted)' }}>
+                  סה״כ משובץ: {fmt(totalAllocated)} מתוך {fmt(formAmount)}
+                  {Math.abs(totalAllocated - formAmount) > 0.01 && ' — שים לב לפער'}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </Modal>
 

@@ -562,3 +562,103 @@
 | 20:06 | Edited lib/uiSettings.ts | 4→5 lines | ~47 |
 | 20:06 | הוסף אפשרות הסתרת לשוניות בעורך הסיידבר | Sidebar.tsx, SidebarLayoutEditor.tsx, lib/uiSettings.ts | הוסף כפתור הסתר/הצג, סקציית מוסתרים, שמירה ב-localStorage + supabase | ~2k |
 | 20:06 | Session end: 14 writes across 4 files (DocumentsClient.tsx, SidebarLayoutEditor.tsx, Sidebar.tsx, uiSettings.ts) | 3 reads | ~4720 tok |
+| 20:09 | Session end: 14 writes across 4 files (DocumentsClient.tsx, SidebarLayoutEditor.tsx, Sidebar.tsx, uiSettings.ts) | 3 reads | ~4720 tok |
+
+## Session: 2026-07-01 17:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-07-01 17:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-07-01 17:04
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-07-01 17:04
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-07-05 21:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:17 | Created ../../../.claude/plans/lively-imagining-tarjan.md | — | ~3125 |
+| 22:26 | Edited ../../../.claude/plans/lively-imagining-tarjan.md | 28→33 lines | ~861 |
+| 22:26 | Edited ../../../.claude/plans/lively-imagining-tarjan.md | 2→3 lines | ~172 |
+| 22:27 | Edited ../../../.claude/plans/lively-imagining-tarjan.md | 5→6 lines | ~130 |
+| 22:38 | Edited ../../../.claude/plans/lively-imagining-tarjan.md | 2→6 lines | ~233 |
+| 22:38 | Edited ../../../.claude/plans/lively-imagining-tarjan.md | 1→2 lines | ~109 |
+| 22:40 | Created supabase/migrations/061_expenses_amortization_and_recurring_link.sql | — | ~92 |
+| 22:41 | Edited components/expenses/ExpensesClient.tsx | CSS: recurring_expense_id, amortize_months | ~79 |
+| 22:42 | Edited components/expenses/ExpensesClient.tsx | 2→3 lines | ~34 |
+| 22:42 | Edited components/expenses/ExpensesClient.tsx | 6→11 lines | ~185 |
+| 22:42 | Edited components/expenses/ExpensesClient.tsx | 4→6 lines | ~112 |
+| 22:42 | Edited components/expenses/ExpensesClient.tsx | modified setFAmortizeMonths() | ~280 |
+| 22:43 | Edited components/expenses/ExpensesClient.tsx | CSS: amortize_months | ~110 |
+| 22:43 | Edited components/expenses/ExpensesClient.tsx | CSS: recurring_expense_id | ~69 |
+| 22:43 | Edited components/expenses/ExpensesClient.tsx | inline fix | ~76 |
+| 22:43 | Edited components/expenses/ExpensesClient.tsx | added 3 condition(s) | ~773 |
+| 22:43 | Edited components/expenses/ExpensesClient.tsx | expanded (+22 lines) | ~435 |
+| 22:44 | Edited components/expenses/ExpensesClient.tsx | expanded (+14 lines) | ~376 |
+| 22:44 | Edited components/expenses/ExpensesClient.tsx | added optional chaining | ~960 |
+| 22:45 | Edited components/expenses/ExpensesClient.tsx | CSS: transition, transform, marginLeft | ~494 |
+| 22:46 | Edited components/expenses/ExpensesClient.tsx | 27→29 lines | ~493 |
+| 22:47 | Edited components/expenses/ExpensesClient.tsx | expanded (+18 lines) | ~356 |
+| 22:48 | Created supabase/migrations/062_supplier_check_reconciliation.sql | — | ~273 |
+| 22:49 | Created lib/debts/reconcileSupplierPayment.ts | — | ~439 |
+| 22:49 | Edited components/expenses/ScheduledPaymentsModal.tsx | modified monthKeyOf() | ~359 |
+| 22:49 | Edited components/expenses/ScheduledPaymentsModal.tsx | expanded (+15 lines) | ~357 |
+| 22:50 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: supplierId, ascending, debt | ~609 |
+| 22:51 | Edited components/expenses/ScheduledPaymentsModal.tsx | added nullish coalescing | ~1295 |
+| 22:52 | Edited components/expenses/ScheduledPaymentsModal.tsx | added nullish coalescing | ~2925 |
+| 22:52 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: map | ~144 |
+| 22:53 | Edited components/expenses/ScheduledPaymentsModal.tsx | 6→6 lines | ~115 |
+| 22:53 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: marginRight, marginRight | ~157 |
+| 22:54 | Edited components/debts/DebtsClient.tsx | CSS: supplier_debt_id | ~403 |
+| 22:55 | Edited components/debts/DebtsClient.tsx | 6→11 lines | ~140 |
+| 22:56 | Edited components/debts/DebtsClient.tsx | added 1 import(s) | ~65 |
+| 22:56 | Edited components/debts/DebtsClient.tsx | inline fix | ~19 |
+| 22:57 | Edited components/debts/DebtsClient.tsx | 3→4 lines | ~78 |
+| 22:58 | Edited components/debts/DebtsClient.tsx | 13→15 lines | ~290 |
+| 22:58 | Edited components/debts/DebtsClient.tsx | expanded (+7 lines) | ~237 |
+| 22:58 | Edited components/debts/DebtsClient.tsx | CSS: unlinkedPayments | ~288 |
+| 22:59 | Edited components/debts/DebtsClient.tsx | expanded (+8 lines) | ~189 |
+| 22:59 | Edited components/debts/DebtsClient.tsx | 3→4 lines | ~109 |
+| 23:00 | Edited components/debts/DebtsClient.tsx | added optional chaining | ~1169 |
+| 23:01 | Edited components/debts/DebtsClient.tsx | added 1 condition(s) | ~244 |
+| 23:02 | Edited components/suppliers/SuppliersClient.tsx | expanded (+10 lines) | ~90 |
+| 23:03 | Edited components/suppliers/SuppliersClient.tsx | 4→5 lines | ~84 |
+| 23:03 | Edited components/suppliers/SuppliersClient.tsx | 7→10 lines | ~172 |
+| 23:03 | Edited components/suppliers/SuppliersClient.tsx | added nullish coalescing | ~52 |
+| 23:03 | Edited components/suppliers/SuppliersClient.tsx | added nullish coalescing | ~138 |
+| 23:04 | Edited components/suppliers/SuppliersClient.tsx | modified suppDebts() | ~58 |
+| 23:04 | Edited components/suppliers/SuppliersClient.tsx | expanded (+20 lines) | ~566 |
+| 23:04 | Edited components/suppliers/SuppliersClient.tsx | 4→5 lines | ~103 |
+| 23:05 | Created supabase/migrations/063_billing_vat_period_fixed_addon.sql | — | ~185 |
+| 23:07 | Created supabase/migrations/063_billing_vat_period_fixed_addon.sql | — | ~184 |
+
+## Session: 2026-07-05 23:14
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-07-05 23:14
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 02:09 | Edited components/billing/BillingClient.tsx | 33→37 lines | ~258 |
+| 02:09 | Edited components/billing/BillingClient.tsx | 6→7 lines | ~111 |
+| 02:10 | Edited components/billing/BillingClient.tsx | 5→8 lines | ~134 |
+| 02:10 | Edited components/billing/BillingClient.tsx | CSS: fixed_addon | ~50 |
+| 02:11 | Edited components/billing/BillingClient.tsx | CSS: fixed_addon | ~451 |
+| 02:11 | Edited components/billing/BillingClient.tsx | added 4 condition(s) | ~1113 |
+| 02:12 | Edited components/billing/BillingClient.tsx | CSS: marginTop | ~170 |
+| 02:12 | Edited components/billing/BillingClient.tsx | CSS: gridTemplateColumns, gap | ~667 |
+| 02:12 | Edited components/billing/BillingClient.tsx | CSS: marginTop | ~218 |
+| 02:20 | Implemented approved plan (lively-imagining-tarjan.md): expenses category accordion + fixed/annual amortize_months + actual/prorated summary toggle; supplier debts — manual (not FIFO) debt-month allocation via new supplier_debt_payments ledger + check-series creation (equal/round+remainder split) + global checks calendar tab + fixed the real bug where checks never closed supplier_debts; billing — real VAT calc (was cosmetic-only), multi-month meter period fields, fixed_addon for electric company's fixed component (payer-side only) | ExpensesClient.tsx, ScheduledPaymentsModal.tsx, DebtsClient.tsx, SuppliersClient.tsx, BillingClient.tsx, lib/debts/reconcileSupplierPayment.ts, migrations 061-063 | tsc --noEmit clean; eslint shows only pre-existing issues (ref-during-render, unescaped quotes) on lines not touched | ~85k tok |

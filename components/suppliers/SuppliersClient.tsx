@@ -48,6 +48,16 @@ interface InvoiceEntry {
   description?: string
 }
 
+interface ScheduledPayment {
+  id: string
+  supplier_id: string | null
+  amount: number
+  due_date: string
+  payment_method: 'check' | 'transfer'
+  is_paid: boolean
+  check_number: string | null
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const ISRAELI_BANKS: { name: string; code: string }[] = [
@@ -101,6 +111,7 @@ export default function SuppliersClient() {
   const [suppliers, setSuppliers]     = useState<Supplier[]>([])
   const [debts, setDebts]             = useState<SupplierDebt[]>([])
   const [categories, setCategories]   = useState<string[]>([])
+  const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([])
 
   // Detail panel
   const [selected, setSelected] = useState<Supplier | null>(null)
@@ -138,12 +149,15 @@ export default function SuppliersClient() {
     if (!tid) return
     setLoading(true)
 
-    const [suppRes, debtRes, catRes] = await Promise.all([
+    const [suppRes, debtRes, catRes, paymentsRes] = await Promise.all([
       supabase.from('suppliers').select('*').eq('tenant_id', tid).order('name'),
       supabase.from('supplier_debts')
         .select('id,supplier_id,amount,paid,description,date,is_closed,doc_type,doc_number,invoices')
         .eq('tenant_id', tid),
       supabase.from('supplier_categories').select('name').eq('tenant_id', tid).order('name'),
+      supabase.from('scheduled_payments')
+        .select('id,supplier_id,amount,due_date,payment_method,is_paid,check_number')
+        .eq('tenant_id', tid).order('due_date'),
     ])
 
     if (suppRes.data) {
@@ -159,6 +173,7 @@ export default function SuppliersClient() {
     }
     if (debtRes.data) setDebts(debtRes.data)
     if (catRes.data)  setCategories(catRes.data.map(r => r.name))
+    setScheduledPayments(paymentsRes.data ?? [])
     setLoading(false)
   }, [supabase, resolveTenant])
 
@@ -170,6 +185,7 @@ export default function SuppliersClient() {
     const ch = supabase.channel('suppliers-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, loadAll)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_debts' }, loadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scheduled_payments' }, loadAll)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [supabase, loadAll])
@@ -250,6 +266,8 @@ export default function SuppliersClient() {
   const suppDebts      = (suppId: string) => debts.filter(d => d.supplier_id === suppId)
   const totalDebt      = (suppId: string) => suppDebts(suppId).filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
   const openDebtsCount = (suppId: string) => suppDebts(suppId).filter(d => !d.is_closed).length
+  const nextCheck = (suppId: string) =>
+    scheduledPayments.filter(p => p.supplier_id === suppId && !p.is_paid).sort((a, b) => a.due_date.localeCompare(b.due_date))[0] ?? null
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-muted)', fontSize: '14px' }}>
@@ -259,6 +277,7 @@ export default function SuppliersClient() {
 
   const selectedDebts     = selected ? suppDebts(selected.id) : []
   const selectedOpenTotal = selected ? totalDebt(selected.id) : 0
+  const selectedNextCheck = selected ? nextCheck(selected.id) : null
 
   // ── Excel / JSON ───────────────────────────────────────────────────────────
 
@@ -480,6 +499,26 @@ export default function SuppliersClient() {
                 </div>
               )}
             </div>
+
+            {/* Balance + next check summary */}
+            {(selectedOpenTotal > 0 || selectedNextCheck) && (
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                {selectedOpenTotal > 0 && (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', flex: 1, minWidth: '140px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>יתרת חוב פתוחה</div>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(selectedOpenTotal)}</div>
+                  </div>
+                )}
+                {selectedNextCheck && (
+                  <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px 14px', flex: 1, minWidth: '140px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>
+                      📅 {selectedNextCheck.payment_method === 'check' ? "צ׳ק" : 'העברה'} הבא לפירעון{selectedNextCheck.check_number ? ` #${selectedNextCheck.check_number}` : ''}
+                    </div>
+                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#0369a1' }}>{fmt(selectedNextCheck.amount)} • {selectedNextCheck.due_date}</div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Debts section */}
             <div>

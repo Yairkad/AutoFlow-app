@@ -27,6 +27,8 @@ interface Expense {
   supplier_id: string | null
   payment_method: PaymentMethod | null
   payment_ref: string | null
+  recurring_expense_id: string | null
+  amortize_months: number | null
 }
 
 interface Income {
@@ -48,6 +50,7 @@ interface SummaryRow {
 
 type Tab     = 'expenses' | 'income' | 'summary'
 type VatMode = 'with' | 'without'
+type SumMode = 'actual' | 'prorated'
 
 // ─── Default category seeds ───────────────────────────────────────────────────
 
@@ -229,8 +232,13 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   const [sumPreset,      setSumPreset]      = useState<SumPreset>('6m')
   const [sumDateFrom,    setSumDateFrom]    = useState(() => presetRange('6m').from)
   const [sumDateTo,      setSumDateTo]      = useState(() => presetRange('6m').to)
+  const [sumMode,        setSumMode]        = useState<SumMode>('actual')
   const [summaryRows,    setSummaryRows]    = useState<SummaryRow[]>([])
   const [summaryLoading, setSummaryLoading] = useState(false)
+
+  // Category-grouped view (expenses/income tables)
+  const [groupedView, setGroupedView] = useState(true)
+  const [openCats,    setOpenCats]    = useState<Set<string>>(new Set())
 
   // Add/Edit modal
   const [modal,    setModal]    = useState(false)
@@ -253,6 +261,8 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   const [fSchedDue,      setFSchedDue]      = useState('')
   const [fSchedMethod,   setFSchedMethod]   = useState<'check' | 'transfer'>('check')
   const [fSchedRef,      setFSchedRef]      = useState('')
+  const [fAmortize,       setFAmortize]       = useState(false)
+  const [fAmortizeMonths, setFAmortizeMonths] = useState('12')
 
   // Recurring management modals
   const [recListModal, setRecListModal] = useState(false)
@@ -400,7 +410,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     setSummaryLoading(true)
 
     const [expRes, incRes] = await Promise.all([
-      supabase.from('expenses').select('date, amount').gte('date', sumDateFrom).lte('date', sumDateTo),
+      supabase.from('expenses').select('date, amount, amortize_months').gte('date', sumDateFrom).lte('date', sumDateTo),
       supabase.from('income').select('date, amount').gte('date', sumDateFrom).lte('date', sumDateTo),
     ])
 
@@ -413,13 +423,39 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
       d = new Date(d.getFullYear(), d.getMonth() + 1, 1)
     }
 
-    for (const r of expRes.data ?? []) {
-      const k = r.date.slice(0, 7)
-      if (map[k]) map[k].expenses += Number(r.amount)
+    // "actual" → full amount lands on its real month. "prorated" → an amortized
+    // expense is spread evenly over its amortize_months, starting at its own month.
+    const applyExpense = (dateStr: string, amount: number, amortizeMonths: number | null) => {
+      if (sumMode === 'actual' || !amortizeMonths || amortizeMonths <= 1) {
+        const k = dateStr.slice(0, 7)
+        if (map[k]) map[k].expenses += amount
+        return
+      }
+      const per = amount / amortizeMonths
+      const start = new Date(dateStr.slice(0, 7) + '-01')
+      for (let i = 0; i < amortizeMonths; i++) {
+        const k = toMonthStr(new Date(start.getFullYear(), start.getMonth() + i, 1))
+        if (map[k]) map[k].expenses += per
+      }
     }
+
+    for (const r of expRes.data ?? []) applyExpense(r.date, Number(r.amount), r.amortize_months ?? null)
     for (const r of incRes.data ?? []) {
       const k = r.date.slice(0, 7)
       if (map[k]) map[k].income += Number(r.amount)
+    }
+
+    // Prorated mode: older amortized expenses (dated before the range) can still
+    // be "bleeding" into it — pull them from a lookback window and spread too.
+    if (sumMode === 'prorated') {
+      const lookbackFrom = new Date(sumDateFrom.slice(0, 7) + '-01')
+      lookbackFrom.setMonth(lookbackFrom.getMonth() - 24)
+      const lookbackRes = await supabase.from('expenses')
+        .select('date, amount, amortize_months')
+        .not('amortize_months', 'is', null)
+        .gte('date', lookbackFrom.toISOString().slice(0, 10))
+        .lt('date', sumDateFrom)
+      for (const r of lookbackRes.data ?? []) applyExpense(r.date, Number(r.amount), r.amortize_months)
     }
 
     setSummaryRows(
@@ -428,7 +464,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         .sort((a, b) => b.month.localeCompare(a.month))
     )
     setSummaryLoading(false)
-  }, [sumDateFrom, sumDateTo]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sumDateFrom, sumDateTo, sumMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (tab === 'summary') fetchSummary()
@@ -445,7 +481,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     if (fixed.length > 0) {
       const today = new Date().toISOString().slice(0, 10)
       await supabase.from('expenses').insert(
-        fixed.map(r => ({ tenant_id: tenantId, date: today, category: r.category, description: r.description, amount: r.amount, supplier_id: r.supplier_id }))
+        fixed.map(r => ({ tenant_id: tenantId, date: today, category: r.category, description: r.description, amount: r.amount, supplier_id: r.supplier_id, recurring_expense_id: r.id }))
       )
       await Promise.all(fixed.map(r => supabase.from('recurring_expenses').update({ last_applied: currentMonth }).eq('id', r.id)))
       showToast(`${fixed.length} הוצאות קבועות נוספו אוטומטית ✓`, 'success')
@@ -470,7 +506,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     if (!tenantIdRef.current) return
     setVarSaving(true)
     const today = new Date().toISOString().slice(0, 10)
-    await supabase.from('expenses').insert({ tenant_id: tenantIdRef.current, date: today, category: currentVar.category, description: currentVar.description, amount: parseFloat(varAmount), supplier_id: currentVar.supplier_id })
+    await supabase.from('expenses').insert({ tenant_id: tenantIdRef.current, date: today, category: currentVar.category, description: currentVar.description, amount: parseFloat(varAmount), supplier_id: currentVar.supplier_id, recurring_expense_id: currentVar.id })
     await supabase.from('recurring_expenses').update({ last_applied: currentMonth }).eq('id', currentVar.id)
     setVarSaving(false)
     advanceVar()
@@ -511,6 +547,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     setFVatMode('without')
     setFIsRecurring(false); setFRecurFreq('monthly'); setFRecurVar(false)
     setFIsScheduled(false); setFSchedDue(''); setFSchedMethod('check'); setFSchedRef('')
+    setFAmortize(false); setFAmortizeMonths('12')
     setModal(true)
   }
 
@@ -526,6 +563,8 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     setFVatMode('without')
     setFIsRecurring(false); setFRecurFreq('monthly'); setFRecurVar(false)
     setFIsScheduled(false); setFSchedDue(''); setFSchedMethod('check'); setFSchedRef('')
+    const amortizeMonths = (item as Expense).amortize_months
+    setFAmortize(!!amortizeMonths); setFAmortizeMonths(amortizeMonths ? String(amortizeMonths) : '12')
     setModal(true)
   }
 
@@ -558,6 +597,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           supplier_id: fSupplier || null,
           payment_method: fPayMethod,
           payment_ref: (fPayMethod === "צ'ק" || fPayMethod === 'העברה') ? (fPayRef || null) : null,
+          amortize_months: fAmortize ? (parseInt(fAmortizeMonths, 10) || 12) : null,
         }
         const res = editItem
           ? await supabase.from('expenses').update(payload).eq('id', editItem.id)
@@ -671,6 +711,64 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     if (filterSup && tab === 'expenses' && (row as Expense).supplier_id !== filterSup) return false
     return true
   })
+
+  const groupedEntries = (() => {
+    const map: Record<string, { rows: (Expense | Income)[]; total: number }> = {}
+    filteredRows.forEach(row => {
+      const key = (row.category || '').trim() || 'אחר / לא מקוטלג'
+      if (!map[key]) map[key] = { rows: [], total: 0 }
+      map[key].rows.push(row)
+      map[key].total += Number(row.amount)
+    })
+    return Object.entries(map).sort((a, b) => b[1].total - a[1].total)
+  })()
+
+  const toggleCat = (cat: string) => setOpenCats(prev => {
+    const next = new Set(prev)
+    if (next.has(cat)) next.delete(cat); else next.add(cat)
+    return next
+  })
+
+  const renderDataRow = (row: Expense | Income) => (
+    <tr key={row.id} onClick={() => setSelectedRowId(selectedRowId === row.id ? null : row.id)} className="tr-hover" style={{ borderBottom: '1px solid var(--border)', background: selectedRowId === row.id ? '#eff6ff' : undefined, cursor: 'pointer' }}>
+      <td style={{ ...TD, color: 'var(--text-muted)' }}>{new Date(row.date + 'T00:00:00').toLocaleDateString('he-IL')}</td>
+      <td style={TD}>
+        <span style={{ background: '#f1f5f9', borderRadius: '6px', padding: '2px 8px', fontSize: '12px', fontWeight: 500 }}>{row.category}</span>
+        {tab === 'expenses' && (row as Expense).recurring_expense_id && <span title="הוצאה קבועה" style={{ marginRight: 6, fontSize: 12 }}>🔁</span>}
+        {tab === 'expenses' && !!(row as Expense).amortize_months && (
+          <span title={`פריסה ל-${(row as Expense).amortize_months} חודשים בדוחות`} style={{ marginRight: 6, fontSize: 11, background: '#eef2ff', color: '#4338ca', borderRadius: 6, padding: '1px 6px' }}>
+            📅÷{(row as Expense).amortize_months}
+          </span>
+        )}
+      </td>
+      <td style={{ ...TD, color: row.description ? 'var(--text)' : 'var(--text-muted)' }}>{row.description || '—'}</td>
+      {tab === 'expenses' && (
+        <td style={{ ...TD, color: 'var(--text-muted)' }}>{suppliers.find(s => s.id === (row as Expense).supplier_id)?.name || '—'}</td>
+      )}
+      {tab === 'expenses' && (() => {
+        const exp = row as Expense
+        const pm  = exp.payment_method
+        const pmColors: Record<string, { color: string; bg: string }> = {
+          'מזומן':   { color: '#16a34a', bg: '#f0fdf4' },
+          'אשראי':   { color: '#2563eb', bg: '#eff6ff' },
+          "צ'ק":    { color: '#92400e', bg: '#fef9c3' },
+          'העברה':   { color: '#6d28d9', bg: '#f5f3ff' },
+        }
+        const cs = pm ? (pmColors[pm] ?? { color: 'var(--text-muted)', bg: '#f1f5f9' }) : null
+        return (
+          <td style={TD}>
+            {pm && cs ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: cs.color, background: cs.bg, borderRadius: '6px', padding: '2px 7px', whiteSpace: 'nowrap' }}>{pm}</span>
+                {exp.payment_ref && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{exp.payment_ref}</span>}
+              </div>
+            ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+          </td>
+        )
+      })()}
+      <td style={{ ...TD, textAlign: 'left', fontWeight: 700, color: tab === 'expenses' ? 'var(--danger)' : 'var(--primary)' }}>{fmt(row.amount)}</td>
+    </tr>
+  )
 
   const parsedAmount  = parseFloat(fAmount)
   const hasAmount     = !isNaN(parsedAmount) && parsedAmount > 0
@@ -871,6 +969,20 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               ✕ נקה
             </button>
           )}
+          <div style={{ display: 'flex', gap: '2px', padding: '3px', background: '#f1f5f9', borderRadius: '9px' }}>
+            {([
+              [true,  '📁 מקובץ'],
+              [false, '📋 רשימה'],
+            ] as [boolean, string][]).map(([v, label]) => (
+              <button key={String(v)} onClick={() => setGroupedView(v)} style={{
+                border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '5px 12px', fontSize: '12px',
+                fontWeight: groupedView === v ? 600 : 400,
+                color: groupedView === v ? 'var(--text)' : 'var(--text-muted)',
+                background: groupedView === v ? '#fff' : 'transparent',
+                borderRadius: '7px', boxShadow: groupedView === v ? '0 1px 4px rgba(0,0,0,.1)' : 'none', whiteSpace: 'nowrap',
+              }}>{label}</button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -879,6 +991,28 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {tab === 'summary' && (
         <div>
+          {/* Actual vs. prorated toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>תצוגה:</span>
+            <div style={{ display: 'flex', gap: '2px', padding: '3px', background: '#f1f5f9', borderRadius: '9px' }}>
+              {([
+                ['actual',   '💵 בפועל'],
+                ['prorated', '📅 יחסי (מפוצל)'],
+              ] as [SumMode, string][]).map(([m, label]) => (
+                <button key={m} onClick={() => setSumMode(m)} style={{
+                  border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '5px 12px', fontSize: '12px',
+                  fontWeight: sumMode === m ? 600 : 400,
+                  color: sumMode === m ? 'var(--text)' : 'var(--text-muted)',
+                  background: sumMode === m ? '#fff' : 'transparent',
+                  borderRadius: '7px', boxShadow: sumMode === m ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+                }}>{label}</button>
+              ))}
+            </div>
+            {sumMode === 'prorated' && (
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>הוצאות עם פריסה שנתית מוצגות מחולקות שווה בשווה על פני החודשים</span>
+            )}
+          </div>
+
           {/* Preset buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
             {([
@@ -1019,46 +1153,35 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                   <th style={{ ...TH, textAlign: 'left' }}>סכום</th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredRows.length === 0 ? (
+              {filteredRows.length === 0 ? (
+                <tbody>
                   <tr>
                     <td colSpan={tab === 'expenses' ? 6 : 4} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)', fontSize: '14px' }}>
                       {baseRows.length === 0 ? 'אין רשומות לחודש זה' : 'לא נמצאו תוצאות לחיפוש'}
                     </td>
                   </tr>
-                ) : filteredRows.map(row => (
-                  <tr key={row.id} onClick={() => setSelectedRowId(selectedRowId === row.id ? null : row.id)} className="tr-hover" style={{ borderBottom: '1px solid var(--border)', background: selectedRowId === row.id ? '#eff6ff' : undefined, cursor: 'pointer' }}>
-                    <td style={{ ...TD, color: 'var(--text-muted)' }}>{new Date(row.date + 'T00:00:00').toLocaleDateString('he-IL')}</td>
-                    <td style={TD}><span style={{ background: '#f1f5f9', borderRadius: '6px', padding: '2px 8px', fontSize: '12px', fontWeight: 500 }}>{row.category}</span></td>
-                    <td style={{ ...TD, color: row.description ? 'var(--text)' : 'var(--text-muted)' }}>{row.description || '—'}</td>
-                    {tab === 'expenses' && (
-                      <td style={{ ...TD, color: 'var(--text-muted)' }}>{suppliers.find(s => s.id === (row as Expense).supplier_id)?.name || '—'}</td>
-                    )}
-                    {tab === 'expenses' && (() => {
-                      const exp = row as Expense
-                      const pm  = exp.payment_method
-                      const pmColors: Record<string, { color: string; bg: string }> = {
-                        'מזומן':   { color: '#16a34a', bg: '#f0fdf4' },
-                        'אשראי':   { color: '#2563eb', bg: '#eff6ff' },
-                        "צ'ק":    { color: '#92400e', bg: '#fef9c3' },
-                        'העברה':   { color: '#6d28d9', bg: '#f5f3ff' },
-                      }
-                      const cs = pm ? (pmColors[pm] ?? { color: 'var(--text-muted)', bg: '#f1f5f9' }) : null
-                      return (
-                        <td style={TD}>
-                          {pm && cs ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start' }}>
-                              <span style={{ fontSize: '12px', fontWeight: 600, color: cs.color, background: cs.bg, borderRadius: '6px', padding: '2px 7px', whiteSpace: 'nowrap' }}>{pm}</span>
-                              {exp.payment_ref && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{exp.payment_ref}</span>}
-                            </div>
-                          ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                </tbody>
+              ) : groupedView ? (
+                groupedEntries.map(([cat, group]) => {
+                  const isOpen = openCats.has(cat)
+                  const totalCols = tab === 'expenses' ? 6 : 4
+                  return (
+                    <tbody key={cat}>
+                      <tr onClick={() => toggleCat(cat)} className="tr-hover" style={{ cursor: 'pointer', background: '#f8fafc', borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ ...TD, fontWeight: 700 }} colSpan={totalCols - 2}>
+                          <span style={{ display: 'inline-block', transition: 'transform .15s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', marginLeft: 8 }}>›</span>
+                          {cat}
                         </td>
-                      )
-                    })()}
-                    <td style={{ ...TD, textAlign: 'left', fontWeight: 700, color: tab === 'expenses' ? 'var(--danger)' : 'var(--primary)' }}>{fmt(row.amount)}</td>
-                  </tr>
-                ))}
-              </tbody>
+                        <td style={{ ...TD, color: 'var(--text-muted)' }}>{group.rows.length} פריטים</td>
+                        <td style={{ ...TD, textAlign: 'left', fontWeight: 800, color: tab === 'expenses' ? 'var(--danger)' : 'var(--primary)' }}>{fmt(group.total)}</td>
+                      </tr>
+                      {isOpen && group.rows.map(renderDataRow)}
+                    </tbody>
+                  )
+                })
+              ) : (
+                <tbody>{filteredRows.map(renderDataRow)}</tbody>
+              )}
               {filteredRows.length > 0 && (
                 <tfoot>
                   <tr style={{ background: '#f8fafc', borderTop: '2px solid var(--border)' }}>
@@ -1158,6 +1281,24 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                   onChange={e => setFPayRef(e.target.value)}
                   className="form-input"
                 />
+              )}
+            </div>
+          )}
+
+          {/* Annual expense — prorated in reports over N months, shown in full on its real date */}
+          {tab === 'expenses' && !fIsScheduled && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Toggle on={fAmortize} onChange={setFAmortize} label="📅 הוצאה שנתית (פריסה בדוחות)" />
+              {fAmortize && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingRight: '44px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>פרוס על פני</span>
+                  <input
+                    type="number" min="2" step="1" value={fAmortizeMonths}
+                    onChange={e => setFAmortizeMonths(e.target.value)}
+                    className="form-input" style={{ width: '70px' }}
+                  />
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>חודשים — יוצג בטאב הרגיל בתאריך התשלום המלא, ובסיכום החודשי (תצוגת &quot;יחסי&quot;) מחולק שווה בשווה</span>
+                </div>
               )}
             </div>
           )}
