@@ -8,6 +8,7 @@ import Modal from '@/components/ui/Modal'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { reconcileSupplierPayment, DebtAllocation } from '@/lib/debts/reconcileSupplierPayment'
+import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,7 @@ interface Props {
   onRefresh?: () => void
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void
   expenseCats: string[]
+  initialSupplierId?: string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -108,11 +110,12 @@ function todayIso() { return new Date().toISOString().slice(0, 10) }
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ScheduledPaymentsModal({
-  open, onClose, suppliers, tenantId, supabase, onRefresh, showToast, expenseCats,
+  open, onClose, suppliers, tenantId, supabase, onRefresh, showToast, expenseCats, initialSupplierId,
 }: Props) {
   const [rows,      setRows]      = useState<ScheduledPayment[]>([])
   const [loading,   setLoading]   = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [showQuickAddSupplier, setShowQuickAddSupplier] = useState(false)
   const importRef = useRef<HTMLInputElement>(null)
 
   // Form modal
@@ -207,11 +210,17 @@ export default function ScheduledPaymentsModal({
   const openAdd = () => {
     setEditItem(null)
     setFDesc(''); setFAmount(''); setFDue(todayIso())
-    setFMethod('check'); setFSupplier(''); setFNotes(''); setFCheckNumber('')
+    setFMethod('check'); setFSupplier(initialSupplierId ?? ''); setFNotes(''); setFCheckNumber('')
     setFSeriesMode(false); setFSeriesCount('3'); setFSeriesInterval('month'); setFSeriesDays('30')
     setFSeriesSplit('equal'); setFSeriesRoundAmt(''); setFSeriesRemainderPos('last')
     setFormOpen(true)
   }
+
+  // Auto-open the add form (pre-filled to the given supplier) when opened this way
+  useEffect(() => {
+    if (open && initialSupplierId) openAdd()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const openEdit = (p: ScheduledPayment) => {
     setEditItem(p)
@@ -885,10 +894,18 @@ export default function ScheduledPaymentsModal({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <label style={{ fontSize: '13px', fontWeight: 500 }}>ספק (אופציונלי)</label>
-            <select value={fSupplier} onChange={e => setFSupplier(e.target.value)} style={SEL}>
-              <option value="">— ללא ספק —</option>
-              {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <select value={fSupplier} onChange={e => setFSupplier(e.target.value)} style={SEL}>
+                <option value="">— ללא ספק —</option>
+                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowQuickAddSupplier(true)}
+                title="הוסף ספק חדש"
+                style={{ padding: '0 12px', border: '1px solid var(--border)', borderRadius: '8px', background: '#f8fafc', cursor: 'pointer', fontSize: '15px', color: 'var(--primary)', flexShrink: 0 }}
+              >＋</button>
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -992,6 +1009,15 @@ export default function ScheduledPaymentsModal({
           </div>
         )}
       </Modal>
+
+      <QuickAddSupplierModal
+        open={showQuickAddSupplier}
+        onClose={() => setShowQuickAddSupplier(false)}
+        tenantId={tenantId}
+        supabase={supabase}
+        showToast={showToast}
+        onCreated={(s: QuickSupplier) => { setFSupplier(s.id); onRefresh?.() }}
+      />
     </>
   )
 }

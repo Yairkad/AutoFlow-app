@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T05:24:43.061Z
-> Files: 19 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T14:31:33.672Z
+> Files: 20 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -9,7 +9,7 @@
 
 ## ../../../.claude/plans/
 
-- `lively-imagining-tarjan.md` — תכנון: דף חדש "מעקב ספקים" + טבלת חשבוניות/זיכויים לפי חודש (~1745 tok)
+- `lively-imagining-tarjan.md` — תכנון: תשלום מרובה-חובות, אמצעי תשלום, הוספת ספק מהירה, כרטיסים (~1169 tok)
 
 ## ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/
 
@@ -256,7 +256,7 @@
 
 ## components/debts/
 
-- `DebtsClient.tsx` — fmt (~10175 tok)
+- `DebtsClient.tsx` — fmt (~10300 tok)
 
 ## components/documents/
 
@@ -268,7 +268,7 @@
 ## components/expenses/
 
 - `ExpensesClient.tsx` — DEFAULT_EXPENSE_CATS (~21193 tok)
-- `ScheduledPaymentsModal.tsx` — monthKeyOf (~13333 tok)
+- `ScheduledPaymentsModal.tsx` — monthKeyOf (~13691 tok)
 
 ## components/inspections/
 
@@ -298,10 +298,11 @@
 
 ## components/supplier-tracking/
 
-- `SupplierTrackingClient.tsx` — fmt (~14891 tok)
+- `SupplierTrackingClient.tsx` — fmt (~22236 tok)
 
 ## components/suppliers/
 
+- `QuickAddSupplierModal.tsx` — QuickAddSupplierModal — renders modal (~794 tok)
 - `SuppliersClient.tsx` — ISRAELI_BANKS (~10675 tok)
 
 ## components/test-transfer/

@@ -10,10 +10,12 @@ import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
 import { reconcileSupplierPayment } from '@/lib/debts/reconcileSupplierPayment'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
+import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Direction = 'charge' | 'credit'
+type PaymentMethod = 'מזומן' | 'אשראי' | "צ'ק" | 'העברה'
 
 interface InvoiceEntry {
   type: 'invoice' | 'karteset'
@@ -21,6 +23,7 @@ interface InvoiceEntry {
   amount: string
   date: string
   direction: Direction
+  notes: string
 }
 
 interface SupplierDebt {
@@ -58,7 +61,7 @@ const fmt = (n: number) =>
 const todayISO = () => new Date().toISOString().slice(0, 10)
 const bal = (d: { amount: number; paid: number; direction: Direction }) =>
   d.direction === 'credit' ? -Number(d.amount) : Math.max(0, Number(d.amount) - Number(d.paid))
-const EMPTY_INV = (): InvoiceEntry => ({ type: 'invoice', number: '', amount: '', date: todayISO(), direction: 'charge' })
+const EMPTY_INV = (): InvoiceEntry => ({ type: 'invoice', number: '', amount: '', date: todayISO(), direction: 'charge', notes: '' })
 
 const waUrl = (phone: string, text: string) => {
   let digits = phone.replace(/\D/g, '')
@@ -104,6 +107,16 @@ export default function SupplierTrackingClient() {
   // Row selection
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  // Which supplier cards are expanded (collapsed by default — click to open detail)
+  const [openSupplierKeys, setOpenSupplierKeys] = useState<Set<string>>(new Set())
+  const supplierKeyOf = (sid: string | null) => sid ?? '__none__'
+  const toggleSupplierOpen = (sid: string | null) => setOpenSupplierKeys(prev => {
+    const k = supplierKeyOf(sid)
+    const next = new Set(prev)
+    if (next.has(k)) next.delete(k); else next.add(k)
+    return next
+  })
+
   // Supplier debt form (each line = its own invoice/credit)
   const [showSuppModal, setShowSuppModal] = useState(false)
   const [editSupp, setEditSupp]           = useState<SupplierDebt | null>(null)
@@ -112,11 +125,23 @@ export default function SupplierTrackingClient() {
   const [sInvoices, setSInvoices] = useState<InvoiceEntry[]>([EMPTY_INV()])
   const [sSaving, setSsaving]     = useState(false)
 
-  // Payment modal
-  const [payItem, setPayItem]     = useState<{ id: string; balance: number } | null>(null)
-  const [payAmount, setPayAmount] = useState('')
+  // Retroactively allocate an already-issued check/payment against open debts
+  const [allocatingPayment, setAllocatingPayment] = useState<ScheduledPayment | null>(null)
+  const [allocSelectedIds, setAllocSelectedIds] = useState<Set<string>>(new Set())
+  const [allocAmounts, setAllocAmounts] = useState<Record<string, string>>({})
+  const [allocSaving, setAllocSaving] = useState(false)
+
+  // Payment modal — pays one or several open debts of one supplier at once
+  const [showPayModal, setShowPayModal]   = useState(false)
+  const [paySupplierId, setPaySupplierId] = useState<string | null>(null)
+  const [paySelectedIds, setPaySelectedIds] = useState<Set<string>>(new Set())
+  const [payAllocAmounts, setPayAllocAmounts] = useState<Record<string, string>>({})
+  const [payMethod, setPayMethod] = useState<PaymentMethod>('מזומן')
   const [payDate, setPayDate]     = useState(todayISO())
   const [paySaving, setPaySaving] = useState(false)
+
+  // Quick-add-supplier modal
+  const [showQuickAddSupplier, setShowQuickAddSupplier] = useState(false)
 
   // Tenant name (for WA messages)
   const [tenantName, setTenantName] = useState('AutoFlow')
@@ -124,6 +149,20 @@ export default function SupplierTrackingClient() {
 
   // Scheduled payments (checks) modal
   const [schedModal, setSchedModal] = useState(false)
+  const [schedInitialSupplierId, setSchedInitialSupplierId] = useState<string | undefined>(undefined)
+
+  // Styled printing — pick what to print, then render a hidden print-only area
+  const [showPrintChoice, setShowPrintChoice] = useState(false)
+  const [printMode, setPrintMode] = useState<'ledger' | 'calendar' | null>(null)
+  const [printSupplierId, setPrintSupplierId] = useState<string>('')
+
+  useEffect(() => {
+    if (!printMode) return
+    const t = setTimeout(() => window.print(), 150)
+    const onAfterPrint = () => { setPrintMode(null) }
+    window.addEventListener('afterprint', onAfterPrint)
+    return () => { clearTimeout(t); window.removeEventListener('afterprint', onAfterPrint) }
+  }, [printMode])
 
   // ── Tenant ────────────────────────────────────────────────────────────────
 
@@ -198,7 +237,10 @@ export default function SupplierTrackingClient() {
     if (didAutoOpen.current || loading) return
     didAutoOpen.current = true
     const openId = new URLSearchParams(window.location.search).get('open')
-    if (openId && suppliers.some(s => s.id === openId)) setSearch(suppliers.find(s => s.id === openId)!.name)
+    if (openId && suppliers.some(s => s.id === openId)) {
+      setSearch(suppliers.find(s => s.id === openId)!.name)
+      setOpenSupplierKeys(prev => new Set(prev).add(supplierKeyOf(openId)))
+    }
   }, [loading, suppliers])
 
   // ── Realtime ──────────────────────────────────────────────────────────────
@@ -216,12 +258,12 @@ export default function SupplierTrackingClient() {
 
   const openSuppModal = (d?: SupplierDebt) => {
     if (d) {
-      setEditSupp(d); setSSupplier(d.supplier_id ?? ''); setSNotes(d.description ?? '')
+      setEditSupp(d); setSSupplier(d.supplier_id ?? ''); setSNotes('')
       const existing = Array.isArray(d.invoices) && d.invoices.length > 0
-        ? d.invoices.map(i => ({ type: i.type as 'invoice' | 'karteset', number: i.number, amount: String(i.amount), date: d.date, direction: d.direction }))
+        ? d.invoices.map(i => ({ type: i.type as 'invoice' | 'karteset', number: i.number, amount: String(i.amount), date: d.date, direction: d.direction, notes: d.description ?? '' }))
         : d.doc_number
-          ? [{ type: (d.doc_type ?? 'invoice') as 'invoice' | 'karteset', number: d.doc_number, amount: String(d.amount), date: d.date, direction: d.direction }]
-          : [{ ...EMPTY_INV(), date: d.date, direction: d.direction }]
+          ? [{ type: (d.doc_type ?? 'invoice') as 'invoice' | 'karteset', number: d.doc_number, amount: String(d.amount), date: d.date, direction: d.direction, notes: d.description ?? '' }]
+          : [{ ...EMPTY_INV(), date: d.date, direction: d.direction, notes: d.description ?? '' }]
       setSInvoices(existing)
     } else {
       setEditSupp(null); setSSupplier(''); setSNotes(''); setSInvoices([EMPTY_INV()])
@@ -250,7 +292,7 @@ export default function SupplierTrackingClient() {
       const row = {
         supplier_id: sSupplier || null,
         amount: total || parseFloat(validLines[0]?.amount) || 0,
-        description: sNotes.trim() || null,
+        description: validLines[0]?.notes.trim() || sNotes.trim() || null,
         date: validLines[0]?.date || todayISO(),
         doc_type: validLines[0]?.type ?? 'invoice',
         doc_number: validLines[0]?.number.trim() || null,
@@ -266,7 +308,7 @@ export default function SupplierTrackingClient() {
         id: crypto.randomUUID(), tenant_id: tid,
         supplier_id: sSupplier || null,
         amount: parseFloat(l.amount) || 0,
-        description: sNotes.trim() || null,
+        description: l.notes.trim() || sNotes.trim() || null,
         date: l.date,
         doc_type: l.type,
         doc_number: l.number.trim() || null,
@@ -293,29 +335,137 @@ export default function SupplierTrackingClient() {
     setShowSuppModal(true)
   }
 
-  // ── Payment ───────────────────────────────────────────────────────────────
+  // ── Payment (one or several open debts of one supplier, in one action) ────
 
-  const openPay = (id: string, debtBalance: number) => {
-    setPayItem({ id, balance: debtBalance })
-    setPayAmount(String(debtBalance.toFixed(2))); setPayDate(todayISO())
+  const payOpenDebts = supplierDebts.filter(d => d.supplier_id === paySupplierId && !d.is_closed && d.direction === 'charge')
+  const payDebtsByMonth = (() => {
+    const map: Record<string, SupplierDebt[]> = {}
+    payOpenDebts.forEach(d => {
+      const mk = monthKeyOf(d.date)
+      if (!map[mk]) map[mk] = []
+      map[mk].push(d)
+    })
+    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]))
+  })()
+  const payTotalSelected = Array.from(paySelectedIds).reduce((s, id) => s + (parseFloat(payAllocAmounts[id] ?? '0') || 0), 0)
+
+  const openPaySupplier = (supplierId: string | null, preselectId?: string) => {
+    setPaySupplierId(supplierId)
+    setPayMethod('מזומן'); setPayDate(todayISO())
+    if (preselectId) {
+      const d = supplierDebts.find(x => x.id === preselectId)
+      setPaySelectedIds(new Set([preselectId]))
+      setPayAllocAmounts(d ? { [preselectId]: String(bal(d).toFixed(2)) } : {})
+    } else {
+      setPaySelectedIds(new Set()); setPayAllocAmounts({})
+    }
+    setShowPayModal(true)
   }
 
-  const recordPayment = async () => {
-    if (!payItem || !payAmount) return
-    const amount = parseFloat(payAmount)
-    if (isNaN(amount) || amount <= 0) { showToast('סכום לא תקין', 'error'); return }
+  const togglePayDebt = (d: SupplierDebt) => {
+    setPaySelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(d.id)) {
+        next.delete(d.id)
+        setPayAllocAmounts(a => { const c = { ...a }; delete c[d.id]; return c })
+      } else {
+        next.add(d.id)
+        setPayAllocAmounts(a => ({ ...a, [d.id]: a[d.id] ?? String(bal(d).toFixed(2)) }))
+      }
+      return next
+    })
+  }
+
+  const selectAllPayDebts = () => {
+    setPaySelectedIds(new Set(payOpenDebts.map(d => d.id)))
+    setPayAllocAmounts(Object.fromEntries(payOpenDebts.map(d => [d.id, String(bal(d).toFixed(2))])))
+  }
+
+  const submitPayment = async () => {
+    if (paySelectedIds.size === 0) { showToast('בחר לפחות שורה אחת לתשלום', 'error'); return }
     const tid = tenantIdRef.current
     if (!tid) return
+
+    if (payMethod === "צ'ק") {
+      setShowPayModal(false)
+      setSchedInitialSupplierId(paySupplierId ?? undefined)
+      setSchedModal(true)
+      return
+    }
+
+    const allocations = Array.from(paySelectedIds)
+      .map(id => ({ supplier_debt_id: id, amount: parseFloat(payAllocAmounts[id] ?? '0') || 0 }))
+      .filter(a => a.amount > 0)
+    if (allocations.length === 0) { showToast('סכום לא תקין', 'error'); return }
+
     setPaySaving(true)
-    const { error } = await reconcileSupplierPayment(supabase, tid, [{ supplier_debt_id: payItem.id, amount }], null)
+    const { error } = await reconcileSupplierPayment(supabase, tid, allocations, null)
     if (error) { showToast('שגיאה בתשלום: ' + error, 'error'); setPaySaving(false); return }
+
+    const total = allocations.reduce((s, a) => s + a.amount, 0)
+    const suppName = suppliers.find(s => s.id === paySupplierId)?.name ?? 'ספק'
+    await supabase.from('expenses').insert({
+      tenant_id: tid, date: payDate, category: 'ספקים',
+      description: `תשלום לספק ${suppName}`, amount: total,
+      supplier_id: paySupplierId, payment_method: payMethod, payment_ref: null,
+    })
+
     showToast('תשלום נרשם ✓', 'success')
-    setPaySaving(false); setPayItem(null); loadAll()
+    setPaySaving(false); setShowPayModal(false); loadAll()
   }
 
   const toggleClose = async (id: string, current: boolean) => {
     await supabase.from('supplier_debts').update({ is_closed: !current }).eq('id', id)
     loadAll()
+  }
+
+  // ── Retroactive allocation of an already-issued check/payment ─────────────
+
+  const allocOpenDebts = supplierDebts.filter(d => d.supplier_id === allocatingPayment?.supplier_id && !d.is_closed && d.direction === 'charge')
+  const allocDebtsByMonth = (() => {
+    const map: Record<string, SupplierDebt[]> = {}
+    allocOpenDebts.forEach(d => {
+      const mk = monthKeyOf(d.date)
+      if (!map[mk]) map[mk] = []
+      map[mk].push(d)
+    })
+    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]))
+  })()
+  const allocTotalSelected = Array.from(allocSelectedIds).reduce((s, id) => s + (parseFloat(allocAmounts[id] ?? '0') || 0), 0)
+
+  const openAllocatePayment = (p: ScheduledPayment) => {
+    setAllocatingPayment(p); setAllocSelectedIds(new Set()); setAllocAmounts({})
+  }
+
+  const toggleAllocDebt = (d: SupplierDebt) => {
+    setAllocSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(d.id)) {
+        next.delete(d.id)
+        setAllocAmounts(a => { const c = { ...a }; delete c[d.id]; return c })
+      } else {
+        next.add(d.id)
+        const remaining = (allocatingPayment?.amount ?? 0) - allocTotalSelected
+        setAllocAmounts(a => ({ ...a, [d.id]: a[d.id] ?? String(Math.max(0, Math.min(bal(d), remaining || bal(d))).toFixed(2)) }))
+      }
+      return next
+    })
+  }
+
+  const submitAllocatePayment = async () => {
+    if (!allocatingPayment) return
+    if (allocSelectedIds.size === 0) { showToast('בחר לפחות שורה אחת', 'error'); return }
+    const tid = tenantIdRef.current
+    if (!tid) return
+    const allocations = Array.from(allocSelectedIds)
+      .map(id => ({ supplier_debt_id: id, amount: parseFloat(allocAmounts[id] ?? '0') || 0 }))
+      .filter(a => a.amount > 0)
+    if (allocations.length === 0) { showToast('סכום לא תקין', 'error'); return }
+    setAllocSaving(true)
+    const { error } = await reconcileSupplierPayment(supabase, tid, allocations, allocatingPayment.id)
+    if (error) { showToast('שגיאה בשיבוץ: ' + error, 'error'); setAllocSaving(false); return }
+    showToast('שובץ ✓', 'success')
+    setAllocSaving(false); setAllocatingPayment(null); loadAll()
   }
 
   // ── Filters ───────────────────────────────────────────────────────────────
@@ -362,12 +512,12 @@ export default function SupplierTrackingClient() {
 
   const StatusChip = ({ debt }: { debt: SupplierDebt }) => {
     if (debt.direction === 'credit')
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>זיכוי</span>
+      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>זיכוי</span>
     if (debt.is_closed)
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>שולם ✓</span>
     if (Number(debt.paid) > 0)
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef3c7', color: 'var(--warning)', fontWeight: 600 }}>חלקי</span>
-    return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>חיוב</span>
+    return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>חיוב</span>
   }
 
   const EmptyState = ({ icon, text }: { icon: string; text: string }) => (
@@ -396,6 +546,51 @@ export default function SupplierTrackingClient() {
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'יומן צ׳קים')
     }
     XLSX.writeFile(wb, 'מעקב-ספקים.xlsx')
+  }
+
+  async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; e.target.value = ''
+    if (!file) return
+    const tid = tenantIdRef.current
+    if (!tid) return
+    const buf = await file.arrayBuffer()
+    const wb  = XLSX.read(buf, { type: 'array', cellDates: true })
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]])
+    if (!rows.length) { showToast('הקובץ ריק', 'error'); return }
+
+    const parseDate = (v: unknown): string => {
+      if (v instanceof Date) return v.toISOString().slice(0, 10)
+      if (typeof v === 'number') return new Date(Math.round((v - 25569) * 86400000)).toISOString().slice(0, 10)
+      const s = String(v ?? '').trim()
+      const m = s.match(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})/)
+      if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+      return todayISO()
+    }
+
+    const toInsert = rows.map(r => {
+      const suppName = String(r['ספק'] ?? '').trim()
+      const supplier = suppName ? suppliers.find(s => s.name === suppName) : undefined
+      const direction: Direction = String(r['סוג'] ?? '').includes('זיכוי') ? 'credit' : 'charge'
+      const amount = parseFloat(String(r['סכום'] ?? '')) || 0
+      const paid   = direction === 'credit' ? 0 : (parseFloat(String(r['שולם'] ?? '')) || 0)
+      const isClosed = direction === 'credit' || String(r['סטטוס'] ?? '').includes('סגור') || paid >= amount && amount > 0
+      return {
+        id: crypto.randomUUID(), tenant_id: tid,
+        supplier_id: supplier?.id ?? null,
+        amount, paid, direction, is_closed: isClosed,
+        date: parseDate(r['תאריך']),
+        doc_type: 'invoice', doc_number: String(r['מספר'] ?? '').trim() || null,
+        description: String(r['תיאור'] ?? '').trim() || null,
+        invoices: [],
+      }
+    }).filter(r => r.amount > 0)
+
+    if (!toInsert.length) { showToast('לא נמצאו שורות תקינות (חסר סכום)', 'error'); return }
+    const { error } = await supabase.from('supplier_debts').insert(toInsert)
+    if (error) { showToast('שגיאה בייבוא: ' + error.message, 'error'); return }
+    showToast(`יובאו ${toInsert.length} רשומות ✓`, 'success')
+    loadAll()
   }
 
   if (loading) return (
@@ -444,7 +639,8 @@ export default function SupplierTrackingClient() {
             <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
               יתרה כוללת: <strong style={{ color: 'var(--danger)' }}>{fmt(openSuppTotal)}</strong>
             </span>
-            <ExcelMenu onExportExcel={exportExcel} />
+            <Button variant="secondary" onClick={() => setShowPrintChoice(true)}>🖨️ הדפסה</Button>
+            <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
           </div>
 
           {/* Selection action bar */}
@@ -464,7 +660,7 @@ export default function SupplierTrackingClient() {
                 >💬 ווצאפ</button>
               )}
               {!selectedSupp.is_closed && bal(selectedSupp) > 0 && selectedSupp.direction === 'charge' && (
-                <button onClick={() => openPay(selectedId, bal(selectedSupp))} style={{ padding: '5px 12px', background: '#f0fdf6', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>₪ שלם</button>
+                <button onClick={() => openPaySupplier(selectedSupp.supplier_id, selectedId)} style={{ padding: '5px 12px', background: '#f0fdf6', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>₪ שלם</button>
               )}
               <button onClick={() => toggleClose(selectedId, selectedSupp.is_closed)} style={{ padding: '5px 10px', background: selectedSupp.is_closed ? '#fef2f2' : '#f0fdf6', color: selectedSupp.is_closed ? 'var(--danger)' : '#16a34a', border: '1px solid', borderColor: selectedSupp.is_closed ? '#fecaca' : '#bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>{selectedSupp.is_closed ? '↩ פתח' : '✓ סגור'}</button>
               <button onClick={() => openSuppModal(selectedSupp)} style={{ padding: '5px 10px', background: '#f0f9ff', color: 'var(--accent)', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>✏️ ערוך</button>
@@ -518,27 +714,51 @@ export default function SupplierTrackingClient() {
 
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {groups.map(group => (
+                {groups.map(group => {
+                  const isOpen = openSupplierKeys.has(supplierKeyOf(group.sid))
+                  return (
                   <div key={group.sid ?? 'none'} style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
 
-                    <div style={{ background: '#f1f5f9', borderBottom: '2px solid var(--border)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <div
+                      onClick={() => toggleSupplierOpen(group.sid)}
+                      style={{ background: '#f1f5f9', borderBottom: isOpen ? '2px solid var(--border)' : 'none', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', cursor: 'pointer' }}
+                    >
+                      <span style={{ display: 'inline-block', transition: 'transform .15s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--text-muted)' }}>›</span>
                       <span style={{ fontWeight: 700, fontSize: '15px' }}>🏭 {group.supp?.name ?? 'ללא ספק'}</span>
                       {group.supp?.phone && <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{group.supp.phone}</span>}
                       <span style={{ marginRight: 'auto', fontSize: '14px', fontWeight: 700, color: group.totalBal > 0 ? 'var(--danger)' : '#16a34a' }}>
                         יתרה כוללת: {fmt(group.totalBal)}
                       </span>
-                      {group.sid && (
-                        <button onClick={() => addDebtForSupplier(group.sid!)}
-                          style={{ padding: '4px 12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
-                          + הוסף
-                        </button>
-                      )}
+                      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '6px' }}>
+                        {group.totalBal > 0 && (
+                          <button onClick={() => openPaySupplier(group.sid)}
+                            style={{ padding: '4px 12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                            💰 תשלום
+                          </button>
+                        )}
+                        {group.sid && (
+                          <button onClick={() => addDebtForSupplier(group.sid!)}
+                            style={{ padding: '4px 12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                            + הוסף
+                          </button>
+                        )}
+                      </div>
                     </div>
+
+                    {isOpen && (
+                    <>
 
                     {group.unlinkedPayments.length > 0 && (
                       <div style={{ background: '#fffbeb', borderBottom: '1px solid #fde68a', padding: '10px 16px', fontSize: '12px', color: '#92400e' }}>
-                        ⚠ {group.unlinkedPayments.length} צ׳קים/תשלומים לספק זה לא שובצו מול חודש ספציפי:{' '}
-                        {group.unlinkedPayments.map(p => `${fmt(p.amount)} (${p.due_date})`).join(', ')}
+                        <div>⚠ {group.unlinkedPayments.length} צ׳קים/תשלומים לספק זה טרם שובצו מול חוב — לחץ לשיבוץ רטרואקטיבי:</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                          {group.unlinkedPayments.map(p => (
+                            <button key={p.id} onClick={() => openAllocatePayment(p)}
+                              style={{ padding: '3px 10px', background: '#fff', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', color: '#92400e', fontWeight: 600 }}>
+                              {fmt(p.amount)} ({p.due_date}) →
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     )}
 
@@ -596,10 +816,13 @@ export default function SupplierTrackingClient() {
                                     className="tr-hover"
                                     style={{ cursor: 'pointer', background: selectedId === d.id ? '#eff6ff' : d.is_closed && d.direction === 'charge' ? '#fafafa' : undefined }}
                                   >
-                                    <td style={tdSt}>{item.number ? `#${item.number}` : '—'}</td>
+                                    <td style={tdSt}>
+                                      {item.number ? `#${item.number}` : '—'}
+                                      {d.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>{d.description}</div>}
+                                    </td>
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
                                     <td style={tdSt}><StatusChip debt={d} /></td>
-                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? 'var(--danger)' : 'var(--text)' }}>
+                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? '#16a34a' : 'var(--danger)' }}>
                                       {d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}
                                     </td>
                                   </tr>
@@ -649,8 +872,10 @@ export default function SupplierTrackingClient() {
                         </div>
                       )
                     })}
+                    </>
+                    )}
                   </div>
-                ))}
+                )})}
               </div>
             )
           })()}
@@ -730,7 +955,7 @@ export default function SupplierTrackingClient() {
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>ספק</span>
-                  <a href="/suppliers" style={{ fontSize: '11px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}>+ הוסף ספק חדש</a>
+                  <button type="button" onClick={() => setShowQuickAddSupplier(true)} style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, padding: 0 }}>+ הוסף ספק חדש</button>
                 </div>
                 <select value={sSupplier} onChange={e => setSSupplier(e.target.value)} className="form-input">
                   <option value="">— ללא ספק ספציפי —</option>
@@ -763,9 +988,9 @@ export default function SupplierTrackingClient() {
                           {(['charge', 'credit'] as const).map(dir => (
                             <button key={dir} type="button" onClick={() => updateInvoiceLine(i, 'direction', dir)} style={{
                               padding: '4px 10px', border: '1px solid', borderRadius: '5px', fontSize: '11px', cursor: 'pointer', fontWeight: 600,
-                              borderColor: inv.direction === dir ? (dir === 'credit' ? 'var(--danger)' : 'var(--primary)') : 'var(--border)',
-                              background: inv.direction === dir ? (dir === 'credit' ? '#fef2f2' : '#f0fdf4') : 'transparent',
-                              color: inv.direction === dir ? (dir === 'credit' ? 'var(--danger)' : 'var(--primary)') : 'var(--text-muted)',
+                              borderColor: inv.direction === dir ? (dir === 'credit' ? '#16a34a' : 'var(--danger)') : 'var(--border)',
+                              background: inv.direction === dir ? (dir === 'credit' ? '#f0fdf6' : '#fef2f2') : 'transparent',
+                              color: inv.direction === dir ? (dir === 'credit' ? '#16a34a' : 'var(--danger)') : 'var(--text-muted)',
                             }}>{dir === 'charge' ? 'חיוב' : 'זיכוי'}</button>
                           ))}
                         </div>
@@ -780,6 +1005,7 @@ export default function SupplierTrackingClient() {
                         <input type="number" min="0" step="0.01" value={inv.amount} onChange={e => updateInvoiceLine(i, 'amount', e.target.value)} placeholder="סכום..." className="form-input" style={{ margin: 0 }} />
                         <input type="date" value={inv.date} onChange={e => updateInvoiceLine(i, 'date', e.target.value)} className="form-input" style={{ margin: 0 }} />
                       </div>
+                      <input value={inv.notes} onChange={e => updateInvoiceLine(i, 'notes', e.target.value)} placeholder="הערות לשורה זו (אופציונלי)..." className="form-input" style={{ margin: 0 }} />
                     </div>
                   ))}
                 </div>
@@ -806,27 +1032,87 @@ export default function SupplierTrackingClient() {
         </div>
       )}
 
-      {/* ── PAYMENT MODAL ── */}
-      {payItem && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPayItem(null)}>
-          <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '380px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>₪ רשום תשלום</h3>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '18px' }}>
-              יתרה: <strong style={{ color: 'var(--danger)' }}>{fmt(payItem.balance)}</strong>
-            </div>
-            <div style={{ display: 'grid', gap: '14px' }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                סכום תשלום (₪) *
-                <input type="number" min="0.01" step="0.01" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="0.00" className="form-input" />
-              </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                תאריך תשלום
-                <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="form-input" />
-              </label>
-            </div>
+      {/* ── PAYMENT MODAL — pick one or several open debts + payment method ── */}
+      {showPayModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowPayModal(false)}>
+          <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>₪ תשלום ל{suppliers.find(s => s.id === paySupplierId)?.name ?? 'ספק'}</h3>
+
+            {payOpenDebts.length === 0 ? (
+              <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>אין חובות פתוחים לספק זה</div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0 8px' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600 }}>בחר אילו חודשים לשלם</span>
+                  <button type="button" onClick={selectAllPayDebts} style={{ padding: '4px 10px', background: '#f0fdf4', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>☑ שלם הכל</button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
+                  {payDebtsByMonth.map(([mk, debts]) => (
+                    <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', marginBottom: 4 }}>{fmtMonth(mk)}</div>
+                      {debts.map(d => {
+                        const checked = paySelectedIds.has(d.id)
+                        return (
+                          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                            <input type="checkbox" checked={checked} onChange={() => togglePayDebt(d)} />
+                            <span style={{ fontSize: 12, flex: 1, color: 'var(--text-muted)' }}>
+                              {d.doc_number ? `#${d.doc_number} · ` : ''}{d.date} · יתרה {fmt(bal(d))}
+                            </span>
+                            {checked && (
+                              <input
+                                type="number" step="0.01"
+                                value={payAllocAmounts[d.id] ?? ''}
+                                onChange={e => setPayAllocAmounts(a => ({ ...a, [d.id]: e.target.value }))}
+                                style={{ width: 90, padding: '4px 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 6 }}
+                              />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+                {paySelectedIds.size > 0 && (
+                  <div style={{ fontSize: 13, fontWeight: 700, marginTop: 8, textAlign: 'left' }}>
+                    סה&quot;כ לתשלום: {fmt(payTotalSelected)}
+                  </div>
+                )}
+
+                <div style={{ marginTop: '16px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 500 }}>אמצעי תשלום</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
+                    {(['מזומן', 'אשראי', 'העברה', "צ'ק"] as PaymentMethod[]).map(m => (
+                      <button key={m} type="button" onClick={() => setPayMethod(m)} style={{
+                        padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
+                        border: `1px solid ${payMethod === m ? 'var(--primary)' : 'var(--border)'}`,
+                        background: payMethod === m ? '#f0fdf4' : '#f8fafc',
+                        color: payMethod === m ? 'var(--primary)' : 'var(--text-muted)',
+                      }}>
+                        {m === 'מזומן' ? '💵' : m === 'אשראי' ? '💳' : m === "צ'ק" ? '📝' : '🏦'} {m}
+                      </button>
+                    ))}
+                  </div>
+                  {payMethod === "צ'ק" && (
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>ייפתח מודל יצירת צ׳ק/סדרה, מסונן מראש לספק זה.</div>
+                  )}
+                </div>
+
+                {payMethod !== "צ'ק" && (
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600, marginTop: '12px' }}>
+                    תאריך תשלום
+                    <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="form-input" />
+                  </label>
+                )}
+              </>
+            )}
+
             <div className="sticky-actions">
-              <Button variant="secondary" onClick={() => setPayItem(null)}>ביטול</Button>
-              <Button loading={paySaving} onClick={recordPayment} style={{ background: '#16a34a', borderColor: '#16a34a' }}>✓ אשר תשלום</Button>
+              <Button variant="secondary" onClick={() => setShowPayModal(false)}>ביטול</Button>
+              {payOpenDebts.length > 0 && (
+                <Button loading={paySaving} onClick={submitPayment} style={{ background: '#16a34a', borderColor: '#16a34a' }}>
+                  {payMethod === "צ'ק" ? 'המשך לצ׳ק ←' : '✓ אשר תשלום'}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -849,18 +1135,196 @@ export default function SupplierTrackingClient() {
         </div>
       )}
 
+      {/* ── ALLOCATE EXISTING CHECK/PAYMENT MODAL (retroactive) ── */}
+      {allocatingPayment && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setAllocatingPayment(null)}>
+          <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>שיבוץ תשלום מול חובות</h3>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
+              {allocatingPayment.payment_method === 'check' ? "צ'ק" : 'העברה'}{allocatingPayment.check_number ? ` #${allocatingPayment.check_number}` : ''} · <strong>{fmt(allocatingPayment.amount)}</strong> · {allocatingPayment.due_date}
+            </div>
+
+            {allocOpenDebts.length === 0 ? (
+              <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>אין חובות פתוחים לספק זה</div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '260px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
+                  {allocDebtsByMonth.map(([mk, debts]) => (
+                    <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', marginBottom: 4 }}>{fmtMonth(mk)}</div>
+                      {debts.map(d => {
+                        const checked = allocSelectedIds.has(d.id)
+                        return (
+                          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                            <input type="checkbox" checked={checked} onChange={() => toggleAllocDebt(d)} />
+                            <span style={{ fontSize: 12, flex: 1, color: 'var(--text-muted)' }}>
+                              {d.doc_number ? `#${d.doc_number} · ` : ''}{d.date} · יתרה {fmt(bal(d))}
+                            </span>
+                            {checked && (
+                              <input
+                                type="number" step="0.01"
+                                value={allocAmounts[d.id] ?? ''}
+                                onChange={e => setAllocAmounts(a => ({ ...a, [d.id]: e.target.value }))}
+                                style={{ width: 90, padding: '4px 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 6 }}
+                              />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, marginTop: 8, color: Math.abs(allocTotalSelected - allocatingPayment.amount) > 0.01 ? 'var(--warning)' : 'var(--text-muted)' }}>
+                  סה&quot;כ משובץ: {fmt(allocTotalSelected)} מתוך {fmt(allocatingPayment.amount)}
+                </div>
+              </>
+            )}
+
+            <div className="sticky-actions">
+              <Button variant="secondary" onClick={() => setAllocatingPayment(null)}>ביטול</Button>
+              {allocOpenDebts.length > 0 && (
+                <Button loading={allocSaving} onClick={submitAllocatePayment}>✓ שבץ</Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── SCHEDULED PAYMENTS (CHECKS) MODAL ── */}
       {tenantIdRef.current && (
         <ScheduledPaymentsModal
           open={schedModal}
-          onClose={() => setSchedModal(false)}
+          onClose={() => { setSchedModal(false); setSchedInitialSupplierId(undefined) }}
           suppliers={suppliers}
           tenantId={tenantIdRef.current}
           supabase={supabase}
           onRefresh={loadAll}
           showToast={showToast}
           expenseCats={expenseCats}
+          initialSupplierId={schedInitialSupplierId}
         />
+      )}
+
+      <QuickAddSupplierModal
+        open={showQuickAddSupplier}
+        onClose={() => setShowQuickAddSupplier(false)}
+        tenantId={tenantIdRef.current ?? ''}
+        supabase={supabase}
+        showToast={showToast}
+        onCreated={(s: QuickSupplier) => {
+          setSuppliers(prev => [...prev, s].sort((a, b) => a.name.localeCompare(b.name, 'he')))
+          setSSupplier(s.id)
+        }}
+      />
+
+      {/* ── PRINT CHOICE MODAL ── */}
+      {showPrintChoice && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowPrintChoice(false)}>
+          <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '420px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700 }}>🖨️ מה להדפיס?</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>כרטסת ספק (חשבוניות/זיכויים + מאזן)</div>
+                <select value={printSupplierId} onChange={e => setPrintSupplierId(e.target.value)} className="form-input" style={{ marginBottom: '8px' }}>
+                  <option value="">בחר ספק...</option>
+                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <Button
+                  onClick={() => { setShowPrintChoice(false); setPrintMode('ledger') }}
+                  disabled={!printSupplierId}
+                  style={{ width: '100%' }}
+                >🖨️ הדפס כרטסת</Button>
+              </div>
+              <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>יומן צ׳קים עתידי (כל הספקים)</div>
+                <Button
+                  variant="secondary"
+                  onClick={() => { setShowPrintChoice(false); setPrintMode('calendar') }}
+                  style={{ width: '100%' }}
+                >🖨️ הדפס יומן צ׳קים</Button>
+              </div>
+            </div>
+            <div className="sticky-actions">
+              <Button variant="secondary" onClick={() => setShowPrintChoice(false)}>סגור</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── HIDDEN PRINT AREA — only visible via @media print ── */}
+      {printMode && (
+        <div id="print-area" style={{ display: 'none' }}>
+          <style>{`
+            @media print {
+              body * { visibility: hidden; }
+              #print-area, #print-area * { visibility: visible; }
+              #print-area { display: block !important; position: absolute; top: 0; right: 0; width: 100%; padding: 24px; direction: rtl; }
+              #print-area table { width: 100%; border-collapse: collapse; font-size: 13px; }
+              #print-area th, #print-area td { border: 1px solid #333; padding: 6px 8px; text-align: right; }
+              #print-area th { background: #eee; }
+            }
+          `}</style>
+
+          {printMode === 'ledger' && (() => {
+            const supp = suppliers.find(s => s.id === printSupplierId)
+            const debts = supplierDebts.filter(d => d.supplier_id === printSupplierId).sort((a, b) => a.date.localeCompare(b.date))
+            const chargeTotal = debts.filter(d => d.direction !== 'credit').reduce((s, d) => s + Number(d.amount), 0)
+            const creditTotal = debts.filter(d => d.direction === 'credit').reduce((s, d) => s + Number(d.amount), 0)
+            const paidTotal   = debts.reduce((s, d) => s + Number(d.paid), 0)
+            const balance     = debts.reduce((s, d) => s + bal(d), 0)
+            return (
+              <div>
+                <h2 style={{ margin: '0 0 4px' }}>{tenantName} — כרטסת ספק: {supp?.name ?? ''}</h2>
+                <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {new Date().toLocaleDateString('he-IL')}</div>
+                <table>
+                  <thead><tr><th>תאריך</th><th>מספר</th><th>סוג</th><th>סכום</th></tr></thead>
+                  <tbody>
+                    {debts.flatMap(d => {
+                      const items = Array.isArray(d.invoices) && d.invoices.length > 0 ? d.invoices : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]
+                      return items.map((item, idx) => (
+                        <tr key={`${d.id}-${idx}`}>
+                          <td>{d.date}</td>
+                          <td>{item.number || '—'}</td>
+                          <td>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
+                          <td>{d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}</td>
+                        </tr>
+                      ))
+                    })}
+                  </tbody>
+                </table>
+                <div style={{ marginTop: 16, fontWeight: 700, fontSize: 14 }}>
+                  סה&quot;כ חיוב: {fmt(chargeTotal)} &nbsp; | &nbsp; סה&quot;כ זיכוי: {fmt(creditTotal)} &nbsp; | &nbsp; שולם: {fmt(paidTotal)} &nbsp; | &nbsp; יתרה: {fmt(balance)}
+                </div>
+              </div>
+            )
+          })()}
+
+          {printMode === 'calendar' && (() => {
+            const upcoming = scheduledPayments.filter(p => !p.is_paid).sort((a, b) => a.due_date.localeCompare(b.due_date))
+            const total = upcoming.reduce((s, p) => s + Number(p.amount), 0)
+            return (
+              <div>
+                <h2 style={{ margin: '0 0 4px' }}>{tenantName} — יומן צ׳קים עתידי</h2>
+                <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {new Date().toLocaleDateString('he-IL')}</div>
+                <table>
+                  <thead><tr><th>ספק</th><th>תיאור</th><th>תאריך פירעון</th><th>מספר צ׳ק</th><th>סכום</th></tr></thead>
+                  <tbody>
+                    {upcoming.map(p => (
+                      <tr key={p.id}>
+                        <td>{suppliers.find(s => s.id === p.supplier_id)?.name ?? '—'}</td>
+                        <td>{p.description}</td>
+                        <td>{p.due_date}</td>
+                        <td>{p.check_number ?? ''}</td>
+                        <td>{fmt(p.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ marginTop: 16, fontWeight: 700, fontSize: 14 }}>סה&quot;כ: {fmt(total)}</div>
+              </div>
+            )
+          })()}
+        </div>
       )}
     </div>
   )
