@@ -662,3 +662,20 @@
 | 02:12 | Edited components/billing/BillingClient.tsx | CSS: gridTemplateColumns, gap | ~667 |
 | 02:12 | Edited components/billing/BillingClient.tsx | CSS: marginTop | ~218 |
 | 02:20 | Implemented approved plan (lively-imagining-tarjan.md): expenses category accordion + fixed/annual amortize_months + actual/prorated summary toggle; supplier debts — manual (not FIFO) debt-month allocation via new supplier_debt_payments ledger + check-series creation (equal/round+remainder split) + global checks calendar tab + fixed the real bug where checks never closed supplier_debts; billing — real VAT calc (was cosmetic-only), multi-month meter period fields, fixed_addon for electric company's fixed component (payer-side only) | ExpensesClient.tsx, ScheduledPaymentsModal.tsx, DebtsClient.tsx, SuppliersClient.tsx, BillingClient.tsx, lib/debts/reconcileSupplierPayment.ts, migrations 061-063 | tsc --noEmit clean; eslint shows only pre-existing issues (ref-during-render, unescaped quotes) on lines not touched | ~85k tok |
+| 02:59 | Session end: 9 writes across 1 files (BillingClient.tsx) | 3 reads | ~52902 tok |
+| 03:08 | Created ../../../.claude/plans/lively-imagining-tarjan.md | — | ~1570 |
+| 03:14 | Session end: 10 writes across 2 files (BillingClient.tsx, lively-imagining-tarjan.md) | 10 reads | ~60129 tok |
+| 08:10 | Created ../../../.claude/plans/lively-imagining-tarjan.md | — | ~1862 |
+| 08:14 | Created supabase/migrations/064_supplier_debt_direction.sql | — | ~78 |
+| 08:16 | Edited components/layout/Sidebar.tsx | 1→2 lines | ~61 |
+| 08:17 | Edited components/layout/Sidebar.tsx | inline fix | ~26 |
+| 08:17 | Edited components/layout/Sidebar.tsx | 1→2 lines | ~56 |
+| 08:17 | Created app/supplier-tracking/page.tsx | — | ~79 |
+| 08:20 | Created components/supplier-tracking/SupplierTrackingClient.tsx | — | ~14891 |
+| 08:23 | Created components/debts/DebtsClient.tsx | — | ~10175 |
+| 08:23 | Edited components/suppliers/SuppliersClient.tsx | CSS: direction | ~82 |
+| 08:24 | Edited components/suppliers/SuppliersClient.tsx | modified Number() | ~52 |
+| 08:24 | Edited components/suppliers/SuppliersClient.tsx | 3→3 lines | ~52 |
+| 08:30 | Implemented approved plan round 2: moved detailed supplier-debt management (month-grouped invoice/credit table, checks calendar, add/edit) out of DebtsClient.tsx into a new dedicated page/sidebar item /supplier-tracking (SupplierTrackingClient.tsx). Added supplier_debts.direction ('charge'|'credit') for credit notes — bal() now direction-aware everywhere. New entries insert one independent row per invoice/credit line (own date+direction) instead of bundling under one shared date. DebtsClient.tsx suppliers tab reduced to summary-only (name+phone+balance+link, no add/edit/detail) | Sidebar.tsx, app/supplier-tracking/page.tsx, components/supplier-tracking/SupplierTrackingClient.tsx (new), components/debts/DebtsClient.tsx (rewritten), components/suppliers/SuppliersClient.tsx, migration 064 | tsc --noEmit clean; eslint findings are pre-existing patterns/lines only | ~95k tok |
+| 08:24 | Edited components/suppliers/SuppliersClient.tsx | added optional chaining | ~97 |
+| 09:05 | Session end: 22 writes across 8 files (BillingClient.tsx, lively-imagining-tarjan.md, 064_supplier_debt_direction.sql, Sidebar.tsx, page.tsx) | 10 reads | ~87788 tok |

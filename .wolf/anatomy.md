@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-05T23:12:59.535Z
-> Files: 16 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T05:24:43.061Z
+> Files: 19 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -9,7 +9,7 @@
 
 ## ../../../.claude/plans/
 
-- `lively-imagining-tarjan.md` — תכנון: שיפור הוצאות, חובות ספקים/צ'קים, וחשבונות (שכירות/חשמל) (~3398 tok)
+- `lively-imagining-tarjan.md` — תכנון: דף חדש "מעקב ספקים" + טבלת חשבוניות/זיכויים לפי חודש (~1745 tok)
 
 ## ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/
 
@@ -192,6 +192,10 @@
 ## app/settings/
 
 
+## app/supplier-tracking/
+
+- `page.tsx` — SupplierTrackingPage (~79 tok)
+
 ## app/suppliers/
 
 
@@ -252,7 +256,7 @@
 
 ## components/debts/
 
-- `DebtsClient.tsx` — fmt (~19040 tok)
+- `DebtsClient.tsx` — fmt (~10175 tok)
 
 ## components/documents/
 
@@ -274,7 +278,7 @@
 
 ## components/layout/
 
-- `Sidebar.tsx` — NAV_ITEMS (~5272 tok)
+- `Sidebar.tsx` — NAV_ITEMS (~5333 tok)
 - `SidebarLayoutEditor.tsx` — SIDEBAR_LAYOUT_KEY (~3558 tok)
 
 ## components/products/
@@ -292,9 +296,13 @@
 ## components/settings/
 
 
+## components/supplier-tracking/
+
+- `SupplierTrackingClient.tsx` — fmt (~14891 tok)
+
 ## components/suppliers/
 
-- `SuppliersClient.tsx` — ISRAELI_BANKS (~10628 tok)
+- `SuppliersClient.tsx` — ISRAELI_BANKS (~10675 tok)
 
 ## components/test-transfer/
 
@@ -345,6 +353,7 @@
 - `061_expenses_amortization_and_recurring_link.sql` — Link a materialized expense back to the recurring template it came from, (~92 tok)
 - `062_supplier_check_reconciliation.sql` — Check number/series bookkeeping, and an explicit (user-chosen) ledger of which (~273 tok)
 - `063_billing_vat_period_fixed_addon.sql` — Optional multi-month period for irregular meter readings, and an optional (~184 tok)
+- `064_supplier_debt_direction.sql` — A supplier debt row can be a charge (regular invoice, adds to what's owed) (~78 tok)
 
 ## tests/
 

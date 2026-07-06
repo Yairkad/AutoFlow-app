@@ -38,6 +38,7 @@ interface SupplierDebt {
   is_closed: boolean
   doc_type: string | null
   doc_number: string | null
+  direction: 'charge' | 'credit'
   invoices: InvoiceEntry[] | null
 }
 
@@ -83,8 +84,8 @@ const ISRAELI_BANKS: { name: string; code: string }[] = [
 const fmt = (n: number) =>
   `₪${Number(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-const bal = (d: { amount: number; paid: number }) =>
-  Math.max(0, Number(d.amount) - Number(d.paid))
+const bal = (d: { amount: number; paid: number; direction?: 'charge' | 'credit' }) =>
+  d.direction === 'credit' ? -Number(d.amount) : Math.max(0, Number(d.amount) - Number(d.paid))
 
 // Format phone → WhatsApp URL
 const waUrl = (phone: string, text: string) => {
@@ -152,7 +153,7 @@ export default function SuppliersClient() {
     const [suppRes, debtRes, catRes, paymentsRes] = await Promise.all([
       supabase.from('suppliers').select('*').eq('tenant_id', tid).order('name'),
       supabase.from('supplier_debts')
-        .select('id,supplier_id,amount,paid,description,date,is_closed,doc_type,doc_number,invoices')
+        .select('id,supplier_id,amount,paid,description,date,is_closed,doc_type,doc_number,direction,invoices')
         .eq('tenant_id', tid),
       supabase.from('supplier_categories').select('name').eq('tenant_id', tid).order('name'),
       supabase.from('scheduled_payments')
@@ -591,8 +592,8 @@ export default function SuppliersClient() {
               )}
 
               <div style={{ marginTop: '14px', textAlign: 'center' }}>
-                <a href="/debts" style={{ fontSize: '12px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
-                  → מעבר לניהול חובות
+                <a href={`/supplier-tracking?open=${selected?.id ?? ''}`} style={{ fontSize: '12px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
+                  → מעקב ספקים מפורט
                 </a>
               </div>
             </div>

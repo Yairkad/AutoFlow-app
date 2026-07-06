@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: '/expenses',    label: 'הוצאות',                  color: '#f59e0b,#fbbf24', module: 'expenses' },
   { href: '/billing',     label: 'חשבונות',                 color: '#8b5cf6,#a78bfa', module: 'billing' },
   { href: '/debts',       label: 'חובות',                   color: '#ef4444,#f87171', module: 'debts' },
+  { href: '/supplier-tracking', label: 'מעקב ספקים',        color: '#0369a1,#38bdf8', module: 'suppliers' },
   { href: '/employees',   label: 'עובדים',                  color: '#0ea5e9,#38bdf8', module: null },
   { href: '/products',    label: 'מוצרים',                  color: '#f97316,#fb923c', module: ['products', 'products_view'] },
   { href: '/tires',       label: 'צמיגים',                  color: '#6b7280,#9ca3af', module: ['tires', 'tires_view'] },
@@ -31,7 +32,7 @@ const NAV_ITEMS = [
 // ─── חלוקה לקטגוריות — ערוך כאן כרצונך ──────────────────────────────────────
 const SECTIONS: { label: string | null; hrefs: string[] }[] = [
   { label: null,       hrefs: ['/dashboard'] },
-  { label: 'כספים',   hrefs: ['/expenses', '/billing', '/debts'] },
+  { label: 'כספים',   hrefs: ['/expenses', '/billing', '/debts', '/supplier-tracking'] },
   { label: 'אנשים',   hrefs: ['/employees'] },
   { label: 'מלאי',    hrefs: ['/products', '/tires', '/scan', '/cars'] },
   { label: 'עסקאות',  hrefs: ['/quotes', '/suppliers', '/alignment', '/inspections', '/test-transfer'] },
@@ -45,6 +46,7 @@ const ICONS: Record<string, React.ReactNode> = {
   '/expenses':    <><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></>,
   '/billing':     <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>,
   '/debts':       <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
+  '/supplier-tracking': <><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></>,
   '/employees':   <><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></>,
   '/products':    <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></>,
   '/tires':       <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></>,
