@@ -1,15 +1,22 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T14:31:33.672Z
-> Files: 20 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-07T16:51:55.732Z
+> Files: 25 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
 - `citycell_prices.csv` (~1175 tok)
 
+## ../../../../0411~1/AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/09f05ae2-13fa-41eb-916f-813c69742d07/scratchpad/
+
+- `dump_forecast.py` — col_to_num, cell_ref_col, excel_date (~563 tok)
+- `dump_xlsx.py` — col_to_num, cell_ref_col, excel_date (~748 tok)
+- `dump_xlsx2.py` — col_to_num, cell_ref_col, excel_date (~910 tok)
+
 ## ../../../.claude/plans/
 
 - `lively-imagining-tarjan.md` — תכנון: תשלום מרובה-חובות, אמצעי תשלום, הוספת ספק מהירה, כרטיסים (~1169 tok)
+- `vivid-launching-squid.md` — צ'קים לא-משובצים: אפשרות "התעלם" + שיבוץ לחוב סגור (~837 tok)
 
 ## ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/
 
@@ -256,7 +263,7 @@
 
 ## components/debts/
 
-- `DebtsClient.tsx` — fmt (~10300 tok)
+- `DebtsClient.tsx` — fmt (~10404 tok)
 
 ## components/documents/
 
@@ -298,7 +305,7 @@
 
 ## components/supplier-tracking/
 
-- `SupplierTrackingClient.tsx` — fmt (~22236 tok)
+- `SupplierTrackingClient.tsx` — fmt (~22689 tok)
 
 ## components/suppliers/
 
@@ -355,6 +362,7 @@
 - `062_supplier_check_reconciliation.sql` — Check number/series bookkeeping, and an explicit (user-chosen) ledger of which (~273 tok)
 - `063_billing_vat_period_fixed_addon.sql` — Optional multi-month period for irregular meter readings, and an optional (~184 tok)
 - `064_supplier_debt_direction.sql` — A supplier debt row can be a charge (regular invoice, adds to what's owed) (~78 tok)
+- `065_scheduled_payments_ignore_allocation.sql` — Lets the user dismiss the "unlinked check" warning for checks that are (~69 tok)
 
 ## tests/
 

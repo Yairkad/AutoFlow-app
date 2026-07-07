@@ -40,7 +40,7 @@ interface ScheduledPayment {
   due_date: string; payment_method: 'check' | 'transfer'
   supplier_id: string | null; category: string | null
   is_paid: boolean; paid_date: string | null; expense_id: string | null; notes: string | null
-  check_number: string | null; series_id: string | null
+  check_number: string | null; series_id: string | null; allocation_ignored: boolean
 }
 
 interface SupplierDebtPayment {
@@ -130,6 +130,7 @@ export default function SupplierTrackingClient() {
   const [allocSelectedIds, setAllocSelectedIds] = useState<Set<string>>(new Set())
   const [allocAmounts, setAllocAmounts] = useState<Record<string, string>>({})
   const [allocSaving, setAllocSaving] = useState(false)
+  const [allocShowClosed, setAllocShowClosed] = useState(false)
 
   // Payment modal — pays one or several open debts of one supplier at once
   const [showPayModal, setShowPayModal]   = useState(false)
@@ -421,7 +422,7 @@ export default function SupplierTrackingClient() {
 
   // ── Retroactive allocation of an already-issued check/payment ─────────────
 
-  const allocOpenDebts = supplierDebts.filter(d => d.supplier_id === allocatingPayment?.supplier_id && !d.is_closed && d.direction === 'charge')
+  const allocOpenDebts = supplierDebts.filter(d => d.supplier_id === allocatingPayment?.supplier_id && (allocShowClosed || !d.is_closed) && d.direction === 'charge')
   const allocDebtsByMonth = (() => {
     const map: Record<string, SupplierDebt[]> = {}
     allocOpenDebts.forEach(d => {
@@ -434,7 +435,13 @@ export default function SupplierTrackingClient() {
   const allocTotalSelected = Array.from(allocSelectedIds).reduce((s, id) => s + (parseFloat(allocAmounts[id] ?? '0') || 0), 0)
 
   const openAllocatePayment = (p: ScheduledPayment) => {
-    setAllocatingPayment(p); setAllocSelectedIds(new Set()); setAllocAmounts({})
+    setAllocatingPayment(p); setAllocSelectedIds(new Set()); setAllocAmounts({}); setAllocShowClosed(false)
+  }
+
+  const ignoreAllocation = async (p: ScheduledPayment) => {
+    if (!confirm('להתעלם מהצ׳ק הזה? הוא לא יוצג יותר כלא-משובץ.')) return
+    await supabase.from('scheduled_payments').update({ allocation_ignored: true }).eq('id', p.id)
+    loadAll()
   }
 
   const toggleAllocDebt = (d: SupplierDebt) => {
@@ -699,7 +706,7 @@ export default function SupplierTrackingClient() {
                 debtPayments.filter(dp => debtIds.has(dp.supplier_debt_id) && dp.scheduled_payment_id)
                   .map(dp => dp.scheduled_payment_id!)
               )
-              const unlinkedPayments = suppPayments.filter(p => !p.is_paid && !linkedIds.has(p.id))
+              const unlinkedPayments = suppPayments.filter(p => !p.is_paid && !p.allocation_ignored && !linkedIds.has(p.id))
 
               return { sid, supp, totalBal, monthMap, months, suppPayments, unlinkedPayments }
             }).filter(Boolean) as {
@@ -753,10 +760,16 @@ export default function SupplierTrackingClient() {
                         <div>⚠ {group.unlinkedPayments.length} צ׳קים/תשלומים לספק זה טרם שובצו מול חוב — לחץ לשיבוץ רטרואקטיבי:</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
                           {group.unlinkedPayments.map(p => (
-                            <button key={p.id} onClick={() => openAllocatePayment(p)}
-                              style={{ padding: '3px 10px', background: '#fff', border: '1px solid #fde68a', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', color: '#92400e', fontWeight: 600 }}>
-                              {fmt(p.amount)} ({p.due_date}) →
-                            </button>
+                            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                              <button onClick={() => openAllocatePayment(p)}
+                                style={{ padding: '3px 10px', background: '#fff', border: '1px solid #fde68a', borderRadius: '6px 0 0 6px', fontSize: '11px', cursor: 'pointer', color: '#92400e', fontWeight: 600 }}>
+                                {fmt(p.amount)} ({p.due_date}) →
+                              </button>
+                              <button onClick={() => ignoreAllocation(p)} title="התעלם מהצ׳ק הזה"
+                                style={{ padding: '3px 8px', background: '#fff', border: '1px solid #fde68a', borderLeft: 'none', borderRadius: '0 6px 6px 0', fontSize: '11px', cursor: 'pointer', color: '#92400e' }}>
+                                ✕ התעלם
+                              </button>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -1144,8 +1157,13 @@ export default function SupplierTrackingClient() {
               {allocatingPayment.payment_method === 'check' ? "צ'ק" : 'העברה'}{allocatingPayment.check_number ? ` #${allocatingPayment.check_number}` : ''} · <strong>{fmt(allocatingPayment.amount)}</strong> · {allocatingPayment.due_date}
             </div>
 
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)', marginBottom: 10, cursor: 'pointer' }}>
+              <input type="checkbox" checked={allocShowClosed} onChange={e => setAllocShowClosed(e.target.checked)} />
+              הצג גם חובות סגורים
+            </label>
+
             {allocOpenDebts.length === 0 ? (
-              <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>אין חובות פתוחים לספק זה</div>
+              <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>אין חובות {allocShowClosed ? '' : 'פתוחים '}לספק זה</div>
             ) : (
               <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '260px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
@@ -1159,6 +1177,9 @@ export default function SupplierTrackingClient() {
                             <input type="checkbox" checked={checked} onChange={() => toggleAllocDebt(d)} />
                             <span style={{ fontSize: 12, flex: 1, color: 'var(--text-muted)' }}>
                               {d.doc_number ? `#${d.doc_number} · ` : ''}{d.date} · יתרה {fmt(bal(d))}
+                              {d.is_closed && (
+                                <span style={{ marginRight: 6, padding: '1px 6px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: '#dcfce7', color: '#16a34a' }}>✓ סגור</span>
+                              )}
                             </span>
                             {checked && (
                               <input

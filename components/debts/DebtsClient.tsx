@@ -479,30 +479,34 @@ export default function DebtsClient() {
             )
 
             return (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
                 {rows.sort((a, b) => b.totalBal - a.totalBal).map(r => (
                   <div key={r.sid ?? 'none'} style={{
                     background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)',
-                    padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px',
+                    padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px',
                   }}>
-                    <div style={{
-                      width: 42, height: 42, borderRadius: '50%', background: 'var(--primary)', color: '#fff',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', fontWeight: 700, flexShrink: 0,
-                    }}>
-                      {(r.supp?.name ?? 'ל').charAt(0)}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: 42, height: 42, borderRadius: '50%', background: 'var(--primary)', color: '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', fontWeight: 700, flexShrink: 0,
+                      }}>
+                        {(r.supp?.name ?? 'ל').charAt(0)}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🏭 {r.supp?.name ?? 'ללא ספק'}</div>
+                        {r.supp?.phone && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>📞 {r.supp.phone}</div>}
+                      </div>
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '14px' }}>🏭 {r.supp?.name ?? 'ללא ספק'}</div>
-                      {r.supp?.phone && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>📞 {r.supp.phone}</div>}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: r.totalBal > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(r.totalBal)}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{r.totalBal > 0 ? 'יתרה פתוחה' : '✓ נקי'}</div>
+                      </div>
+                      <a href={`/supplier-tracking${r.sid ? `?open=${r.sid}` : ''}`}
+                        style={{ padding: '6px 12px', background: '#eff6ff', color: 'var(--primary)', border: '1px solid #bfdbfe', borderRadius: '8px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        מעקב מפורט →
+                      </a>
                     </div>
-                    <div style={{ textAlign: 'left', flexShrink: 0 }}>
-                      <div style={{ fontSize: '14px', fontWeight: 800, color: r.totalBal > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(r.totalBal)}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{r.totalBal > 0 ? 'יתרה פתוחה' : '✓ נקי'}</div>
-                    </div>
-                    <a href={`/supplier-tracking${r.sid ? `?open=${r.sid}` : ''}`}
-                      style={{ padding: '6px 14px', background: '#eff6ff', color: 'var(--primary)', border: '1px solid #bfdbfe', borderRadius: '8px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                      מעקב מפורט →
-                    </a>
                   </div>
                 ))}
               </div>
