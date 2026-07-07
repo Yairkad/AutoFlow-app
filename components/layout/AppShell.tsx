@@ -1,13 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import Footer from './Footer'
 import { ProfileProvider } from '@/lib/contexts/ProfileContext'
 
-export default function AppShell({ children, noFooter }: { children: React.ReactNode; noFooter?: boolean }) {
+export default function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const pathname = usePathname()
 
   return (
     <ProfileProvider>
@@ -32,7 +34,7 @@ export default function AppShell({ children, noFooter }: { children: React.React
       }}>
         {children}
       </main>
-      {!noFooter && <Footer />}
+      {pathname !== '/dashboard' && <Footer />}
     </ProfileProvider>
   )
 }
