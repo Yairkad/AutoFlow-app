@@ -331,7 +331,7 @@ export default function SuppliersClient() {
               <div style={{ fontSize: '14px' }}>אין ספקים. לחץ "+ הוסף ספק" כדי להתחיל.</div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
               {filtered.map(s => {
                 const debt     = totalDebt(s.id)
                 const openCnt  = openDebtsCount(s.id)
@@ -349,64 +349,67 @@ export default function SuppliersClient() {
                       cursor: 'pointer',
                       transition: 'all .15s',
                       display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
+                      flexDirection: 'column',
+                      gap: '10px',
                     }}
                   >
-                    {/* Avatar */}
-                    <div style={{
-                      width: 42, height: 42, borderRadius: '50%',
-                      background: 'var(--primary)', color: '#fff',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '17px', fontWeight: 700, flexShrink: 0,
-                    }}>
-                      {s.name.charAt(0)}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      {/* Avatar */}
+                      <div style={{
+                        width: 42, height: 42, borderRadius: '50%',
+                        background: 'var(--primary)', color: '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '17px', fontWeight: 700, flexShrink: 0,
+                      }}>
+                        {s.name.charAt(0)}
+                      </div>
+
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {s.name}
+                          {s.category && (
+                            <span style={{ fontSize: '10px', background: '#ede9fe', color: '#7c3aed', padding: '1px 7px', borderRadius: '20px', fontWeight: 600, flexShrink: 0 }}>
+                              {s.category}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                          {s.contact_name && <span>👤 {s.contact_name}</span>}
+                          {s.phone && <span>📞 {s.phone}</span>}
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {s.name}
-                        {s.category && (
-                          <span style={{ fontSize: '10px', background: '#ede9fe', color: '#7c3aed', padding: '1px 7px', borderRadius: '20px', fontWeight: 600, flexShrink: 0 }}>
-                            {s.category}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        {s.contact_name && <span>👤 {s.contact_name}</span>}
-                        {s.phone && <span>📞 {s.phone}</span>}
-                      </div>
-                    </div>
-
-                    {/* Debt badge */}
-                    {openCnt > 0 ? (
-                      <div style={{ textAlign: 'left', flexShrink: 0 }}>
-                        <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(debt)}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{openCnt} חובות</div>
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, flexShrink: 0 }}>✓ נקי</span>
-                    )}
-
-                    {/* Actions area */}
-                    <div
-                      style={{ display: 'flex', gap: '6px', flexShrink: 0 }}
-                      onClick={e => e.stopPropagation()}
-                    >
-                      {/* WhatsApp — always visible if phone exists */}
-                      {s.phone && (
-                        <a
-                          href={waUrl(s.phone, `שלום ${s.name}, `)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="שלח הודעה בווצאפ"
-                          style={{ padding: '5px 9px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '7px', fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}
-                        >
-                          💬
-                        </a>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      {/* Debt badge */}
+                      {openCnt > 0 ? (
+                        <div style={{ textAlign: 'left', flexShrink: 0 }}>
+                          <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(debt)}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{openCnt} חובות</div>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, flexShrink: 0 }}>✓ נקי</span>
                       )}
 
+                      {/* Actions area */}
+                      <div
+                        style={{ display: 'flex', gap: '6px', flexShrink: 0 }}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {/* WhatsApp — always visible if phone exists */}
+                        {s.phone && (
+                          <a
+                            href={waUrl(s.phone, `שלום ${s.name}, `)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="שלח הודעה בווצאפ"
+                            style={{ padding: '5px 9px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '7px', fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}
+                          >
+                            💬
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )

@@ -1,29 +1,23 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-07T16:51:55.732Z
-> Files: 25 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-07T20:42:31.062Z
+> Files: 26 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
-- `citycell_prices.csv` (~1175 tok)
 
 ## ../../../../0411~1/AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/09f05ae2-13fa-41eb-916f-813c69742d07/scratchpad/
 
-- `dump_forecast.py` — col_to_num, cell_ref_col, excel_date (~563 tok)
-- `dump_xlsx.py` — col_to_num, cell_ref_col, excel_date (~748 tok)
-- `dump_xlsx2.py` — col_to_num, cell_ref_col, excel_date (~910 tok)
 
 ## ../../../.claude/plans/
 
-- `lively-imagining-tarjan.md` — תכנון: תשלום מרובה-חובות, אמצעי תשלום, הוספת ספק מהירה, כרטיסים (~1169 tok)
-- `vivid-launching-squid.md` — צ'קים לא-משובצים: אפשרות "התעלם" + שיבוץ לחוב סגור (~837 tok)
+- `vivid-launching-squid.md` — Header/Sidebar קבועים בין ניווטים (Next.js route group) (~976 tok)
 
 ## ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/
 
 
 ## ../../../AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/b832685e-2011-43a5-a71e-5b15984bedbf/scratchpad/
 
-- `make_csv.py` (~1624 tok)
 
 ## ./
 
@@ -36,6 +30,94 @@
 
 ## app/
 
+
+## app/(app)/
+
+- `layout.tsx` — AppGroupLayout (~52 tok)
+
+## app/(app)/alignment/
+
+- `page.tsx` — AlignmentPage (~41 tok)
+
+## app/(app)/billing/
+
+- `page.tsx` — BillingPage (~38 tok)
+
+## app/(app)/cars/
+
+- `page.tsx` — CarsPage (~34 tok)
+
+## app/(app)/dashboard/
+
+- `page.tsx` — DashboardPage (~984 tok)
+
+## app/(app)/debts/
+
+- `page.tsx` — DebtsPage (~36 tok)
+
+## app/(app)/documents/
+
+- `page.tsx` — DocumentsPage (~41 tok)
+
+## app/(app)/employees/
+
+- `page.tsx` — EmployeesPage (~41 tok)
+
+## app/(app)/expenses/
+
+- `page.tsx` — ExpensesPage (~46 tok)
+
+## app/(app)/income/
+
+- `page.tsx` — IncomePage (~45 tok)
+
+## app/(app)/inspections/
+
+- `page.tsx` — InspectionsPage (~44 tok)
+
+## app/(app)/my-profile/
+
+- `page.tsx` — labelSt (~2915 tok)
+
+## app/(app)/products/
+
+- `page.tsx` — ProductsPage (~40 tok)
+
+## app/(app)/quotes/
+
+- `page.tsx` — QuotesPage (~37 tok)
+
+## app/(app)/reminders/
+
+- `page.tsx` — RemindersPage (~41 tok)
+
+## app/(app)/scan/
+
+- `page.tsx` — metadata (~48 tok)
+
+## app/(app)/settings/
+
+- `page.tsx` — SettingsPage (~40 tok)
+
+## app/(app)/supplier-tracking/
+
+- `page.tsx` — SupplierTrackingPage (~52 tok)
+
+## app/(app)/suppliers/
+
+- `page.tsx` — SuppliersPage (~41 tok)
+
+## app/(app)/test-transfer/
+
+- `page.tsx` — TestTransferPage (~46 tok)
+
+## app/(app)/tires/
+
+- `page.tsx` — TiresPage (~36 tok)
+
+## app/(app)/tires/inventory-count/
+
+- `page.tsx` — metadata (~60 tok)
 
 ## app/accessibility/
 
@@ -201,7 +283,6 @@
 
 ## app/supplier-tracking/
 
-- `page.tsx` — SupplierTrackingPage (~79 tok)
 
 ## app/suppliers/
 
@@ -253,7 +334,6 @@
 
 ## components/billing/
 
-- `BillingClient.tsx` — fmt (~20062 tok)
 
 ## components/cars/
 
@@ -263,19 +343,15 @@
 
 ## components/debts/
 
-- `DebtsClient.tsx` — fmt (~10404 tok)
 
 ## components/documents/
 
-- `DocumentsClient.tsx` — emptyForm — renders table (~23489 tok)
 
 ## components/employees/
 
 
 ## components/expenses/
 
-- `ExpensesClient.tsx` — DEFAULT_EXPENSE_CATS (~21193 tok)
-- `ScheduledPaymentsModal.tsx` — monthKeyOf (~13691 tok)
 
 ## components/inspections/
 
@@ -285,8 +361,7 @@
 
 ## components/layout/
 
-- `Sidebar.tsx` — NAV_ITEMS (~5333 tok)
-- `SidebarLayoutEditor.tsx` — SIDEBAR_LAYOUT_KEY (~3558 tok)
+- `AppShell.tsx` — AppShell (~330 tok)
 
 ## components/products/
 
@@ -305,12 +380,10 @@
 
 ## components/supplier-tracking/
 
-- `SupplierTrackingClient.tsx` — fmt (~22689 tok)
 
 ## components/suppliers/
 
-- `QuickAddSupplierModal.tsx` — QuickAddSupplierModal — renders modal (~794 tok)
-- `SuppliersClient.tsx` — ISRAELI_BANKS (~10675 tok)
+- `SuppliersClient.tsx` — Main "ספקים / נותני שירות" page: master-detail layout, supplier list as responsive card grid (repeat(auto-fill, minmax(260px,1fr))) + detail/edit panel on select (~10791 tok)
 
 ## components/test-transfer/
 
@@ -326,7 +399,6 @@
 
 ## lib/
 
-- `uiSettings.ts` — Read ui_settings from the current user's tenant (~395 tok)
 
 ## lib/auth/
 
@@ -336,7 +408,6 @@
 
 ## lib/debts/
 
-- `reconcileSupplierPayment.ts` — Exports DebtAllocation, reconcileSupplierPayment (~439 tok)
 
 ## lib/hooks/
 
@@ -358,14 +429,10 @@
 
 ## supabase/migrations/
 
-- `061_expenses_amortization_and_recurring_link.sql` — Link a materialized expense back to the recurring template it came from, (~92 tok)
-- `062_supplier_check_reconciliation.sql` — Check number/series bookkeeping, and an explicit (user-chosen) ledger of which (~273 tok)
-- `063_billing_vat_period_fixed_addon.sql` — Optional multi-month period for irregular meter readings, and an optional (~184 tok)
-- `064_supplier_debt_direction.sql` — A supplier debt row can be a charge (regular invoice, adds to what's owed) (~78 tok)
-- `065_scheduled_payments_ignore_allocation.sql` — Lets the user dismiss the "unlinked check" warning for checks that are (~69 tok)
 
 ## tests/
 
+- `_tmp_grid_check.spec.ts` — Declares BASE (~510 tok)
 
 ## tests/fixtures/
 
