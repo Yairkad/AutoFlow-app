@@ -46,5 +46,17 @@
     "related_bugs": ["bug-003"],
     "occurrences": 1,
     "last_seen": "2026-06-29"
+  },
+  {
+    "id": "bug-005",
+    "timestamp": "2026-07-08T00:00:00.000Z",
+    "error_message": "מעקב ספקים (SupplierTrackingClient) — כל הרשומות מוצגות תחת 'ללא ספק' למרות שיש להן supplier_id תקין ובעמוד ספקים (SuppliersClient) השם כן מוצג נכון",
+    "file": "components/supplier-tracking/SupplierTrackingClient.tsx",
+    "root_cause": "loadAll() queries suppliers with an explicit column list that includes the new `opening_balance` column added in supabase/migrations/066_supplier_opening_balance.sql. If that migration hasn't actually been applied to the live DB yet, the query errors (column does not exist) and `suppRes.data` is null, so `if (suppRes.data) setSuppliers(...)` silently skips — leaving `suppliers` state as an empty array for the whole session. Every group's `suppliers.find(s => s.id === sid)` then fails, so every supplier renders as 'ללא ספק' even though supplier_debts.supplier_id is populated correctly. SuppliersClient.tsx and DebtsClient.tsx don't hit this: SuppliersClient uses `select('*')` (no error on a missing column, just omits it) and DebtsClient's suppliers query never asks for opening_balance at all.",
+    "fix": "Code-side: added an else-if in loadAll() to showToast the suppRes.error message instead of failing silently, so a missing-column/RLS error surfaces immediately next time instead of masquerading as 'ללא ספק' on every row. Real fix requires applying migration 066_supplier_opening_balance.sql to the live Supabase DB (ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS opening_balance numeric(10,2) NOT NULL DEFAULT 0) — could not run this myself, no DB credentials in this environment.",
+    "tags": ["supplier-tracking", "migration", "silent-failure", "opening_balance", "select-error-swallowed"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-07-08"
   }
 ]

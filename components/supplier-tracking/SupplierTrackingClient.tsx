@@ -118,10 +118,10 @@ export default function SupplierTrackingClient() {
     return next
   })
 
-  // Which month blocks inside a supplier card are collapsed (expanded by default; click a month to collapse just that one)
-  const [collapsedMonthKeys, setCollapsedMonthKeys] = useState<Set<string>>(new Set())
+  // Which month blocks inside a supplier card are expanded (collapsed by default; click a month to open just that one)
+  const [expandedMonthKeys, setExpandedMonthKeys] = useState<Set<string>>(new Set())
   const monthKeyFor = (sid: string | null, mk: string) => `${supplierKeyOf(sid)}::${mk}`
-  const toggleMonthCollapsed = (sid: string | null, mk: string) => setCollapsedMonthKeys(prev => {
+  const toggleMonthCollapsed = (sid: string | null, mk: string) => setExpandedMonthKeys(prev => {
     const k = monthKeyFor(sid, mk)
     const next = new Set(prev)
     if (next.has(k)) next.delete(k); else next.add(k)
@@ -214,6 +214,7 @@ export default function SupplierTrackingClient() {
     ])
     if (suppDebtRes.data) setSupplierDebts(suppDebtRes.data)
     if (suppRes.data)     setSuppliers(suppRes.data)
+    else if (suppRes.error) showToast('שגיאה בטעינת ספקים: ' + suppRes.error.message, 'error')
     if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
     const payments: ScheduledPayment[] = paymentsRes.data ?? []
     setScheduledPayments(payments)
@@ -815,7 +816,7 @@ export default function SupplierTrackingClient() {
                       const monthNetTotal    = monthChargeTotal - monthCreditTotal
                       const monthPaidTotal   = monthDebts.reduce((s, d) => s + Number(d.paid), 0)
                       const monthBalance     = monthDebts.reduce((s, d) => s + bal(d), 0)
-                      const monthCollapsed   = collapsedMonthKeys.has(monthKeyFor(group.sid, mk))
+                      const monthCollapsed   = !expandedMonthKeys.has(monthKeyFor(group.sid, mk))
 
                       return (
                         <div key={mk} style={{ borderBottom: mIdx < group.months.length - 1 ? '1px solid var(--border)' : 'none', padding: '14px 16px' }}>

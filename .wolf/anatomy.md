@@ -380,7 +380,7 @@
 
 ## components/supplier-tracking/
 
-- `SupplierTrackingClient.tsx` — Main supplier debt tracking page ("מעקב ספקים"): supplier cards (collapsed by default) expand to per-month debt/credit blocks, each month independently collapsible via its own toggle; each invoice row has inline ✏️/🗑 buttons opening the edit modal directly (no need to scroll to the top selection bar); checks calendar tab, payment/allocation modals, Excel import; styled print now supports choosing "all/specific months/date range" for the ledger, seeded by the supplier's opening_balance + prior debts as a running "יתרה בפועל" column (~12300 tok)
+- `SupplierTrackingClient.tsx` — Main supplier debt tracking page ("מעקב ספקים"): supplier cards (collapsed by default) expand to per-month debt/credit blocks, each month collapsed by default too (own toggle, `expandedMonthKeys`); each invoice row has inline ✏️/🗑 buttons opening the edit modal directly (no need to scroll to the top selection bar); checks calendar tab, payment/allocation modals, Excel import; styled print now supports choosing "all/specific months/date range" for the ledger, seeded by the supplier's opening_balance + prior debts as a running "יתרה בפועל" column. loadAll()'s suppliers query now toasts on error instead of silently leaving suppliers=[] (see bug-005 — a missing migration column errors this query and made every row show "ללא ספק") (~12400 tok)
 
 ## components/suppliers/
 
