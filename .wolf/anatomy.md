@@ -380,11 +380,11 @@
 
 ## components/supplier-tracking/
 
-- `SupplierTrackingClient.tsx` — Main supplier debt tracking page ("מעקב ספקים"): supplier cards (collapsed by default) expand to per-month debt/credit blocks, each month independently collapsible via its own toggle; each invoice row has inline ✏️/🗑 buttons opening the edit modal directly (no need to scroll to the top selection bar); checks calendar tab, payment/allocation modals, Excel import, styled print (~11600 tok)
+- `SupplierTrackingClient.tsx` — Main supplier debt tracking page ("מעקב ספקים"): supplier cards (collapsed by default) expand to per-month debt/credit blocks, each month independently collapsible via its own toggle; each invoice row has inline ✏️/🗑 buttons opening the edit modal directly (no need to scroll to the top selection bar); checks calendar tab, payment/allocation modals, Excel import; styled print now supports choosing "all/specific months/date range" for the ledger, seeded by the supplier's opening_balance + prior debts as a running "יתרה בפועל" column (~12300 tok)
 
 ## components/suppliers/
 
-- `SuppliersClient.tsx` — Main "ספקים / נותני שירות" page: master-detail layout, supplier list as responsive card grid (repeat(auto-fill, minmax(260px,1fr))) + detail/edit panel on select (~10791 tok)
+- `SuppliersClient.tsx` — Main "ספקים / נותני שירות" page: master-detail layout, supplier list as responsive card grid (repeat(auto-fill, minmax(260px,1fr))) + detail/edit panel on select; edit form now includes `opening_balance` (יתרת פתיחה) feeding the supplier-tracking printed ledger (~10900 tok)
 
 ## components/test-transfer/
 
