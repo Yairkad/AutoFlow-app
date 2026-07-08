@@ -117,6 +117,16 @@ export default function SupplierTrackingClient() {
     return next
   })
 
+  // Which month blocks inside a supplier card are collapsed (expanded by default; click a month to collapse just that one)
+  const [collapsedMonthKeys, setCollapsedMonthKeys] = useState<Set<string>>(new Set())
+  const monthKeyFor = (sid: string | null, mk: string) => `${supplierKeyOf(sid)}::${mk}`
+  const toggleMonthCollapsed = (sid: string | null, mk: string) => setCollapsedMonthKeys(prev => {
+    const k = monthKeyFor(sid, mk)
+    const next = new Set(prev)
+    if (next.has(k)) next.delete(k); else next.add(k)
+    return next
+  })
+
   // Supplier debt form (each line = its own invoice/credit)
   const [showSuppModal, setShowSuppModal] = useState(false)
   const [editSupp, setEditSupp]           = useState<SupplierDebt | null>(null)
@@ -790,24 +800,33 @@ export default function SupplierTrackingClient() {
                       const monthNetTotal    = monthChargeTotal - monthCreditTotal
                       const monthPaidTotal   = monthDebts.reduce((s, d) => s + Number(d.paid), 0)
                       const monthBalance     = monthDebts.reduce((s, d) => s + bal(d), 0)
+                      const monthCollapsed   = collapsedMonthKeys.has(monthKeyFor(group.sid, mk))
 
                       return (
                         <div key={mk} style={{ borderBottom: mIdx < group.months.length - 1 ? '1px solid var(--border)' : 'none', padding: '14px 16px' }}>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                          <div
+                            onClick={() => toggleMonthCollapsed(group.sid, mk)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: monthCollapsed ? 0 : '10px', cursor: 'pointer' }}
+                          >
+                            <span style={{ display: 'inline-block', transition: 'transform .15s', transform: monthCollapsed ? 'rotate(0deg)' : 'rotate(90deg)', color: 'var(--text-muted)', fontSize: '12px' }}>›</span>
                             <span style={{ fontWeight: 700, fontSize: '14px', color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
                             {monthBalance <= 0
                               ? <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>סגור ✓</span>
                               : <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>פתוח</span>}
+                            <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthBalance > 0 ? 'var(--danger)' : '#16a34a' }}>
+                              יתרה: {fmt(monthBalance)}
+                            </span>
                           </div>
 
-                          {carryOver !== 0 && (
+                          {!monthCollapsed && carryOver !== 0 && (
                             <div style={{ padding: '7px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', marginBottom: '10px', fontSize: '13px', color: '#92400e', fontWeight: 600 }}>
                               ↩ יתרה מחודשים קודמים: {fmt(carryOver)}
                             </div>
                           )}
 
                           {/* Invoices/credits table */}
+                          {!monthCollapsed && (
                           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
                             <thead>
                               <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -856,8 +875,9 @@ export default function SupplierTrackingClient() {
                               </tr>
                             </tfoot>
                           </table>
+                          )}
 
-                          {monthPayments.length > 0 && (
+                          {!monthCollapsed && monthPayments.length > 0 && (
                             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px 12px' }}>
                               <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', marginBottom: '7px' }}>📅 תשלומים מתוזמנים:</div>
                               {monthPayments.map((p, pi) => {
