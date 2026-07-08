@@ -46,5 +46,17 @@
     "related_bugs": ["bug-003"],
     "occurrences": 1,
     "last_seen": "2026-06-29"
+  },
+  {
+    "id": "bug-005",
+    "timestamp": "2026-07-08T00:00:00.000Z",
+    "error_message": "Vercel deploy failed: Type error at SupplierTrackingClient.tsx:1284:24 — Argument of type '(prev: Supplier[]) => QuickSupplier[]' is not assignable... Property 'opening_balance' is missing in type 'QuickSupplier' but required in type 'Supplier'.",
+    "file": "components/supplier-tracking/SupplierTrackingClient.tsx",
+    "root_cause": "Added a required `opening_balance` field to the local `Supplier` interface in SupplierTrackingClient.tsx for the printed-ledger feature, but forgot the QuickAddSupplierModal's onCreated callback merges a `QuickSupplier` (id/name/phone/contact_name only, no opening_balance) straight into the `suppliers` state array. Wasn't caught before pushing because this environment had no node_modules installed at the time, so only a manual brace/paren balance check was done instead of a real `tsc`/`next build`.",
+    "fix": "In the onCreated handler, spread the new supplier as `{ ...s, opening_balance: 0 }` before appending to state — matches the DB column's actual default for a freshly quick-added supplier.",
+    "tags": ["supplier-tracking", "typescript", "build-failure", "opening_balance", "QuickAddSupplierModal", "vercel-deploy"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-07-08"
   }
 ]
