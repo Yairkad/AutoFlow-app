@@ -25,6 +25,7 @@ interface Supplier {
   bank_branch: string | null
   bank_account: string | null
   bank_account_holder: string | null
+  opening_balance: number
   created_at: string
 }
 
@@ -131,6 +132,7 @@ export default function SuppliersClient() {
   const [fBankBranch, setFBankBranch]         = useState('')
   const [fBankAccount, setFBankAccount]       = useState('')
   const [fBankHolder, setFBankHolder]         = useState('')
+  const [fOpeningBalance, setFOpeningBalance] = useState('')
   const [showBankDrop, setShowBankDrop]       = useState(false)
   const [saving, setSaving]       = useState(false)
 
@@ -200,11 +202,13 @@ export default function SuppliersClient() {
       setFEmail(s.email ?? ''); setFAddress(s.address ?? ''); setFNotes(s.notes ?? '')
       setFBankName(s.bank_name ?? ''); setFBankBranch(s.bank_branch ?? '')
       setFBankAccount(s.bank_account ?? ''); setFBankHolder(s.bank_account_holder ?? '')
+      setFOpeningBalance(s.opening_balance ? String(s.opening_balance) : '')
     } else {
       setEditItem(null)
       setFName(''); setFCategory(''); setFContact(''); setFPhone('')
       setFEmail(''); setFAddress(''); setFNotes('')
       setFBankName(''); setFBankBranch(''); setFBankAccount(''); setFBankHolder('')
+      setFOpeningBalance('')
     }
     setShowBankDrop(false)
     setShowModal(true)
@@ -227,6 +231,7 @@ export default function SuppliersClient() {
       bank_branch: fBankBranch.trim() || null,
       bank_account: fBankAccount.trim() || null,
       bank_account_holder: fBankHolder.trim() || null,
+      opening_balance: parseFloat(fOpeningBalance) || 0,
     }
     if (editItem) {
       const { error } = await supabase.from('suppliers').update(row).eq('id', editItem.id)
@@ -491,6 +496,12 @@ export default function SuppliersClient() {
                   <div style={{ fontSize: '13px' }}>{selected.notes}</div>
                 </div>
               )}
+              {!!selected.opening_balance && (
+                <div style={{ background: 'var(--bg)', borderRadius: '8px', padding: '10px 14px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>📒 יתרת פתיחה</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600 }}>{selected.opening_balance.toLocaleString('he-IL')} ₪</div>
+                </div>
+              )}
               {(selected.bank_name || selected.bank_account) && (
                 <div style={{ background: '#f0f9ff', borderRadius: '8px', padding: '10px 14px', gridColumn: '1 / -1', border: '1px solid #bae6fd' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '5px' }}>🏦 פרטי בנק לתשלום</div>
@@ -661,6 +672,11 @@ export default function SuppliersClient() {
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                 הערות
                 <textarea value={fNotes} onChange={e => setFNotes(e.target.value)} placeholder="פרטים נוספים..." rows={2} className="form-input" style={{ resize: 'vertical' }} />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                יתרת פתיחה
+                <input type="number" step="0.01" value={fOpeningBalance} onChange={e => setFOpeningBalance(e.target.value)} placeholder="0" className="form-input" />
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>חוב שהיה קיים לפני תחילת המעקב במערכת — משמש כנקודת פתיחה בכרטסת המודפסת</span>
               </label>
               {/* Bank / payment details */}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>

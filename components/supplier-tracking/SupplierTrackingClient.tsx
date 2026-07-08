@@ -49,6 +49,7 @@ interface SupplierDebtPayment {
 
 interface Supplier {
   id: string; name: string; phone: string | null; contact_name: string | null
+  opening_balance: number
 }
 
 type Tab    = 'byMonth' | 'calendar'
@@ -117,6 +118,16 @@ export default function SupplierTrackingClient() {
     return next
   })
 
+  // Which month blocks inside a supplier card are collapsed (expanded by default; click a month to collapse just that one)
+  const [collapsedMonthKeys, setCollapsedMonthKeys] = useState<Set<string>>(new Set())
+  const monthKeyFor = (sid: string | null, mk: string) => `${supplierKeyOf(sid)}::${mk}`
+  const toggleMonthCollapsed = (sid: string | null, mk: string) => setCollapsedMonthKeys(prev => {
+    const k = monthKeyFor(sid, mk)
+    const next = new Set(prev)
+    if (next.has(k)) next.delete(k); else next.add(k)
+    return next
+  })
+
   // Supplier debt form (each line = its own invoice/credit)
   const [showSuppModal, setShowSuppModal] = useState(false)
   const [editSupp, setEditSupp]           = useState<SupplierDebt | null>(null)
@@ -156,6 +167,20 @@ export default function SupplierTrackingClient() {
   const [showPrintChoice, setShowPrintChoice] = useState(false)
   const [printMode, setPrintMode] = useState<'ledger' | 'calendar' | null>(null)
   const [printSupplierId, setPrintSupplierId] = useState<string>('')
+  const [printRangeMode, setPrintRangeMode] = useState<'all' | 'months' | 'range'>('all')
+  const [printMonths, setPrintMonths] = useState<Set<string>>(new Set())
+  const [printDateFrom, setPrintDateFrom] = useState('')
+  const [printDateTo, setPrintDateTo] = useState('')
+
+  const printSupplierMonths = (() => {
+    const set = new Set(supplierDebts.filter(d => d.supplier_id === printSupplierId).map(d => monthKeyOf(d.date)))
+    return [...set].sort().reverse()
+  })()
+  const togglePrintMonth = (mk: string) => setPrintMonths(prev => {
+    const next = new Set(prev)
+    if (next.has(mk)) next.delete(mk); else next.add(mk)
+    return next
+  })
 
   useEffect(() => {
     if (!printMode) return
@@ -182,7 +207,7 @@ export default function SupplierTrackingClient() {
     setLoading(true)
     const [suppDebtRes, suppRes, paymentsRes, debtPaymentsRes, catRes] = await Promise.all([
       supabase.from('supplier_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
-      supabase.from('suppliers').select('id,name,phone,contact_name').eq('tenant_id', tid).order('name'),
+      supabase.from('suppliers').select('id,name,phone,contact_name,opening_balance').eq('tenant_id', tid).order('name'),
       supabase.from('scheduled_payments').select('*').eq('tenant_id', tid).order('due_date'),
       supabase.from('supplier_debt_payments').select('*').eq('tenant_id', tid),
       supabase.from('expense_categories').select('name').eq('tenant_id', tid).order('created_at'),
@@ -790,24 +815,33 @@ export default function SupplierTrackingClient() {
                       const monthNetTotal    = monthChargeTotal - monthCreditTotal
                       const monthPaidTotal   = monthDebts.reduce((s, d) => s + Number(d.paid), 0)
                       const monthBalance     = monthDebts.reduce((s, d) => s + bal(d), 0)
+                      const monthCollapsed   = collapsedMonthKeys.has(monthKeyFor(group.sid, mk))
 
                       return (
                         <div key={mk} style={{ borderBottom: mIdx < group.months.length - 1 ? '1px solid var(--border)' : 'none', padding: '14px 16px' }}>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                          <div
+                            onClick={() => toggleMonthCollapsed(group.sid, mk)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: monthCollapsed ? 0 : '10px', cursor: 'pointer' }}
+                          >
+                            <span style={{ display: 'inline-block', transition: 'transform .15s', transform: monthCollapsed ? 'rotate(0deg)' : 'rotate(90deg)', color: 'var(--text-muted)', fontSize: '12px' }}>›</span>
                             <span style={{ fontWeight: 700, fontSize: '14px', color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
                             {monthBalance <= 0
                               ? <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>סגור ✓</span>
                               : <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>פתוח</span>}
+                            <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthBalance > 0 ? 'var(--danger)' : '#16a34a' }}>
+                              יתרה: {fmt(monthBalance)}
+                            </span>
                           </div>
 
-                          {carryOver !== 0 && (
+                          {!monthCollapsed && carryOver !== 0 && (
                             <div style={{ padding: '7px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', marginBottom: '10px', fontSize: '13px', color: '#92400e', fontWeight: 600 }}>
                               ↩ יתרה מחודשים קודמים: {fmt(carryOver)}
                             </div>
                           )}
 
                           {/* Invoices/credits table */}
+                          {!monthCollapsed && (
                           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
                             <thead>
                               <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -815,6 +849,7 @@ export default function SupplierTrackingClient() {
                                 <th style={thSt}>תאריך</th>
                                 <th style={thSt}>סוג</th>
                                 <th style={{ ...thSt, textAlign: 'left' }}>סכום</th>
+                                <th style={{ ...thSt, textAlign: 'center', width: '70px' }}></th>
                               </tr>
                             </thead>
                             <tbody>
@@ -838,13 +873,25 @@ export default function SupplierTrackingClient() {
                                     <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? '#16a34a' : 'var(--danger)' }}>
                                       {d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}
                                     </td>
+                                    <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                      <button
+                                        onClick={e => { e.stopPropagation(); openSuppModal(d) }}
+                                        title="ערוך"
+                                        style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
+                                      >✏️</button>
+                                      <button
+                                        onClick={e => { e.stopPropagation(); deleteSuppDebt(d.id) }}
+                                        title="מחק"
+                                        style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
+                                      >🗑</button>
+                                    </td>
                                   </tr>
                                 ))
                               })}
                             </tbody>
                             <tfoot>
                               <tr style={{ borderTop: '2px solid var(--border)', background: '#f8fafc' }}>
-                                <td colSpan={4} style={{ padding: '8px 10px' }}>
+                                <td colSpan={5} style={{ padding: '8px 10px' }}>
                                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-muted)' }}>
                                     <span>סה&quot;כ חיוב: <strong style={{ color: 'var(--text)' }}>{fmt(monthChargeTotal)}</strong></span>
                                     {monthCreditTotal > 0 && <span>סה&quot;כ זיכוי: <strong style={{ color: 'var(--danger)' }}>{fmt(monthCreditTotal)}</strong></span>}
@@ -856,8 +903,9 @@ export default function SupplierTrackingClient() {
                               </tr>
                             </tfoot>
                           </table>
+                          )}
 
-                          {monthPayments.length > 0 && (
+                          {!monthCollapsed && monthPayments.length > 0 && (
                             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px 12px' }}>
                               <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', marginBottom: '7px' }}>📅 תשלומים מתוזמנים:</div>
                               {monthPayments.map((p, pi) => {
@@ -1246,13 +1294,64 @@ export default function SupplierTrackingClient() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
                 <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>כרטסת ספק (חשבוניות/זיכויים + מאזן)</div>
-                <select value={printSupplierId} onChange={e => setPrintSupplierId(e.target.value)} className="form-input" style={{ marginBottom: '8px' }}>
+                <select
+                  value={printSupplierId}
+                  onChange={e => { setPrintSupplierId(e.target.value); setPrintMonths(new Set()); setPrintDateFrom(''); setPrintDateTo('') }}
+                  className="form-input" style={{ marginBottom: '8px' }}
+                >
                   <option value="">בחר ספק...</option>
                   {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
+
+                {printSupplierId && (
+                  <>
+                    <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+                      {(['all', 'months', 'range'] as const).map(m => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setPrintRangeMode(m)}
+                          style={{
+                            flex: 1, padding: '5px 6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', borderRadius: '6px',
+                            border: '1px solid ' + (printRangeMode === m ? 'var(--primary)' : 'var(--border)'),
+                            background: printRangeMode === m ? 'var(--primary)' : '#fff',
+                            color: printRangeMode === m ? '#fff' : 'var(--text)',
+                          }}
+                        >{m === 'all' ? 'כל התקופה' : m === 'months' ? 'חודשים נבחרים' : 'טווח תאריכים'}</button>
+                      ))}
+                    </div>
+
+                    {printRangeMode === 'months' && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '8px', maxHeight: '120px', overflowY: 'auto' }}>
+                        {printSupplierMonths.length === 0
+                          ? <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>אין רשומות לספק זה</span>
+                          : printSupplierMonths.map(mk => (
+                            <label key={mk} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', padding: '3px 8px', border: '1px solid var(--border)', borderRadius: '14px', cursor: 'pointer', background: printMonths.has(mk) ? '#eff6ff' : '#fff' }}>
+                              <input type="checkbox" checked={printMonths.has(mk)} onChange={() => togglePrintMonth(mk)} />
+                              {fmtMonth(mk)}
+                            </label>
+                          ))}
+                      </div>
+                    )}
+
+                    {printRangeMode === 'range' && (
+                      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                        <label style={{ flex: 1, fontSize: '11px', color: 'var(--text-muted)' }}>
+                          מתאריך
+                          <input type="date" value={printDateFrom} onChange={e => setPrintDateFrom(e.target.value)} className="form-input" />
+                        </label>
+                        <label style={{ flex: 1, fontSize: '11px', color: 'var(--text-muted)' }}>
+                          עד תאריך
+                          <input type="date" value={printDateTo} onChange={e => setPrintDateTo(e.target.value)} className="form-input" />
+                        </label>
+                      </div>
+                    )}
+                  </>
+                )}
+
                 <Button
                   onClick={() => { setShowPrintChoice(false); setPrintMode('ledger') }}
-                  disabled={!printSupplierId}
+                  disabled={!printSupplierId || (printRangeMode === 'months' && printMonths.size === 0)}
                   style={{ width: '100%' }}
                 >🖨️ הדפס כרטסת</Button>
               </div>
@@ -1288,33 +1387,72 @@ export default function SupplierTrackingClient() {
 
           {printMode === 'ledger' && (() => {
             const supp = suppliers.find(s => s.id === printSupplierId)
-            const debts = supplierDebts.filter(d => d.supplier_id === printSupplierId).sort((a, b) => a.date.localeCompare(b.date))
+            const allDebts = supplierDebts.filter(d => d.supplier_id === printSupplierId).sort((a, b) => a.date.localeCompare(b.date))
+
+            const sortedPrintMonths = [...printMonths].sort()
+            const rangeStart = printRangeMode === 'months' && sortedPrintMonths.length > 0
+              ? `${sortedPrintMonths[0]}-01`
+              : printRangeMode === 'range' ? (printDateFrom || null) : null
+
+            const inRange = (d: SupplierDebt) => {
+              if (printRangeMode === 'months') return sortedPrintMonths.length === 0 || printMonths.has(monthKeyOf(d.date))
+              if (printRangeMode === 'range') return (!printDateFrom || d.date >= printDateFrom) && (!printDateTo || d.date <= printDateTo)
+              return true
+            }
+
+            const debts = allDebts.filter(inRange)
+            const priorDebts = rangeStart ? allDebts.filter(d => d.date < rangeStart) : []
+            const openingForReport = (supp?.opening_balance ?? 0) + priorDebts.reduce((s, d) => s + bal(d), 0)
+
             const chargeTotal = debts.filter(d => d.direction !== 'credit').reduce((s, d) => s + Number(d.amount), 0)
             const creditTotal = debts.filter(d => d.direction === 'credit').reduce((s, d) => s + Number(d.amount), 0)
             const paidTotal   = debts.reduce((s, d) => s + Number(d.paid), 0)
-            const balance     = debts.reduce((s, d) => s + bal(d), 0)
+
+            let running = openingForReport
+            const showOpeningRow = openingForReport !== 0 || !!rangeStart
+
+            const rangeLabel = printRangeMode === 'months'
+              ? sortedPrintMonths.map(fmtMonth).join(', ')
+              : printRangeMode === 'range'
+                ? `${printDateFrom || 'ההתחלה'} — ${printDateTo || 'היום'}`
+                : 'כל התקופה'
+
             return (
               <div>
                 <h2 style={{ margin: '0 0 4px' }}>{tenantName} — כרטסת ספק: {supp?.name ?? ''}</h2>
+                <div style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>תקופה: {rangeLabel}</div>
                 <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {new Date().toLocaleDateString('he-IL')}</div>
                 <table>
-                  <thead><tr><th>תאריך</th><th>מספר</th><th>סוג</th><th>סכום</th></tr></thead>
+                  <thead><tr><th>תאריך</th><th>מספר</th><th>סוג</th><th>סכום</th><th>יתרה בפועל</th></tr></thead>
                   <tbody>
+                    {showOpeningRow && (
+                      <tr style={{ fontWeight: 700, background: '#f5f5f5' }}>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>יתרת פתיחה</td>
+                        <td>—</td>
+                        <td>{fmt(openingForReport)}</td>
+                      </tr>
+                    )}
                     {debts.flatMap(d => {
                       const items = Array.isArray(d.invoices) && d.invoices.length > 0 ? d.invoices : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]
-                      return items.map((item, idx) => (
-                        <tr key={`${d.id}-${idx}`}>
-                          <td>{d.date}</td>
-                          <td>{item.number || '—'}</td>
-                          <td>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
-                          <td>{d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}</td>
-                        </tr>
-                      ))
+                      return items.map((item, idx) => {
+                        running += d.direction === 'credit' ? -Number(item.amount) : Number(item.amount)
+                        return (
+                          <tr key={`${d.id}-${idx}`}>
+                            <td>{d.date}</td>
+                            <td>{item.number || '—'}</td>
+                            <td style={{ textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
+                            <td style={{ textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}</td>
+                            <td>{fmt(running)}</td>
+                          </tr>
+                        )
+                      })
                     })}
                   </tbody>
                 </table>
                 <div style={{ marginTop: 16, fontWeight: 700, fontSize: 14 }}>
-                  סה&quot;כ חיוב: {fmt(chargeTotal)} &nbsp; | &nbsp; סה&quot;כ זיכוי: {fmt(creditTotal)} &nbsp; | &nbsp; שולם: {fmt(paidTotal)} &nbsp; | &nbsp; יתרה: {fmt(balance)}
+                  סה&quot;כ חיוב: {fmt(chargeTotal)} &nbsp; | &nbsp; סה&quot;כ זיכוי: {fmt(creditTotal)} &nbsp; | &nbsp; שולם: {fmt(paidTotal)} &nbsp; | &nbsp; יתרה בפועל: {fmt(running)}
                 </div>
               </div>
             )
