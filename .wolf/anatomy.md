@@ -380,7 +380,7 @@
 
 ## components/supplier-tracking/
 
-- `SupplierTrackingClient.tsx` — Main supplier debt tracking page ("מעקב ספקים"): supplier cards (collapsed by default) expand to per-month debt/credit blocks, each month independently collapsible via its own toggle; checks calendar tab, payment/allocation modals, Excel import, styled print (~11500 tok)
+- `SupplierTrackingClient.tsx` — Main supplier debt tracking page ("מעקב ספקים"): supplier cards (collapsed by default) expand to per-month debt/credit blocks, each month independently collapsible via its own toggle; each invoice row has inline ✏️/🗑 buttons opening the edit modal directly (no need to scroll to the top selection bar); checks calendar tab, payment/allocation modals, Excel import, styled print (~11600 tok)
 
 ## components/suppliers/
 

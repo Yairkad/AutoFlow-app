@@ -834,6 +834,7 @@ export default function SupplierTrackingClient() {
                                 <th style={thSt}>תאריך</th>
                                 <th style={thSt}>סוג</th>
                                 <th style={{ ...thSt, textAlign: 'left' }}>סכום</th>
+                                <th style={{ ...thSt, textAlign: 'center', width: '70px' }}></th>
                               </tr>
                             </thead>
                             <tbody>
@@ -857,13 +858,25 @@ export default function SupplierTrackingClient() {
                                     <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? '#16a34a' : 'var(--danger)' }}>
                                       {d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}
                                     </td>
+                                    <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                      <button
+                                        onClick={e => { e.stopPropagation(); openSuppModal(d) }}
+                                        title="ערוך"
+                                        style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
+                                      >✏️</button>
+                                      <button
+                                        onClick={e => { e.stopPropagation(); deleteSuppDebt(d.id) }}
+                                        title="מחק"
+                                        style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
+                                      >🗑</button>
+                                    </td>
                                   </tr>
                                 ))
                               })}
                             </tbody>
                             <tfoot>
                               <tr style={{ borderTop: '2px solid var(--border)', background: '#f8fafc' }}>
-                                <td colSpan={4} style={{ padding: '8px 10px' }}>
+                                <td colSpan={5} style={{ padding: '8px 10px' }}>
                                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-muted)' }}>
                                     <span>סה&quot;כ חיוב: <strong style={{ color: 'var(--text)' }}>{fmt(monthChargeTotal)}</strong></span>
                                     {monthCreditTotal > 0 && <span>סה&quot;כ זיכוי: <strong style={{ color: 'var(--danger)' }}>{fmt(monthCreditTotal)}</strong></span>}

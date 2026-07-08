@@ -820,3 +820,4 @@
 | 23:44 | Fixed grid location: applied 3-per-row card grid to SuppliersClient.tsx (the actual "ספקים/נותני שירות" page) — earlier grid change had only landed on /debts summary tab, not this page | components/suppliers/SuppliersClient.tsx | fixed, tsc clean | ~2k |
 | 23:45 | Session end: 3 writes across 2 files (_tmp_grid_check.spec.ts, SuppliersClient.tsx) | 6 reads | ~1417 tok |
 | 10:34 | Added per-month collapse toggle inside supplier cards (mirrors existing openSupplierKeys pattern with new collapsedMonthKeys state) | components/supplier-tracking/SupplierTrackingClient.tsx | added, structure verified (paren/brace balanced; node_modules absent in env so no live tsc) | ~2k |
+| 10:37 | Added inline edit/delete buttons to each invoice row so editing no longer requires scrolling to the top selection bar | components/supplier-tracking/SupplierTrackingClient.tsx | added, brace/paren balance verified | ~1.5k |
