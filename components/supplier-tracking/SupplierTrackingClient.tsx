@@ -1282,7 +1282,7 @@ export default function SupplierTrackingClient() {
         supabase={supabase}
         showToast={showToast}
         onCreated={(s: QuickSupplier) => {
-          setSuppliers(prev => [...prev, s].sort((a, b) => a.name.localeCompare(b.name, 'he')))
+          setSuppliers(prev => [...prev, { ...s, opening_balance: 0 }].sort((a, b) => a.name.localeCompare(b.name, 'he')))
           setSSupplier(s.id)
         }}
       />

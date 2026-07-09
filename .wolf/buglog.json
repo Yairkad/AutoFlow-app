@@ -58,5 +58,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-07-08"
+  },
+  {
+    "id": "bug-006",
+    "timestamp": "2026-07-09T00:00:00.000Z",
+    "error_message": "Vercel build failed: Type error in SupplierTrackingClient.tsx:1285 — Argument of type '(prev: Supplier[]) => QuickSupplier[]' is not assignable to parameter of type 'SetStateAction<Supplier[]>'. Property 'opening_balance' is missing in type 'QuickSupplier' but required in type 'Supplier'.",
+    "file": "components/supplier-tracking/SupplierTrackingClient.tsx",
+    "root_cause": "QuickAddSupplierModal.tsx's onCreated callback returns a QuickSupplier ({id,name,phone,contact_name}) which does not include opening_balance. SupplierTrackingClient.tsx's onCreated handler pushed that object directly into setSuppliers (typed Supplier[], which requires opening_balance since migration 066_supplier_opening_balance.sql / bug-005). TypeScript caught this at Vercel's `next build` TypeScript pass — it did not surface locally in this session until `npm run build` was run (tsc --noEmit alone was blocked by missing node_modules until dependencies were installed).",
+    "fix": "In SupplierTrackingClient.tsx's <QuickAddSupplierModal onCreated={...}>, spread `{ ...s, opening_balance: 0 }` when appending to suppliers state — new suppliers created via the quick-add modal always start at opening_balance 0 (the DB column default), so this matches real behavior, not just a type cast.",
+    "tags": ["build-error", "typescript", "supplier-tracking", "QuickAddSupplierModal", "opening_balance", "type-mismatch"],
+    "related_bugs": ["bug-005"],
+    "occurrences": 1,
+    "last_seen": "2026-07-09"
   }
 ]
