@@ -35,6 +35,8 @@
 
 - **Inspection checklist skeleton_only (2026-06-17):** skeleton_only flag stored in `findings` JSON as `{ skeleton_only: true, items: [...], notes: '' }`. No DB column needed. SKELETON_SYSTEM_INDICES = Set([16, 17]) — שלדת מרכב, מרכב (פחחות). Status 'na' added to ChecklistItem for non-skeleton systems. parseFindings() auto-applies 'na' when skeleton_only=true.
 
+- **[2026-07-09] Scan module edit forms were missing fields present elsewhere:** `ScanClient.tsx`'s "found item" modal only showed qty (no prices), and its tire edit modal only had load_idx/speed_idx (no width/profile/rim) even though the "new tire" flow in the same file already had full WIDTHS/PROFILES/RIMS selects. When a form in one flow of a file has a field set, check sibling flows (found/edit/create) in the same component for the same fields before assuming they're already covered — this component had 3 separate tire forms (new/edit/found-display) that had drifted out of sync.
+
 ## Decision Log
 
 <!-- Significant technical decisions with rationale. Why X was chosen over Y. -->
