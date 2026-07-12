@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
+import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
 
 interface AlertPayment {
   id: string
@@ -72,6 +74,7 @@ const SALARY_CHIP: React.CSSProperties = {
 }
 
 export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
+  const { profile } = useProfile()
   const [payments,      setPayments]      = useState<AlertPayment[]>([])
   const [salaries,      setSalaries]      = useState<UnpaidSalary[]>([])
   const [suppliers,     setSuppliers]     = useState<Supplier[]>([])
@@ -83,6 +86,10 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
   const supabase = useRef(createClient()).current
 
   const load = async () => {
+    if (profile?.tenantId) {
+      await autoMarkOverdueChecksPaid(supabase, profile.tenantId).catch(() => {})
+    }
+
     const ahead = new Date(); ahead.setDate(ahead.getDate() + 30)
     const aheadStr = ahead.toISOString().slice(0, 10)
 

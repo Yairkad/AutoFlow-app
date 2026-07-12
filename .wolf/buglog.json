@@ -58,5 +58,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-07-08"
+  },
+  {
+    "id": "bug-006",
+    "timestamp": "2026-07-12T00:00:00.000Z",
+    "error_message": "צ'קים שהגיע מועד הפירעון שלהם עדיין מוצגים עם כפתור '✓ שולם' ידני, ובפאנל ההתראות מוצגים כ'באיחור' — למרות שסוכם שצ'ק אמור להיסמן כשולם אוטומטית ברגע שמגיע התאריך",
+    "file": "components/expenses/ScheduledPaymentsModal.tsx, components/dashboard/AlertsPanel.tsx",
+    "root_cause": "scheduled_payments.is_paid was a fully manual field — nothing in the codebase (no trigger, cron, or client-side logic) ever flipped it to true when due_date arrived. statusInfo() in ScheduledPaymentsModal and the AlertsPanel query both derive the overdue/paid state purely from is_paid + due_date, so an unpaid-but-overdue check correctly (given the missing logic) rendered as late with a manual pay button.",
+    "fix": "Added lib/utils/autoMarkOverdueChecks.ts (autoMarkOverdueChecksPaid) which, for payment_method='check' rows with is_paid=false and due_date<=today, race-guards an update to is_paid=true+paid_date then inserts the matching expenses row and backfills expense_id — mirroring the manual markPaid() side effects. Called from ProfileContext.load() (session-level, admin-gated) plus defensively re-run in ScheduledPaymentsModal.fetch() and AlertsPanel.load() for sessions left open across midnight. Transfers remain manual (not in scope).",
+    "tags": ["scheduled_payments", "checks", "is_paid", "AlertsPanel", "ScheduledPaymentsModal", "auto-mark-paid", "due_date"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-07-12"
   }
 ]
