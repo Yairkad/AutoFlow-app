@@ -340,7 +340,7 @@
 
 ## components/dashboard/
 
-- `AlertsPanel.tsx` — "⚡ התראות" dashboard widget (desktop bar + mobile compact popover): queries unpaid `scheduled_payments`(due≤30d)/unpaid `salaries`/open `customer_debts`(7d+), renders as colored chips with `dayLabel()`/`chipStyle()` ("⚠️ Xי' באיחור" etc). `load()` now awaits `autoMarkOverdueChecksPaid` first (via `useProfile().tenantId`) so overdue checks are already flipped to paid and excluded by the `is_paid=false` filter (~1200 tok)
+- `AlertsPanel.tsx` — "⚡ התראות" dashboard widget (desktop bar + mobile compact popover): queries unpaid `scheduled_payments`(due≤30d, then client-filtered to `CHECK_ALERT_DAYS=5` for `payment_method==='check'` only — transfers keep the 30d window)/unpaid `salaries`/open `customer_debts`(7d+), renders as colored chips with `dayLabel()`/`chipStyle()` ("⚠️ Xי' באיחור" etc). `load()` now awaits `autoMarkOverdueChecksPaid` first (via `useProfile().tenantId`) so overdue checks are already flipped to paid and excluded by the `is_paid=false` filter (~1250 tok)
 
 ## components/debts/
 

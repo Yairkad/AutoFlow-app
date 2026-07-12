@@ -73,6 +73,10 @@ const SALARY_CHIP: React.CSSProperties = {
   background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe',
 }
 
+// Checks are only surfaced this close to their due_date, so alerts stay focused
+// on what's actually about to happen (transfers keep the wider 30-day lookahead).
+const CHECK_ALERT_DAYS = 5
+
 export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
   const { profile } = useProfile()
   const [payments,      setPayments]      = useState<AlertPayment[]>([])
@@ -118,7 +122,9 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
         .order('date', { ascending: true }),
     ])
 
-    setPayments(pmtRes.data ?? [])
+    setPayments((pmtRes.data ?? []).filter(p =>
+      p.payment_method === 'check' ? daysUntil(p.due_date) <= CHECK_ALERT_DAYS : true
+    ))
     setSuppliers(supRes.data ?? [])
     setSalaries(salRes.data ?? [])
     setEmployees(empRes.data ?? [])
