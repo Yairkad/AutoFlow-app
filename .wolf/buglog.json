@@ -70,5 +70,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-07-12"
+  },
+  {
+    "id": "bug-007",
+    "timestamp": "2026-07-12T00:00:00.000Z",
+    "error_message": "Vercel production build failed: Type error in ./components/supplier-tracking/SupplierTrackingClient.tsx:1285:24 — Argument of type '(prev: Supplier[]) => QuickSupplier[]' is not assignable to parameter of type 'SetStateAction<Supplier[]>'. Property 'opening_balance' is missing in type 'QuickSupplier' but required in type 'Supplier'.",
+    "file": "components/supplier-tracking/SupplierTrackingClient.tsx",
+    "root_cause": "QuickAddSupplierModal.onCreated hands back a QuickSupplier (id/name/phone/contact_name only — quick-add form has no opening_balance field). SupplierTrackingClient.tsx's setSuppliers(prev => [...prev, s]...) pushed that QuickSupplier straight into state typed as Supplier[], which requires opening_balance. tsc caught it locally too (noticed and left unfixed as 'pre-existing, unrelated' during the previous session's check-auto-pay work) but this is what actually broke the Vercel deploy — should have fixed it immediately instead of deferring.",
+    "fix": "onCreated now spreads { ...s, opening_balance: 0 } before pushing into suppliers state — a freshly quick-added supplier has no opening balance yet, so 0 is the correct default (matches the DB column's own default).",
+    "tags": ["build-failure", "typescript", "supplier-tracking", "QuickAddSupplierModal", "opening_balance", "vercel"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-07-12"
   }
 ]
