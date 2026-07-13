@@ -846,3 +846,32 @@
 | — | Fixed checks modal reopening (list modal) after successful save/edit — save handlers never called parent onClose() | components/expenses/ScheduledPaymentsModal.tsx | fixed, see bug-010 | ~1k |
 | — | Built new customer ledger (כרטסת לקוחות) feature mirroring supplier-tracking/suppliers, inverted direction semantics (charge = customer owes business), no incoming-check-series system per product decision | supabase/migrations/067-070, lib/debts/reconcileCustomerLedgerPayment.ts, components/customers/CustomersClient.tsx, components/customers/QuickAddCustomerModal.tsx, components/customer-tracking/CustomerTrackingClient.tsx, app/(app)/customers/page.tsx, app/(app)/customer-tracking/page.tsx | added, tsc clean, next build compiles (env has no Supabase creds so migrations not applied here) | ~25k |
 | — | Wired customer ledger into Sidebar (new /customers, /customer-tracking nav items + 'customers' module), Settings (ALL_MODULES, BACKUP_TABLES), and DebtsClient.tsx (new ledger-customers card section in customers tab, folded into netOwed + new summary stat card) — old ad-hoc customer_debts table/tab left untouched | components/layout/Sidebar.tsx, components/settings/SettingsClient.tsx, components/debts/DebtsClient.tsx | added, tsc clean | ~3k |
+| 23:48 | Session end: 3 writes across 2 files (_tmp_grid_check.spec.ts, SuppliersClient.tsx) | 6 reads | ~1417 tok |
+| 23:50 | Session end: 3 writes across 2 files (_tmp_grid_check.spec.ts, SuppliersClient.tsx) | 6 reads | ~1417 tok |
+
+## Session: 2026-07-13 16:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+| — | User applied migrations 066-070 to live Supabase DB via SQL Editor (wrapped in BEGIN/COMMIT), confirmed success — resolves bug-005 (suppliers opening_balance column) and unblocks the new customer ledger feature (customers/customer_categories/customer_ledger_debts/customer_ledger_payments/income columns) | supabase/migrations/066-070 | applied, see bug-005 | ~50 |
+| 16:53 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | CSS: d | ~148 |
+| 16:53 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | toLocaleDateString() → fmtDMY() | ~582 |
+| 16:53 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | toLocaleDateString() → fmtDMY() | ~231 |
+| 16:53 | Edited components/customer-tracking/CustomerTrackingClient.tsx | CSS: d | ~148 |
+| 16:54 | Edited components/customer-tracking/CustomerTrackingClient.tsx | toLocaleDateString() → fmtDMY() | ~582 |
+
+| — | Added fmtDMY() helper (pure string-split for YYYY-MM-DD, no Date/toISOString) to both SupplierTrackingClient.tsx and CustomerTrackingClient.tsx; applied DD/MM/YY format to all printed dates (ledger print, supplier check calendar print, "תאריך הדפסה" line). Added הערה (d.description) column to both ledger print tables, narrowed סוג column to 46px width | components/supplier-tracking/SupplierTrackingClient.tsx, components/customer-tracking/CustomerTrackingClient.tsx | done, tsc clean | ~2k |
+| 16:55 | Session end: 5 writes across 2 files (SupplierTrackingClient.tsx, CustomerTrackingClient.tsx) | 5 reads | ~1691 tok |
+| 17:01 | Edited components/customer-tracking/CustomerTrackingClient.tsx | 5→8 lines | ~136 |
+| 17:01 | Edited components/customer-tracking/CustomerTrackingClient.tsx | CSS: Quick-fill, allocs | ~514 |
+| 17:01 | Edited components/customer-tracking/CustomerTrackingClient.tsx | CSS: payCheckNumber, payRefNumber | ~255 |
+| 17:02 | Edited components/customer-tracking/CustomerTrackingClient.tsx | expanded (+17 lines) | ~560 |
+| 17:02 | Edited components/customer-tracking/CustomerTrackingClient.tsx | expanded (+6 lines) | ~403 |
+| 17:02 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | 3→6 lines | ~103 |
+| 17:02 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | CSS: Quick-fill, allocs | ~499 |
+| 17:03 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | modified insert() | ~128 |
+| 17:03 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | expanded (+17 lines) | ~559 |
+| 17:04 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | expanded (+6 lines) | ~209 |
+
+| — | Added transfer (העברה) reference-number field (מספר אסמכתא) to both supplier and customer payment modals — reuses check_number/payment_ref columns, only shown when payMethod==='העברה'. Added quick-fill "סכום שהתקבל/ששולם" + שיוך dropdown (auto oldest-first spread, or target one specific open invoice for partial payment) that pre-fills the existing manual checkbox/amount list — user can still edit before confirming, keeping the manual-control model | components/customer-tracking/CustomerTrackingClient.tsx, components/supplier-tracking/SupplierTrackingClient.tsx | done, tsc clean | ~3k |

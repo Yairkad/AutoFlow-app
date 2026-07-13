@@ -45,6 +45,14 @@ type Filter = 'open' | 'closed' | 'all'
 
 const fmt = (n: number) =>
   `₪${Number(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const fmtDMY = (d: string | Date) => {
+  if (typeof d === 'string') {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d)
+    if (m) return `${m[3]}/${m[2]}/${m[1].slice(2)}`
+    d = new Date(d)
+  }
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(2)}`
+}
 const todayISO = () => new Date().toISOString().slice(0, 10)
 // direction: 'charge' = the customer owes the business more (invoice on credit),
 // 'credit' = reduces what the customer owes (credit note/refund).
@@ -129,6 +137,9 @@ export default function CustomerTrackingClient() {
   const [payDate, setPayDate]     = useState(todayISO())
   const [payCheckNumber, setPayCheckNumber] = useState('')
   const [payCheckDate, setPayCheckDate]     = useState('')
+  const [payRefNumber, setPayRefNumber]     = useState('')
+  const [payQuickAmount, setPayQuickAmount] = useState('')
+  const [payQuickTarget, setPayQuickTarget] = useState('auto')
   const [paySaving, setPaySaving] = useState(false)
 
   // Quick-add-customer modal
@@ -318,6 +329,7 @@ export default function CustomerTrackingClient() {
   const openPayCustomer = (customerId: string | null, preselectId?: string) => {
     setPayCustomerId(customerId)
     setPayMethod('מזומן'); setPayDate(todayISO()); setPayCheckNumber(''); setPayCheckDate(todayISO())
+    setPayRefNumber(''); setPayQuickAmount(''); setPayQuickTarget('auto')
     if (preselectId) {
       const d = customerDebts.find(x => x.id === preselectId)
       setPaySelectedIds(new Set([preselectId]))
@@ -326,6 +338,36 @@ export default function CustomerTrackingClient() {
       setPaySelectedIds(new Set()); setPayAllocAmounts({})
     }
     setShowPayModal(true)
+  }
+
+  // Quick-fill: type one total amount, either spread oldest-open-first (auto)
+  // or apply the whole amount to one chosen invoice (partial payment support) —
+  // just pre-fills the manual checkbox/amount list below, user can still edit before confirming.
+  const applyQuickAmount = () => {
+    const amt = parseFloat(payQuickAmount) || 0
+    if (amt <= 0) { showToast('סכום לא תקין', 'error'); return }
+    if (payQuickTarget === 'auto') {
+      const sorted = [...payOpenDebts].sort((a, b) => a.date.localeCompare(b.date))
+      let remaining = amt
+      const ids = new Set<string>()
+      const allocs: Record<string, string> = {}
+      for (const d of sorted) {
+        if (remaining <= 0) break
+        const take = Math.min(bal(d), remaining)
+        if (take <= 0) continue
+        ids.add(d.id)
+        allocs[d.id] = take.toFixed(2)
+        remaining -= take
+      }
+      setPaySelectedIds(ids)
+      setPayAllocAmounts(allocs)
+    } else {
+      const d = payOpenDebts.find(x => x.id === payQuickTarget)
+      if (!d) return
+      const take = Math.min(bal(d), amt)
+      setPaySelectedIds(new Set([d.id]))
+      setPayAllocAmounts({ [d.id]: take.toFixed(2) })
+    }
   }
 
   const togglePayDebt = (d: CustomerLedgerDebt) => {
@@ -357,10 +399,12 @@ export default function CustomerTrackingClient() {
       .filter(a => a.amount > 0)
     if (allocations.length === 0) { showToast('סכום לא תקין', 'error'); return }
 
+    const refNumber = payMethod === "צ'ק" ? payCheckNumber : payMethod === 'העברה' ? payRefNumber : ''
+
     setPaySaving(true)
     const { error } = await reconcileCustomerLedgerPayment(supabase, tid, allocations, {
       payment_method: payMethod,
-      check_number: payMethod === "צ'ק" ? (payCheckNumber || null) : null,
+      check_number: refNumber || null,
       check_date: payMethod === "צ'ק" ? (payCheckDate || null) : null,
       notes: null,
     })
@@ -372,7 +416,7 @@ export default function CustomerTrackingClient() {
       tenant_id: tid, date: payDate, category: 'לקוחות',
       description: `תשלום מלקוח ${custName}`, amount: total,
       customer_id: payCustomerId, payment_method: payMethod,
-      payment_ref: payMethod === "צ'ק" ? (payCheckNumber || null) : null,
+      payment_ref: refNumber || null,
     })
 
     showToast('תשלום נרשם ✓', 'success')
@@ -816,6 +860,23 @@ export default function CustomerTrackingClient() {
               <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>אין חובות פתוחים ללקוח זה</div>
             ) : (
               <>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', margin: '14px 0', padding: '10px', background: '#f8fafc', borderRadius: 8, border: '1px solid var(--border)' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, flex: 1 }}>
+                    סכום שהתקבל
+                    <input type="number" step="0.01" value={payQuickAmount} onChange={e => setPayQuickAmount(e.target.value)} placeholder="0.00" className="form-input" style={{ margin: 0 }} />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, flex: 1.6 }}>
+                    שיוך
+                    <select value={payQuickTarget} onChange={e => setPayQuickTarget(e.target.value)} className="form-input" style={{ margin: 0 }}>
+                      <option value="auto">אוטומטי (מהישן ביותר)</option>
+                      {payOpenDebts.map(d => (
+                        <option key={d.id} value={d.id}>{d.doc_number ? `#${d.doc_number} · ` : ''}{fmtDMY(d.date)} · יתרה {fmt(bal(d))}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button type="button" onClick={applyQuickAmount} style={{ padding: '8px 14px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>החל</button>
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0 8px' }}>
                   <span style={{ fontSize: '13px', fontWeight: 600 }}>בחר אילו חודשים לשלם</span>
                   <button type="button" onClick={selectAllPayDebts} style={{ padding: '4px 10px', background: '#f0fdf4', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>☑ שלם הכל</button>
@@ -877,6 +938,12 @@ export default function CustomerTrackingClient() {
                         <input type="date" value={payCheckDate} onChange={e => setPayCheckDate(e.target.value)} className="form-input" style={{ margin: 0 }} />
                       </label>
                     </div>
+                  )}
+                  {payMethod === 'העברה' && (
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
+                      מספר אסמכתא
+                      <input value={payRefNumber} onChange={e => setPayRefNumber(e.target.value)} placeholder="אופציונלי" className="form-input" style={{ margin: 0 }} />
+                    </label>
                   )}
                 </div>
 
@@ -1053,15 +1120,16 @@ export default function CustomerTrackingClient() {
               <div>
                 <h2 style={{ margin: '0 0 4px' }}>{tenantName} — כרטסת לקוח: {cust?.name ?? ''}</h2>
                 <div style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>תקופה: {rangeLabel}</div>
-                <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {new Date().toLocaleDateString('he-IL')}</div>
+                <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {fmtDMY(new Date())}</div>
                 <table>
-                  <thead><tr><th>תאריך</th><th>מספר</th><th>סוג</th><th>סכום</th><th>יתרה בפועל</th></tr></thead>
+                  <thead><tr><th>תאריך</th><th>מספר</th><th style={{ width: 46 }}>סוג</th><th>הערה</th><th>סכום</th><th>יתרה בפועל</th></tr></thead>
                   <tbody>
                     {showOpeningRow && (
                       <tr style={{ fontWeight: 700, background: '#f5f5f5' }}>
                         <td>—</td>
                         <td>—</td>
                         <td>יתרת פתיחה</td>
+                        <td>—</td>
                         <td>—</td>
                         <td>{fmt(openingForReport)}</td>
                       </tr>
@@ -1072,9 +1140,10 @@ export default function CustomerTrackingClient() {
                         running += d.direction === 'credit' ? -Number(item.amount) : Number(item.amount)
                         return (
                           <tr key={`${d.id}-${idx}`}>
-                            <td>{d.date}</td>
+                            <td>{fmtDMY(d.date)}</td>
                             <td>{item.number || '—'}</td>
-                            <td style={{ textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
+                            <td style={{ width: 46, textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
+                            <td>{d.description || ''}</td>
                             <td style={{ textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}</td>
                             <td>{fmt(running)}</td>
                           </tr>
