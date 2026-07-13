@@ -28,6 +28,18 @@ interface Supplier {
   id: string; name: string; phone: string | null; contact_name: string | null
 }
 
+// Customer ledger (כרטסת לקוחות) — a separate, curated set of credit
+// customers, distinct from the ad-hoc customer_debts rows above.
+interface CustomerLedgerDebt {
+  id: string; tenant_id: string; customer_id: string | null
+  amount: number; paid: number; is_closed: boolean
+  direction: 'charge' | 'credit'
+}
+
+interface LedgerCustomer {
+  id: string; name: string; phone: string | null
+}
+
 type Tab    = 'customers' | 'suppliers' | 'summary'
 type Filter = 'open' | 'closed' | 'all'
 
@@ -71,6 +83,8 @@ export default function DebtsClient() {
   const [customerDebts, setCustomerDebts] = useState<CustomerDebt[]>([])
   const [supplierDebts, setSupplierDebts] = useState<SupplierDebt[]>([])
   const [suppliers, setSuppliers]         = useState<Supplier[]>([])
+  const [customerLedgerDebts, setCustomerLedgerDebts] = useState<CustomerLedgerDebt[]>([])
+  const [ledgerCustomers, setLedgerCustomers]         = useState<LedgerCustomer[]>([])
 
   // Row selection (customers only — supplier detail/edit lives on /supplier-tracking now)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -113,14 +127,18 @@ export default function DebtsClient() {
     const tid = await resolveTenant()
     if (!tid) return
     setLoading(true)
-    const [custRes, suppDebtRes, suppRes] = await Promise.all([
+    const [custRes, suppDebtRes, suppRes, custLedgerDebtRes, ledgerCustRes] = await Promise.all([
       supabase.from('customer_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
       supabase.from('supplier_debts').select('id,tenant_id,supplier_id,amount,paid,description,date,is_closed,created_at,direction').eq('tenant_id', tid),
       supabase.from('suppliers').select('id,name,phone,contact_name').eq('tenant_id', tid).order('name'),
+      supabase.from('customer_ledger_debts').select('id,tenant_id,customer_id,amount,paid,is_closed,direction').eq('tenant_id', tid),
+      supabase.from('customers').select('id,name,phone').eq('tenant_id', tid).order('name'),
     ])
     if (custRes.data)     setCustomerDebts(custRes.data)
     if (suppDebtRes.data) setSupplierDebts(suppDebtRes.data)
     if (suppRes.data)     setSuppliers(suppRes.data)
+    if (custLedgerDebtRes.data) setCustomerLedgerDebts(custLedgerDebtRes.data)
+    if (ledgerCustRes.data)     setLedgerCustomers(ledgerCustRes.data)
     if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
     setLoading(false)
   }, [supabase, resolveTenant, profile])
@@ -143,6 +161,7 @@ export default function DebtsClient() {
     const ch = supabase.channel('debts-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_debts' }, loadAll)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_debts' }, loadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_ledger_debts' }, loadAll)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [supabase, loadAll])
@@ -224,9 +243,12 @@ export default function DebtsClient() {
     d.name.includes(search) || (d.phone?.includes(search) ?? false) || (d.plate?.includes(search) ?? false)
   )
 
-  const openCustTotal = customerDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
-  const openSuppTotal = supplierDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
-  const netOwed       = openSuppTotal - openCustTotal
+  const openCustTotal       = customerDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
+  const openSuppTotal       = supplierDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
+  const openCustLedgerTotal = customerLedgerDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
+  // netOwed folds in both the old ad-hoc customer_debts total and the new
+  // customer-ledger total — both represent money customers owe the business.
+  const netOwed = openSuppTotal - openCustTotal - openCustLedgerTotal
 
   // ── Selected item info (customers) ───────────────────────────────────────
 
@@ -453,6 +475,54 @@ export default function DebtsClient() {
               </table>
             </div>
           )}
+
+          {/* Ledger customers (הקפה) — separate curated set, full detail on /customer-tracking */}
+          {ledgerCustomers.length > 0 && (() => {
+            const rows = ledgerCustomers.map(c => {
+              const debts = customerLedgerDebts.filter(d => d.customer_id === c.id)
+              const totalBal = debts.reduce((s, d) => s + bal(d), 0)
+              return { c, totalBal }
+            }).filter(r => filter === 'all' ? true : filter === 'open' ? r.totalBal > 0 : r.totalBal <= 0)
+
+            if (rows.length === 0) return null
+
+            return (
+              <div style={{ marginTop: '28px' }}>
+                <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700 }}>💳 לקוחות בכרטסת (הקפה)</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
+                  {rows.sort((a, b) => b.totalBal - a.totalBal).map(r => (
+                    <div key={r.c.id} style={{
+                      background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)',
+                      padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: 42, height: 42, borderRadius: '50%', background: 'var(--primary)', color: '#fff',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', fontWeight: 700, flexShrink: 0,
+                        }}>
+                          {r.c.name.charAt(0)}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>💳 {r.c.name}</div>
+                          {r.c.phone && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>📞 {r.c.phone}</div>}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: 800, color: r.totalBal > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(r.totalBal)}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{r.totalBal > 0 ? 'יתרה פתוחה' : '✓ נקי'}</div>
+                        </div>
+                        <a href={`/customer-tracking?open=${r.c.id}`}
+                          style={{ padding: '6px 12px', background: '#eff6ff', color: 'var(--primary)', border: '1px solid #bfdbfe', borderRadius: '8px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                          מעקב מפורט →
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
 
@@ -520,12 +590,16 @@ export default function DebtsClient() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
             {[
-              { label: 'חובות לקוחות פתוחים', value: openCustTotal, color: 'var(--danger)', icon: '💳', sub: `${customerDebts.filter(d => !d.is_closed).length} רשומות` },
-              { label: 'חובות לספקים פתוחים', value: openSuppTotal, color: 'var(--warning)', icon: '🏭', sub: `${supplierDebts.filter(d => !d.is_closed).length} רשומות` },
-              { label: netOwed >= 0 ? 'חייבים לספקים נטו' : 'חייבים לנו נטו', value: Math.abs(netOwed), color: netOwed >= 0 ? 'var(--danger)' : 'var(--primary)', icon: '📊', sub: netOwed >= 0 ? 'מצב שלילי' : 'מצב חיובי' },
+              { label: 'חובות לקוחות פתוחים', value: openCustTotal, color: 'var(--danger)', icon: '💳', sub: `${customerDebts.filter(d => !d.is_closed).length} רשומות`, href: null as string | null },
+              { label: 'חובות לספקים פתוחים', value: openSuppTotal, color: 'var(--warning)', icon: '🏭', sub: `${supplierDebts.filter(d => !d.is_closed).length} רשומות`, href: null as string | null },
+              { label: 'לקוחות בכרטסת פתוחים', value: openCustLedgerTotal, color: 'var(--danger)', icon: '💳', sub: `${ledgerCustomers.length} לקוחות`, href: '/customer-tracking' },
+              { label: netOwed >= 0 ? 'חייבים לספקים נטו' : 'חייבים לנו נטו', value: Math.abs(netOwed), color: netOwed >= 0 ? 'var(--danger)' : 'var(--primary)', icon: '📊', sub: netOwed >= 0 ? 'מצב שלילי' : 'מצב חיובי', href: null as string | null },
             ].map(c => (
               <div key={c.label} style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', padding: '20px', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', borderTop: `3px solid ${c.color}` }}>
-                <div style={{ fontSize: '26px', marginBottom: '8px' }}>{c.icon}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ fontSize: '26px', marginBottom: '8px' }}>{c.icon}</div>
+                  {c.href && <a href={c.href} style={{ fontSize: '11px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>מעקב →</a>}
+                </div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>{c.label}</div>
                 <div style={{ fontSize: '26px', fontWeight: 800, color: c.color }}>{fmt(c.value)}</div>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{c.sub}</div>

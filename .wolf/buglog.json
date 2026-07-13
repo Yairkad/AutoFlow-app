@@ -73,14 +73,62 @@
   },
   {
     "id": "bug-007",
-    "timestamp": "2026-07-12T00:00:00.000Z",
-    "error_message": "Vercel production build failed: Type error in ./components/supplier-tracking/SupplierTrackingClient.tsx:1285:24 — Argument of type '(prev: Supplier[]) => QuickSupplier[]' is not assignable to parameter of type 'SetStateAction<Supplier[]>'. Property 'opening_balance' is missing in type 'QuickSupplier' but required in type 'Supplier'.",
-    "file": "components/supplier-tracking/SupplierTrackingClient.tsx",
-    "root_cause": "QuickAddSupplierModal.onCreated hands back a QuickSupplier (id/name/phone/contact_name only — quick-add form has no opening_balance field). SupplierTrackingClient.tsx's setSuppliers(prev => [...prev, s]...) pushed that QuickSupplier straight into state typed as Supplier[], which requires opening_balance. tsc caught it locally too (noticed and left unfixed as 'pre-existing, unrelated' during the previous session's check-auto-pay work) but this is what actually broke the Vercel deploy — should have fixed it immediately instead of deferring.",
-    "fix": "onCreated now spreads { ...s, opening_balance: 0 } before pushing into suppliers state — a freshly quick-added supplier has no opening balance yet, so 0 is the correct default (matches the DB column's own default).",
-    "tags": ["build-failure", "typescript", "supplier-tracking", "QuickAddSupplierModal", "opening_balance", "vercel"],
+    "timestamp": "2026-07-13T00:00:00.000Z",
+    "error_message": "בבדיקות קניה (טופס בדיקה לפני קניה) הדפסת הטופס הפסיקה לסמן ✓/✗ בעמודות תקין/לא תקין — הטבלה יוצאת ריקה לגמרי",
+    "file": "components/inspections/InspectionChecklistModal.tsx",
+    "root_cause": "ok/fail status for a system was only ever resolved inside goNext() (the '›' next-arrow / 'לסיכום' button). Every other way of leaving a step — goPrev ('‹'), jumpTo (clicking a numbered pill), and the direct setStep(TOTAL)/setStep(0) calls on the '≡' summary pill and '← חזור' button — moved `step` without committing the item's status, so any system reviewed via those paths stayed at its initial '' status forever and printed as a fully blank row (no ✓, no ✗, no fault text) in printChecklist's makeRow().",
+    "fix": "Extracted a shared commitCurrentStep() (resolves items[step].status from faults, skips 'na' items) and call it at the top of goNext, goPrev, and jumpTo. Rewired the two remaining direct setStep(TOTAL)/setStep(0) call sites to go through jumpTo(TOTAL)/jumpTo(0) instead so no navigation path skips the commit.",
+    "tags": ["inspections", "checklist", "print", "status", "navigation", "state-not-committed"],
     "related_bugs": [],
     "occurrences": 1,
-    "last_seen": "2026-07-12"
+    "last_seen": "2026-07-13"
+  },
+  {
+    "id": "bug-007",
+    "timestamp": "2026-07-13T00:00:00.000Z",
+    "error_message": "Vercel deploy 'Failed to compile' — ./components/supplier-tracking/SupplierTrackingClient.tsx:1285:24 Type error: Argument of type '(prev: Supplier[]) => QuickSupplier[]' is not assignable to parameter of type 'SetStateAction<Supplier[]>' — Property 'opening_balance' is missing in type 'QuickSupplier' but required in type 'Supplier'",
+    "file": "components/supplier-tracking/SupplierTrackingClient.tsx",
+    "root_cause": "QuickAddSupplierModal.tsx's onCreated callback hands back a QuickSupplier (id/name/phone/contact_name only). SupplierTrackingClient's setSuppliers(prev => [...prev, s]...) pushed that raw QuickSupplier straight into Supplier[] state, but Supplier (components/supplier-tracking/SupplierTrackingClient.tsx:50-53, added alongside migration 066_supplier_opening_balance.sql) requires a non-optional opening_balance: number. This was a pure type-level gap (tsc wasn't runnable in earlier sessions — no node_modules — so it slipped past review) that only surfaced when Vercel ran `npm run build`'s TypeScript check.",
+    "fix": "In the onCreated handler, spread the QuickSupplier and default opening_balance: 0 (matches the DB column's default for a brand-new supplier row with no invoices yet): setSuppliers(prev => [...prev, { ...s, opening_balance: 0 }]...)",
+    "tags": ["supplier-tracking", "build-failure", "typescript", "opening_balance", "vercel"],
+    "related_bugs": ["bug-005"],
+    "occurrences": 1,
+    "last_seen": "2026-07-13"
+  },
+  {
+    "id": "bug-008",
+    "timestamp": "2026-07-13T00:00:00.000Z",
+    "error_message": "יצירת סדרת צ'קים ליום 10 בחודש שומרת את הצ'קים ביום 9",
+    "file": "components/expenses/ScheduledPaymentsModal.tsx",
+    "root_cause": "In the series-creation loop, `new Date(fDue + 'T00:00:00')` is parsed as LOCAL time, but the row was serialized with `dueDate.toISOString().slice(0,10)`, which converts to UTC before slicing. In Israel (UTC+2/+3), local midnight falls on the previous UTC calendar day, so every generated row (including the first, i=0) landed one day earlier than selected.",
+    "fix": "Added a local-only date formatter `toLocalISODate(d)` (built from getFullYear/getMonth/getDate, no UTC conversion) and used it instead of `.toISOString().slice(0,10)` for the series due_date. Single-payment save path already wrote `fDue` directly (no Date round-trip) and was unaffected.",
+    "tags": ["scheduled-payments", "checks", "date", "timezone", "off-by-one"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-07-13"
+  },
+  {
+    "id": "bug-009",
+    "timestamp": "2026-07-13T00:00:00.000Z",
+    "error_message": "יצירת סדרת צ'קים מתוך מסך תשלום ספק לא משייכת אוטומטית לחוב שסומן ('שלם הכל' / סימון ידני נשכח)",
+    "file": "components/expenses/ScheduledPaymentsModal.tsx, components/supplier-tracking/SupplierTrackingClient.tsx",
+    "root_cause": "SupplierTrackingClient.submitPayment()'s check-method branch only forwarded paySupplierId into ScheduledPaymentsModal via schedInitialSupplierId — paySelectedIds/payAllocAmounts (the debts the user had just checked off) were discarded. ScheduledPaymentsModal's auto-opened add form always reset selectedDebtIds/debtAllocAmounts to empty whenever the supplier changed, so buildAllocations() returned empty and reconcileSupplierPayment was skipped unless the user manually re-selected debts inside the checks modal.",
+    "fix": "Added initialSelectedDebtIds/initialDebtAllocAmounts props to ScheduledPaymentsModal, carried via a pendingInitialAllocRef consumed once inside the open-debts fetch (fetchOpenDebtsAndSeed), seeding the selection (filtered to debts still open) instead of resetting to empty. SupplierTrackingClient now passes paySelectedIds/payAllocAmounts through on the check-method redirect and clears the new state in the modal's onClose.",
+    "tags": ["scheduled-payments", "checks", "supplier-debts", "reconciliation", "state-lost-across-redirect"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-07-13"
+  },
+  {
+    "id": "bug-010",
+    "timestamp": "2026-07-13T00:00:00.000Z",
+    "error_message": "אחרי אישור יצירת סדרת צ'קים, או אחרי עריכת תשלום קיים, מודל הצ'קים 'נפתח מחדש' במקום להיסגר",
+    "file": "components/expenses/ScheduledPaymentsModal.tsx",
+    "root_cause": "ScheduledPaymentsModal renders two sibling <Modal> instances (list + add/edit form) gated by the same parent `open` prop combined with a local formOpen flag. All three save-success branches (edit/series/new) only called setFormOpen(false), never the parent's onClose() — so with `open` still true, the LIST modal immediately reappeared right after a successful save, reading as 'the checks modal reopened.' Confirmed openEdit() (editing an existing payment) is only reachable from within that list modal, so the edit flow hit the identical mechanism.",
+    "fix": "Added an onClose() call after setFormOpen(false) in all three save-success branches, so the whole modal closes on successful save instead of falling back to the list. Deliberate UX choice per user report — no 'stay on list for rapid multi-add' behavior preserved.",
+    "tags": ["scheduled-payments", "checks", "modal", "onClose", "state-not-propagated"],
+    "related_bugs": ["bug-009"],
+    "occurrences": 1,
+    "last_seen": "2026-07-13"
   }
 ]
