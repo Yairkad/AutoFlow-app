@@ -58,5 +58,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-07-08"
+  },
+  {
+    "id": "bug-006",
+    "timestamp": "2026-07-13T00:00:00.000Z",
+    "error_message": "בבדיקות קניה (טופס בדיקה לפני קניה) הדפסת הטופס הפסיקה לסמן ✓/✗ בעמודות תקין/לא תקין — הטבלה יוצאת ריקה לגמרי",
+    "file": "components/inspections/InspectionChecklistModal.tsx",
+    "root_cause": "ok/fail status for a system was only ever resolved inside goNext() (the '›' next-arrow / 'לסיכום' button). Every other way of leaving a step — goPrev ('‹'), jumpTo (clicking a numbered pill), and the direct setStep(TOTAL)/setStep(0) calls on the '≡' summary pill and '← חזור' button — moved `step` without committing the item's status, so any system reviewed via those paths stayed at its initial '' status forever and printed as a fully blank row (no ✓, no ✗, no fault text) in printChecklist's makeRow().",
+    "fix": "Extracted a shared commitCurrentStep() (resolves items[step].status from faults, skips 'na' items) and call it at the top of goNext, goPrev, and jumpTo. Rewired the two remaining direct setStep(TOTAL)/setStep(0) call sites to go through jumpTo(TOTAL)/jumpTo(0) instead so no navigation path skips the commit.",
+    "tags": ["inspections", "checklist", "print", "status", "navigation", "state-not-committed"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-07-13"
   }
 ]

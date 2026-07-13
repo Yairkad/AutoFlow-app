@@ -481,21 +481,32 @@ export default function InspectionChecklistModal({ inspection, business, inspect
 
   // ── Navigation ─────────────────────────────────────────────────────────────────
 
+  // Resolve the current step's ok/fail status from its faults before navigating
+  // away — must run on every exit path (next, prev, pill-jump, summary), not
+  // just "next", or systems reviewed via the pills never get marked.
+  function commitCurrentStep() {
+    if (step >= TOTAL) return
+    const cur = items[step]
+    if (cur.status === 'na') return
+    const hasFaults = cur.faults.filter(Boolean).length > 0
+    const newStatus: ChecklistItem['status'] = hasFaults ? 'fail' : 'ok'
+    setItems(prev => prev.map((item, i) => i === step ? { ...item, status: newStatus } : item))
+  }
+
   function goNext() {
-    if (step < TOTAL) {
-      const cur = items[step]
-      if (cur.status !== 'na') {
-        const hasFaults = cur.faults.filter(Boolean).length > 0
-        const newStatus: ChecklistItem['status'] = hasFaults ? 'fail' : 'ok'
-        setItems(prev => prev.map((item, i) => i === step ? { ...item, status: newStatus } : item))
-      }
-    }
+    commitCurrentStep()
     setStep(s => Math.min(s + 1, TOTAL))
   }
 
-  function goPrev() { setStep(s => Math.max(s - 1, 0)) }
+  function goPrev() {
+    commitCurrentStep()
+    setStep(s => Math.max(s - 1, 0))
+  }
 
-  function jumpTo(i: number) { setStep(i) }
+  function jumpTo(i: number) {
+    commitCurrentStep()
+    setStep(i)
+  }
 
   // ── Save + Print ───────────────────────────────────────────────────────────────
 
@@ -597,7 +608,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
           })}
           {/* Summary pill */}
           <button
-            onClick={() => setStep(TOTAL)}
+            onClick={() => jumpTo(TOTAL)}
             title="סיכום"
             style={{
               flexShrink: 0, width: 28, height: 28, borderRadius: '50%',
@@ -898,7 +909,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
                 💾 שמור
               </Button>
               <button
-                onClick={() => setStep(0)}
+                onClick={() => jumpTo(0)}
                 style={{
                   flexShrink: 0, padding: '10px 14px',
                   border: '1px solid var(--border)', borderRadius: 8,
