@@ -47,6 +47,14 @@
 
 - `page.tsx` — CarsPage (~34 tok)
 
+## app/(app)/customers/
+
+- `page.tsx` — CustomersPage, wraps CustomersClient (~30 tok)
+
+## app/(app)/customer-tracking/
+
+- `page.tsx` — CustomerTrackingPage, wraps CustomerTrackingClient (~30 tok)
+
 ## app/(app)/dashboard/
 
 - `page.tsx` — DashboardPage (~984 tok)
@@ -338,23 +346,43 @@
 ## components/cars/
 
 
+## components/customer-tracking/
+
+- `CustomerTrackingClient.tsx` — "מעקב לקוחות" page, structural mirror of `supplier-tracking/SupplierTrackingClient.tsx` for the new customer-ledger feature (`customers`/`customer_ledger_debts`/`customer_ledger_payments` tables). Same by-customer/by-month grouping, invoice-line add/edit modal, direct payment modal (4 methods incl. inline check-number/date fields — no check-series/calendar system per product decision), styled print ledger, Excel import/export, WhatsApp. `direction:'charge'` here means the CUSTOMER owes the business (inverted vs. supplier meaning) — `bal()` formula itself unchanged. Deep-link `?open=<customerId>` (~9000 tok)
+
+## components/customers/
+
+- `CustomersClient.tsx` — "לקוחות (כרטסת)" master/detail page, structural mirror of `suppliers/SuppliersClient.tsx` minus bank-details fields and next-check card (no checks concept for customers). Fields: name/category/phone/email/address/notes/opening_balance. Links to `/customer-tracking?open=<id>` (~4500 tok)
+- `QuickAddCustomerModal.tsx` — mirrors `suppliers/QuickAddSupplierModal.tsx` minus contact_name; name-only-required, inserts into `customers` (~500 tok)
+
 ## components/dashboard/
 
+- `AlertsPanel.tsx` — "⚡ התראות" dashboard widget (desktop bar + mobile compact popover): queries unpaid `scheduled_payments`(due≤30d, then client-filtered to `CHECK_ALERT_DAYS=5` for `payment_method==='check'` only — transfers keep the 30d window)/unpaid `salaries`/open `customer_debts`(7d+), renders as colored chips with `dayLabel()`/`chipStyle()` ("⚠️ Xי' באיחור" etc). `load()` now awaits `autoMarkOverdueChecksPaid` first (via `useProfile().tenantId`) so overdue checks are already flipped to paid and excluded by the `is_paid=false` filter (~1250 tok)
 
 ## components/debts/
 
+- `DebtsClient.tsx` — "חובות" page: ad-hoc `customer_debts` flat CRUD table (customers tab, untouched legacy feature), suppliers tab (summary card grid linking to /supplier-tracking), summary tab (stat cards + top-debtor lists). Now also fetches `customer_ledger_debts`/`customers` (the new curated customer-ledger feature) and renders a second "💳 לקוחות בכרטסת" card-grid section below the old table (not merged with it) linking to /customer-tracking, plus a 4th summary stat card; `netOwed` folds in `openCustLedgerTotal` alongside the old `openCustTotal` (~5500 tok)
 
 ## components/documents/
 
+
+## components/expenses/
+
+- `ScheduledPaymentsModal.tsx` — the "checks" (צ'קים) modal: list + add/edit form (two sibling `<Modal>`s gated by `open && !formOpen`/`formOpen`), single-payment and check-series creation (equal-split or round+remainder), debt-allocation checkboxes feeding `reconcileSupplierPayment`, Excel import/export. Used by both `SupplierTrackingClient.tsx` (passes `initialSupplierId`/`initialSelectedDebtIds`/`initialDebtAllocAmounts` to auto-open pre-filled + pre-seeded) and `ExpensesClient.tsx` (generic entry, no auto-open). Series due-dates built via local-only `toLocalISODate()` (see bug-008 — previously went through `toISOString()` and shifted a day in Israel's UTC+2/+3). All three save-success branches call `onClose()` (see bug-010) so the modal fully closes rather than falling back to the list (~5000 tok)
 
 ## components/employees/
 
 
 ## components/expenses/
 
+- `ScheduledPaymentsModal.tsx` — "📅 תשלומים מתוזמנים" modal: add/edit/delete post-dated checks & transfers, check-series batch creation, debt-month allocation via `reconcileSupplierPayment`, Excel import/export. `statusInfo()` derives the status chip purely from `is_paid`+`due_date`; `fetch()` now awaits `autoMarkOverdueChecksPaid` first so overdue checks flip to paid before the list renders. Manual "✓ שולם" button (`markPaid()`) still exists for transfers and for early/manual check settlement (~2200 tok)
+
+## components/expenses/
+
 
 ## components/inspections/
 
+- `InspectionChecklistModal.tsx` — Pre-purchase vehicle inspection checklist drawer (21 MOT systems). Per-system status ('ok'|'fail'|''|'na') is resolved from that step's fault list by `commitCurrentStep()`, called on every navigation exit (next/prev/pill-jump/summary) — see bug-006. `printChecklist()` renders the 2-page A4 "טופס סיכום אחיד" with ✓/✗ per system; skeleton-only mode (SKELETON_SYSTEM_INDICES) marks non-skeleton systems 'na' with strikethrough. `ChecklistBadge` shows a pass/fail chip on history cards (~5000 tok)
 
 ## components/landing/
 
@@ -362,6 +390,7 @@
 ## components/layout/
 
 - `AppShell.tsx` — AppShell (~330 tok)
+- `Sidebar.tsx` — nav config: `NAV_ITEMS` (href/label/color/module), `SECTIONS` (grouping), `ICONS` (SVG per href); module-gated via `profile.allowedModules`. Includes `/customer-tracking` + `/customers` (module `'customers'`) alongside the existing `/supplier-tracking` + `/suppliers` (module `'suppliers'`) (~2500 tok)
 
 ## components/products/
 
@@ -379,6 +408,7 @@
 
 ## components/settings/
 
+- `SettingsClient.tsx` — tenant settings: user/role management (`ALL_MODULES` permission list, incl. `'customers'` module), backup/restore (`BACKUP_TABLES` array — incl. `customers`/`customer_categories`/`customer_ledger_debts`/`customer_ledger_payments`), landing-page prices, Drive integration, vault. Very large file (1600+ lines) — grep for the section you need rather than reading in full
 
 ## components/supplier-tracking/
 
@@ -408,8 +438,12 @@
 
 ## lib/contexts/
 
+- `ProfileContext.tsx` — `ProfileProvider`/`useProfile()`: fetches session+profile+full tenant row ONCE per AppShell mount, wired into `AppShell` above Header/Sidebar/page children. On successful load, if role is admin/super_admin, fire-and-forget calls `autoMarkOverdueChecksPaid(sb, tenantId)` (session-level pass so overdue checks are settled as soon as any admin page loads) (~700 tok)
 
 ## lib/debts/
+
+- `reconcileSupplierPayment.ts` — applies a user-chosen allocation of a payment against specific `supplier_debts` rows (updates paid/is_closed, inserts `supplier_debt_payments`); never FIFO, caller picks which debt(s) (~300 tok)
+- `reconcileCustomerLedgerPayment.ts` — mirrors `reconcileSupplierPayment.ts` for the new customer-ledger feature (`customer_ledger_debts`/`customer_ledger_payments`); takes a `paymentMeta` object (method/check_number/check_date/notes) instead of a `scheduledPaymentId` since customers have no check-series concept (~350 tok)
 
 
 ## lib/hooks/
@@ -419,6 +453,8 @@
 
 
 ## lib/utils/
+
+- `autoMarkOverdueChecks.ts` — `autoMarkOverdueChecksPaid(supabase, tenantId)`: for `scheduled_payments` rows with `payment_method='check', is_paid=false, due_date<=today`, race-guarded flips `is_paid=true`+`paid_date`, then inserts a matching `expenses` row and backfills `expense_id` (mirrors `ScheduledPaymentsModal`'s manual markPaid()). Called from `ProfileContext.load()` (session-level, admin-gated), and defensively re-run inside `ScheduledPaymentsModal.fetch()` and `AlertsPanel.load()` (~200 tok)
 
 
 ## lib/yard/
