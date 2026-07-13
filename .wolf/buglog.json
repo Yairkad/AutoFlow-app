@@ -70,5 +70,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-07-13"
+  },
+  {
+    "id": "bug-007",
+    "timestamp": "2026-07-13T00:00:00.000Z",
+    "error_message": "Vercel deploy 'Failed to compile' — ./components/supplier-tracking/SupplierTrackingClient.tsx:1285:24 Type error: Argument of type '(prev: Supplier[]) => QuickSupplier[]' is not assignable to parameter of type 'SetStateAction<Supplier[]>' — Property 'opening_balance' is missing in type 'QuickSupplier' but required in type 'Supplier'",
+    "file": "components/supplier-tracking/SupplierTrackingClient.tsx",
+    "root_cause": "QuickAddSupplierModal.tsx's onCreated callback hands back a QuickSupplier (id/name/phone/contact_name only). SupplierTrackingClient's setSuppliers(prev => [...prev, s]...) pushed that raw QuickSupplier straight into Supplier[] state, but Supplier (components/supplier-tracking/SupplierTrackingClient.tsx:50-53, added alongside migration 066_supplier_opening_balance.sql) requires a non-optional opening_balance: number. This was a pure type-level gap (tsc wasn't runnable in earlier sessions — no node_modules — so it slipped past review) that only surfaced when Vercel ran `npm run build`'s TypeScript check.",
+    "fix": "In the onCreated handler, spread the QuickSupplier and default opening_balance: 0 (matches the DB column's default for a brand-new supplier row with no invoices yet): setSuppliers(prev => [...prev, { ...s, opening_balance: 0 }]...)",
+    "tags": ["supplier-tracking", "build-failure", "typescript", "opening_balance", "vercel"],
+    "related_bugs": ["bug-005"],
+    "occurrences": 1,
+    "last_seen": "2026-07-13"
   }
 ]
