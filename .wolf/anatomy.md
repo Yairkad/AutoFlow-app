@@ -403,6 +403,8 @@
 
 ## components/scan/
 
+- `ScanClient.tsx` — Barcode scan page: scan-to-lookup + inventory count mode. "Found" modal now shows cost_price/sell_price (מחיר קנייה/מכירה) alongside qty. Edit modal for tires now includes width/profile/rim (מידות צמיג) selects, not just load/speed index — EditForm gained width/profile/rim string fields, openEdit/saveEdit updated to read/write them (~6900 tok)
+
 
 ## components/settings/
 

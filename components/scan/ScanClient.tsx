@@ -21,13 +21,15 @@ interface InventoryItem {
   sku: string | null
   barcode: string | null
   qty: number
+  cost_price: number | null
+  sell_price: number | null
 }
 
 interface EditForm {
   // shared
   sku: string; qty: string; sell_price: string; cost_price: string; notes: string
   // tires
-  brand: string; load_idx: string; speed_idx: string; location: string
+  brand: string; width: string; profile: string; rim: string; load_idx: string; speed_idx: string; location: string
   condition: 'new' | 'used'; tire_type: 'regular' | 'reinforced' | 'commercial'
   // products
   name: string; barcode: string; category: string; unit: string
@@ -69,7 +71,7 @@ export default function ScanClient() {
 
   // edit
   const [editItem, setEditItem] = useState<InventoryItem | null>(null)
-  const [editForm, setEditForm] = useState<EditForm>({ sku: '', qty: '', sell_price: '', cost_price: '', notes: '', brand: '', load_idx: '', speed_idx: '', location: '', condition: 'new', tire_type: 'regular', name: '', barcode: '', category: '', unit: 'יח׳' })
+  const [editForm, setEditForm] = useState<EditForm>({ sku: '', qty: '', sell_price: '', cost_price: '', notes: '', brand: '', width: '', profile: '', rim: '', load_idx: '', speed_idx: '', location: '', condition: 'new', tire_type: 'regular', name: '', barcode: '', category: '', unit: 'יח׳' })
   const [saving,   setSaving]   = useState(false)
 
   // count mode
@@ -90,15 +92,17 @@ export default function ScanClient() {
   const load = useCallback(async (tenantId: string) => {
     setLoading(true)
     const [{ data: tires }, { data: products }] = await Promise.all([
-      sb.from('tires').select('id,brand,width,profile,rim,sku,qty').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
-      sb.from('products').select('id,name,sku,barcode,qty').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+      sb.from('tires').select('id,brand,width,profile,rim,sku,qty,cost_price,sell_price').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+      sb.from('products').select('id,name,sku,barcode,qty,buy_price,sell_price').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
     ])
     const tireItems: InventoryItem[] = (tires ?? []).map(t => ({
       id: t.id, type: 'tire', name: `${t.brand ?? ''} ${t.width}/${t.profile}R${t.rim}`.trim(),
       sku: t.sku ?? null, barcode: t.sku ?? null, qty: t.qty,
+      cost_price: t.cost_price ?? null, sell_price: t.sell_price ?? null,
     }))
     const prodItems: InventoryItem[] = (products ?? []).map(p => ({
       id: p.id, type: 'product', name: p.name, sku: p.sku ?? null, barcode: p.barcode ?? null, qty: p.qty,
+      cost_price: p.buy_price ?? null, sell_price: p.sell_price ?? null,
     }))
     setItems([...tireItems, ...prodItems])
     setLoading(false)
@@ -192,6 +196,7 @@ export default function ScanClient() {
       const { data } = await sb.from('tires').select('brand,width,profile,rim,sku,qty,sell_price,cost_price,load_idx,speed_idx,location,notes,condition,tire_type').eq('id', item.id).single()
       setEditForm({
         brand: data?.brand ?? '', sku: data?.sku ?? '', barcode: '',
+        width: String(data?.width ?? ''), profile: String(data?.profile ?? ''), rim: String(data?.rim ?? ''),
         load_idx: data?.load_idx ?? '', speed_idx: data?.speed_idx ?? '',
         qty: String(data?.qty ?? 0), sell_price: String(data?.sell_price ?? ''),
         cost_price: String(data?.cost_price ?? ''), location: data?.location ?? '',
@@ -205,7 +210,7 @@ export default function ScanClient() {
         category: data?.category ?? '', unit: data?.unit ?? 'יח׳',
         qty: String(data?.qty ?? 0), sell_price: String(data?.sell_price ?? ''),
         cost_price: String(data?.buy_price ?? ''), notes: data?.notes ?? '',
-        brand: '', load_idx: '', speed_idx: '', location: '', condition: 'new', tire_type: 'regular',
+        brand: '', width: '', profile: '', rim: '', load_idx: '', speed_idx: '', location: '', condition: 'new', tire_type: 'regular',
       })
     }
     setEditItem(item)
@@ -222,6 +227,9 @@ export default function ScanClient() {
       await sb.from('tires').update({
         brand: editForm.brand.trim() || null,
         sku: editForm.sku.trim() || null,
+        width: Number(editForm.width) || null,
+        profile: Number(editForm.profile) || null,
+        rim: Number(editForm.rim) || null,
         load_idx: editForm.load_idx || null,
         speed_idx: editForm.speed_idx || null,
         qty, sell_price, cost_price,
@@ -511,7 +519,11 @@ export default function ScanClient() {
           <div className="flex items-center gap-2 mb-3">{BADGE(foundItem.type)}<span className="text-green-600 font-bold text-sm">✓ נמצא</span></div>
           <p className="font-black text-slate-800 text-xl mb-1">{foundItem.name}</p>
           {foundItem.sku && <p className="text-slate-400 text-sm mb-1">מק״ט: {foundItem.sku}</p>}
-          <p className="text-slate-500 text-sm mb-5">כמות: <span style={{ fontWeight: 700, color: foundItem.qty === 0 ? '#ef4444' : '#16a34a' }}>{foundItem.qty}</span></p>
+          <p className="text-slate-500 text-sm mb-3">כמות: <span style={{ fontWeight: 700, color: foundItem.qty === 0 ? '#ef4444' : '#16a34a' }}>{foundItem.qty}</span></p>
+          <div className="flex gap-4 mb-5">
+            <p className="text-slate-500 text-sm">מחיר קנייה: <span style={{ fontWeight: 700, color: '#1e293b' }}>{foundItem.cost_price != null ? `₪${foundItem.cost_price}` : '—'}</span></p>
+            <p className="text-slate-500 text-sm">מחיר מכירה: <span style={{ fontWeight: 700, color: '#1e293b' }}>{foundItem.sell_price != null ? `₪${foundItem.sell_price}` : '—'}</span></p>
+          </div>
           <div className="flex gap-3">
             <button onClick={() => openEdit(foundItem)} className="flex-1 bg-blue-600 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '11px' }}>✏️ ערוך כאן</button>
             <button onClick={closeModal} className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all" style={{ padding: '11px' }}>סגור</button>
@@ -662,6 +674,26 @@ export default function ScanClient() {
           <div className="flex items-center gap-2 mb-4">{BADGE(editItem.type)}<span className="font-bold text-slate-700">עריכת {editItem.type === 'tire' ? 'צמיג' : 'מוצר'}</span></div>
 
           {editItem.type === 'tire' && <>
+            <div className="grid grid-cols-3 gap-2">
+              <Field label="רוחב">
+                <select className="form-input" value={editForm.width} onChange={e => setEF('width', e.target.value)}>
+                  <option value="">—</option>
+                  {WIDTHS.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </Field>
+              <Field label="פרופיל">
+                <select className="form-input" value={editForm.profile} onChange={e => setEF('profile', e.target.value)}>
+                  <option value="">—</option>
+                  {PROFILES.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </Field>
+              <Field label="חישוק">
+                <select className="form-input" value={editForm.rim} onChange={e => setEF('rim', e.target.value)}>
+                  <option value="">—</option>
+                  {RIMS.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </Field>
+            </div>
             <Field label="מותג"><input className="form-input" value={editForm.brand} onChange={e => setEF('brand', e.target.value)} placeholder="Michelin, Bridgestone..." /></Field>
             <Field label="מקט / ברקוד יצרן"><input className="form-input" value={editForm.sku} onChange={e => setEF('sku', e.target.value)} placeholder="סרוק או הקלד" style={{ fontFamily: 'monospace' }} /></Field>
             <div className="grid grid-cols-2 gap-3">

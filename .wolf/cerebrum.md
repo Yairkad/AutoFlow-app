@@ -36,6 +36,8 @@
 
 - **Inspection checklist skeleton_only (2026-06-17):** skeleton_only flag stored in `findings` JSON as `{ skeleton_only: true, items: [...], notes: '' }`. No DB column needed. SKELETON_SYSTEM_INDICES = Set([16, 17]) — שלדת מרכב, מרכב (פחחות). Status 'na' added to ChecklistItem for non-skeleton systems. parseFindings() auto-applies 'na' when skeleton_only=true.
 
+- **[2026-07-09] Scan module edit forms were missing fields present elsewhere:** `ScanClient.tsx`'s "found item" modal only showed qty (no prices), and its tire edit modal only had load_idx/speed_idx (no width/profile/rim) even though the "new tire" flow in the same file already had full WIDTHS/PROFILES/RIMS selects. When a form in one flow of a file has a field set, check sibling flows (found/edit/create) in the same component for the same fields before assuming they're already covered — this component had 3 separate tire forms (new/edit/found-display) that had drifted out of sync.
+
 ## Decision Log
 
 - **[2026-07-12] Check alerts narrowed to a 5-day lookahead:** user asked that upcoming *checks* in `AlertsPanel` only appear starting 5 days before `due_date`, not the full 30-day window, so the alerts stay focused on what's actually imminent. Added `CHECK_ALERT_DAYS = 5` constant; the DB query itself still fetches everything due within 30 days (unchanged `.lte('due_date', aheadStr)`), but `setPayments()` now client-filters to `daysUntil(due_date) <= 5` when `payment_method === 'check'`. **Transfers were deliberately left at the 30-day window** — the user only mentioned checks ("צ'קים"), and transfers aren't post-dated the same way checks are. If asked to also narrow transfers, this is the filter to extend.
