@@ -52,6 +52,8 @@ interface Props {
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void
   expenseCats: string[]
   initialSupplierId?: string
+  initialSelectedDebtIds?: string[]
+  initialDebtAllocAmounts?: Record<string, string>
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -107,10 +109,18 @@ const ICON_BTN: React.CSSProperties = {
 
 function todayIso() { return new Date().toISOString().slice(0, 10) }
 
+function toLocalISODate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ScheduledPaymentsModal({
   open, onClose, suppliers, tenantId, supabase, onRefresh, showToast, expenseCats, initialSupplierId,
+  initialSelectedDebtIds, initialDebtAllocAmounts,
 }: Props) {
   const [rows,      setRows]      = useState<ScheduledPayment[]>([])
   const [loading,   setLoading]   = useState(false)
@@ -172,21 +182,41 @@ export default function ScheduledPaymentsModal({
 
   // ── Open debts for the selected supplier (for debt-month allocation) ───────
 
-  const fetchOpenDebts = useCallback(async (supplierId: string) => {
-    if (!supplierId) { setOpenDebts([]); return }
+  // Carries a debt-selection made in a caller's own payment picker (e.g.
+  // SupplierTrackingClient's "☑ שלם הכל") across the redirect into this
+  // modal's auto-opened add form, consumed once fetchOpenDebtsAndSeed runs.
+  const pendingInitialAllocRef = useRef<{ supplierId: string; ids: string[]; amounts: Record<string, string> } | null>(null)
+
+  const fetchOpenDebtsAndSeed = useCallback(async (supplierId: string) => {
+    if (!supplierId) { setOpenDebts([]); setSelectedDebtIds(new Set()); setDebtAllocAmounts({}); return }
     const { data } = await supabase
       .from('supplier_debts')
       .select('id, date, amount, paid')
       .eq('supplier_id', supplierId)
       .eq('is_closed', false)
       .order('date', { ascending: true })
-    setOpenDebts(data ?? [])
+    const debts = data ?? []
+    setOpenDebts(debts)
+
+    const pending = pendingInitialAllocRef.current
+    if (pending && pending.supplierId === supplierId) {
+      const validIds = pending.ids.filter(id => debts.some(d => d.id === id))
+      setSelectedDebtIds(new Set(validIds))
+      setDebtAllocAmounts(Object.fromEntries(validIds.map(id => {
+        const d = debts.find(x => x.id === id)!
+        const balance = Number(d.amount) - Number(d.paid)
+        return [id, pending.amounts[id] ?? String(balance.toFixed(2))]
+      })))
+      pendingInitialAllocRef.current = null
+    } else {
+      setSelectedDebtIds(new Set())
+      setDebtAllocAmounts({})
+    }
   }, [supabase])
 
   useEffect(() => {
-    setSelectedDebtIds(new Set()); setDebtAllocAmounts({})
-    if (formOpen) fetchOpenDebts(fSupplier)
-  }, [fSupplier, formOpen, fetchOpenDebts])
+    if (formOpen) fetchOpenDebtsAndSeed(fSupplier)
+  }, [fSupplier, formOpen, fetchOpenDebtsAndSeed])
 
   const toggleDebtSelected = (debt: OpenSupplierDebt) => {
     setSelectedDebtIds(prev => {
@@ -218,7 +248,12 @@ export default function ScheduledPaymentsModal({
 
   // Auto-open the add form (pre-filled to the given supplier) when opened this way
   useEffect(() => {
-    if (open && initialSupplierId) openAdd()
+    if (open && initialSupplierId) {
+      pendingInitialAllocRef.current = initialSelectedDebtIds && initialSelectedDebtIds.length > 0
+        ? { supplierId: initialSupplierId, ids: initialSelectedDebtIds, amounts: initialDebtAllocAmounts ?? {} }
+        : null
+      openAdd()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
@@ -256,6 +291,7 @@ export default function ScheduledPaymentsModal({
       if (res.error) { showToast('שגיאה: ' + res.error.message, 'error'); return }
       showToast('עודכן', 'success')
       setFormOpen(false)
+      onClose()
       fetch(); onRefresh?.()
       return
     }
@@ -281,7 +317,7 @@ export default function ScheduledPaymentsModal({
         else dueDate.setDate(dueDate.getDate() + (parseInt(fSeriesDays, 10) || 30) * i)
         rowsToInsert.push({
           tenant_id: tenantId, description: fDesc, amount: amt,
-          due_date: dueDate.toISOString().slice(0, 10),
+          due_date: toLocalISODate(dueDate),
           payment_method: fMethod, supplier_id: fSupplier || null, notes: fNotes || null,
           check_number: baseCheckNum !== null ? String(baseCheckNum + i) : null,
           series_id: seriesId,
@@ -306,6 +342,7 @@ export default function ScheduledPaymentsModal({
       setSaving(false)
       showToast(`${n} צ׳קים נוצרו ✓`, 'success')
       setFormOpen(false)
+      onClose()
       fetch(); onRefresh?.()
       return
     }
@@ -331,6 +368,7 @@ export default function ScheduledPaymentsModal({
     setSaving(false)
     showToast('נוסף', 'success')
     setFormOpen(false)
+    onClose()
     fetch(); onRefresh?.()
   }
 

@@ -82,5 +82,41 @@
     "related_bugs": ["bug-005"],
     "occurrences": 1,
     "last_seen": "2026-07-13"
+  },
+  {
+    "id": "bug-008",
+    "timestamp": "2026-07-13T00:00:00.000Z",
+    "error_message": "יצירת סדרת צ'קים ליום 10 בחודש שומרת את הצ'קים ביום 9",
+    "file": "components/expenses/ScheduledPaymentsModal.tsx",
+    "root_cause": "In the series-creation loop, `new Date(fDue + 'T00:00:00')` is parsed as LOCAL time, but the row was serialized with `dueDate.toISOString().slice(0,10)`, which converts to UTC before slicing. In Israel (UTC+2/+3), local midnight falls on the previous UTC calendar day, so every generated row (including the first, i=0) landed one day earlier than selected.",
+    "fix": "Added a local-only date formatter `toLocalISODate(d)` (built from getFullYear/getMonth/getDate, no UTC conversion) and used it instead of `.toISOString().slice(0,10)` for the series due_date. Single-payment save path already wrote `fDue` directly (no Date round-trip) and was unaffected.",
+    "tags": ["scheduled-payments", "checks", "date", "timezone", "off-by-one"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-07-13"
+  },
+  {
+    "id": "bug-009",
+    "timestamp": "2026-07-13T00:00:00.000Z",
+    "error_message": "יצירת סדרת צ'קים מתוך מסך תשלום ספק לא משייכת אוטומטית לחוב שסומן ('שלם הכל' / סימון ידני נשכח)",
+    "file": "components/expenses/ScheduledPaymentsModal.tsx, components/supplier-tracking/SupplierTrackingClient.tsx",
+    "root_cause": "SupplierTrackingClient.submitPayment()'s check-method branch only forwarded paySupplierId into ScheduledPaymentsModal via schedInitialSupplierId — paySelectedIds/payAllocAmounts (the debts the user had just checked off) were discarded. ScheduledPaymentsModal's auto-opened add form always reset selectedDebtIds/debtAllocAmounts to empty whenever the supplier changed, so buildAllocations() returned empty and reconcileSupplierPayment was skipped unless the user manually re-selected debts inside the checks modal.",
+    "fix": "Added initialSelectedDebtIds/initialDebtAllocAmounts props to ScheduledPaymentsModal, carried via a pendingInitialAllocRef consumed once inside the open-debts fetch (fetchOpenDebtsAndSeed), seeding the selection (filtered to debts still open) instead of resetting to empty. SupplierTrackingClient now passes paySelectedIds/payAllocAmounts through on the check-method redirect and clears the new state in the modal's onClose.",
+    "tags": ["scheduled-payments", "checks", "supplier-debts", "reconciliation", "state-lost-across-redirect"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-07-13"
+  },
+  {
+    "id": "bug-010",
+    "timestamp": "2026-07-13T00:00:00.000Z",
+    "error_message": "אחרי אישור יצירת סדרת צ'קים, או אחרי עריכת תשלום קיים, מודל הצ'קים 'נפתח מחדש' במקום להיסגר",
+    "file": "components/expenses/ScheduledPaymentsModal.tsx",
+    "root_cause": "ScheduledPaymentsModal renders two sibling <Modal> instances (list + add/edit form) gated by the same parent `open` prop combined with a local formOpen flag. All three save-success branches (edit/series/new) only called setFormOpen(false), never the parent's onClose() — so with `open` still true, the LIST modal immediately reappeared right after a successful save, reading as 'the checks modal reopened.' Confirmed openEdit() (editing an existing payment) is only reachable from within that list modal, so the edit flow hit the identical mechanism.",
+    "fix": "Added an onClose() call after setFormOpen(false) in all three save-success branches, so the whole modal closes on successful save instead of falling back to the list. Deliberate UX choice per user report — no 'stay on list for rapid multi-add' behavior preserved.",
+    "tags": ["scheduled-payments", "checks", "modal", "onClose", "state-not-propagated"],
+    "related_bugs": ["bug-009"],
+    "occurrences": 1,
+    "last_seen": "2026-07-13"
   }
 ]
