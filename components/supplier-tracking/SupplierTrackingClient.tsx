@@ -162,6 +162,8 @@ export default function SupplierTrackingClient() {
   // Scheduled payments (checks) modal
   const [schedModal, setSchedModal] = useState(false)
   const [schedInitialSupplierId, setSchedInitialSupplierId] = useState<string | undefined>(undefined)
+  const [schedInitialDebtIds, setSchedInitialDebtIds] = useState<string[] | undefined>(undefined)
+  const [schedInitialDebtAllocAmounts, setSchedInitialDebtAllocAmounts] = useState<Record<string, string> | undefined>(undefined)
 
   // Styled printing — pick what to print, then render a hidden print-only area
   const [showPrintChoice, setShowPrintChoice] = useState(false)
@@ -416,6 +418,8 @@ export default function SupplierTrackingClient() {
     if (payMethod === "צ'ק") {
       setShowPayModal(false)
       setSchedInitialSupplierId(paySupplierId ?? undefined)
+      setSchedInitialDebtIds(Array.from(paySelectedIds))
+      setSchedInitialDebtAllocAmounts({ ...payAllocAmounts })
       setSchedModal(true)
       return
     }
@@ -1264,7 +1268,12 @@ export default function SupplierTrackingClient() {
       {tenantIdRef.current && (
         <ScheduledPaymentsModal
           open={schedModal}
-          onClose={() => { setSchedModal(false); setSchedInitialSupplierId(undefined) }}
+          onClose={() => {
+            setSchedModal(false)
+            setSchedInitialSupplierId(undefined)
+            setSchedInitialDebtIds(undefined)
+            setSchedInitialDebtAllocAmounts(undefined)
+          }}
           suppliers={suppliers}
           tenantId={tenantIdRef.current}
           supabase={supabase}
@@ -1272,6 +1281,8 @@ export default function SupplierTrackingClient() {
           showToast={showToast}
           expenseCats={expenseCats}
           initialSupplierId={schedInitialSupplierId}
+          initialSelectedDebtIds={schedInitialDebtIds}
+          initialDebtAllocAmounts={schedInitialDebtAllocAmounts}
         />
       )}
 
