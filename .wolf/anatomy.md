@@ -355,6 +355,7 @@
 
 ## components/inspections/
 
+- `InspectionChecklistModal.tsx` — Pre-purchase vehicle inspection checklist drawer (21 MOT systems). Per-system status ('ok'|'fail'|''|'na') is resolved from that step's fault list by `commitCurrentStep()`, called on every navigation exit (next/prev/pill-jump/summary) — see bug-006. `printChecklist()` renders the 2-page A4 "טופס סיכום אחיד" with ✓/✗ per system; skeleton-only mode (SKELETON_SYSTEM_INDICES) marks non-skeleton systems 'na' with strikethrough. `ChecklistBadge` shows a pass/fail chip on history cards (~5000 tok)
 
 ## components/landing/
 
