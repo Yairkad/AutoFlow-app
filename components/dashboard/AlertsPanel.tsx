@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useProfile } from '@/lib/contexts/ProfileContext'
+import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
 
 interface AlertPayment {
   id: string
@@ -71,7 +73,12 @@ const SALARY_CHIP: React.CSSProperties = {
   background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe',
 }
 
+// Checks are only surfaced this close to their due_date, so alerts stay focused
+// on what's actually about to happen (transfers keep the wider 30-day lookahead).
+const CHECK_ALERT_DAYS = 5
+
 export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
+  const { profile } = useProfile()
   const [payments,      setPayments]      = useState<AlertPayment[]>([])
   const [salaries,      setSalaries]      = useState<UnpaidSalary[]>([])
   const [suppliers,     setSuppliers]     = useState<Supplier[]>([])
@@ -83,6 +90,10 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
   const supabase = useRef(createClient()).current
 
   const load = async () => {
+    if (profile?.tenantId) {
+      await autoMarkOverdueChecksPaid(supabase, profile.tenantId).catch(() => {})
+    }
+
     const ahead = new Date(); ahead.setDate(ahead.getDate() + 30)
     const aheadStr = ahead.toISOString().slice(0, 10)
 
@@ -111,7 +122,9 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
         .order('date', { ascending: true }),
     ])
 
-    setPayments(pmtRes.data ?? [])
+    setPayments((pmtRes.data ?? []).filter(p =>
+      p.payment_method === 'check' ? daysUntil(p.due_date) <= CHECK_ALERT_DAYS : true
+    ))
     setSuppliers(supRes.data ?? [])
     setSalaries(salRes.data ?? [])
     setEmployees(empRes.data ?? [])

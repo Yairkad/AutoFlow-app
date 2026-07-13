@@ -357,6 +357,7 @@
 
 ## components/dashboard/
 
+- `AlertsPanel.tsx` — "⚡ התראות" dashboard widget (desktop bar + mobile compact popover): queries unpaid `scheduled_payments`(due≤30d, then client-filtered to `CHECK_ALERT_DAYS=5` for `payment_method==='check'` only — transfers keep the 30d window)/unpaid `salaries`/open `customer_debts`(7d+), renders as colored chips with `dayLabel()`/`chipStyle()` ("⚠️ Xי' באיחור" etc). `load()` now awaits `autoMarkOverdueChecksPaid` first (via `useProfile().tenantId`) so overdue checks are already flipped to paid and excluded by the `is_paid=false` filter (~1250 tok)
 
 ## components/debts/
 
@@ -371,6 +372,10 @@
 
 ## components/employees/
 
+
+## components/expenses/
+
+- `ScheduledPaymentsModal.tsx` — "📅 תשלומים מתוזמנים" modal: add/edit/delete post-dated checks & transfers, check-series batch creation, debt-month allocation via `reconcileSupplierPayment`, Excel import/export. `statusInfo()` derives the status chip purely from `is_paid`+`due_date`; `fetch()` now awaits `autoMarkOverdueChecksPaid` first so overdue checks flip to paid before the list renders. Manual "✓ שולם" button (`markPaid()`) still exists for transfers and for early/manual check settlement (~2200 tok)
 
 ## components/expenses/
 
@@ -431,6 +436,7 @@
 
 ## lib/contexts/
 
+- `ProfileContext.tsx` — `ProfileProvider`/`useProfile()`: fetches session+profile+full tenant row ONCE per AppShell mount, wired into `AppShell` above Header/Sidebar/page children. On successful load, if role is admin/super_admin, fire-and-forget calls `autoMarkOverdueChecksPaid(sb, tenantId)` (session-level pass so overdue checks are settled as soon as any admin page loads) (~700 tok)
 
 ## lib/debts/
 
@@ -445,6 +451,8 @@
 
 
 ## lib/utils/
+
+- `autoMarkOverdueChecks.ts` — `autoMarkOverdueChecksPaid(supabase, tenantId)`: for `scheduled_payments` rows with `payment_method='check', is_paid=false, due_date<=today`, race-guarded flips `is_paid=true`+`paid_date`, then inserts a matching `expenses` row and backfills `expense_id` (mirrors `ScheduledPaymentsModal`'s manual markPaid()). Called from `ProfileContext.load()` (session-level, admin-gated), and defensively re-run inside `ScheduledPaymentsModal.fetch()` and `AlertsPanel.load()` (~200 tok)
 
 
 ## lib/yard/

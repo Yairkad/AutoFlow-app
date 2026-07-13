@@ -9,6 +9,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { reconcileSupplierPayment, DebtAllocation } from '@/lib/debts/reconcileSupplierPayment'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
+import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -170,13 +171,14 @@ export default function ScheduledPaymentsModal({
 
   const fetch = useCallback(async () => {
     setLoading(true)
+    await autoMarkOverdueChecksPaid(supabase, tenantId).catch(() => {})
     const { data } = await supabase
       .from('scheduled_payments')
       .select('*')
       .order('due_date', { ascending: true })
     setRows(data ?? [])
     setLoading(false)
-  }, [supabase])
+  }, [supabase, tenantId])
 
   useEffect(() => { if (open) fetch() }, [open, fetch])
 

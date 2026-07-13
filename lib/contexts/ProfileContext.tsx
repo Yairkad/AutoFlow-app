@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
 
 export interface TenantRow {
   id: string
@@ -73,6 +74,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       tenant: (tenant as TenantRow) ?? null,
     })
     setLoading(false)
+
+    // Checks past their due_date are settled automatically — no manual "שולם" click needed.
+    if (p.role === 'admin' || p.role === 'super_admin') {
+      autoMarkOverdueChecksPaid(sb, p.tenant_id).catch(() => {})
+    }
   }, [sb])
 
   useEffect(() => { load() }, [load])
