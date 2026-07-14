@@ -10,6 +10,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import { reconcileSupplierPayment, DebtAllocation } from '@/lib/debts/reconcileSupplierPayment'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
+import { markScheduledPaymentPaid } from '@/lib/utils/markCheckPaid'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,6 +56,8 @@ interface Props {
   initialSupplierId?: string
   initialSelectedDebtIds?: string[]
   initialDebtAllocAmounts?: Record<string, string>
+  initialOpenAdd?: boolean
+  initialEditItem?: ScheduledPayment | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -121,7 +124,7 @@ function toLocalISODate(d: Date): string {
 
 export default function ScheduledPaymentsModal({
   open, onClose, suppliers, tenantId, supabase, onRefresh, showToast, expenseCats, initialSupplierId,
-  initialSelectedDebtIds, initialDebtAllocAmounts,
+  initialSelectedDebtIds, initialDebtAllocAmounts, initialOpenAdd, initialEditItem,
 }: Props) {
   const [rows,      setRows]      = useState<ScheduledPayment[]>([])
   const [loading,   setLoading]   = useState(false)
@@ -248,17 +251,6 @@ export default function ScheduledPaymentsModal({
     setFormOpen(true)
   }
 
-  // Auto-open the add form (pre-filled to the given supplier) when opened this way
-  useEffect(() => {
-    if (open && initialSupplierId) {
-      pendingInitialAllocRef.current = initialSelectedDebtIds && initialSelectedDebtIds.length > 0
-        ? { supplierId: initialSupplierId, ids: initialSelectedDebtIds, amounts: initialDebtAllocAmounts ?? {} }
-        : null
-      openAdd()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
-
   const openEdit = (p: ScheduledPayment) => {
     setEditItem(p)
     setFDesc(p.description); setFAmount(String(p.amount)); setFDue(p.due_date)
@@ -267,6 +259,20 @@ export default function ScheduledPaymentsModal({
     setFSeriesMode(false)
     setFormOpen(true)
   }
+
+  // Auto-open the add form (pre-filled to the given supplier) or the edit form for a
+  // specific row when opened this way (e.g. from the checks journal page or supplier-tracking).
+  useEffect(() => {
+    if (!open) return
+    if (initialEditItem) { openEdit(initialEditItem); return }
+    if (initialSupplierId || initialOpenAdd) {
+      pendingInitialAllocRef.current = initialSupplierId && initialSelectedDebtIds && initialSelectedDebtIds.length > 0
+        ? { supplierId: initialSupplierId, ids: initialSelectedDebtIds, amounts: initialDebtAllocAmounts ?? {} }
+        : null
+      openAdd()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   // ── Save ───────────────────────────────────────────────────────────────────
 
@@ -399,26 +405,13 @@ export default function ScheduledPaymentsModal({
     if (!payItem || !payDate) return
     setPaySaving(true)
 
-    // Create expense entry
-    const expRes = await supabase.from('expenses').insert({
-      tenant_id:      tenantId,
-      date:           payDate,
-      category:       payCat,
-      description:    payDesc || payItem.description,
-      amount:         payItem.amount,
-      supplier_id:    payItem.supplier_id,
-      payment_method: payItem.payment_method === 'check' ? "צ'ק" : 'העברה',
-      payment_ref:    payItem.notes || null,
-    }).select('id').single()
-
-    if (expRes.error) { showToast('שגיאה ביצירת הוצאה: ' + expRes.error.message, 'error'); setPaySaving(false); return }
-
-    // Mark payment as paid
-    await supabase.from('scheduled_payments').update({
-      is_paid: true, paid_date: payDate, expense_id: expRes.data.id,
-    }).eq('id', payItem.id)
+    const { error } = await markScheduledPaymentPaid(supabase, tenantId, payItem, {
+      paidDate: payDate, category: payCat, description: payDesc || payItem.description,
+    })
 
     setPaySaving(false)
+    if (error) { showToast('שגיאה ביצירת הוצאה: ' + error, 'error'); return }
+
     showToast('תשלום סומן כנפרע והוצאה נוצרה ✓', 'success')
     setPayOpen(false)
     fetch()

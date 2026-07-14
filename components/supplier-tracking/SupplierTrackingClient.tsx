@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import Link from 'next/link'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
@@ -52,7 +53,6 @@ interface Supplier {
   opening_balance: number
 }
 
-type Tab    = 'byMonth' | 'calendar'
 type Filter = 'open' | 'closed' | 'all'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -100,7 +100,6 @@ export default function SupplierTrackingClient() {
   const tenantIdRef = useRef<string | null>(null)
   const { showToast } = useToast()
 
-  const [tab, setTab]       = useState<Tab>('byMonth')
   const [filter, setFilter] = useState<Filter>('open')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -178,7 +177,7 @@ export default function SupplierTrackingClient() {
 
   // Styled printing — pick what to print, then render a hidden print-only area
   const [showPrintChoice, setShowPrintChoice] = useState(false)
-  const [printMode, setPrintMode] = useState<'ledger' | 'calendar' | null>(null)
+  const [printMode, setPrintMode] = useState<'ledger' | null>(null)
   const [printSupplierId, setPrintSupplierId] = useState<string>('')
   const [printRangeMode, setPrintRangeMode] = useState<'all' | 'months' | 'range'>('all')
   const [printMonths, setPrintMonths] = useState<Set<string>>(new Set())
@@ -264,7 +263,6 @@ export default function SupplierTrackingClient() {
   }, [supabase, resolveTenant, showToast, profile])
 
   useEffect(() => { loadAll() }, [loadAll])
-  useEffect(() => { setSelectedId(null); setFilter('open'); setSearch('') }, [tab])
   useEffect(() => {
     const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedId(null) }
     window.addEventListener('keydown', fn)
@@ -558,27 +556,6 @@ export default function SupplierTrackingClient() {
 
   // ── Sub-components ────────────────────────────────────────────────────────
 
-  const TabBtn = ({ t, label, count }: { t: Tab; label: string; count?: number }) => (
-    <button onClick={() => setTab(t)} style={{
-      padding: '7px 14px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-      fontSize: '13px', fontWeight: tab === t ? 600 : 400,
-      color: tab === t ? 'var(--text)' : 'var(--text-muted)',
-      background: tab === t ? '#fff' : 'transparent',
-      borderRadius: '8px', whiteSpace: 'nowrap', flexShrink: 0,
-      boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-      transition: 'all .15s', display: 'flex', alignItems: 'center', gap: '5px',
-    }}>
-      {label}
-      {count != null && count > 0 && (
-        <span style={{
-          background: tab === t ? '#dcfce7' : '#e2e8f0',
-          color: tab === t ? '#15803d' : 'var(--text-muted)',
-          borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: 700,
-        }}>{count}</span>
-      )}
-    </button>
-  )
-
   const FilterBtn = ({ f, label }: { f: Filter; label: string }) => (
     <button onClick={() => setFilter(f)} style={{
       padding: '5px 14px', border: '1px solid',
@@ -611,20 +588,12 @@ export default function SupplierTrackingClient() {
 
   function exportExcel() {
     const wb = XLSX.utils.book_new()
-    if (tab === 'byMonth') {
-      const rows = supplierDebts.map(d => ({
-        ספק: suppliers.find(s => s.id === d.supplier_id)?.name ?? '', מספר: d.doc_number ?? '',
-        סוג: d.direction === 'credit' ? 'זיכוי' : 'חיוב', סכום: d.amount, שולם: d.paid, יתרה: bal(d),
-        תאריך: d.date, סטטוס: d.is_closed ? 'סגור' : 'פתוח', תיאור: d.description ?? '',
-      }))
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'חשבוניות וזיכויים')
-    } else {
-      const rows = scheduledPayments.filter(p => !p.is_paid).map(p => ({
-        ספק: suppliers.find(s => s.id === p.supplier_id)?.name ?? '', תיאור: p.description, סכום: p.amount,
-        'תאריך פירעון': p.due_date, אמצעי: p.payment_method === 'check' ? "צ'ק" : 'העברה', 'מספר צ׳ק': p.check_number ?? '',
-      }))
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'יומן צ׳קים')
-    }
+    const rows = supplierDebts.map(d => ({
+      ספק: suppliers.find(s => s.id === d.supplier_id)?.name ?? '', מספר: d.doc_number ?? '',
+      סוג: d.direction === 'credit' ? 'זיכוי' : 'חיוב', סכום: d.amount, שולם: d.paid, יתרה: bal(d),
+      תאריך: d.date, סטטוס: d.is_closed ? 'סגור' : 'פתוח', תיאור: d.description ?? '',
+    }))
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'חשבוניות וזיכויים')
     XLSX.writeFile(wb, 'מעקב-ספקים.xlsx')
   }
 
@@ -691,20 +660,11 @@ export default function SupplierTrackingClient() {
         subtitle="חשבוניות, זיכויים, ושיבוץ צ'קים לפי חודש"
       />
 
-      {/* Tabs */}
-      <div className="scroll-x" style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
-          <TabBtn t="byMonth"  label="🏭 לפי ספק" />
-          <TabBtn t="calendar" label="📅 יומן צ׳קים" count={scheduledPayments.filter(p => !p.is_paid).length} />
-        </div>
-      </div>
-
-      {/* ── BY-MONTH TAB ── */}
-      {tab === 'byMonth' && (
-        <div>
+      <div>
           <div style={{ display: 'flex', gap: '10px', marginBottom: selectedId ? '8px' : '16px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Button onClick={() => openSuppModal()}>+ הוסף חשבונית/זיכוי</Button>
             <Button variant="secondary" onClick={() => setSchedModal(true)}>📝 צ׳ק / סדרה לספק</Button>
+            <Link href="/checks" style={{ padding: '8px 18px', borderRadius: '9px', fontSize: '14px', fontWeight: 500, border: '1.5px solid var(--border)', background: '#fff', color: 'var(--text)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>📅 יומן צ׳קים</Link>
             <div style={{ display: 'flex', gap: '6px' }}>
               <FilterBtn f="open" label="פתוחים" />
               <FilterBtn f="closed" label="סגורים" />
@@ -821,6 +781,12 @@ export default function SupplierTrackingClient() {
                             style={{ padding: '4px 12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
                             + הוסף
                           </button>
+                        )}
+                        {group.sid && (
+                          <Link href={`/checks?supplier=${group.sid}`}
+                            style={{ padding: '4px 12px', background: '#fff', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
+                            📅 יומן הצ׳קים
+                          </Link>
                         )}
                       </div>
                     </div>
@@ -989,71 +955,6 @@ export default function SupplierTrackingClient() {
             )
           })()}
         </div>
-      )}
-
-      {/* ── CHECKS CALENDAR TAB ── */}
-      {tab === 'calendar' && (() => {
-        const upcoming = scheduledPayments.filter(p => !p.is_paid).sort((a, b) => a.due_date.localeCompare(b.due_date))
-        const monthGroups: Record<string, ScheduledPayment[]> = {}
-        upcoming.forEach(p => {
-          const mk = monthKeyOf(p.due_date)
-          if (!monthGroups[mk]) monthGroups[mk] = []
-          monthGroups[mk].push(p)
-        })
-        const months = Object.keys(monthGroups).sort()
-        const grandTotal = upcoming.reduce((s, p) => s + Number(p.amount), 0)
-
-        return (
-          <div>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-              <Button variant="secondary" onClick={() => setSchedModal(true)}>📝 צ׳ק / סדרה לספק</Button>
-              <ExcelMenu onExportExcel={exportExcel} />
-            </div>
-            {upcoming.length === 0 ? (
-              <EmptyState icon="📅" text="אין צ׳קים או תשלומים עתידיים" />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)' }}>סה״כ עתידי לתשלום — כל הספקים</span>
-                  <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(grandTotal)}</span>
-                </div>
-                {months.map(mk => {
-                  const items = monthGroups[mk]
-                  const monthTotal = items.reduce((s, p) => s + Number(p.amount), 0)
-                  return (
-                    <div key={mk} style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-                      <div style={{ background: '#f1f5f9', borderBottom: '2px solid var(--border)', padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, fontSize: '14px', color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
-                        <span style={{ fontWeight: 700, fontSize: '14px' }}>{fmt(monthTotal)}</span>
-                      </div>
-                      <div>
-                        {items.map((p, i) => {
-                          const days = daysUntilDate(p.due_date)
-                          const supName = suppliers.find(s => s.id === p.supplier_id)?.name
-                          return (
-                            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderBottom: i < items.length - 1 ? '1px solid #f1f5f9' : 'none', flexWrap: 'wrap' }}>
-                              <span style={{ fontSize: '11px', background: p.payment_method === 'check' ? '#fef9c3' : '#eff6ff', color: p.payment_method === 'check' ? '#92400e' : '#1d4ed8', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, flexShrink: 0 }}>
-                                {p.payment_method === 'check' ? "צ'ק" : 'העברה'}{p.check_number ? ` #${p.check_number}` : ''}
-                              </span>
-                              <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '90px' }}>{supName ?? '—'}</span>
-                              <span style={{ fontSize: '13px', flex: 1 }}>{p.description}</span>
-                              <span style={{ fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{p.due_date}</span>
-                              <span style={{ fontWeight: 700, minWidth: '90px', textAlign: 'left' }}>{fmt(p.amount)}</span>
-                              <span style={{ fontSize: '11px', fontWeight: 600, color: days < 0 ? 'var(--danger)' : days <= 7 ? 'var(--warning)' : '#2563eb', whiteSpace: 'nowrap' }}>
-                                {days < 0 ? `באיחור ${Math.abs(days)} ימים` : days === 0 ? 'היום!' : `עוד ${days} ימים`}
-                              </span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )
-      })()}
 
       {/* ── SUPPLIER DEBT MODAL ── */}
       {showSuppModal && (
@@ -1433,13 +1334,8 @@ export default function SupplierTrackingClient() {
                   style={{ width: '100%' }}
                 >🖨️ הדפס כרטסת</Button>
               </div>
-              <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>יומן צ׳קים עתידי (כל הספקים)</div>
-                <Button
-                  variant="secondary"
-                  onClick={() => { setShowPrintChoice(false); setPrintMode('calendar') }}
-                  style={{ width: '100%' }}
-                >🖨️ הדפס יומן צ׳קים</Button>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                להדפסת יומן צ׳קים — <Link href="/checks" style={{ color: 'var(--primary)', fontWeight: 600 }}>עברו ליומן הצ׳קים</Link>
               </div>
             </div>
             <div className="sticky-actions">
@@ -1535,32 +1431,6 @@ export default function SupplierTrackingClient() {
                 <div style={{ marginTop: 16, fontWeight: 700, fontSize: 14 }}>
                   סה&quot;כ חיוב: {fmt(chargeTotal)} &nbsp; | &nbsp; סה&quot;כ זיכוי: {fmt(creditTotal)} &nbsp; | &nbsp; שולם: {fmt(paidTotal)} &nbsp; | &nbsp; יתרה בפועל: {fmt(running)}
                 </div>
-              </div>
-            )
-          })()}
-
-          {printMode === 'calendar' && (() => {
-            const upcoming = scheduledPayments.filter(p => !p.is_paid).sort((a, b) => a.due_date.localeCompare(b.due_date))
-            const total = upcoming.reduce((s, p) => s + Number(p.amount), 0)
-            return (
-              <div>
-                <h2 style={{ margin: '0 0 4px' }}>{tenantName} — יומן צ׳קים עתידי</h2>
-                <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {fmtDMY(new Date())}</div>
-                <table>
-                  <thead><tr><th>ספק</th><th>תיאור</th><th>תאריך פירעון</th><th>מספר צ׳ק</th><th>סכום</th></tr></thead>
-                  <tbody>
-                    {upcoming.map(p => (
-                      <tr key={p.id}>
-                        <td>{suppliers.find(s => s.id === p.supplier_id)?.name ?? '—'}</td>
-                        <td>{p.description}</td>
-                        <td>{fmtDMY(p.due_date)}</td>
-                        <td>{p.check_number ?? ''}</td>
-                        <td>{fmt(p.amount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div style={{ marginTop: 16, fontWeight: 700, fontSize: 14 }}>סה&quot;כ: {fmt(total)}</div>
               </div>
             )
           })()}
