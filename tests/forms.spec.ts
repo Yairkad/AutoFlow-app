@@ -31,9 +31,9 @@ test.describe('טפסים – חובות', () => {
     await page.goto('/debts')
   })
 
-  test('שני טאבים: לקוחות / ספקים', async ({ page }) => {
-    await expect(page.locator('button, [role="tab"]', { hasText: 'לקוחות' })).toBeVisible()
-    await expect(page.locator('button, [role="tab"]', { hasText: 'ספקים' })).toBeVisible()
+  test('שני טאבים: לקוחות מזדמנים / העברות לאימות', async ({ page }) => {
+    await expect(page.locator('button, [role="tab"]', { hasText: 'לקוחות מזדמנים' })).toBeVisible()
+    await expect(page.locator('button, [role="tab"]', { hasText: 'העברות לאימות' })).toBeVisible()
   })
 
   test('כפתור הוספת חוב קיים', async ({ page }) => {
@@ -60,7 +60,7 @@ test.describe('טפסים – ספקים', () => {
   })
 
   test('כפתור הוספת ספק קיים', async ({ page }) => {
-    await expect(page.locator('button', { hasText: /הוסף|ספק/ })).toBeVisible()
+    await expect(page.locator('button', { hasText: /הוסף|ספק/ }).first()).toBeVisible()
   })
 })
 
@@ -99,15 +99,20 @@ test.describe('טפסים – הגדרות', () => {
   })
 })
 
-test.describe('טפסים – חשבונות', () => {
-  test.beforeEach(async ({ page }) => {
+test.describe('טפסים – ספקים / לקוחות (מעקב + פרטים)', () => {
+  test('/suppliers: טאבי מעקב ופרטים', async ({ page }) => {
     await setupMocks(page)
-    await page.goto('/billing')
+    await page.goto('/suppliers')
+    for (const label of ['📋 מעקב', '🏭 פרטים']) {
+      await expect(page.locator(`button:has-text("${label}")`)).toBeVisible()
+    }
   })
 
-  test('4 טאבים: חודשי / פריטים / אנשי קשר / סיכום', async ({ page }) => {
-    for (const label of ['חודשי', 'פריטים', 'אנשי קשר', 'סיכום']) {
-      await expect(page.locator(`button:has-text("${label}"), [role="tab"]:has-text("${label}")`)).toBeVisible()
+  test('/customers: טאבי מעקב ופרטים', async ({ page }) => {
+    await setupMocks(page)
+    await page.goto('/customers')
+    for (const label of ['📋 מעקב', '💳 פרטים']) {
+      await expect(page.locator(`button:has-text("${label}")`)).toBeVisible()
     }
   })
 })

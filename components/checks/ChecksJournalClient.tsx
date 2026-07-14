@@ -463,7 +463,7 @@ export default function ChecksJournalClient() {
                           </span>
                           {p.series_id && <span title="חלק מסדרת צ׳קים" style={{ fontSize: 12 }}>📚</span>}
                           {unlinked && (
-                            <Link href={`/supplier-tracking?open=${p.supplier_id}`} title="לא משויך לחוב — לשיוך היכנסו למעקב ספקים" style={{ fontSize: 12, textDecoration: 'none' }}>⚠️</Link>
+                            <Link href={`/suppliers?tab=tracking&open=${p.supplier_id}`} title="לא משויך לחוב — לשיוך היכנסו למעקב ספקים" style={{ fontSize: 12, textDecoration: 'none' }}>⚠️</Link>
                           )}
                           <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '90px' }}>{supName ?? '—'}</span>
                           <span style={{ fontSize: '13px', flex: 1, textDecoration: p.is_paid ? 'line-through' : 'none' }}>{p.description}</span>

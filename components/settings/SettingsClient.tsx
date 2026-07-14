@@ -80,7 +80,6 @@ const ALL_MODULES = [
   { key: 'inspections',label: '📝 בדיקות קניה' },
   { key: 'reminders',  label: '🔔 תזכורות' },
   { key: 'documents',  label: '📄 מסמכים' },
-  { key: 'billing',    label: '🧾 חשבונות' },
   { key: 'settings',   label: '⚙️ הגדרות (כללי)' },
   { key: 'vault',          label: '🔒 כספת סיסמאות' },
   { key: 'products_view', label: '📦 מוצרים (צפיה בלבד)' },
@@ -1473,9 +1472,9 @@ function PricesSection({ supabase, tenantId, showToast }: { supabase: ReturnType
 
 const BACKUP_TABLES = [
   'tires','tire_sales','products','product_sales',
-  'alignment_jobs','billing_contacts','billing_entries','billing_entry_payments','billing_items',
+  'alignment_jobs','recurring_items',
   'cars','car_requests','car_sale_requests',
-  'customer_debts','supplier_debts','suppliers',
+  'customer_debts','supplier_debts','supplier_debt_payments','supplier_categories','suppliers',
   'customers','customer_categories','customer_ledger_debts','customer_ledger_payments',
   'employees','salaries','scheduled_payments',
   'expense_categories','expenses','income','income_categories','recurring_expenses',

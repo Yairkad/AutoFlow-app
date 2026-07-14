@@ -16,7 +16,6 @@ const PAGES = [
   { href: '/inspections', title: 'בדיקות' },
   { href: '/reminders',   title: 'תזכורות' },
   { href: '/documents',   title: 'מסמכים' },
-  { href: '/billing',     title: 'חשבונות' },
   { href: '/settings',    title: 'הגדרות' },
 ]
 

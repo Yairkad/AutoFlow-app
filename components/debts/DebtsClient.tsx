@@ -8,39 +8,25 @@ import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
+import CallLogModal, { CustomerDebtCall } from './CallLogModal'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface CustomerDebt {
   id: string; tenant_id: string; name: string; phone: string | null
   plate: string | null; amount: number; paid: number; description: string | null
-  date: string; is_closed: boolean; created_at: string
+  date: string; due_date: string | null; is_closed: boolean; created_at: string
 }
 
-interface SupplierDebt {
-  id: string; tenant_id: string; supplier_id: string | null
-  amount: number; paid: number; description: string | null
-  date: string; is_closed: boolean; created_at: string
-  direction: 'charge' | 'credit'
+type PaymentMethod = 'מזומן' | 'אשראי' | "צ'ק" | 'העברה'
+
+interface CustomerDebtPayment {
+  id: string; customer_debt_id: string; amount: number
+  payment_date: string; payment_method: string; reference: string | null
+  transfer_verified: boolean | null; verified_date: string | null; created_at: string
 }
 
-interface Supplier {
-  id: string; name: string; phone: string | null; contact_name: string | null
-}
-
-// Customer ledger (כרטסת לקוחות) — a separate, curated set of credit
-// customers, distinct from the ad-hoc customer_debts rows above.
-interface CustomerLedgerDebt {
-  id: string; tenant_id: string; customer_id: string | null
-  amount: number; paid: number; is_closed: boolean
-  direction: 'charge' | 'credit'
-}
-
-interface LedgerCustomer {
-  id: string; name: string; phone: string | null
-}
-
-type Tab    = 'customers' | 'suppliers' | 'summary'
+type Tab    = 'customers' | 'transfers'
 type Filter = 'open' | 'closed' | 'all'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -70,7 +56,7 @@ const tdSt: React.CSSProperties = { padding: '11px 12px', verticalAlign: 'middle
 
 export default function DebtsClient() {
   const supabase    = useRef(createClient()).current
-  const { profile } = useProfile()
+  const { profile, loading: profileLoading } = useProfile()
   const tenantIdRef = useRef<string | null>(null)
   const { showToast } = useToast()
 
@@ -81,12 +67,10 @@ export default function DebtsClient() {
 
   // Data
   const [customerDebts, setCustomerDebts] = useState<CustomerDebt[]>([])
-  const [supplierDebts, setSupplierDebts] = useState<SupplierDebt[]>([])
-  const [suppliers, setSuppliers]         = useState<Supplier[]>([])
-  const [customerLedgerDebts, setCustomerLedgerDebts] = useState<CustomerLedgerDebt[]>([])
-  const [ledgerCustomers, setLedgerCustomers]         = useState<LedgerCustomer[]>([])
+  const [calls, setCalls]       = useState<CustomerDebtCall[]>([])
+  const [payments, setPayments] = useState<CustomerDebtPayment[]>([])
 
-  // Row selection (customers only — supplier detail/edit lives on /supplier-tracking now)
+  // Row selection
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   // Customer debt form
@@ -98,12 +82,18 @@ export default function DebtsClient() {
   const [cAmount, setCAmount] = useState('')
   const [cDesc, setCDesc]   = useState('')
   const [cDate, setCDate]   = useState(todayISO())
+  const [cDueDate, setCDueDate] = useState('')
   const [cSaving, setCsaving] = useState(false)
+
+  // Call log modal
+  const [callLogDebtId, setCallLogDebtId] = useState<string | null>(null)
 
   // Payment modal (customer debts only)
   const [payItem, setPayItem] = useState<{ id: string; balance: number } | null>(null)
   const [payAmount, setPayAmount] = useState('')
   const [payDate, setPayDate]     = useState(todayISO())
+  const [payMethod, setPayMethod] = useState<PaymentMethod>('מזומן')
+  const [payReference, setPayReference] = useState('')
   const [paySaving, setPaySaving] = useState(false)
 
   // Tenant name (for WA messages)
@@ -111,6 +101,9 @@ export default function DebtsClient() {
 
   // WhatsApp edit modal
   const [waModal, setWaModal] = useState<{ phone: string; text: string } | null>(null)
+
+  // Transfers-pending-verification tab: show already-verified ones too?
+  const [showVerifiedTransfers, setShowVerifiedTransfers] = useState(false)
 
   // ── Tenant ────────────────────────────────────────────────────────────────
 
@@ -125,23 +118,23 @@ export default function DebtsClient() {
 
   const loadAll = useCallback(async () => {
     const tid = await resolveTenant()
-    if (!tid) return
+    if (!tid) {
+      // Profile context gave up resolving (e.g. no session) — stop spinning instead of hanging forever.
+      if (!profileLoading) setLoading(false)
+      return
+    }
     setLoading(true)
-    const [custRes, suppDebtRes, suppRes, custLedgerDebtRes, ledgerCustRes] = await Promise.all([
+    const [custRes, callsRes, paymentsRes] = await Promise.all([
       supabase.from('customer_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
-      supabase.from('supplier_debts').select('id,tenant_id,supplier_id,amount,paid,description,date,is_closed,created_at,direction').eq('tenant_id', tid),
-      supabase.from('suppliers').select('id,name,phone,contact_name').eq('tenant_id', tid).order('name'),
-      supabase.from('customer_ledger_debts').select('id,tenant_id,customer_id,amount,paid,is_closed,direction').eq('tenant_id', tid),
-      supabase.from('customers').select('id,name,phone').eq('tenant_id', tid).order('name'),
+      supabase.from('customer_debt_calls').select('*').eq('tenant_id', tid),
+      supabase.from('customer_debt_payments').select('*').eq('tenant_id', tid).order('payment_date', { ascending: false }),
     ])
     if (custRes.data)     setCustomerDebts(custRes.data)
-    if (suppDebtRes.data) setSupplierDebts(suppDebtRes.data)
-    if (suppRes.data)     setSuppliers(suppRes.data)
-    if (custLedgerDebtRes.data) setCustomerLedgerDebts(custLedgerDebtRes.data)
-    if (ledgerCustRes.data)     setLedgerCustomers(ledgerCustRes.data)
+    if (callsRes.data)    setCalls(callsRes.data)
+    if (paymentsRes.data) setPayments(paymentsRes.data)
     if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
     setLoading(false)
-  }, [supabase, resolveTenant, profile])
+  }, [supabase, resolveTenant, profile, profileLoading])
 
   useEffect(() => { loadAll() }, [loadAll])
 
@@ -160,8 +153,8 @@ export default function DebtsClient() {
   useEffect(() => {
     const ch = supabase.channel('debts-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_debts' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_debts' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_ledger_debts' }, loadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_debt_calls' }, loadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_debt_payments' }, loadAll)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [supabase, loadAll])
@@ -171,9 +164,9 @@ export default function DebtsClient() {
   const openCustModal = (d?: CustomerDebt) => {
     if (d) {
       setEditCust(d); setCName(d.name); setCPhone(d.phone ?? ''); setCPlate(d.plate ?? '')
-      setCAmount(String(d.amount)); setCDesc(d.description ?? ''); setCDate(d.date)
+      setCAmount(String(d.amount)); setCDesc(d.description ?? ''); setCDate(d.date); setCDueDate(d.due_date ?? '')
     } else {
-      setEditCust(null); setCName(''); setCPhone(''); setCPlate(''); setCAmount(''); setCDesc(''); setCDate(todayISO())
+      setEditCust(null); setCName(''); setCPhone(''); setCPlate(''); setCAmount(''); setCDesc(''); setCDate(todayISO()); setCDueDate('')
     }
     setShowCustModal(true)
   }
@@ -185,7 +178,7 @@ export default function DebtsClient() {
     const row = {
       tenant_id: tid, name: cName.trim(), phone: cPhone.trim() || null,
       plate: cPlate.trim() || null, amount: parseFloat(cAmount),
-      description: cDesc.trim() || null, date: cDate,
+      description: cDesc.trim() || null, date: cDate, due_date: cDueDate || null,
     }
     if (editCust) {
       const { error } = await supabase.from('customer_debts').update(row).eq('id', editCust.id)
@@ -210,12 +203,14 @@ export default function DebtsClient() {
   const openPay = (id: string, debtBalance: number) => {
     setPayItem({ id, balance: debtBalance })
     setPayAmount(String(debtBalance.toFixed(2))); setPayDate(todayISO())
+    setPayMethod('מזומן'); setPayReference('')
   }
 
   const recordPayment = async () => {
     if (!payItem || !payAmount) return
     const amount = parseFloat(payAmount)
     if (isNaN(amount) || amount <= 0) { showToast('סכום לא תקין', 'error'); return }
+    const tid = tenantIdRef.current!
     setPaySaving(true)
     const debt = customerDebts.find(d => d.id === payItem.id)
     if (!debt) { setPaySaving(false); return }
@@ -223,12 +218,23 @@ export default function DebtsClient() {
     const isClosed = newPaid >= Number(debt.amount)
     const { error } = await supabase.from('customer_debts').update({ paid: newPaid, is_closed: isClosed }).eq('id', payItem.id)
     if (error) { showToast('שגיאה בתשלום', 'error'); setPaySaving(false); return }
+    await supabase.from('customer_debt_payments').insert({
+      tenant_id: tid, customer_debt_id: payItem.id, amount,
+      payment_date: payDate, payment_method: payMethod,
+      reference: payReference.trim() || null,
+      transfer_verified: payMethod === 'העברה' ? false : null,
+    })
     showToast(isClosed ? 'שולם במלואו ✓' : 'תשלום נרשם ✓', 'success')
     setPaySaving(false); setPayItem(null); loadAll()
   }
 
   const toggleCustClose = async (id: string, current: boolean) => {
     await supabase.from('customer_debts').update({ is_closed: !current }).eq('id', id)
+    loadAll()
+  }
+
+  const verifyTransfer = async (id: string) => {
+    await supabase.from('customer_debt_payments').update({ transfer_verified: true, verified_date: todayISO() }).eq('id', id)
     loadAll()
   }
 
@@ -243,12 +249,9 @@ export default function DebtsClient() {
     d.name.includes(search) || (d.phone?.includes(search) ?? false) || (d.plate?.includes(search) ?? false)
   )
 
-  const openCustTotal       = customerDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
-  const openSuppTotal       = supplierDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
-  const openCustLedgerTotal = customerLedgerDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
-  // netOwed folds in both the old ad-hoc customer_debts total and the new
-  // customer-ledger total — both represent money customers owe the business.
-  const netOwed = openSuppTotal - openCustTotal - openCustLedgerTotal
+  const openCustTotal = customerDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
+  const pendingTransfers = payments.filter(p => p.payment_method === 'העברה' && !p.transfer_verified)
+  const visibleTransfers = payments.filter(p => p.payment_method === 'העברה' && (showVerifiedTransfers || !p.transfer_verified))
 
   // ── Selected item info (customers) ───────────────────────────────────────
 
@@ -311,13 +314,13 @@ export default function DebtsClient() {
         <FilterBtn f="all" label="הכל" />
       </div>
       <input
-        placeholder={tab === 'customers' ? 'חיפוש שם / טלפון / לוחית...' : 'חיפוש ספק...'}
+        placeholder="חיפוש שם / טלפון / לוחית..."
         value={search}
         onChange={e => setSearch(e.target.value)}
         className="form-input" style={{ flex: 1, minWidth: '180px', maxWidth: '300px' }}
       />
       <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
-        יתרה: <strong style={{ color: 'var(--danger)' }}>{fmt(tab === 'customers' ? openCustTotal : openSuppTotal)}</strong>
+        יתרה: <strong style={{ color: 'var(--danger)' }}>{fmt(openCustTotal)}</strong>
       </span>
       <ExcelMenu onExportExcel={exportExcel} />
     </div>
@@ -349,6 +352,12 @@ export default function DebtsClient() {
             💬 ווצאפ תזכורת
           </button>
         )}
+        <button
+          onClick={() => setCallLogDebtId(selectedId)}
+          style={{ padding: '5px 12px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+        >
+          📞 שיחה{calls.filter(c => c.customer_debt_id === selectedId).length > 0 ? ` (${calls.filter(c => c.customer_debt_id === selectedId).length})` : ''}
+        </button>
         {!debt.is_closed && bal(debt) > 0 && (
           <button
             onClick={() => openPay(selectedId, bal(debt))}
@@ -386,17 +395,9 @@ export default function DebtsClient() {
 
   function exportExcel() {
     const wb = XLSX.utils.book_new()
-    if (tab === 'customers' || tab === 'summary') {
-      const rows = customerDebts.map(d => ({ שם: d.name, טלפון: d.phone ?? '', לוחית: d.plate ?? '', סכום: d.amount, שולם: d.paid, יתרה: bal(d), תאריך: d.date, סטטוס: d.is_closed ? 'סגור' : 'פתוח', הערה: d.description ?? '' }))
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'חובות לקוחות')
-    }
-    if (tab === 'suppliers' || tab === 'summary') {
-      const bySupplier = new Map<string, number>()
-      supplierDebts.forEach(d => bySupplier.set(d.supplier_id ?? '', (bySupplier.get(d.supplier_id ?? '') ?? 0) + bal(d)))
-      const rows = [...bySupplier.entries()].map(([sid, balance]) => ({ ספק: suppliers.find(s => s.id === sid)?.name ?? 'ללא ספק', יתרה: balance }))
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'יתרות ספקים')
-    }
-    XLSX.writeFile(wb, 'חובות.xlsx')
+    const rows = customerDebts.map(d => ({ שם: d.name, טלפון: d.phone ?? '', לוחית: d.plate ?? '', סכום: d.amount, שולם: d.paid, יתרה: bal(d), תאריך: d.date, 'יעד לתשלום': d.due_date ?? '', סטטוס: d.is_closed ? 'סגור' : 'פתוח', הערה: d.description ?? '' }))
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'חובות לקוחות מזדמנים')
+    XLSX.writeFile(wb, 'חובות-לקוחות-מזדמנים.xlsx')
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -408,15 +409,14 @@ export default function DebtsClient() {
         iconBg="linear-gradient(135deg,#ef4444,#f87171)"
         iconShadow="#ef444444"
         title="חובות"
-        subtitle="מעקב חובות לקוחות וספקים"
+        subtitle="לקוחות מזדמנים החייבים כסף, ואימות תשלומים שהתקבלו בהעברה בנקאית"
       />
 
       {/* Tabs */}
       <div className="scroll-x" style={{ marginBottom: '20px' }}>
         <div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
-          <TabBtn t="customers" label="💳 לקוחות" count={customerDebts.filter(d => !d.is_closed).length} />
-          <TabBtn t="suppliers" label="🏭 ספקים"  count={supplierDebts.filter(d => !d.is_closed).length} />
-          <TabBtn t="summary"   label="📊 סיכום" />
+          <TabBtn t="customers" label="💳 לקוחות מזדמנים" count={customerDebts.filter(d => !d.is_closed).length} />
+          <TabBtn t="transfers" label="🏦 העברות לאימות" count={pendingTransfers.length} />
         </div>
       </div>
 
@@ -432,7 +432,7 @@ export default function DebtsClient() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                    {['שם לקוח', 'טלפון', 'לוחית', 'סכום', 'שולם', 'יתרה', 'תאריך', 'סטטוס'].map(h => (
+                    {['שם לקוח', 'טלפון', 'לוחית', 'סכום', 'שולם', 'יתרה', 'תאריך', 'יעד לתשלום', 'סטטוס'].map(h => (
                       <th key={h} style={thSt}>{h}</th>
                     ))}
                   </tr>
@@ -440,6 +440,7 @@ export default function DebtsClient() {
                 <tbody>
                   {filteredCust.map((d, i) => {
                     const isSelected = selectedId === d.id
+                    const isOverdue = !!d.due_date && !d.is_closed && d.due_date < todayISO()
                     return (
                       <tr
                         key={d.id}
@@ -467,6 +468,9 @@ export default function DebtsClient() {
                         <td style={{ ...tdSt, color: '#16a34a' }}>{fmt(d.paid)}</td>
                         <td style={{ ...tdSt, fontWeight: 700, color: bal(d) > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(bal(d))}</td>
                         <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
+                        <td style={{ ...tdSt, whiteSpace: 'nowrap', color: isOverdue ? 'var(--danger)' : 'var(--text-muted)', fontWeight: isOverdue ? 700 : 400 }}>
+                          {d.due_date ? (isOverdue ? `⚠ ${d.due_date}` : d.due_date) : '—'}
+                        </td>
                         <td style={tdSt}><StatusChip debt={d} /></td>
                       </tr>
                     )
@@ -475,165 +479,64 @@ export default function DebtsClient() {
               </table>
             </div>
           )}
-
-          {/* Ledger customers (הקפה) — separate curated set, full detail on /customer-tracking */}
-          {ledgerCustomers.length > 0 && (() => {
-            const rows = ledgerCustomers.map(c => {
-              const debts = customerLedgerDebts.filter(d => d.customer_id === c.id)
-              const totalBal = debts.reduce((s, d) => s + bal(d), 0)
-              return { c, totalBal }
-            }).filter(r => filter === 'all' ? true : filter === 'open' ? r.totalBal > 0 : r.totalBal <= 0)
-
-            if (rows.length === 0) return null
-
-            return (
-              <div style={{ marginTop: '28px' }}>
-                <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700 }}>💳 לקוחות בכרטסת (הקפה)</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
-                  {rows.sort((a, b) => b.totalBal - a.totalBal).map(r => (
-                    <div key={r.c.id} style={{
-                      background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)',
-                      padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                          width: 42, height: 42, borderRadius: '50%', background: 'var(--primary)', color: '#fff',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', fontWeight: 700, flexShrink: 0,
-                        }}>
-                          {r.c.name.charAt(0)}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>💳 {r.c.name}</div>
-                          {r.c.phone && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>📞 {r.c.phone}</div>}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <div>
-                          <div style={{ fontSize: '14px', fontWeight: 800, color: r.totalBal > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(r.totalBal)}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{r.totalBal > 0 ? 'יתרה פתוחה' : '✓ נקי'}</div>
-                        </div>
-                        <a href={`/customer-tracking?open=${r.c.id}`}
-                          style={{ padding: '6px 12px', background: '#eff6ff', color: 'var(--primary)', border: '1px solid #bfdbfe', borderRadius: '8px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                          מעקב מפורט →
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          })()}
         </div>
       )}
 
-      {/* ── SUPPLIERS TAB — summary only, full detail moved to /supplier-tracking ── */}
-      {tab === 'suppliers' && (
+      {/* ── TRANSFERS TAB — bank-transfer payments pending verification ── */}
+      {tab === 'transfers' && (
         <div>
-          <Toolbar />
-          {(() => {
-            const allSuppIds = [...new Set(supplierDebts.map(d => d.supplier_id))]
-            const rows = allSuppIds.map(sid => {
-              const debts = supplierDebts.filter(d => d.supplier_id === sid)
-              const supp = suppliers.find(s => s.id === sid)
-              const totalBal = debts.reduce((s, d) => s + bal(d), 0)
-
-              if (search.trim() && !(supp?.name ?? '').toLowerCase().includes(search.toLowerCase())) return null
-              if (filter === 'open'   && totalBal === 0) return null
-              if (filter === 'closed' && totalBal > 0)  return null
-
-              return { sid, supp, totalBal }
-            }).filter(Boolean) as { sid: string | null; supp: Supplier | undefined; totalBal: number }[]
-
-            if (rows.length === 0) return (
-              <EmptyState icon="🏭" text={`אין חובות לספקים ${filter === 'open' ? 'פתוחים' : filter === 'closed' ? 'סגורים' : ''}`} />
-            )
-
-            return (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
-                {rows.sort((a, b) => b.totalBal - a.totalBal).map(r => (
-                  <div key={r.sid ?? 'none'} style={{
-                    background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)',
-                    padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: 42, height: 42, borderRadius: '50%', background: 'var(--primary)', color: '#fff',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', fontWeight: 700, flexShrink: 0,
-                      }}>
-                        {(r.supp?.name ?? 'ל').charAt(0)}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🏭 {r.supp?.name ?? 'ללא ספק'}</div>
-                        {r.supp?.phone && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>📞 {r.supp.phone}</div>}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 800, color: r.totalBal > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(r.totalBal)}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{r.totalBal > 0 ? 'יתרה פתוחה' : '✓ נקי'}</div>
-                      </div>
-                      <a href={`/supplier-tracking${r.sid ? `?open=${r.sid}` : ''}`}
-                        style={{ padding: '6px 12px', background: '#eff6ff', color: 'var(--primary)', border: '1px solid #bfdbfe', borderRadius: '8px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>
-                        מעקב מפורט →
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )
-          })()}
-        </div>
-      )}
-
-      {/* ── SUMMARY TAB ── */}
-      {tab === 'summary' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-            {[
-              { label: 'חובות לקוחות פתוחים', value: openCustTotal, color: 'var(--danger)', icon: '💳', sub: `${customerDebts.filter(d => !d.is_closed).length} רשומות`, href: null as string | null },
-              { label: 'חובות לספקים פתוחים', value: openSuppTotal, color: 'var(--warning)', icon: '🏭', sub: `${supplierDebts.filter(d => !d.is_closed).length} רשומות`, href: null as string | null },
-              { label: 'לקוחות בכרטסת פתוחים', value: openCustLedgerTotal, color: 'var(--danger)', icon: '💳', sub: `${ledgerCustomers.length} לקוחות`, href: '/customer-tracking' },
-              { label: netOwed >= 0 ? 'חייבים לספקים נטו' : 'חייבים לנו נטו', value: Math.abs(netOwed), color: netOwed >= 0 ? 'var(--danger)' : 'var(--primary)', icon: '📊', sub: netOwed >= 0 ? 'מצב שלילי' : 'מצב חיובי', href: null as string | null },
-            ].map(c => (
-              <div key={c.label} style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', padding: '20px', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', borderTop: `3px solid ${c.color}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ fontSize: '26px', marginBottom: '8px' }}>{c.icon}</div>
-                  {c.href && <a href={c.href} style={{ fontSize: '11px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>מעקב →</a>}
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>{c.label}</div>
-                <div style={{ fontSize: '26px', fontWeight: 800, color: c.color }}>{fmt(c.value)}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{c.sub}</div>
-              </div>
-            ))}
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={showVerifiedTransfers} onChange={e => setShowVerifiedTransfers(e.target.checked)} />
+              הצג גם מאומתות
+            </label>
+            <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
+              ממתינות לאימות: <strong style={{ color: 'var(--danger)' }}>{pendingTransfers.length}</strong>
+            </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', padding: '20px', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-              <h3 style={{ margin: '0 0 14px', fontSize: '14px', fontWeight: 700 }}>חייבים גדולים – לקוחות</h3>
-              {customerDebts.filter(d => !d.is_closed && bal(d) > 0).sort((a, b) => bal(b) - bal(a)).slice(0, 8).map(d => (
-                <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
-                  <div><div style={{ fontWeight: 600 }}>{d.name}</div>{d.phone && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{d.phone}</div>}</div>
-                  <strong style={{ color: 'var(--danger)' }}>{fmt(bal(d))}</strong>
-                </div>
-              ))}
-              {customerDebts.filter(d => !d.is_closed).length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>✓ אין חובות פתוחים</div>}
+
+          {visibleTransfers.length === 0 ? (
+            <EmptyState icon="🏦" text="אין העברות לאימות" />
+          ) : (
+            <div style={{ overflowX: 'auto', background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
+                    {['לקוח', 'טלפון', 'סכום', 'תאריך', 'אסמכתא', 'סטטוס', ''].map(h => (
+                      <th key={h} style={thSt}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleTransfers.sort((a, b) => b.payment_date.localeCompare(a.payment_date)).map(p => {
+                    const debt = customerDebts.find(d => d.id === p.customer_debt_id)
+                    return (
+                      <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ ...tdSt, fontWeight: 600 }}>{debt?.name ?? '—'}</td>
+                        <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{debt?.phone || '—'}</td>
+                        <td style={{ ...tdSt, fontWeight: 700 }}>{fmt(p.amount)}</td>
+                        <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{p.payment_date}</td>
+                        <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.reference || '—'}</td>
+                        <td style={tdSt}>
+                          {p.transfer_verified
+                            ? <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>✓ אומת{p.verified_date ? ` (${p.verified_date})` : ''}</span>
+                            : <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef3c7', color: 'var(--warning)', fontWeight: 600 }}>ממתין</span>}
+                        </td>
+                        <td style={tdSt}>
+                          {!p.transfer_verified && (
+                            <button
+                              onClick={() => verifyTransfer(p.id)}
+                              style={{ padding: '4px 10px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}
+                            >✓ אומת בחשבון</button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
-            <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', padding: '20px', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>חייבים גדולים – ספקים</h3>
-                <a href="/supplier-tracking" style={{ fontSize: '12px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>מעקב ספקים →</a>
-              </div>
-              {supplierDebts.filter(d => !d.is_closed && bal(d) > 0).sort((a, b) => bal(b) - bal(a)).slice(0, 8).map(d => (
-                <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{suppliers.find(s => s.id === d.supplier_id)?.name ?? 'לא צוין'}</div>
-                    {d.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{d.description}</div>}
-                  </div>
-                  <strong style={{ color: 'var(--warning)' }}>{fmt(bal(d))}</strong>
-                </div>
-              ))}
-              {supplierDebts.filter(d => !d.is_closed).length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>✓ אין חובות פתוחים</div>}
-            </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -652,7 +555,10 @@ export default function DebtsClient() {
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>סכום (₪) *<input type="number" min="0" step="0.01" value={cAmount} onChange={e => setCAmount(e.target.value)} placeholder="0.00" className="form-input" /></label>
               </div>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>הערות<textarea value={cDesc} onChange={e => setCDesc(e.target.value)} placeholder="הערות על החוב..." className="form-input" style={{ resize: 'vertical', minHeight: '68px' }} /></label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>תאריך *<input type="date" value={cDate} onChange={e => setCDate(e.target.value)} className="form-input" /></label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>תאריך *<input type="date" value={cDate} onChange={e => setCDate(e.target.value)} className="form-input" /></label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>יעד לתשלום<input type="date" value={cDueDate} onChange={e => setCDueDate(e.target.value)} className="form-input" /></label>
+              </div>
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowCustModal(false)}>ביטול</Button>
@@ -679,6 +585,27 @@ export default function DebtsClient() {
                 תאריך תשלום
                 <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="form-input" />
               </label>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: 600 }}>אמצעי תשלום</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
+                  {(['מזומן', 'אשראי', 'העברה', "צ'ק"] as PaymentMethod[]).map(m => (
+                    <button key={m} type="button" onClick={() => setPayMethod(m)} style={{
+                      padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
+                      border: `1px solid ${payMethod === m ? 'var(--primary)' : 'var(--border)'}`,
+                      background: payMethod === m ? '#f0fdf4' : '#f8fafc',
+                      color: payMethod === m ? 'var(--primary)' : 'var(--text-muted)',
+                    }}>
+                      {m === 'מזומן' ? '💵' : m === 'אשראי' ? '💳' : m === "צ'ק" ? '📝' : '🏦'} {m}
+                    </button>
+                  ))}
+                </div>
+                {(payMethod === 'העברה' || payMethod === "צ'ק") && (
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
+                    {payMethod === 'העברה' ? 'מספר אסמכתא' : 'מספר צ׳ק'}
+                    <input value={payReference} onChange={e => setPayReference(e.target.value)} placeholder="אופציונלי" className="form-input" style={{ margin: 0 }} />
+                  </label>
+                )}
+              </div>
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setPayItem(null)}>ביטול</Button>
@@ -714,6 +641,18 @@ export default function DebtsClient() {
           </div>
         </div>
       )}
+
+      <CallLogModal
+        open={!!callLogDebtId}
+        onClose={() => setCallLogDebtId(null)}
+        debtId={callLogDebtId}
+        debtName={customerDebts.find(d => d.id === callLogDebtId)?.name ?? ''}
+        calls={calls.filter(c => c.customer_debt_id === callLogDebtId)}
+        tenantId={tenantIdRef.current ?? ''}
+        supabase={supabase}
+        showToast={showToast}
+        onSaved={loadAll}
+      />
     </div>
   )
 }

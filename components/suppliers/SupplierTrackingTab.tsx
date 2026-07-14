@@ -1,21 +1,23 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
-import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
-import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
+import Modal from '@/components/ui/Modal'
 import { reconcileSupplierPayment } from '@/lib/debts/reconcileSupplierPayment'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
+import VatToggle from '@/components/ui/VatToggle'
+import UnitToggle from '@/components/ui/UnitToggle'
+import { withVat, withoutVat } from '@/lib/utils/vat'
+import { Supplier, SupplierDebt, ScheduledPayment, SupplierDebtPayment, RecurringItem, Direction, fmt, bal, waUrl } from './shared'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Direction = 'charge' | 'credit'
 type PaymentMethod = 'מזומן' | 'אשראי' | "צ'ק" | 'העברה'
 
 interface InvoiceEntry {
@@ -27,38 +29,23 @@ interface InvoiceEntry {
   notes: string
 }
 
-interface SupplierDebt {
-  id: string; tenant_id: string; supplier_id: string | null
-  amount: number; paid: number; description: string | null
-  date: string; is_closed: boolean; created_at: string
-  doc_type: string | null; doc_number: string | null
-  direction: Direction
-  invoices: { type: string; number: string; amount: number; description?: string }[] | null
-}
-
-interface ScheduledPayment {
-  id: string; tenant_id: string; description: string; amount: number
-  due_date: string; payment_method: 'check' | 'transfer'
-  supplier_id: string | null; category: string | null
-  is_paid: boolean; paid_date: string | null; expense_id: string | null; notes: string | null
-  check_number: string | null; series_id: string | null; allocation_ignored: boolean
-}
-
-interface SupplierDebtPayment {
-  id: string; supplier_debt_id: string; scheduled_payment_id: string | null; amount: number
-}
-
-interface Supplier {
-  id: string; name: string; phone: string | null; contact_name: string | null
-  opening_balance: number
-}
-
 type Filter = 'open' | 'closed' | 'all'
+
+interface SupplierTrackingTabProps {
+  tenantId: string
+  tenantName: string
+  suppliers: Supplier[]
+  supplierDebts: SupplierDebt[]
+  scheduledPayments: ScheduledPayment[]
+  debtPayments: SupplierDebtPayment[]
+  recurringItems: RecurringItem[]
+  expenseCats: string[]
+  openId: string | null
+  reload: () => void
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const fmt = (n: number) =>
-  `₪${Number(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const fmtDMY = (d: string | Date) => {
   if (typeof d === 'string') {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d)
@@ -68,15 +55,8 @@ const fmtDMY = (d: string | Date) => {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(2)}`
 }
 const todayISO = () => new Date().toISOString().slice(0, 10)
-const bal = (d: { amount: number; paid: number; direction: Direction }) =>
-  d.direction === 'credit' ? -Number(d.amount) : Math.max(0, Number(d.amount) - Number(d.paid))
+const monthISO = () => new Date().toISOString().slice(0, 7)
 const EMPTY_INV = (): InvoiceEntry => ({ type: 'invoice', number: '', amount: '', date: todayISO(), direction: 'charge', notes: '' })
-
-const waUrl = (phone: string, text: string) => {
-  let digits = phone.replace(/\D/g, '')
-  if (!digits.startsWith('972')) digits = digits.startsWith('0') ? '972' + digits.slice(1) : '972' + digits
-  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`
-}
 
 const monthKeyOf = (iso: string) => iso.slice(0, 7)
 const HEB_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
@@ -94,23 +74,14 @@ const tdSt: React.CSSProperties = { padding: '8px 10px', verticalAlign: 'middle'
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function SupplierTrackingClient() {
+export default function SupplierTrackingTab({
+  tenantId, tenantName, suppliers, supplierDebts, scheduledPayments, debtPayments, recurringItems, expenseCats, openId, reload,
+}: SupplierTrackingTabProps) {
   const supabase    = useRef(createClient()).current
-  const { profile } = useProfile()
-  const tenantIdRef = useRef<string | null>(null)
   const { showToast } = useToast()
 
   const [filter, setFilter] = useState<Filter>('open')
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
-
-  // Data
-  const [supplierDebts, setSupplierDebts] = useState<SupplierDebt[]>([])
-  const [suppliers, setSuppliers]         = useState<Supplier[]>([])
-  const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([])
-  const [debtPayments, setDebtPayments]   = useState<SupplierDebtPayment[]>([])
-  const [expenseCats, setExpenseCats]     = useState<string[]>(['ספקים', 'אחר'])
-  const autoExpenseDoneRef = useRef(false)
 
   // Row selection
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -165,9 +136,48 @@ export default function SupplierTrackingClient() {
   // Quick-add-supplier modal
   const [showQuickAddSupplier, setShowQuickAddSupplier] = useState(false)
 
-  // Tenant name (for WA messages)
-  const [tenantName, setTenantName] = useState('AutoFlow')
+  // Recurring-item (rate template) add/edit
+  const [showRecItemModal, setShowRecItemModal] = useState(false)
+  const [editRecItem, setEditRecItem] = useState<RecurringItem | null>(null)
+  const [riSupplierId, setRiSupplierId] = useState<string | null>(null)
+  const [riName, setRiName] = useState('')
+  const [riType, setRiType] = useState<'fixed' | 'meter'>('fixed')
+  const [riAmt, setRiAmt] = useState('')
+  const [riPpu, setRiPpu] = useState('')
+  const [riPpuUnit, setRiPpuUnit] = useState<'ils' | 'agorot'>('ils')
+  const [riFixedAddon, setRiFixedAddon] = useState('')
+  const [riFrom, setRiFrom] = useState(monthISO())
+  const [riActive, setRiActive] = useState(true)
+  const [riVat, setRiVat] = useState<'before' | 'after'>('after')
+  const [riSaving, setRiSaving] = useState(false)
+
+  // "Generate this month's charges" — fixed-type recurring items only
+  const [genMonth, setGenMonth] = useState(monthISO())
+  const [generating, setGenerating] = useState(false)
+
+  // "Log a meter reading" — month-independent, one meter-type item at a time
+  const [meterReadItem, setMeterReadItem] = useState<RecurringItem | null>(null)
+  const [mrCurr, setMrCurr] = useState('')
+  const [mrPeriodStart, setMrPeriodStart] = useState('')
+  const [mrPeriodEnd, setMrPeriodEnd] = useState(todayISO())
+  const [mrSaving, setMrSaving] = useState(false)
+
   const [waModal, setWaModal] = useState<{ phone: string; text: string } | null>(null)
+
+  // Quick read-only glance at one supplier's full payment history (no navigation, no print/filter)
+  const [quickHistorySupplier, setQuickHistorySupplier] = useState<string | null>(null)
+  const [historyExpenses, setHistoryExpenses] = useState<{ id: string; date: string; description: string; amount: number; payment_method: string | null }[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+
+  useEffect(() => {
+    if (!quickHistorySupplier) { setHistoryExpenses([]); return }
+    setHistoryLoading(true)
+    supabase.from('expenses')
+      .select('id, date, description, amount, payment_method')
+      .eq('supplier_id', quickHistorySupplier)
+      .order('date', { ascending: false })
+      .then(({ data }) => { setHistoryExpenses(data ?? []); setHistoryLoading(false) })
+  }, [quickHistorySupplier, supabase])
 
   // Scheduled payments (checks) modal
   const [schedModal, setSchedModal] = useState(false)
@@ -202,95 +212,22 @@ export default function SupplierTrackingClient() {
     return () => { clearTimeout(t); window.removeEventListener('afterprint', onAfterPrint) }
   }, [printMode])
 
-  // ── Tenant ────────────────────────────────────────────────────────────────
-
-  const resolveTenant = useCallback(async () => {
-    if (tenantIdRef.current) return tenantIdRef.current
-    if (!profile) return null
-    tenantIdRef.current = profile.tenantId
-    return tenantIdRef.current
-  }, [profile])
-
-  // ── Load ──────────────────────────────────────────────────────────────────
-
-  const loadAll = useCallback(async () => {
-    const tid = await resolveTenant()
-    if (!tid) return
-    setLoading(true)
-    const [suppDebtRes, suppRes, paymentsRes, debtPaymentsRes, catRes] = await Promise.all([
-      supabase.from('supplier_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
-      supabase.from('suppliers').select('id,name,phone,contact_name,opening_balance').eq('tenant_id', tid).order('name'),
-      supabase.from('scheduled_payments').select('*').eq('tenant_id', tid).order('due_date'),
-      supabase.from('supplier_debt_payments').select('*').eq('tenant_id', tid),
-      supabase.from('expense_categories').select('name').eq('tenant_id', tid).order('created_at'),
-    ])
-    if (suppDebtRes.data) setSupplierDebts(suppDebtRes.data)
-    if (suppRes.data)     setSuppliers(suppRes.data)
-    else if (suppRes.error) showToast('שגיאה בטעינת ספקים: ' + suppRes.error.message, 'error')
-    if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
-    const payments: ScheduledPayment[] = paymentsRes.data ?? []
-    setScheduledPayments(payments)
-    setDebtPayments(debtPaymentsRes.data ?? [])
-    if (catRes.data && catRes.data.length > 0) setExpenseCats(catRes.data.map(r => r.name))
-    setLoading(false)
-
-    // Auto-expense overdue scheduled payments — runs once per session
-    if (!autoExpenseDoneRef.current) {
-      autoExpenseDoneRef.current = true
-      const today = new Date().toISOString().slice(0, 10)
-      const overdue = payments.filter(p => !p.is_paid && p.due_date <= today)
-      if (overdue.length > 0) {
-        for (const p of overdue) {
-          const expRes = await supabase.from('expenses').insert({
-            tenant_id: tid, date: p.due_date,
-            category: p.category || 'ספקים',
-            description: p.description, amount: p.amount,
-            supplier_id: p.supplier_id,
-            payment_method: p.payment_method === 'check' ? "צ'ק" : 'העברה',
-            payment_ref: p.notes || null,
-          }).select('id').single()
-          if (!expRes.error) {
-            await supabase.from('scheduled_payments').update({
-              is_paid: true, paid_date: today, expense_id: expRes.data.id,
-            }).eq('id', p.id)
-          }
-        }
-        showToast(`${overdue.length} תשלומים נרשמו אוטומטית כהוצאות ✓`, 'info')
-        const refreshed = await supabase.from('scheduled_payments').select('*').eq('tenant_id', tid).order('due_date')
-        setScheduledPayments(refreshed.data ?? [])
-      }
-    }
-  }, [supabase, resolveTenant, showToast, profile])
-
-  useEffect(() => { loadAll() }, [loadAll])
   useEffect(() => {
     const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedId(null) }
     window.addEventListener('keydown', fn)
     return () => window.removeEventListener('keydown', fn)
   }, [])
 
-  // Deep-link: ?open=<supplierId>
-  const didAutoOpen = useRef(false)
+  // Deep-link: ?open=<supplierId> (parsed once by the shell, passed down as `openId`)
   useEffect(() => {
-    if (didAutoOpen.current || loading) return
-    didAutoOpen.current = true
-    const openId = new URLSearchParams(window.location.search).get('open')
-    if (openId && suppliers.some(s => s.id === openId)) {
-      setSearch(suppliers.find(s => s.id === openId)!.name)
+    if (!openId) return
+    const target = suppliers.find(s => s.id === openId)
+    if (target) {
+      setSearch(target.name)
       setOpenSupplierKeys(prev => new Set(prev).add(supplierKeyOf(openId)))
     }
-  }, [loading, suppliers])
-
-  // ── Realtime ──────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    const ch = supabase.channel('supplier-tracking-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_debts' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'scheduled_payments' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_debt_payments' }, loadAll)
-      .subscribe()
-    return () => { supabase.removeChannel(ch) }
-  }, [supabase, loadAll])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId, suppliers.length])
 
   // ── Supplier debt CRUD ────────────────────────────────────────────────────
 
@@ -320,7 +257,7 @@ export default function SupplierTrackingClient() {
     const validLines = sInvoices.filter(i => i.number.trim() || parseFloat(i.amount) > 0)
     if (validLines.length === 0) { showToast('נא למלא לפחות שורה אחת', 'error'); return }
     if (validLines.some(l => !l.date)) { showToast('נא לבחור תאריך לכל שורה', 'error'); return }
-    const tid = tenantIdRef.current!
+    const tid = tenantId!
     setSsaving(true)
 
     if (editSupp) {
@@ -359,18 +296,158 @@ export default function SupplierTrackingClient() {
       if (error) { showToast('שגיאה בשמירה', 'error'); setSsaving(false); return }
       showToast(`נשמרו ${rows.length} רשומות ✓`, 'success')
     }
-    setSsaving(false); setShowSuppModal(false); setSelectedId(null); loadAll()
+    setSsaving(false); setShowSuppModal(false); setSelectedId(null); reload()
   }
 
   const deleteSuppDebt = async (id: string) => {
     if (!confirm('למחוק רשומה זו?')) return
     await supabase.from('supplier_debts').delete().eq('id', id)
-    showToast('נמחק', 'success'); setSelectedId(null); loadAll()
+    showToast('נמחק', 'success'); setSelectedId(null); reload()
   }
 
   const addDebtForSupplier = (suppId: string) => {
     setEditSupp(null); setSSupplier(suppId); setSNotes(''); setSInvoices([EMPTY_INV()])
     setShowSuppModal(true)
+  }
+
+  // ── Recurring items (rate templates: rent/arnona/electricity meter, etc.) ──
+
+  const openRecItemModal = (supplierId: string, item?: RecurringItem) => {
+    setRiSupplierId(supplierId)
+    if (item) {
+      setEditRecItem(item)
+      setRiName(item.name); setRiType(item.type)
+      setRiAmt(item.amount != null ? String(item.amount) : '')
+      setRiPpu(item.price_per_unit != null ? String(item.price_per_unit) : '')
+      setRiPpuUnit('ils')
+      setRiFixedAddon(item.fixed_addon != null ? String(item.fixed_addon) : '')
+      setRiFrom(item.valid_from); setRiActive(item.active); setRiVat('after')
+    } else {
+      setEditRecItem(null)
+      setRiName(''); setRiType('fixed'); setRiAmt(''); setRiPpu(''); setRiPpuUnit('ils')
+      setRiFixedAddon(''); setRiFrom(monthISO()); setRiActive(true); setRiVat('after')
+    }
+    setShowRecItemModal(true)
+  }
+
+  const saveRecItem = async () => {
+    if (!riSupplierId) return
+    if (!riName.trim()) { showToast('נא להזין שם', 'error'); return }
+    const tid = tenantId
+    if (!tid) return
+    setRiSaving(true)
+    const rawAmt = riType === 'fixed' ? (parseFloat(riAmt) || 0) : null
+    const amount = rawAmt != null ? (riVat === 'before' ? withVat(rawAmt) : rawAmt) : null
+    const rawPpu = riType === 'meter' ? (parseFloat(riPpu) || 0) : null
+    const ppuIls = rawPpu != null ? (riPpuUnit === 'agorot' ? rawPpu / 100 : rawPpu) : null
+    const price_per_unit = ppuIls != null ? (riVat === 'before' ? withVat(ppuIls) : ppuIls) : null
+    const row = {
+      tenant_id: tid, name: riName.trim(), supplier_id: riSupplierId, customer_id: null,
+      type: riType, amount, price_per_unit,
+      fixed_addon: riType === 'meter' && riFixedAddon ? (parseFloat(riFixedAddon) || 0) : null,
+      valid_from: riFrom, active: riActive,
+    }
+    const { error } = editRecItem
+      ? await supabase.from('recurring_items').update(row).eq('id', editRecItem.id)
+      : await supabase.from('recurring_items').insert(row)
+    if (error) { showToast('שגיאה בשמירה: ' + error.message, 'error'); setRiSaving(false); return }
+    showToast('נשמר ✓', 'success')
+    setRiSaving(false); setShowRecItemModal(false); reload()
+  }
+
+  const deleteRecItem = async (id: string) => {
+    if (!confirm('למחוק חיוב חוזר זה?')) return
+    await supabase.from('recurring_items').delete().eq('id', id)
+    showToast('נמחק', 'success'); reload()
+  }
+
+  // ── Generate this month's charges — fixed-type recurring items only ───────
+  // Meter-type items are deliberately excluded here (see "log a meter reading" below):
+  // meter readings aren't taken every calendar month, so auto-generating a monthly
+  // placeholder for them would nag the user in months they haven't actually read the meter.
+
+  const generateRecurringCharges = async () => {
+    const tid = tenantId
+    if (!tid) return
+    setGenerating(true)
+    try {
+      const active = recurringItems.filter(it => it.type === 'fixed' && it.active && it.valid_from <= genMonth)
+      const best = new Map<string, RecurringItem>()
+      for (const it of active) {
+        const key = `${it.supplier_id ?? ''}__${it.name}`
+        const prev = best.get(key)
+        if (!prev || it.valid_from > prev.valid_from) best.set(key, it)
+      }
+      const monthStart = `${genMonth}-01`
+      const [y, m] = genMonth.split('-').map(Number)
+      const nextMonthStart = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+      const existingRecIds = new Set(
+        supplierDebts.filter(d => d.recurring_item_id && d.date >= monthStart && d.date < nextMonthStart)
+          .map(d => d.recurring_item_id)
+      )
+      const toCreate = [...best.values()].filter(it => !existingRecIds.has(it.id))
+      if (!toCreate.length) { showToast('כל החיובים הקבועים כבר נוצרו לחודש זה', 'error'); setGenerating(false); return }
+      const rows = toCreate.map(it => ({
+        tenant_id: tid, supplier_id: it.supplier_id, amount: it.amount ?? 0,
+        paid: 0, description: it.name, date: monthStart, is_closed: false,
+        doc_type: 'invoice', direction: 'charge' as const, invoices: [],
+        recurring_item_id: it.id,
+      }))
+      const { error } = await supabase.from('supplier_debts').insert(rows)
+      if (error) throw error
+      showToast(`נוצרו ${rows.length} חיובים ✓`, 'success')
+      reload()
+    } catch { showToast('שגיאה ביצירת חיובים', 'error') }
+    setGenerating(false)
+  }
+
+  // ── Log a meter reading — month-independent, one meter-type item at a time ─
+
+  const addDay = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number)
+    const dt = new Date(y, m - 1, d + 1)
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+  }
+
+  const lastMeterRow = (itemId: string) => {
+    const rows = supplierDebts.filter(d => d.recurring_item_id === itemId && d.meter_curr != null)
+      .sort((a, b) => (a.period_end ?? a.date).localeCompare(b.period_end ?? b.date))
+    return rows[rows.length - 1]
+  }
+
+  const meterPrevReading = meterReadItem ? Number(lastMeterRow(meterReadItem.id)?.meter_curr ?? 0) : 0
+  const mrComputedTotal = meterReadItem
+    ? ((parseFloat(mrCurr) || 0) - meterPrevReading) * (meterReadItem.price_per_unit ?? 0) + (meterReadItem.fixed_addon ?? 0)
+    : 0
+
+  const openMeterReadModal = (item: RecurringItem) => {
+    const last = lastMeterRow(item.id)
+    setMeterReadItem(item)
+    setMrCurr('')
+    setMrPeriodStart(last?.period_end ? addDay(last.period_end) : '')
+    setMrPeriodEnd(todayISO())
+  }
+
+  const saveMeterReading = async () => {
+    if (!meterReadItem) return
+    const tid = tenantId
+    if (!tid) return
+    const curr = parseFloat(mrCurr)
+    if (isNaN(curr)) { showToast('נא להזין קריאה נוכחית', 'error'); return }
+    if (!mrPeriodStart) { showToast('נא לבחור תאריך תחילת תקופה', 'error'); return }
+    setMrSaving(true)
+    const { error } = await supabase.from('supplier_debts').insert({
+      tenant_id: tid, supplier_id: meterReadItem.supplier_id,
+      amount: mrComputedTotal, paid: 0, description: meterReadItem.name, date: mrPeriodEnd,
+      is_closed: false, doc_type: 'invoice', direction: 'charge', invoices: [],
+      recurring_item_id: meterReadItem.id,
+      meter_prev: meterPrevReading, meter_curr: curr,
+      price_per_unit: meterReadItem.price_per_unit, fixed_addon: meterReadItem.fixed_addon,
+      period_start: mrPeriodStart, period_end: mrPeriodEnd,
+    })
+    if (error) { showToast('שגיאה בשמירה: ' + error.message, 'error'); setMrSaving(false); return }
+    showToast('קריאה נשמרה ✓', 'success')
+    setMrSaving(false); setMeterReadItem(null); reload()
   }
 
   // ── Payment (one or several open debts of one supplier, in one action) ────
@@ -452,7 +529,7 @@ export default function SupplierTrackingClient() {
 
   const submitPayment = async () => {
     if (paySelectedIds.size === 0) { showToast('בחר לפחות שורה אחת לתשלום', 'error'); return }
-    const tid = tenantIdRef.current
+    const tid = tenantId
     if (!tid) return
 
     if (payMethod === "צ'ק") {
@@ -483,12 +560,12 @@ export default function SupplierTrackingClient() {
     })
 
     showToast('תשלום נרשם ✓', 'success')
-    setPaySaving(false); setShowPayModal(false); loadAll()
+    setPaySaving(false); setShowPayModal(false); reload()
   }
 
   const toggleClose = async (id: string, current: boolean) => {
     await supabase.from('supplier_debts').update({ is_closed: !current }).eq('id', id)
-    loadAll()
+    reload()
   }
 
   // ── Retroactive allocation of an already-issued check/payment ─────────────
@@ -512,7 +589,7 @@ export default function SupplierTrackingClient() {
   const ignoreAllocation = async (p: ScheduledPayment) => {
     if (!confirm('להתעלם מהצ׳ק הזה? הוא לא יוצג יותר כלא-משובץ.')) return
     await supabase.from('scheduled_payments').update({ allocation_ignored: true }).eq('id', p.id)
-    loadAll()
+    reload()
   }
 
   const toggleAllocDebt = (d: SupplierDebt) => {
@@ -533,7 +610,7 @@ export default function SupplierTrackingClient() {
   const submitAllocatePayment = async () => {
     if (!allocatingPayment) return
     if (allocSelectedIds.size === 0) { showToast('בחר לפחות שורה אחת', 'error'); return }
-    const tid = tenantIdRef.current
+    const tid = tenantId
     if (!tid) return
     const allocations = Array.from(allocSelectedIds)
       .map(id => ({ supplier_debt_id: id, amount: parseFloat(allocAmounts[id] ?? '0') || 0 }))
@@ -543,7 +620,7 @@ export default function SupplierTrackingClient() {
     const { error } = await reconcileSupplierPayment(supabase, tid, allocations, allocatingPayment.id)
     if (error) { showToast('שגיאה בשיבוץ: ' + error, 'error'); setAllocSaving(false); return }
     showToast('שובץ ✓', 'success')
-    setAllocSaving(false); setAllocatingPayment(null); loadAll()
+    setAllocSaving(false); setAllocatingPayment(null); reload()
   }
 
   // ── Filters ───────────────────────────────────────────────────────────────
@@ -600,7 +677,7 @@ export default function SupplierTrackingClient() {
   async function importExcel(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; e.target.value = ''
     if (!file) return
-    const tid = tenantIdRef.current
+    const tid = tenantId
     if (!tid) return
     const buf = await file.arrayBuffer()
     const wb  = XLSX.read(buf, { type: 'array', cellDates: true })
@@ -639,30 +716,20 @@ export default function SupplierTrackingClient() {
     const { error } = await supabase.from('supplier_debts').insert(toInsert)
     if (error) { showToast('שגיאה בייבוא: ' + error.message, 'error'); return }
     showToast(`יובאו ${toInsert.length} רשומות ✓`, 'success')
-    loadAll()
+    reload()
   }
-
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-muted)', fontSize: '14px' }}>
-      טוען...
-    </div>
-  )
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div>
-      <PageHeader
-        icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>}
-        iconBg="linear-gradient(135deg,#0369a1,#38bdf8)"
-        iconShadow="#0369a144"
-        title="מעקב ספקים"
-        subtitle="חשבוניות, זיכויים, ושיבוץ צ'קים לפי חודש"
-      />
-
       <div>
           <div style={{ display: 'flex', gap: '10px', marginBottom: selectedId ? '8px' : '16px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Button onClick={() => openSuppModal()}>+ הוסף חשבונית/זיכוי</Button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)} className="form-input" style={{ margin: 0, padding: '7px 8px', fontSize: '12px' }} />
+              <Button variant="secondary" loading={generating} onClick={generateRecurringCharges}>🔄 צור חיובים לחודש</Button>
+            </div>
             <Button variant="secondary" onClick={() => setSchedModal(true)}>📝 צ׳ק / סדרה לספק</Button>
             <Link href="/checks" style={{ padding: '8px 18px', borderRadius: '9px', fontSize: '14px', fontWeight: 500, border: '1.5px solid var(--border)', background: '#fff', color: 'var(--text)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>📅 יומן צ׳קים</Link>
             <div style={{ display: 'flex', gap: '6px' }}>
@@ -783,10 +850,10 @@ export default function SupplierTrackingClient() {
                           </button>
                         )}
                         {group.sid && (
-                          <Link href={`/checks?supplier=${group.sid}`}
-                            style={{ padding: '4px 12px', background: '#fff', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
-                            📅 יומן הצ׳קים
-                          </Link>
+                          <button onClick={e => { e.stopPropagation(); setQuickHistorySupplier(group.sid!) }}
+                            style={{ padding: '4px 12px', background: '#fff', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                            📜 היסטוריית תשלומים
+                          </button>
                         )}
                       </div>
                     </div>
@@ -813,6 +880,39 @@ export default function SupplierTrackingClient() {
                         </div>
                       </div>
                     )}
+
+                    {group.sid && (() => {
+                      const items = recurringItems.filter(it => it.supplier_id === group.sid)
+                      return (
+                        <div style={{ background: '#fafaf9', borderBottom: '1px solid var(--border)', padding: '10px 16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: items.length ? '8px' : 0 }}>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>🔁 חיובים חוזרים</span>
+                            <button onClick={() => openRecItemModal(group.sid!)} style={{ padding: '3px 10px', background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>+ הוסף חיוב חוזר</button>
+                          </div>
+                          {items.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              {items.map(it => (
+                                <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', flexWrap: 'wrap' }}>
+                                  <span style={{ padding: '1px 7px', borderRadius: '4px', fontWeight: 600, background: it.type === 'meter' ? '#eff6ff' : '#f0fdf6', color: it.type === 'meter' ? '#1d4ed8' : '#16a34a' }}>
+                                    {it.type === 'meter' ? 'מונה' : 'קבוע'}
+                                  </span>
+                                  <span style={{ fontWeight: 600, flex: 1, minWidth: '80px' }}>{it.name}</span>
+                                  <span style={{ color: 'var(--text-muted)' }}>
+                                    {it.type === 'meter' ? `${fmt(it.price_per_unit ?? 0)} ליחידה` : fmt(it.amount ?? 0)}
+                                  </span>
+                                  {!it.active && <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>(לא פעיל)</span>}
+                                  {it.type === 'meter' && it.active && (
+                                    <button onClick={() => openMeterReadModal(it)} style={{ padding: '3px 9px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>📊 הזן קריאת מונה</button>
+                                  )}
+                                  <button onClick={() => openRecItemModal(group.sid!, it)} style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>✏️</button>
+                                  <button onClick={() => deleteRecItem(it.id)} style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>🗑</button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
 
                     {group.months.map((mk, mIdx) => {
                       const monthDebts = group.monthMap[mk]
@@ -1232,7 +1332,7 @@ export default function SupplierTrackingClient() {
       )}
 
       {/* ── SCHEDULED PAYMENTS (CHECKS) MODAL ── */}
-      {tenantIdRef.current && (
+      {tenantId && (
         <ScheduledPaymentsModal
           open={schedModal}
           onClose={() => {
@@ -1242,9 +1342,9 @@ export default function SupplierTrackingClient() {
             setSchedInitialDebtAllocAmounts(undefined)
           }}
           suppliers={suppliers}
-          tenantId={tenantIdRef.current}
+          tenantId={tenantId}
           supabase={supabase}
-          onRefresh={loadAll}
+          onRefresh={reload}
           showToast={showToast}
           expenseCats={expenseCats}
           initialSupplierId={schedInitialSupplierId}
@@ -1253,17 +1353,214 @@ export default function SupplierTrackingClient() {
         />
       )}
 
+      {/* ── QUICK PAYMENT HISTORY GLANCE (per supplier, no navigation, read-only) ── */}
+      <Modal
+        open={!!quickHistorySupplier}
+        onClose={() => setQuickHistorySupplier(null)}
+        title={`📜 היסטוריית תשלומים — ${suppliers.find(s => s.id === quickHistorySupplier)?.name ?? ''}`}
+        maxWidth={520}
+      >
+        {(() => {
+          const pending = scheduledPayments
+            .filter(p => p.supplier_id === quickHistorySupplier && !p.is_paid)
+            .sort((a, b) => a.due_date.localeCompare(b.due_date))
+          const pendingTotal = pending.reduce((s, p) => s + Number(p.amount), 0)
+          const paidTotal = historyExpenses.reduce((s, e) => s + Number(e.amount), 0)
+
+          if (historyLoading) return (
+            <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)', fontSize: '14px' }}>טוען...</div>
+          )
+
+          if (pending.length === 0 && historyExpenses.length === 0) return (
+            <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)', fontSize: '14px' }}>אין היסטוריית תשלומים לספק זה</div>
+          )
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {pending.length > 0 && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                    <span>עתידי (טרם שולם)</span>
+                    <span style={{ color: 'var(--danger)' }}>{fmt(pendingTotal)}</span>
+                  </div>
+                  <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+                    {pending.map((p, i) => {
+                      const days = daysUntilDate(p.due_date)
+                      return (
+                        <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderBottom: i < pending.length - 1 ? '1px solid #f1f5f9' : 'none', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 11, background: p.payment_method === 'check' ? '#fef9c3' : '#eff6ff', color: p.payment_method === 'check' ? '#92400e' : '#1d4ed8', padding: '2px 8px', borderRadius: 4, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                            {p.payment_method === 'check' ? "צ'ק" : 'העברה'}{p.check_number ? ` #${p.check_number}` : ''}
+                          </span>
+                          <span style={{ fontSize: 13, flex: 1 }}>{p.description}</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{fmtDMY(p.due_date)}</span>
+                          <span style={{ fontWeight: 700, minWidth: 70, textAlign: 'left' }}>{fmt(p.amount)}</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: days < 0 ? 'var(--danger)' : days <= 7 ? 'var(--warning)' : '#2563eb', whiteSpace: 'nowrap' }}>
+                            {days < 0 ? `באיחור ${Math.abs(days)}` : days === 0 ? 'היום!' : `עוד ${days}`}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                  <span>היסטוריית תשלומים</span>
+                  <span>{fmt(paidTotal)}</span>
+                </div>
+                {historyExpenses.length === 0 ? (
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 4px' }}>אין תשלומים שבוצעו עדיין</div>
+                ) : (
+                  <div style={{ maxHeight: 260, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+                    {historyExpenses.map((e, i) => (
+                      <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderBottom: i < historyExpenses.length - 1 ? '1px solid #f1f5f9' : 'none', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 11, background: '#f0fdf4', color: '#16a34a', padding: '2px 8px', borderRadius: 4, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          {e.payment_method || '—'}
+                        </span>
+                        <span style={{ fontSize: 13, flex: 1 }}>{e.description}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{fmtDMY(e.date)}</span>
+                        <span style={{ fontWeight: 700, minWidth: 70, textAlign: 'left' }}>{fmt(e.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Link href={`/checks?supplier=${quickHistorySupplier}`} onClick={() => setQuickHistorySupplier(null)}
+                style={{ textAlign: 'center', fontSize: 12, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', padding: '6px' }}>
+                → לניהול הצ׳קים העתידיים ביומן הצ׳קים
+              </Link>
+            </div>
+          )
+        })()}
+      </Modal>
+
       <QuickAddSupplierModal
         open={showQuickAddSupplier}
         onClose={() => setShowQuickAddSupplier(false)}
-        tenantId={tenantIdRef.current ?? ''}
+        tenantId={tenantId ?? ''}
         supabase={supabase}
         showToast={showToast}
         onCreated={(s: QuickSupplier) => {
-          setSuppliers(prev => [...prev, { ...s, opening_balance: 0 }].sort((a, b) => a.name.localeCompare(b.name, 'he')))
           setSSupplier(s.id)
+          reload()
         }}
       />
+
+      {/* ── RECURRING ITEM (RATE TEMPLATE) MODAL ── */}
+      {showRecItemModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowRecItemModal(false)}>
+          <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editRecItem ? '✏️ עריכת חיוב חוזר' : '+ חיוב חוזר חדש'}</h3>
+            <div style={{ display: 'grid', gap: '14px' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                שם (למשל: שכירות, ארנונה, חשמל)
+                <input value={riName} onChange={e => setRiName(e.target.value)} className="form-input" />
+              </label>
+
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {(['fixed', 'meter'] as const).map(t => (
+                  <button key={t} type="button" onClick={() => setRiType(t)} style={{
+                    flex: 1, padding: '7px', border: '1px solid', borderRadius: '7px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
+                    borderColor: riType === t ? 'var(--primary)' : 'var(--border)',
+                    background: riType === t ? 'var(--primary)' : 'transparent',
+                    color: riType === t ? '#fff' : 'var(--text-muted)',
+                  }}>{t === 'fixed' ? 'סכום קבוע' : 'לפי מונה'}</button>
+                ))}
+              </div>
+
+              {riType === 'fixed' ? (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>סכום חודשי</span>
+                    <VatToggle mode={riVat} onChange={setRiVat} />
+                  </div>
+                  <input type="number" min="0" step="0.01" value={riAmt} onChange={e => setRiAmt(e.target.value)} className="form-input" style={{ margin: 0 }} />
+                  {riAmt && parseFloat(riAmt) > 0 && (
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      {riVat === 'after'
+                        ? `לפני מע"מ: ${fmt(withoutVat(parseFloat(riAmt)))}`
+                        : `כולל מע"מ (18%): ${fmt(withVat(parseFloat(riAmt)))}`}
+                    </div>
+                  )}
+                </label>
+              ) : (
+                <>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>מחיר ליחידה</span>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <UnitToggle unit={riPpuUnit} onChange={setRiPpuUnit} />
+                        <VatToggle mode={riVat} onChange={setRiVat} />
+                      </div>
+                    </div>
+                    <input type="number" min="0" step="0.0001" value={riPpu} onChange={e => setRiPpu(e.target.value)} className="form-input" style={{ margin: 0 }} />
+                    {riPpu && parseFloat(riPpu) > 0 && (
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        {riVat === 'after'
+                          ? `לפני מע"מ: ₪${withoutVat(parseFloat(riPpu) / (riPpuUnit === 'agorot' ? 100 : 1)).toFixed(4)}`
+                          : `כולל מע"מ: ₪${withVat(parseFloat(riPpu) / (riPpuUnit === 'agorot' ? 100 : 1)).toFixed(4)}`}
+                      </div>
+                    )}
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                    תוספת קבועה (אופציונלי — למשל דמי תשתית)
+                    <input type="number" min="0" step="0.01" value={riFixedAddon} onChange={e => setRiFixedAddon(e.target.value)} className="form-input" style={{ margin: 0 }} />
+                  </label>
+                </>
+              )}
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                בתוקף מחודש
+                <input type="month" value={riFrom} onChange={e => setRiFrom(e.target.value)} className="form-input" />
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                <input type="checkbox" checked={riActive} onChange={e => setRiActive(e.target.checked)} />
+                פעיל
+              </label>
+            </div>
+            <div className="sticky-actions">
+              <Button variant="secondary" onClick={() => setShowRecItemModal(false)}>ביטול</Button>
+              <Button loading={riSaving} onClick={saveRecItem}>💾 שמור</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── LOG A METER READING MODAL (month-independent) ── */}
+      {meterReadItem && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setMeterReadItem(null)}>
+          <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '440px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>📊 הזן קריאת מונה — {meterReadItem.name}</h3>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>קריאה קודמת: <strong>{meterPrevReading}</strong></div>
+            <div style={{ display: 'grid', gap: '14px' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                קריאה נוכחית
+                <input type="number" step="0.01" value={mrCurr} onChange={e => setMrCurr(e.target.value)} className="form-input" style={{ margin: 0 }} autoFocus />
+              </label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                  תחילת תקופה
+                  <input type="date" value={mrPeriodStart} onChange={e => setMrPeriodStart(e.target.value)} className="form-input" style={{ margin: 0 }} />
+                </label>
+                <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                  תאריך קריאה
+                  <input type="date" value={mrPeriodEnd} onChange={e => setMrPeriodEnd(e.target.value)} className="form-input" style={{ margin: 0 }} />
+                </label>
+              </div>
+              <div style={{ padding: '10px 14px', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontWeight: 700 }}>
+                סה&quot;כ לחיוב: {fmt(mrComputedTotal)}
+              </div>
+            </div>
+            <div className="sticky-actions">
+              <Button variant="secondary" onClick={() => setMeterReadItem(null)}>ביטול</Button>
+              <Button loading={mrSaving} onClick={saveMeterReading}>💾 שמור</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── PRINT CHOICE MODAL ── */}
       {showPrintChoice && (

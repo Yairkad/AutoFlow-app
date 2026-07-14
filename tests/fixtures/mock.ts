@@ -82,12 +82,13 @@ export async function mockSupabase(page: Page) {
 
   // All data tables → return empty arrays by default
   const EMPTY_TABLES = [
-    'expenses', 'income', 'customer_debts', 'supplier_debts',
-    'suppliers', 'employees', 'salaries', 'products', 'tires',
+    'expenses', 'income', 'customer_debts', 'supplier_debts', 'supplier_debt_payments',
+    'suppliers', 'supplier_categories', 'customers', 'customer_categories',
+    'customer_ledger_debts', 'customer_ledger_payments', 'recurring_items',
+    'employees', 'salaries', 'products', 'tires',
     'quotes', 'alignment_jobs', 'car_inspections', 'cars',
-    'reminders', 'documents', 'billing_items', 'billing_entries',
-    'billing_entry_payments', 'billing_contacts', 'registration_tokens',
-    'recurring_expenses', 'scheduled_payments',
+    'reminders', 'documents', 'registration_tokens',
+    'recurring_expenses', 'scheduled_payments', 'expense_categories',
   ]
   for (const table of EMPTY_TABLES) {
     await page.route(`${SB_URL}/rest/v1/${table}*`, route => {

@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
-import { Supplier, SupplierDebt, ScheduledPayment, fmt, bal, waUrl } from './shared'
+import { Customer, CustomerLedgerDebt, fmt, bal, waUrl } from './shared'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,170 +17,130 @@ interface InvoiceEntry {
   description?: string
 }
 
-interface SupplierDetailsTabProps {
+interface CustomerDetailsTabProps {
   tenantId: string
-  suppliers: Supplier[]
-  debts: SupplierDebt[]
+  customers: Customer[]
+  debts: CustomerLedgerDebt[]
   categories: string[]
-  scheduledPayments: ScheduledPayment[]
   openId: string | null
-  onOpenTracking: (supplierId: string) => void
+  onOpenTracking: (customerId: string) => void
   reload: () => void
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const ISRAELI_BANKS: { name: string; code: string }[] = [
-  { name: 'בנק לאומי',                   code: '10' },
-  { name: 'בנק דיסקונט',                 code: '11' },
-  { name: 'בנק הפועלים',                 code: '12' },
-  { name: 'בנק אגוד',                    code: '13' },
-  { name: 'בנק אוצר החייל',              code: '14' },
-  { name: 'בנק מרכנתיל דיסקונט',         code: '17' },
-  { name: 'בנק מזרחי טפחות',             code: '20' },
-  { name: 'סיטיבנק',                     code: '22' },
-  { name: 'HSBC',                        code: '23' },
-  { name: 'בנק יהב',                     code: '04' },
-  { name: 'בנק הדואר',                   code: '09' },
-  { name: 'בנק ירושלים',                 code: '54' },
-  { name: 'הבנק הבינלאומי הראשון',        code: '31' },
-  { name: 'בנק פועלי אגודת ישראל',        code: '40' },
-  { name: 'ONE ZERO',                    code: '39' },
-]
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function SupplierDetailsTab({
-  tenantId, suppliers, debts, categories, scheduledPayments, openId, onOpenTracking, reload,
-}: SupplierDetailsTabProps) {
+export default function CustomerDetailsTab({
+  tenantId, customers, debts, categories, openId, onOpenTracking, reload,
+}: CustomerDetailsTabProps) {
   const supabase = useRef(createClient()).current
   const { showToast } = useToast()
 
   const [search, setSearch] = useState('')
 
   // Detail panel
-  const [selected, setSelected] = useState<Supplier | null>(null)
+  const [selected, setSelected] = useState<Customer | null>(null)
 
-  // Supplier form
+  // Customer form
   const [showModal, setShowModal] = useState(false)
-  const [editItem, setEditItem]   = useState<Supplier | null>(null)
+  const [editItem, setEditItem]   = useState<Customer | null>(null)
   const [fName, setFName]         = useState('')
-  const [fContact, setFContact]   = useState('')
   const [fPhone, setFPhone]       = useState('')
   const [fEmail, setFEmail]       = useState('')
   const [fAddress, setFAddress]   = useState('')
   const [fNotes, setFNotes]       = useState('')
   const [fCategory, setFCategory]             = useState('')
-  const [fBankName, setFBankName]             = useState('')
-  const [fBankBranch, setFBankBranch]         = useState('')
-  const [fBankAccount, setFBankAccount]       = useState('')
-  const [fBankHolder, setFBankHolder]         = useState('')
   const [fOpeningBalance, setFOpeningBalance] = useState('')
-  const [showBankDrop, setShowBankDrop]       = useState(false)
   const [saving, setSaving]       = useState(false)
 
-  // Deep-link: ?open=<supplierId> (parsed once by the shell, passed down as `openId`)
+  // Deep-link: ?open=<customerId> (parsed once by the shell, passed down as `openId`)
   useEffect(() => {
     if (!openId) return
-    const target = suppliers.find(s => s.id === openId)
+    const target = customers.find(c => c.id === openId)
     if (target) setSelected(target)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openId, suppliers.length])
+  }, [openId, customers.length])
 
-  // ── Supplier CRUD ─────────────────────────────────────────────────────────
+  // ── Customer CRUD ─────────────────────────────────────────────────────────
 
-  const openModal = (s?: Supplier) => {
-    if (s) {
-      setEditItem(s)
-      setFName(s.name); setFCategory(s.category ?? ''); setFContact(s.contact_name ?? ''); setFPhone(s.phone ?? '')
-      setFEmail(s.email ?? ''); setFAddress(s.address ?? ''); setFNotes(s.notes ?? '')
-      setFBankName(s.bank_name ?? ''); setFBankBranch(s.bank_branch ?? '')
-      setFBankAccount(s.bank_account ?? ''); setFBankHolder(s.bank_account_holder ?? '')
-      setFOpeningBalance(s.opening_balance ? String(s.opening_balance) : '')
+  const openModal = (c?: Customer) => {
+    if (c) {
+      setEditItem(c)
+      setFName(c.name); setFCategory(c.category ?? ''); setFPhone(c.phone ?? '')
+      setFEmail(c.email ?? ''); setFAddress(c.address ?? ''); setFNotes(c.notes ?? '')
+      setFOpeningBalance(c.opening_balance ? String(c.opening_balance) : '')
     } else {
       setEditItem(null)
-      setFName(''); setFCategory(''); setFContact(''); setFPhone('')
+      setFName(''); setFCategory(''); setFPhone('')
       setFEmail(''); setFAddress(''); setFNotes('')
-      setFBankName(''); setFBankBranch(''); setFBankAccount(''); setFBankHolder('')
       setFOpeningBalance('')
     }
-    setShowBankDrop(false)
     setShowModal(true)
   }
 
-  const saveSupplier = async () => {
-    if (!fName.trim()) { showToast('נא להזין שם ספק', 'error'); return }
+  const saveCustomer = async () => {
+    if (!fName.trim()) { showToast('נא להזין שם לקוח', 'error'); return }
     const tid = tenantId!
     setSaving(true)
     const row = {
       tenant_id: tid,
       name: fName.trim(),
       category: fCategory.trim() || null,
-      contact_name: fContact.trim() || null,
       phone: fPhone.trim() || null,
       email: fEmail.trim() || null,
       address: fAddress.trim() || null,
       notes: fNotes.trim() || null,
-      bank_name: fBankName.trim() || null,
-      bank_branch: fBankBranch.trim() || null,
-      bank_account: fBankAccount.trim() || null,
-      bank_account_holder: fBankHolder.trim() || null,
       opening_balance: parseFloat(fOpeningBalance) || 0,
     }
     if (editItem) {
-      const { error } = await supabase.from('suppliers').update(row).eq('id', editItem.id)
+      const { error } = await supabase.from('customers').update(row).eq('id', editItem.id)
       if (error) { showToast('שגיאה בעדכון', 'error'); setSaving(false); return }
       showToast('עודכן ✓', 'success')
       if (selected?.id === editItem.id) setSelected({ ...editItem, ...row })
     } else {
-      const { error } = await supabase.from('suppliers').insert({ ...row, id: crypto.randomUUID() })
+      const { error } = await supabase.from('customers').insert({ ...row, id: crypto.randomUUID() })
       if (error) { showToast('שגיאה בשמירה', 'error'); setSaving(false); return }
-      showToast('ספק נוסף ✓', 'success')
+      showToast('לקוח נוסף ✓', 'success')
     }
     // Auto-save new category to DB
     const cat = fCategory.trim()
     if (cat && !categories.includes(cat)) {
-      await supabase.from('supplier_categories').insert({ tenant_id: tid, name: cat })
+      await supabase.from('customer_categories').insert({ tenant_id: tid, name: cat })
     }
     setSaving(false); setShowModal(false); reload()
   }
 
-  const deleteSupplier = async (s: Supplier) => {
-    if (!confirm(`למחוק את הספק "${s.name}"?\nחובות המקושרים לספק זה לא יימחקו.`)) return
-    const { error } = await supabase.from('suppliers').delete().eq('id', s.id)
+  const deleteCustomer = async (c: Customer) => {
+    if (!confirm(`למחוק את הלקוח "${c.name}"?\nחובות המקושרים ללקוח זה לא יימחקו.`)) return
+    const { error } = await supabase.from('customers').delete().eq('id', c.id)
     if (error) { showToast('שגיאה במחיקה', 'error'); return }
     showToast('נמחק', 'success')
-    if (selected?.id === s.id) setSelected(null)
+    if (selected?.id === c.id) setSelected(null)
     reload()
   }
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
-  const filtered = suppliers.filter(s =>
+  const filtered = customers.filter(c =>
     !search.trim() ||
-    s.name.includes(search) ||
-    (s.phone?.includes(search) ?? false) ||
-    (s.contact_name?.includes(search) ?? false)
+    c.name.includes(search) ||
+    (c.phone?.includes(search) ?? false)
   )
 
-  const suppDebts      = (suppId: string) => debts.filter(d => d.supplier_id === suppId)
-  const totalDebt      = (suppId: string) => suppDebts(suppId).filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
-  const openDebtsCount = (suppId: string) => suppDebts(suppId).filter(d => !d.is_closed).length
-  const nextCheck = (suppId: string) =>
-    scheduledPayments.filter(p => p.supplier_id === suppId && !p.is_paid).sort((a, b) => a.due_date.localeCompare(b.due_date))[0] ?? null
+  const custDebts      = (custId: string) => debts.filter(d => d.customer_id === custId)
+  const totalDebt      = (custId: string) => custDebts(custId).filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
+  const openDebtsCount = (custId: string) => custDebts(custId).filter(d => !d.is_closed).length
 
-  const selectedDebts     = selected ? suppDebts(selected.id) : []
+  const selectedDebts     = selected ? custDebts(selected.id) : []
   const selectedOpenTotal = selected ? totalDebt(selected.id) : 0
-  const selectedNextCheck = selected ? nextCheck(selected.id) : null
 
   // ── Excel / JSON ───────────────────────────────────────────────────────────
 
   function exportExcel() {
-    const rows = suppliers.map(s => ({ שם: s.name, קטגוריה: s.category ?? '', 'איש קשר': s.contact_name ?? '', טלפון: s.phone ?? '', מייל: s.email ?? '', כתובת: s.address ?? '', הערות: s.notes ?? '' }))
+    const rows = customers.map(c => ({ שם: c.name, קטגוריה: c.category ?? '', טלפון: c.phone ?? '', מייל: c.email ?? '', כתובת: c.address ?? '', הערות: c.notes ?? '' }))
     const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'ספקים')
-    XLSX.writeFile(wb, 'ספקים.xlsx')
+    XLSX.utils.book_append_sheet(wb, ws, 'לקוחות')
+    XLSX.writeFile(wb, 'לקוחות.xlsx')
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -189,42 +149,42 @@ export default function SupplierDetailsTab({
     <div>
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <Button onClick={() => openModal()}>+ הוסף ספק</Button>
+        <Button onClick={() => openModal()}>+ הוסף לקוח</Button>
 
         <div style={{ position: 'relative', flex: 1, minWidth: '200px', maxWidth: '340px', display: 'flex', alignItems: 'center' }}>
           <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 10, pointerEvents: 'none', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input
-            placeholder="חיפוש ספק / טלפון / איש קשר..."
+            placeholder="חיפוש לקוח / טלפון..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="form-input" style={{ paddingRight: 30 }}
           />
         </div>
         <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
-          {suppliers.length} ספקים
+          {customers.length} לקוחות
         </span>
         <ExcelMenu onExportExcel={exportExcel} />
       </div>
 
       <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
 
-        {/* ── Suppliers list ── */}
+        {/* ── Customers list ── */}
         <div style={{ flex: 1, minWidth: 0, maxHeight: 'calc(100dvh - 240px)', overflowY: 'auto', paddingLeft: '4px' }}>
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: '52px', marginBottom: '12px' }}>🏭</div>
-              <div style={{ fontSize: '14px' }}>אין ספקים. לחץ "+ הוסף ספק" כדי להתחיל.</div>
+              <div style={{ fontSize: '52px', marginBottom: '12px' }}>💳</div>
+              <div style={{ fontSize: '14px' }}>אין לקוחות. לחץ &quot;+ הוסף לקוח&quot; כדי להתחיל.</div>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
-              {filtered.map(s => {
-                const debt     = totalDebt(s.id)
-                const openCnt  = openDebtsCount(s.id)
-                const isActive = selected?.id === s.id
+              {filtered.map(c => {
+                const debt     = totalDebt(c.id)
+                const openCnt  = openDebtsCount(c.id)
+                const isActive = selected?.id === c.id
                 return (
                   <div
-                    key={s.id}
-                    onClick={() => setSelected(isActive ? null : s)}
+                    key={c.id}
+                    onClick={() => setSelected(isActive ? null : c)}
                     style={{
                       background: 'var(--bg-card)',
                       borderRadius: 'var(--radius)',
@@ -246,22 +206,21 @@ export default function SupplierDetailsTab({
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '17px', fontWeight: 700, flexShrink: 0,
                       }}>
-                        {s.name.charAt(0)}
+                        {c.name.charAt(0)}
                       </div>
 
                       {/* Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {s.name}
-                          {s.category && (
+                          {c.name}
+                          {c.category && (
                             <span style={{ fontSize: '10px', background: '#ede9fe', color: '#7c3aed', padding: '1px 7px', borderRadius: '20px', fontWeight: 600, flexShrink: 0 }}>
-                              {s.category}
+                              {c.category}
                             </span>
                           )}
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                          {s.contact_name && <span>👤 {s.contact_name}</span>}
-                          {s.phone && <span>📞 {s.phone}</span>}
+                          {c.phone && <span>📞 {c.phone}</span>}
                         </div>
                       </div>
                     </div>
@@ -283,9 +242,9 @@ export default function SupplierDetailsTab({
                         onClick={e => e.stopPropagation()}
                       >
                         {/* WhatsApp — always visible if phone exists */}
-                        {s.phone && (
+                        {c.phone && (
                           <a
-                            href={waUrl(s.phone, `שלום ${s.name}, `)}
+                            href={waUrl(c.phone, `שלום ${c.name}, `)}
                             target="_blank"
                             rel="noopener noreferrer"
                             title="שלח הודעה בווצאפ"
@@ -334,9 +293,6 @@ export default function SupplierDetailsTab({
                       {selected.category}
                     </span>
                   )}
-                  {selected.contact_name && (
-                    <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>👤 {selected.contact_name}</div>
-                  )}
                 </div>
               </div>
               {/* WhatsApp button in panel header */}
@@ -351,7 +307,7 @@ export default function SupplierDetailsTab({
                 </a>
               )}
               <Button variant="outline" size="sm" onClick={() => openModal(selected)}>✏️ ערוך</Button>
-              <Button variant="danger" size="sm" onClick={() => deleteSupplier(selected)}>🗑 מחק</Button>
+              <Button variant="danger" size="sm" onClick={() => deleteCustomer(selected)}>🗑 מחק</Button>
               <button
                 onClick={() => setSelected(null)}
                 style={{ padding: '6px 10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', color: 'var(--text-muted)' }}
@@ -382,53 +338,32 @@ export default function SupplierDetailsTab({
                   <div style={{ fontSize: '13px', fontWeight: 600 }}>{selected.opening_balance.toLocaleString('he-IL')} ₪</div>
                 </div>
               )}
-              {(selected.bank_name || selected.bank_account) && (
-                <div style={{ background: '#f0f9ff', borderRadius: '8px', padding: '10px 14px', gridColumn: '1 / -1', border: '1px solid #bae6fd' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '5px' }}>🏦 פרטי בנק לתשלום</div>
-                  <div style={{ fontSize: '13px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                    {selected.bank_name && <span><strong>בנק:</strong> {selected.bank_name}</span>}
-                    {selected.bank_branch && <span><strong>סניף:</strong> {selected.bank_branch}</span>}
-                    {selected.bank_account && <span><strong>חשבון:</strong> {selected.bank_account}</span>}
-                    {selected.bank_account_holder && <span><strong>שם:</strong> {selected.bank_account_holder}</span>}
-                  </div>
-                </div>
-              )}
             </div>
 
-            {/* Balance + next check summary */}
-            {(selectedOpenTotal > 0 || selectedNextCheck) && (
+            {/* Balance summary */}
+            {selectedOpenTotal > 0 && (
               <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                {selectedOpenTotal > 0 && (
-                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', flex: 1, minWidth: '140px' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>יתרת חוב פתוחה</div>
-                    <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(selectedOpenTotal)}</div>
-                  </div>
-                )}
-                {selectedNextCheck && (
-                  <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px 14px', flex: 1, minWidth: '140px' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>
-                      📅 {selectedNextCheck.payment_method === 'check' ? "צ׳ק" : 'העברה'} הבא לפירעון{selectedNextCheck.check_number ? ` #${selectedNextCheck.check_number}` : ''}
-                    </div>
-                    <div style={{ fontSize: '16px', fontWeight: 800, color: '#0369a1' }}>{fmt(selectedNextCheck.amount)} • {selectedNextCheck.due_date}</div>
-                  </div>
-                )}
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 14px', flex: 1, minWidth: '140px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>יתרת חוב פתוחה</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(selectedOpenTotal)}</div>
+                </div>
               </div>
             )}
 
             {/* Debts section */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>חובות לספק</h3>
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>חובות הלקוח</h3>
                 {selectedOpenTotal > 0 && (
                   <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--danger)' }}>
-                    סה"כ: {fmt(selectedOpenTotal)}
+                    סה&quot;כ: {fmt(selectedOpenTotal)}
                   </span>
                 )}
               </div>
 
               {selectedDebts.length === 0 ? (
                 <div style={{ color: 'var(--text-muted)', fontSize: '13px', padding: '20px 0', textAlign: 'center' }}>
-                  ✓ אין חובות לספק זה
+                  ✓ אין חובות ללקוח זה
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -490,7 +425,7 @@ export default function SupplierDetailsTab({
                   onClick={() => selected && onOpenTracking(selected.id)}
                   style={{ fontSize: '12px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}
                 >
-                  → מעקב ספקים מפורט
+                  → מעקב לקוחות מפורט
                 </button>
               </div>
             </div>
@@ -510,48 +445,42 @@ export default function SupplierDetailsTab({
             onClick={e => e.stopPropagation()}
           >
             <h3 style={{ margin: '0 0 22px', fontSize: '17px', fontWeight: 700 }}>
-              {editItem ? '✏️ עריכת ספק' : '+ ספק חדש'}
+              {editItem ? '✏️ עריכת לקוח' : '+ לקוח חדש'}
             </h3>
             <div style={{ display: 'grid', gap: '14px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                  שם ספק *
-                  <input value={fName} onChange={e => setFName(e.target.value)} placeholder="שם החברה / הספק" className="form-input" />
+                  שם לקוח *
+                  <input value={fName} onChange={e => setFName(e.target.value)} placeholder="שם הלקוח" className="form-input" />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   קטגוריה
                   <input
                     value={fCategory}
                     onChange={e => setFCategory(e.target.value)}
-                    list="supplier-categories-list"
+                    list="customer-categories-list"
                     placeholder="בחר או הקלד קטגוריה"
                     className="form-input"
                   />
-                  <datalist id="supplier-categories-list">
+                  <datalist id="customer-categories-list">
                     {categories.map(c => <option key={c} value={c} />)}
                   </datalist>
                 </label>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                  איש קשר
-                  <input value={fContact} onChange={e => setFContact(e.target.value)} placeholder="שם מלא" className="form-input" />
-                </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   טלפון
                   <input type="tel" value={fPhone} onChange={e => setFPhone(e.target.value)} placeholder="050-0000000" className="form-input" />
                 </label>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   אימייל
                   <input type="email" value={fEmail} onChange={e => setFEmail(e.target.value)} placeholder="example@mail.com" className="form-input" />
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                  כתובת
-                  <input value={fAddress} onChange={e => setFAddress(e.target.value)} placeholder="רחוב + עיר" className="form-input" />
-                </label>
               </div>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                כתובת
+                <input value={fAddress} onChange={e => setFAddress(e.target.value)} placeholder="רחוב + עיר" className="form-input" />
+              </label>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                 הערות
                 <textarea value={fNotes} onChange={e => setFNotes(e.target.value)} placeholder="פרטים נוספים..." rows={2} className="form-input" style={{ resize: 'vertical' }} />
@@ -561,73 +490,10 @@ export default function SupplierDetailsTab({
                 <input type="number" step="0.01" value={fOpeningBalance} onChange={e => setFOpeningBalance(e.target.value)} placeholder="0" className="form-input" />
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>חוב שהיה קיים לפני תחילת המעקב במערכת — משמש כנקודת פתיחה בכרטסת המודפסת</span>
               </label>
-              {/* Bank / payment details */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  פרטי חשבון לתשלום
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  {/* Bank name with auto-detect dropdown */}
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                    בנק
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        value={fBankName}
-                        placeholder="התחל להקליד..."
-                        className="form-input" style={{ paddingLeft: '32px' }}
-                        onFocus={() => setShowBankDrop(true)}
-                        onBlur={() => setTimeout(() => setShowBankDrop(false), 150)}
-                        onChange={e => { setFBankName(e.target.value); setShowBankDrop(true) }}
-                      />
-                      {/* Arrow toggle */}
-                      <button
-                        type="button"
-                        onMouseDown={e => { e.preventDefault(); setShowBankDrop(v => !v) }}
-                        style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '30px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      >▼</button>
-                      {/* Bank code badge */}
-                      {ISRAELI_BANKS.find(b => b.name === fBankName) && (
-                        <span style={{ position: 'absolute', left: '34px', top: '50%', transform: 'translateY(-50%)', background: '#e8f5ee', color: 'var(--primary)', fontSize: '11px', fontWeight: 700, padding: '2px 6px', borderRadius: '6px', pointerEvents: 'none' }}>
-                          {ISRAELI_BANKS.find(b => b.name === fBankName)!.code}
-                        </span>
-                      )}
-                      {/* Dropdown */}
-                      {showBankDrop && (
-                        <div style={{ position: 'absolute', top: '100%', right: 0, left: 0, zIndex: 300, background: '#fff', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.12)', maxHeight: '200px', overflowY: 'auto', marginTop: '2px' }}>
-                          {ISRAELI_BANKS
-                            .filter(b => !fBankName || b.name.includes(fBankName) || fBankName === b.name)
-                            .map(b => (
-                              <div
-                                key={b.code + b.name}
-                                onMouseDown={e => { e.preventDefault(); setFBankName(b.name); setShowBankDrop(false) }}
-                                style={{ padding: '9px 12px', cursor: 'pointer', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: fBankName === b.name ? '#f0fdf4' : undefined }}
-                              >
-                                <span>{b.name}</span>
-                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>{b.code}</span>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                    </div>
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                    סניף
-                    <input value={fBankBranch} onChange={e => setFBankBranch(e.target.value)} placeholder="מספר סניף" className="form-input" />
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                    מספר חשבון
-                    <input value={fBankAccount} onChange={e => setFBankAccount(e.target.value)} placeholder="12345678" className="form-input" />
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                    שם בעל החשבון
-                    <input value={fBankHolder} onChange={e => setFBankHolder(e.target.value)} placeholder="שם מלא" className="form-input" />
-                  </label>
-                </div>
-              </div>
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowModal(false)}>ביטול</Button>
-              <Button loading={saving} onClick={saveSupplier}>💾 שמור</Button>
+              <Button loading={saving} onClick={saveCustomer}>💾 שמור</Button>
             </div>
           </div>
         </div>

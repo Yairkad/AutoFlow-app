@@ -8,7 +8,6 @@
     "start": "next start",
     "lint": "eslint",
     "bump-version": "node scripts/bump-version.js",
-    "prepush": "node scripts/bump-version.js",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:report": "playwright show-report"

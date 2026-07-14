@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-14T15:20:53.034Z
-> Files: 11 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-14T22:09:24.733Z
+> Files: 28 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -9,12 +9,15 @@
 ## ../../../../0411~1/AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/09f05ae2-13fa-41eb-916f-813c69742d07/scratchpad/
 
 
+## ../../../../0411~1/AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/701f87d8-2649-4232-980f-6539f2a68d78/scratchpad/
+
+
 ## ../../../../0411~1/AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/8c4bc7d5-59ef-4912-97ea-a0c1fe807875/scratchpad/
 
-- `verify-checks.js` — Declares browser (~450 tok)
 
 ## ../../../.claude/plans/
 
+- `tidy-launching-melody.md` — Merge "חשבונות" (Billing) into Supplier/Customer Tracking (~4920 tok)
 
 ## ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/
 
@@ -24,7 +27,11 @@
 
 ## ./
 
-- `.gitignore` — Git ignore rules (~201 tok)
+- `_tmp_manual_verify.mjs` — API routes: GET (1 endpoints) (~537 tok)
+- `_tmp_manual_verify2.mjs` — API routes: GET (1 endpoints) (~1012 tok)
+- `_tmp_verify_migration.mjs` — env: count (~749 tok)
+- `package.json` — Node.js package manifest (~328 tok)
+- `proxy.ts` — ── Public paths – no auth needed ────────────────────────────────────────── (~1219 tok)
 
 ## .claude/
 
@@ -48,10 +55,6 @@
 
 
 ## app/(app)/checks/
-
-- `page.tsx` — ChecksPage, wraps ChecksJournalClient (~30 tok)
-
-## app/(app)/customer-tracking/
 
 
 ## app/(app)/customers/
@@ -94,9 +97,6 @@
 
 
 ## app/(app)/settings/
-
-
-## app/(app)/supplier-tracking/
 
 
 ## app/(app)/suppliers/
@@ -326,26 +326,28 @@
 
 ## components/billing/
 
+- `BillingClient.tsx` — fmt (~19630 tok)
 
 ## components/cars/
 
 
 ## components/checks/
 
-- `ChecksJournalClient.tsx` — "יומן צ'קים" page (`/checks`), the new top-level checks-only view (payment_method='check' only, transfers stay in Expenses). Filters (supplier/payee, check-number range, due-date range, status, text search) over all tenant `scheduled_payments`, grouped by due-month with per-month + grand totals. Reuses `ScheduledPaymentsModal` for add/edit/series (via new `initialOpenAdd`/`initialEditItem` props) and for Excel import (opens its list view); has its own filtered-scope Excel export (exceljs, adapted from the modal's) and styled print. Row-level mark-paid uses shared `lib/utils/markCheckPaid.ts`. Reads `?supplier=<id>` deep-link from `SupplierTrackingClient`/`SuppliersClient`-style links. Unlinked-to-debt checks show a read-only ⚠ badge linking to `/supplier-tracking?open=<id>` — the actual retroactive-allocation picker stays there, not duplicated here (~9500 tok)
-
-## components/customer-tracking/
-
-- `CustomerTrackingClient.tsx` — fmt (~21358 tok)
 
 ## components/customers/
 
+- `CustomerDetailsTab.tsx` — CustomerDetailsTab (~7374 tok)
+- `CustomersClient.tsx` — CustomersClient (~1809 tok)
+- `CustomerTrackingTab.tsx` — fmtDMY (~25755 tok)
+- `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~674 tok)
 
 ## components/dashboard/
 
 
 ## components/debts/
 
+- `CallLogModal.tsx` — fmtDT (~1464 tok)
+- `DebtsClient.tsx` — fmt (~10481 tok)
 
 ## components/documents/
 
@@ -364,7 +366,7 @@
 
 ## components/layout/
 
-- `Sidebar.tsx` — nav config: `NAV_ITEMS`/`ICONS`/`SECTIONS`. Now includes `/checks` ("יומן צ'קים", module `['expenses','suppliers']`, in the `'כספים'` section next to `/expenses`) (~5900 tok)
+- `Sidebar.tsx` — NAV_ITEMS (~5460 tok)
 
 ## components/products/
 
@@ -380,13 +382,14 @@
 
 ## components/settings/
 
-
-## components/supplier-tracking/
-
-- `SupplierTrackingClient.tsx` — main supplier debt tracking page ("מעקב ספקים"). The old "📅 יומן צ׳קים" calendar tab (+ its Excel export branch + its print option) was **removed** — checks now live on the dedicated `/checks` page (`ChecksJournalClient.tsx`). Only the `byMonth` view remains (no more tab bar/`Tab` type); added a "📅 יומן צ׳קים" link to `/checks` in the toolbar and a per-supplier "📅 יומן הצ׳קים" link to `/checks?supplier=<id>` in each expanded supplier-card header. `scheduledPayments` fetch/realtime + the embedded per-supplier-month payments list + the unlinked-payment allocation/ignore banner are unchanged (~23000 tok)
+- `SettingsClient.tsx` — ALL_MODULES (~30793 tok)
 
 ## components/suppliers/
 
+- `shared.ts` — Shared types/helpers for the merged /suppliers page (SupplierDetailsTab + SupplierTrackingTab). (~768 tok)
+- `SupplierDetailsTab.tsx` — former `SuppliersClient.tsx` body (profile/rolodex list+detail), now props-driven, no own fetch (~5000 tok)
+- `SuppliersClient.tsx` — SuppliersClient (~2444 tok)
+- `SupplierTrackingTab.tsx` — fmtDMY (~29860 tok)
 
 ## components/test-transfer/
 
@@ -396,6 +399,8 @@
 
 ## components/ui/
 
+- `UnitToggle.tsx` — UnitToggle (~213 tok)
+- `VatToggle.tsx` — VatToggle (~220 tok)
 
 ## components/yard/
 
@@ -408,10 +413,10 @@
 
 ## lib/contexts/
 
+- `ProfileContext.tsx` — ProfileContext (~776 tok)
 
 ## lib/debts/
 
-- `reconcileCustomerLedgerPayment.ts` — Exports CustomerDebtAllocation, CustomerPaymentMeta, reconcileCustomerLedgerPayment (~629 tok)
 
 ## lib/hooks/
 
@@ -421,8 +426,7 @@
 
 ## lib/utils/
 
-- `autoMarkOverdueChecks.ts` — `autoMarkOverdueChecksPaid(supabase, tenantId)`: for `scheduled_payments` rows with `payment_method='check', is_paid=false, due_date<=today`, race-guarded flips `is_paid=true`+`paid_date`, then inserts a matching `expenses` row and backfills `expense_id`. Called from `ProfileContext.load()` (session-level, admin-gated), and defensively re-run inside `ScheduledPaymentsModal.fetch()`, `AlertsPanel.load()`, and `ChecksJournalClient.load()` (~200 tok)
-- `markCheckPaid.ts` — `markScheduledPaymentPaid(supabase, tenantId, payment, {paidDate, category, description})`: inserts the matching `expenses` row then flips `scheduled_payments.is_paid/paid_date/expense_id`. Extracted from `ScheduledPaymentsModal.markPaid()` so `ChecksJournalClient.tsx` (`/checks`) can reuse the exact same logic for its own row-level "✓ שולם" action. Distinct from `autoMarkOverdueChecks.ts` (race-guarded, no user input, auto-fires at due_date) — this one is the user-driven manual/early-settle path (~350 tok)
+- `vat.ts` — Exports VAT_RATE, withVat, withoutVat (~42 tok)
 
 ## lib/yard/
 
@@ -435,10 +439,14 @@
 
 ## supabase/migrations/
 
-- `072_customer_ledger_payment_receipt.sql` — Lets a customer-ledger payment record whether a receipt (קבלה) was issued (~134 tok)
+- `076_customer_debt_due_date_calls_payments.sql` — "Occasional debtors" (customer_debts, the ad-hoc table behind /debts) get: (~474 tok)
 
 ## tests/
 
+- `forms.spec.ts` — Declares label (~1234 tok)
+- `navigation.spec.ts` — All app pages and their expected page title text (~804 tok)
+- `responsive.spec.ts` — Mobile viewport – same as iPhone 13 (~852 tok)
 
 ## tests/fixtures/
 
+- `mock.ts` — Supabase project ref (from env) (~988 tok)

@@ -44,8 +44,8 @@ test.describe('רספונסיביות – mobile', () => {
     expect(bodyWidth).toBeLessThanOrEqual(MOBILE.width + 5)
   })
 
-  test('חשבונות – אין overflow', async ({ page }) => {
-    await page.goto('/billing')
+  test('ספקים – אין overflow', async ({ page }) => {
+    await page.goto('/suppliers')
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth)
     expect(bodyWidth).toBeLessThanOrEqual(MOBILE.width + 5)
   })
