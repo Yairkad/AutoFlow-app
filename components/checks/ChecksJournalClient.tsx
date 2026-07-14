@@ -80,9 +80,9 @@ export default function ChecksJournalClient() {
     setFSupplier(''); setFNumFrom(''); setFNumTo(''); setFDateFrom(''); setFDateTo(''); setFStatus('open'); setFSearch('')
   }
 
-  // Collapsed months (membership = collapsed; default all expanded)
-  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set())
-  const toggleMonth = (mk: string) => setCollapsedMonths(prev => {
+  // Expanded months (membership = user opened it; default all collapsed)
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
+  const toggleMonth = (mk: string) => setExpandedMonths(prev => {
     const next = new Set(prev)
     if (next.has(mk)) next.delete(mk); else next.add(mk)
     return next
@@ -436,7 +436,7 @@ export default function ChecksJournalClient() {
 
           {monthGroups.map(([mk, items]) => {
             const monthTotal = items.filter(p => !p.is_paid).reduce((s, p) => s + Number(p.amount), 0)
-            const collapsed = collapsedMonths.has(mk)
+            const collapsed = !expandedMonths.has(mk)
             return (
               <div key={mk} style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
                 <div
@@ -551,29 +551,38 @@ export default function ChecksJournalClient() {
               main { height: auto !important; overflow: visible !important; }
               #print-area, #print-area * { visibility: visible; }
               #print-area { display: block !important; position: absolute; top: 0; right: 0; width: 100%; padding: 24px; direction: rtl; }
-              #print-area table { width: 100%; border-collapse: collapse; font-size: 13px; }
+              #print-area table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 6px; }
               #print-area th, #print-area td { border: 1px solid #333; padding: 6px 8px; text-align: right; }
               #print-area th { background: #eee; }
+              #print-area .print-month-header { font-weight: 700; font-size: 13px; background: #f1f5f9; padding: 6px 8px; margin-top: 14px; border: 1px solid #333; border-bottom: none; }
             }
           `}</style>
           <h2 style={{ margin: '0 0 4px' }}>{tenantName} — יומן צ'קים</h2>
-          <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {fmtDMY(todayISO())}</div>
-          <table>
-            <thead><tr><th>ספק</th><th>תיאור</th><th>תאריך פירעון</th><th>מספר צ׳ק</th><th>סכום</th><th>סטטוס</th></tr></thead>
-            <tbody>
-              {filtered.map(p => (
-                <tr key={p.id}>
-                  <td>{suppliers.find(s => s.id === p.supplier_id)?.name ?? '—'}</td>
-                  <td>{p.description}</td>
-                  <td>{fmtDMY(p.due_date)}</td>
-                  <td>{p.check_number ?? ''}</td>
-                  <td>{fmt(p.amount)}</td>
-                  <td>{p.is_paid ? 'שולם' : 'פתוח'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div style={{ marginTop: 16, fontWeight: 700, fontSize: 14 }}>סה&quot;כ: {fmt(filtered.reduce((s, p) => s + Number(p.amount), 0))}</div>
+          <div style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>תאריך הדפסה: {fmtDMY(todayISO())}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 16 }}>סה&quot;כ כללי: {fmt(filtered.reduce((s, p) => s + Number(p.amount), 0))}</div>
+          {monthGroups.map(([mk, items]) => {
+            const monthTotal = items.reduce((s, p) => s + Number(p.amount), 0)
+            return (
+              <div key={mk}>
+                <div className="print-month-header">{fmtMonth(mk)} — {items.length} צ׳קים — סה&quot;כ {fmt(monthTotal)}</div>
+                <table>
+                  <thead><tr><th>ספק</th><th>תיאור</th><th>תאריך פירעון</th><th>מספר צ׳ק</th><th>סכום</th><th>סטטוס</th></tr></thead>
+                  <tbody>
+                    {items.map(p => (
+                      <tr key={p.id}>
+                        <td>{suppliers.find(s => s.id === p.supplier_id)?.name ?? '—'}</td>
+                        <td>{p.description}</td>
+                        <td>{fmtDMY(p.due_date)}</td>
+                        <td>{p.check_number ?? ''}</td>
+                        <td>{fmt(p.amount)}</td>
+                        <td>{p.is_paid ? 'שולם' : 'פתוח'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

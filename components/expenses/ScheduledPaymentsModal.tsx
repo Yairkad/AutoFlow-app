@@ -38,6 +38,18 @@ interface OpenSupplierDebt {
   paid: number
 }
 
+interface SeriesRow {
+  tenant_id: string
+  description: string
+  amount: number
+  due_date: string
+  payment_method: 'check' | 'transfer'
+  supplier_id: string | null
+  notes: string | null
+  check_number: string | null
+  series_id: string
+}
+
 function monthKeyOf(iso: string) { return iso.slice(0, 7) }
 function fmtMonthShort(ym: string) {
   const [y, m] = ym.split('-')
@@ -155,6 +167,9 @@ export default function ScheduledPaymentsModal({
   const [fSeriesRoundAmt, setFSeriesRoundAmt] = useState('')
   const [fSeriesRemainderPos, setFSeriesRemainderPos] = useState<'first' | 'last'>('last')
 
+  // Series preview — shown after "שמור" in series mode, before the rows are actually inserted
+  const [seriesPreview, setSeriesPreview] = useState<SeriesRow[] | null>(null)
+
   // Debt-month allocation (which open supplier debts this check/series settles)
   const [openDebts,      setOpenDebts]      = useState<OpenSupplierDebt[]>([])
   const [selectedDebtIds, setSelectedDebtIds] = useState<Set<string>>(new Set())
@@ -248,6 +263,7 @@ export default function ScheduledPaymentsModal({
     setFMethod('check'); setFSupplier(initialSupplierId ?? ''); setFNotes(''); setFCheckNumber('')
     setFSeriesMode(false); setFSeriesCount('3'); setFSeriesInterval('month'); setFSeriesDays('30')
     setFSeriesSplit('equal'); setFSeriesRoundAmt(''); setFSeriesRemainderPos('last')
+    setSeriesPreview(null)
     setFormOpen(true)
   }
 
@@ -281,6 +297,62 @@ export default function ScheduledPaymentsModal({
       .map(id => ({ supplier_debt_id: id, amount: parseFloat(debtAllocAmounts[id] ?? '0') || 0 }))
       .filter(a => a.amount > 0)
 
+  const buildSeriesRows = (n: number, amount: number): SeriesRow[] => {
+    const baseCheckNum = fCheckNumber.trim() && /^\d+$/.test(fCheckNumber.trim()) ? parseInt(fCheckNumber.trim(), 10) : null
+    const seriesId = crypto.randomUUID()
+    const rowsToInsert: SeriesRow[] = []
+    for (let i = 0; i < n; i++) {
+      let amt: number
+      if (fSeriesSplit === 'equal') {
+        amt = Math.round((amount / n) * 100) / 100
+      } else {
+        const roundAmt = parseFloat(fSeriesRoundAmt) || 0
+        const isRemainderCheck = fSeriesRemainderPos === 'first' ? i === 0 : i === n - 1
+        amt = isRemainderCheck ? Math.round((amount - roundAmt * (n - 1)) * 100) / 100 : roundAmt
+      }
+      const dueDate = new Date(fDue + 'T00:00:00')
+      if (fSeriesInterval === 'month') dueDate.setMonth(dueDate.getMonth() + i)
+      else dueDate.setDate(dueDate.getDate() + (parseInt(fSeriesDays, 10) || 30) * i)
+      rowsToInsert.push({
+        tenant_id: tenantId, description: fDesc, amount: amt,
+        due_date: toLocalISODate(dueDate),
+        payment_method: fMethod, supplier_id: fSupplier || null, notes: fNotes || null,
+        check_number: baseCheckNum !== null ? String(baseCheckNum + i) : null,
+        series_id: seriesId,
+      })
+    }
+    // Fix rounding drift in equal-split mode so the sum is exact
+    if (fSeriesSplit === 'equal') {
+      const sum = rowsToInsert.reduce((s, r) => s + r.amount, 0)
+      rowsToInsert[rowsToInsert.length - 1].amount = Math.round((rowsToInsert[rowsToInsert.length - 1].amount + (amount - sum)) * 100) / 100
+    }
+    return rowsToInsert
+  }
+
+  const backToEditSeries = () => setSeriesPreview(null)
+
+  const confirmSeriesCreate = async () => {
+    if (!seriesPreview) return
+    setSaving(true)
+
+    const insRes = await supabase.from('scheduled_payments').insert(seriesPreview).select('id')
+    if (insRes.error) { setSaving(false); showToast('שגיאה: ' + insRes.error.message, 'error'); return }
+
+    const allocations = buildAllocations()
+    if (allocations.length > 0) {
+      const primaryId = insRes.data?.[0]?.id ?? null
+      const { error: reconErr } = await reconcileSupplierPayment(supabase, tenantId, allocations, primaryId)
+      if (reconErr) { showToast('הצ׳קים נשמרו, אך שיבוץ החוב נכשל: ' + reconErr, 'error') }
+    }
+
+    setSaving(false)
+    showToast(`${seriesPreview.length} צ׳קים נוצרו ✓`, 'success')
+    setSeriesPreview(null)
+    setFormOpen(false)
+    onClose()
+    fetch(); onRefresh?.()
+  }
+
   const save = async () => {
     if (!fDesc || !fAmount || !fDue) return
     const amount = parseFloat(fAmount)
@@ -304,54 +376,12 @@ export default function ScheduledPaymentsModal({
       return
     }
 
-    // ── New series of checks ─────────────────────────────────────────────────
+    // ── New series of checks: build a preview, don't insert yet ──────────────
     if (fSeriesMode) {
       const n = parseInt(fSeriesCount, 10)
       if (!n || n < 1) { setSaving(false); showToast('מספר צ׳קים לא תקין', 'error'); return }
-      const baseCheckNum = fCheckNumber.trim() && /^\d+$/.test(fCheckNumber.trim()) ? parseInt(fCheckNumber.trim(), 10) : null
-      const seriesId = crypto.randomUUID()
-      const rowsToInsert = []
-      for (let i = 0; i < n; i++) {
-        let amt: number
-        if (fSeriesSplit === 'equal') {
-          amt = Math.round((amount / n) * 100) / 100
-        } else {
-          const roundAmt = parseFloat(fSeriesRoundAmt) || 0
-          const isRemainderCheck = fSeriesRemainderPos === 'first' ? i === 0 : i === n - 1
-          amt = isRemainderCheck ? Math.round((amount - roundAmt * (n - 1)) * 100) / 100 : roundAmt
-        }
-        const dueDate = new Date(fDue + 'T00:00:00')
-        if (fSeriesInterval === 'month') dueDate.setMonth(dueDate.getMonth() + i)
-        else dueDate.setDate(dueDate.getDate() + (parseInt(fSeriesDays, 10) || 30) * i)
-        rowsToInsert.push({
-          tenant_id: tenantId, description: fDesc, amount: amt,
-          due_date: toLocalISODate(dueDate),
-          payment_method: fMethod, supplier_id: fSupplier || null, notes: fNotes || null,
-          check_number: baseCheckNum !== null ? String(baseCheckNum + i) : null,
-          series_id: seriesId,
-        })
-      }
-      // Fix rounding drift in equal-split mode so the sum is exact
-      if (fSeriesSplit === 'equal') {
-        const sum = rowsToInsert.reduce((s, r) => s + r.amount, 0)
-        rowsToInsert[rowsToInsert.length - 1].amount = Math.round((rowsToInsert[rowsToInsert.length - 1].amount + (amount - sum)) * 100) / 100
-      }
-
-      const insRes = await supabase.from('scheduled_payments').insert(rowsToInsert).select('id')
-      if (insRes.error) { setSaving(false); showToast('שגיאה: ' + insRes.error.message, 'error'); return }
-
-      const allocations = buildAllocations()
-      if (allocations.length > 0) {
-        const primaryId = insRes.data?.[0]?.id ?? null
-        const { error: reconErr } = await reconcileSupplierPayment(supabase, tenantId, allocations, primaryId)
-        if (reconErr) { showToast('הצ׳קים נשמרו, אך שיבוץ החוב נכשל: ' + reconErr, 'error') }
-      }
-
       setSaving(false)
-      showToast(`${n} צ׳קים נוצרו ✓`, 'success')
-      setFormOpen(false)
-      onClose()
-      fetch(); onRefresh?.()
+      setSeriesPreview(buildSeriesRows(n, amount))
       return
     }
 
@@ -814,16 +844,45 @@ export default function ScheduledPaymentsModal({
       {/* ── Add / Edit form modal ─────────────────────────────────────────────── */}
       <Modal
         open={formOpen}
-        onClose={() => setFormOpen(false)}
-        title={editItem ? 'עריכת תשלום מתוזמן' : fSeriesMode ? 'סדרת צ׳קים חדשה' : 'תשלום מתוזמן חדש'}
+        onClose={() => { setFormOpen(false); setSeriesPreview(null) }}
+        title={seriesPreview ? 'סיכום סדרת צ׳קים' : editItem ? 'עריכת תשלום מתוזמן' : fSeriesMode ? 'סדרת צ׳קים חדשה' : 'תשלום מתוזמן חדש'}
         maxWidth={520}
         footer={
-          <>
-            <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
-            <Button onClick={save} loading={saving}>💾 שמור</Button>
-          </>
+          seriesPreview ? (
+            <>
+              <Button variant="secondary" onClick={backToEditSeries}>✏️ חזרה לעריכה</Button>
+              <Button onClick={confirmSeriesCreate} loading={saving}>✓ אשר וצור</Button>
+            </>
+          ) : (
+            <>
+              <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
+              <Button onClick={save} loading={saving}>💾 שמור</Button>
+            </>
+          )
         }
       >
+        {seriesPreview ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ padding: '12px 16px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700 }}>נוצרו {seriesPreview.length} צ׳קים</div>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary)', marginTop: '4px' }}>{fmt(seriesPreview.reduce((s, r) => s + r.amount, 0))}</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>סכום כולל לסדרה</div>
+            </div>
+            <div style={{ maxHeight: 260, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+              {seriesPreview.map((r, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: i < seriesPreview.length - 1 ? '1px solid #f1f5f9' : 'none', fontSize: 13 }}>
+                  <span>{fmtDate(r.due_date)}{r.check_number ? ` — #${r.check_number}` : ''}</span>
+                  <span style={{ fontWeight: 600 }}>{fmt(r.amount)}</span>
+                </div>
+              ))}
+            </div>
+            {selectedDebtIds.size > 0 && (
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                שיבוץ מול חובות פתוחים: {fmt(totalAllocated)} מתוך {fmt(formAmount)}
+              </div>
+            )}
+          </div>
+        ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {!editItem && (
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -989,6 +1048,7 @@ export default function ScheduledPaymentsModal({
             </div>
           )}
         </div>
+        )}
       </Modal>
 
       {/* ── Mark as paid modal ───────────────────────────────────────────────── */}
