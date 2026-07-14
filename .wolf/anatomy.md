@@ -348,7 +348,7 @@
 
 ## components/customer-tracking/
 
-- `CustomerTrackingClient.tsx` — "מעקב לקוחות" page, structural mirror of `supplier-tracking/SupplierTrackingClient.tsx` for the new customer-ledger feature (`customers`/`customer_ledger_debts`/`customer_ledger_payments` tables). Same by-customer/by-month grouping, invoice-line add/edit modal, direct payment modal (4 methods incl. inline check-number/date fields — no check-series/calendar system per product decision), styled print ledger, Excel import/export, WhatsApp. `direction:'charge'` here means the CUSTOMER owes the business (inverted vs. supplier meaning) — `bal()` formula itself unchanged. Deep-link `?open=<customerId>` (~9000 tok)
+- `CustomerTrackingClient.tsx` — "מעקב לקוחות" page, structural mirror of `supplier-tracking/SupplierTrackingClient.tsx` for the new customer-ledger feature (`customers`/`customer_ledger_debts`/`customer_ledger_payments` tables). Same by-customer/by-month grouping, invoice-line add/edit modal, direct payment modal (4 methods incl. inline check-number/date fields — no check-series/calendar system per product decision), styled print ledger, Excel import/export, WhatsApp. `direction:'charge'` here means the CUSTOMER owes the business (inverted vs. supplier meaning) — `bal()` formula itself unchanged. Deep-link `?open=<customerId>`. Printed ledger's "יתרה בפועל" running column now nets `d.paid` per debt (bug-011, 2026-07-14) — unlike the supplier print ledger, which deliberately stays gross/unnetted (~9000 tok)
 
 ## components/customers/
 
@@ -426,6 +426,9 @@
 
 
 ## components/yard/
+
+- `WorkCardClient.tsx` — "רכב בטיפול" work-card page (a car currently on the lift/lot): item cart, quick-add services, and barcode scan (`handleBarcodeScan` → `/api/yard/barcode`) to add a tire/product/service to the session. Scan now rejects out-of-stock matches (`item.stock<=0` → "פריט אזל מהמלאי") instead of silently adding them (bug-012, 2026-07-14). Session `status` transitions: `active` → `pending_office` (`sendToOffice`) → `archived` (office closes it) — inventory is only deducted at `archived`, in `app/api/yard/sessions/[id]/route.ts`, not when items are added here.
+- `FreeSearchClient.tsx` — full-text/manual product-tire-service search page (`/yard/[id]/search`) for adding items to a work-card without scanning; also has its own barcode-scan entry point (`handleBarcode`, camera + hidden-input physical scanner) hitting the same `/api/yard/barcode`. Same out-of-stock check as WorkCardClient added 2026-07-14; also fixed a null-deref crash — `/api/yard/barcode` returns HTTP 200 with a `null` body on no-match, so the old `!res.ok` check never actually caught "not found".
 
 
 ## lib/

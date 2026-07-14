@@ -77,9 +77,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         if (!item.ref_id) continue
 
         if (item.item_type === 'tire') {
-          await supabase.rpc('decrement_tire_qty', { p_id: item.ref_id, p_qty: item.quantity })
+          const { error: decErr } = await supabase.rpc('decrement_tire_qty', { p_id: item.ref_id, p_qty: item.quantity })
+          if (decErr) console.error('decrement_tire_qty failed', item.ref_id, decErr.message)
         } else if (item.item_type === 'product') {
-          await supabase.rpc('decrement_product_qty', { p_id: item.ref_id, p_qty: item.quantity })
+          const { error: decErr } = await supabase.rpc('decrement_product_qty', { p_id: item.ref_id, p_qty: item.quantity })
+          if (decErr) console.error('decrement_product_qty failed', item.ref_id, decErr.message)
         }
       }
     }

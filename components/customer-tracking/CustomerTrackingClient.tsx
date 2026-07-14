@@ -1138,6 +1138,10 @@ export default function CustomerTrackingClient() {
                       const items = Array.isArray(d.invoices) && d.invoices.length > 0 ? d.invoices : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]
                       return items.map((item, idx) => {
                         running += d.direction === 'credit' ? -Number(item.amount) : Number(item.amount)
+                        // Net out payments recorded against this debt once its rows are done,
+                        // matching bal()/openingForReport above — otherwise a payment never
+                        // shows up in the printed running balance even though it's listed as "שולם".
+                        if (idx === items.length - 1 && d.direction !== 'credit') running -= Number(d.paid)
                         return (
                           <tr key={`${d.id}-${idx}`}>
                             <td>{fmtDMY(d.date)}</td>

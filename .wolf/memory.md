@@ -875,3 +875,9 @@
 | 17:04 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | expanded (+6 lines) | ~209 |
 
 | — | Added transfer (העברה) reference-number field (מספר אסמכתא) to both supplier and customer payment modals — reuses check_number/payment_ref columns, only shown when payMethod==='העברה'. Added quick-fill "סכום שהתקבל/ששולם" + שיוך dropdown (auto oldest-first spread, or target one specific open invoice for partial payment) that pre-fills the existing manual checkbox/amount list — user can still edit before confirming, keeping the manual-control model | components/customer-tracking/CustomerTrackingClient.tsx, components/supplier-tracking/SupplierTrackingClient.tsx | done, tsc clean | ~3k |
+
+## Session: 2026-07-14
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| — | Fixed 2 user-reported bugs: (1) customer ledger printed "כרטסת לקוח" running balance ("יתרה בפועל") never subtracted recorded payments, only opening-balance carry-in did — now nets `d.paid` per debt on its last row, matching bal()/openingForReport. (2) yard barcode scan: added missing out-of-stock check (`item.stock<=0` → "פריט אזל מהמלאי" instead of silently adding / crashing on null in FreeSearchClient); found root cause of stock never decrementing — decrement_tire_qty/decrement_product_qty RPCs (migration 053) updated a `quantity` column that doesn't exist (real column is `qty`), silently no-op'ing on every session archive since the rpc() error return was never checked | components/customer-tracking/CustomerTrackingClient.tsx, components/yard/WorkCardClient.tsx, components/yard/FreeSearchClient.tsx, app/api/yard/sessions/[id]/route.ts, supabase/migrations/071_fix_yard_decrement_qty_column.sql | done, tsc clean | ~3k |
