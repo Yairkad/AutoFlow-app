@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>אוטו ליין – הדמיה רידיזיין</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Heebo', sans-serif;
+  background: #0a0f1e;
+  color: #fff;
+  overflow-x: hidden;
+}
+a { text-decoration: none; color: inherit; }
+
+/* ── Fixed employee login ── */
+.emp-login {
+  position: fixed; top: 20px; left: 20px; z-index: 200;
+  background: rgba(245,200,0,0.12);
+  border: 1px solid rgba(245,200,0,0.3);
+  backdrop-filter: blur(10px);
+  color: #F5C800; font-size: 13px; font-weight: 700;
+  padding: 8px 16px; border-radius: 8px;
+  transition: background 0.2s;
+}
+.emp-login:hover { background: rgba(245,200,0,0.22); }
+
+/* ════════════════════════════════
+   HERO
+════════════════════════════════ */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #060d1f 0%, #0e1d45 50%, #060d1f 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Geometric decorative circles */
+.deco {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.deco-1 {
+  width: 700px; height: 700px;
+  background: radial-gradient(circle at center, rgba(245,200,0,0.10) 0%, transparent 65%);
+  top: -200px; right: -150px;
+}
+.deco-2 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle at center, rgba(26,42,108,0.6) 0%, transparent 70%);
+  bottom: -100px; left: -80px;
+}
+.deco-3 {
+  width: 280px; height: 280px;
+  background: radial-gradient(circle at center, rgba(245,200,0,0.06) 0%, transparent 70%);
+  top: 40%; left: 35%;
+}
+/* Yellow accent line */
+.hero-accent-line {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: linear-gradient(to bottom, transparent, #F5C800 30%, #F5C800 70%, transparent);
+  opacity: 0.6;
+}
+
+.hero-inner {
+  display: flex;
+  align-items: center;
+  max-width: 1240px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 80px 60px;
+  gap: 64px;
+  flex: 1;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Text column (right in RTL) ── */
+.hero-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #F5C800;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  opacity: 0;
+}
+.eyebrow::before {
+  content: '';
+  display: block;
+  width: 28px; height: 2px;
+  background: #F5C800;
+}
+
+.headline {
+  font-size: clamp(52px, 5.5vw, 88px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -3px;
+  color: #fff;
+}
+.headline .word { display: inline-block; }
+.headline .accent { color: #F5C800; }
+
+.hero-sub {
+  color: rgba(255,255,255,0.6);
+  font-size: 17px;
+  line-height: 1.75;
+  max-width: 500px;
+  opacity: 0;
+}
+
+.cta-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  opacity: 0;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-family: 'Heebo', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  border: none;
+  white-space: nowrap;
+}
+.btn:hover { transform: translateY(-3px); }
+.btn:active { transform: translateY(0); }
+
+.btn-primary {
+  background: #F5C800;
+  color: #060d1f;
+  box-shadow: 0 4px 20px rgba(245,200,0,0.30);
+}
+.btn-primary:hover { box-shadow: 0 8px 32px rgba(245,200,0,0.50); background: #ffd60a; }
+
+.btn-ghost {
+  background: rgba(255,255,255,0.07);
+  color: #fff;
+  border: 1.5px solid rgba(255,255,255,0.20);
+  backdrop-filter: blur(8px);
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.45); }
+
+/* ── Info column (left in RTL) ── */
+.hero-info {
+  flex: 0 0 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  opacity: 0;
+}
+
+.logo-placeholder {
+  width: 110px; height: 110px;
+  background: rgba(245,200,0,0.12);
+  border: 2px solid rgba(245,200,0,0.35);
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 900;
+  color: #F5C800;
+  letter-spacing: -2px;
+}
+
+.glass-card {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 20px;
+  padding: 24px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.biz-name { color: #F5C800; font-size: 19px; font-weight: 800; }
+.biz-tag { color: rgba(255,255,255,0.5); font-size: 13px; margin-top: -8px; }
+
+.info-list { display: flex; flex-direction: column; gap: 10px; }
+.info-item {
+  display: flex; align-items: center; gap: 10px;
+  color: rgba(255,255,255,0.80);
+  font-size: 14px; font-weight: 500;
+  transition: color 0.15s;
+}
+.info-item:hover { color: #F5C800; }
+
+.contact-row { display: flex; gap: 8px; }
+.c-btn {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13px; font-weight: 700;
+  transition: transform 0.15s, filter 0.15s;
+}
+.c-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+.c-btn.call { background: #1a2a6c; color: #fff; border: 1px solid rgba(255,255,255,0.15); }
+.c-btn.wa { background: #25d366; color: #fff; }
+
+.nav-row { display: flex; gap: 8px; }
+.nav-btn {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.65);
+  font-size: 12px; font-weight: 600;
+  transition: background 0.15s;
+}
+.nav-btn:hover { background: rgba(255,255,255,0.10); color: #fff; }
+
+/* Scroll indicator */
+.scroll-indicator {
+  position: absolute;
+  bottom: 36px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  opacity: 0;
+}
+.scroll-mouse {
+  width: 24px; height: 40px;
+  border: 2px solid rgba(255,255,255,0.25);
+  border-radius: 12px;
+  display: flex; justify-content: center;
+  padding-top: 6px;
+}
+.scroll-wheel {
+  width: 4px; height: 8px;
+  background: #F5C800;
+  border-radius: 2px;
+  animation: scrollWheel 1.8s ease-in-out infinite;
+}
+@keyframes scrollWheel {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(14px); opacity: 0; }
+}
+
+/* ════════════════════════════════
+   STATS BAR
+════════════════════════════════ */
+.stats-bar {
+  background: #F5C800;
+  padding: 32px 40px;
+  display: flex;
+  justify-content: center;
+  gap: 0;
+}
+.stat-item {
+  flex: 1;
+  max-width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+.stat-item + .stat-item::before {
+  content: '';
+  position: absolute;
+  right: 0; top: 10%; bottom: 10%;
+  width: 1px;
+  background: rgba(10,15,30,0.15);
+}
+.stat-number {
+  font-size: 40px;
+  font-weight: 900;
+  color: #060d1f;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+.stat-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(10,15,30,0.65);
+}
+
+/* ════════════════════════════════
+   SERVICES
+════════════════════════════════ */
+.section {
+  padding: 96px 40px;
+}
+.section-inner { max-width: 1200px; margin: 0 auto; }
+
+.section-header {
+  text-align: center;
+  margin-bottom: 56px;
+}
+.section-header h2 {
+  font-size: clamp(28px, 3.5vw, 44px);
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  margin-bottom: 8px;
+}
+.section-header p {
+  color: rgba(255,255,255,0.55);
+  font-size: 16px;
+}
+.section-header .title-line {
+  width: 52px; height: 4px;
+  background: #F5C800;
+  border-radius: 2px;
+  margin: 16px auto 0;
+}
+
+.section.light { background: #0f1830; }
+.section.white { background: #fff; color: #1e293b; }
+.section.white .section-header h2 { color: #1a2a6c; }
+.section.white .section-header p { color: #64748b; }
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.service-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 32px 28px;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+.service-card::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; left: 0;
+  height: 3px;
+  background: #F5C800;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s ease;
+}
+.service-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(245,200,0,0.25);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+.service-card:hover::before { transform: scaleX(1); }
+
+.service-icon { font-size: 38px; margin-bottom: 16px; }
+.service-card h3 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+.service-card p { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.65; }
+
+/* ════════════════════════════════
+   CARS FOR SALE
+════════════════════════════════ */
+.cars-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+.car-card {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.car-card:hover { transform: translateY(-6px); box-shadow: 0 12px 40px rgba(0,0,0,0.14); }
+.car-img {
+  width: 100%; height: 180px;
+  background: linear-gradient(135deg, #e2e8f0, #f1f5f9);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 64px;
+}
+.car-info { padding: 18px; }
+.car-info h3 { font-size: 17px; font-weight: 700; color: #1a2a6c; margin-bottom: 6px; }
+.car-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.car-badge {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.car-price {
+  font-size: 22px;
+  font-weight: 900;
+  color: #1a2a6c;
+  letter-spacing: -0.5px;
+}
+
+/* ════════════════════════════════
+   PROMOTIONS
+════════════════════════════════ */
+.promo-card {
+  background: linear-gradient(135deg, #1a2a6c, #0e1d45);
+  border: 1px solid rgba(245,200,0,0.2);
+  border-radius: 18px;
+  padding: 36px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  transition: border-color 0.25s;
+  max-width: 860px;
+  margin: 0 auto;
+}
+.promo-card:hover { border-color: rgba(245,200,0,0.5); }
+.promo-badge {
+  background: #F5C800;
+  color: #060d1f;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 6px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.promo-content h3 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+.promo-content p { color: rgba(255,255,255,0.65); font-size: 15px; line-height: 1.6; }
+
+/* ════════════════════════════════
+   PRICE LIST
+════════════════════════════════ */
+.price-table {
+  max-width: 700px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.price-row:hover { border-color: #1a2a6c; box-shadow: 0 2px 12px rgba(26,42,108,0.1); }
+.price-name { font-weight: 600; color: #1e293b; font-size: 15px; }
+.price-value {
+  font-size: 17px;
+  font-weight: 800;
+  color: #1a2a6c;
+  background: #fffde7;
+  padding: 4px 12px;
+  border-radius: 8px;
+}
+
+/* ════════════════════════════════
+   FAQ
+════════════════════════════════ */
+.faq-list { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.faq-item {
+  background: #0f1830;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.faq-q {
+  padding: 18px 22px;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+.faq-q::after { content: '+'; font-size: 22px; color: #F5C800; transition: transform 0.2s; }
+.faq-item.open .faq-q::after { transform: rotate(45deg); }
+.faq-a {
+  padding: 0 22px;
+  max-height: 0;
+  overflow: hidden;
+  color: rgba(255,255,255,0.6);
+  font-size: 14px;
+  line-height: 1.7;
+  transition: max-height 0.3s ease, padding 0.3s;
+}
+.faq-item.open .faq-a { max-height: 200px; padding: 0 22px 18px; }
+
+/* ════════════════════════════════
+   CUSTOMER AREA
+════════════════════════════════ */
+.customer-section {
+  background: linear-gradient(135deg, #060d1f, #1a2a6c 50%, #060d1f);
+  padding: 96px 40px;
+  text-align: center;
+}
+.customer-inner { max-width: 500px; margin: 0 auto; }
+.customer-inner h2 { font-size: 32px; font-weight: 900; margin-bottom: 10px; }
+.customer-inner p { color: rgba(255,255,255,0.6); font-size: 15px; line-height: 1.7; margin-bottom: 28px; }
+.search-box {
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.search-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.08);
+  border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  color: #fff;
+  font-family: 'Heebo', sans-serif;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-input::placeholder { color: rgba(255,255,255,0.35); }
+.search-input:focus { border-color: #F5C800; }
+.search-btn {
+  width: 100%;
+  padding: 13px;
+  background: #F5C800;
+  color: #060d1f;
+  font-family: 'Heebo', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.search-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(245,200,0,0.4); }
+
+/* ════════════════════════════════
+   FOOTER
+════════════════════════════════ */
+.footer {
+  background: #04080f;
+  padding: 48px 40px 32px;
+  text-align: center;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.footer-brand { font-size: 22px; font-weight: 900; color: #F5C800; margin-bottom: 8px; }
+.footer-info { color: rgba(255,255,255,0.45); font-size: 14px; line-height: 1.8; }
+.footer-links {
+  display: flex; justify-content: center; gap: 28px; flex-wrap: wrap;
+  margin-top: 24px; padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 13px;
+}
+.footer-links a { color: rgba(255,255,255,0.45); transition: color 0.15s; }
+.footer-links a:hover { color: #F5C800; }
+.footer-copy { color: rgba(255,255,255,0.2); font-size: 12px; margin-top: 20px; }
+
+/* ── DEMO BANNER ── */
+.demo-banner {
+  background: #F5C800;
+  color: #060d1f;
+  text-align: center;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 300;
+  letter-spacing: 0.5px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .hero-inner { flex-direction: column-reverse; padding: 40px 24px 80px; gap: 40px; }
+  .hero-info { flex: none; width: 100%; max-width: 420px; }
+  .stats-bar { flex-wrap: wrap; padding: 28px 20px; }
+  .stat-item { flex: 0 0 50%; }
+  .stat-item + .stat-item::before { display: none; }
+}
+@media (max-width: 640px) {
+  .headline { font-size: clamp(40px, 10vw, 60px); letter-spacing: -2px; }
+  .cta-row .btn { flex: 1; padding: 13px 16px; font-size: 14px; }
+  .section { padding: 64px 20px; }
+  .stat-item { flex: 0 0 50%; padding: 12px 8px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Demo banner -->
+<div class="demo-banner">🎨 הדמיה בלבד – כך ייראה הדף הציבורי אחרי הרידיזיין</div>
+
+<!-- Employee login -->
+<a href="#" class="emp-login">🔑 כניסת עובדים</a>
+
+<!-- ══════════════════ HERO ══════════════════ -->
+<section class="hero">
+  <div class="hero-accent-line"></div>
+  <div class="deco deco-1"></div>
+  <div class="deco deco-2"></div>
+  <div class="deco deco-3"></div>
+
+  <div class="hero-inner">
+    <!-- Text side (right in RTL) -->
+    <div class="hero-text">
+      <span class="eyebrow">שירות מקצועי · מהיר · אמין</span>
+
+      <h1 class="headline">
+        <span class="word">הרכב</span> <span class="word">שלך</span><br/>
+        <span class="word accent">בידיים</span><br/>
+        <span class="word">הטובות</span> <span class="word">ביותר</span>
+      </h1>
+
+      <p class="hero-sub">
+        מתמחים בטיפול מקצועי לרכב – מצמיגים ועד בדיקות מקיפות לפני קניה.
+        שירות אדיב, מחירים הוגנים ועבודה מדויקת.
+      </p>
+
+      <div class="cta-row">
+        <a href="#services" class="btn btn-primary">השירותים שלנו</a>
+        <a href="#cars" class="btn btn-primary">🚗 רכבים למכירה</a>
+        <a href="#customer" class="btn btn-ghost">מעקב סטטוס</a>
+      </div>
+    </div>
+
+    <!-- Info side (left in RTL) -->
+    <div class="hero-info" id="hero-info">
+      <div class="logo-placeholder">AL</div>
+
+      <div class="glass-card">
+        <p class="biz-name">אוטו ליין</p>
+        <p class="biz-tag">פנצריה ושירותי רכב</p>
+
+        <div class="info-list">
+          <a href="tel:050-0000000" class="info-item">
+            <span>📞</span><span>050-000-0000</span>
+          </a>
+          <div class="info-item">
+            <span>📍</span><span>רחוב הדוגמה 1, עיר</span>
+          </div>
+          <div class="info-item">
+            <span>🕐</span><span>א'–ה' 08:00–18:00 | ו' 08:00–14:00</span>
+          </div>
+        </div>
+
+        <div class="contact-row">
+          <a href="#" class="c-btn call">📞 שיחה</a>
+          <a href="#" class="c-btn wa">💬 ווצאפ</a>
+        </div>
+
+        <div class="nav-row">
+          <a href="#" class="nav-btn">🗺️ Waze</a>
+          <a href="#" class="nav-btn">📌 Google Maps</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scroll indicator -->
+  <div class="scroll-indicator" id="scroll-ind">
+    <div class="scroll-mouse">
+      <div class="scroll-wheel"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ STATS BAR ══════════════════ -->
+<div class="stats-bar" id="stats-bar">
+  <div class="stat-item">
+    <span class="stat-number" id="stat-0">0+</span>
+    <span class="stat-label">שנות ניסיון</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-number" id="stat-1">0+</span>
+    <span class="stat-label">רכבים טופלו</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-number" id="stat-2">0</span>
+    <span class="stat-label">שירותים מקצועיים</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-number" id="stat-3">0%</span>
+    <span class="stat-label">שביעות רצון</span>
+  </div>
+</div>
+
+<!-- ══════════════════ SERVICES ══════════════════ -->
+<section class="section light" id="services">
+  <div class="section-inner">
+    <div class="section-header anim-section">
+      <h2>השירותים שלנו</h2>
+      <p>כל מה שהרכב שלך צריך – במקום אחד</p>
+      <div class="title-line"></div>
+    </div>
+    <div class="services-grid" id="services-grid">
+      <div class="service-card anim-card">
+        <div class="service-icon">🔧</div>
+        <h3>תיקון ומכירת צמיגים</h3>
+        <p>כל מותגי הצמיגים המובילים במחירים תחרותיים. התאמה מדויקת לכל רכב.</p>
+      </div>
+      <div class="service-card anim-card">
+        <div class="service-icon">🚗</div>
+        <h3>כיוון פרונט</h3>
+        <p>כיוון מדויק ממוחשב לכל סוגי הרכבים. שיפור יציבות נהיגה וחיסכון בצמיגים.</p>
+      </div>
+      <div class="service-card anim-card">
+        <div class="service-icon">🔍</div>
+        <h3>בדיקת רכב לפני קניה</h3>
+        <p>בדיקה מקיפה של 150 נקודות לפני רכישת רכב יד 2. תחסוך כסף ועגמת נפש.</p>
+      </div>
+      <div class="service-card anim-card">
+        <div class="service-icon">🏷️</div>
+        <h3>סוכנות רכב יד 2</h3>
+        <p>קניה ומכירה של רכבים משומשים באמינות מלאה. מחיר הוגן, שקיפות מלאה.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ CARS ══════════════════ -->
+<section class="section white" id="cars">
+  <div class="section-inner">
+    <div class="section-header anim-section">
+      <h2>רכבים למכירה</h2>
+      <p>מבחר רכבים משומשים מוכנים לאספקה מיידית</p>
+      <div class="title-line"></div>
+    </div>
+    <div class="cars-grid">
+      <div class="car-card anim-card">
+        <div class="car-img">🚙</div>
+        <div class="car-info">
+          <h3>טויוטה קורולה 2019</h3>
+          <div class="car-meta">
+            <span class="car-badge">⛽ בנזין</span>
+            <span class="car-badge">📏 85,000 ק"מ</span>
+            <span class="car-badge">⚙️ אוטומט</span>
+          </div>
+          <div class="car-price">₪72,000</div>
+        </div>
+      </div>
+      <div class="car-card anim-card">
+        <div class="car-img">🚗</div>
+        <div class="car-info">
+          <h3>הונדה סיוויק 2020</h3>
+          <div class="car-meta">
+            <span class="car-badge">⛽ היברידי</span>
+            <span class="car-badge">📏 62,000 ק"מ</span>
+            <span class="car-badge">⚙️ אוטומט</span>
+          </div>
+          <div class="car-price">₪88,000</div>
+        </div>
+      </div>
+      <div class="car-card anim-card">
+        <div class="car-img">🛻</div>
+        <div class="car-info">
+          <h3>מזדה CX-5 2021</h3>
+          <div class="car-meta">
+            <span class="car-badge">⛽ בנזין</span>
+            <span class="car-badge">📏 41,000 ק"מ</span>
+            <span class="car-badge">⚙️ אוטומט</span>
+          </div>
+          <div class="car-price">₪115,000</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ PROMOTIONS ══════════════════ -->
+<section class="section light anim-section">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2>מבצעים חמים</h2>
+      <p>הצעות מיוחדות לתקופה מוגבלת</p>
+      <div class="title-line"></div>
+    </div>
+    <div class="promo-card anim-section">
+      <span class="promo-badge">מבצע חם 🔥</span>
+      <div class="promo-content">
+        <h3>החלפת 4 צמיגים + כיוון פרונט</h3>
+        <p>קנה 4 צמיגים וקבל כיוון פרונט ב-50% הנחה. המבצע בתוקף עד סוף החודש.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ PRICE LIST ══════════════════ -->
+<section class="section white anim-section">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2 style="color:#1a2a6c">מחירון שירותים</h2>
+      <p>מחירים שקופים ללא הפתעות</p>
+      <div class="title-line"></div>
+    </div>
+    <div class="price-table">
+      <div class="price-row anim-card"><span class="price-name">כיוון פרונט</span><span class="price-value">₪180</span></div>
+      <div class="price-row anim-card"><span class="price-name">החלפת צמיג (כולל עבודה)</span><span class="price-value">₪50</span></div>
+      <div class="price-row anim-card"><span class="price-name">איזון גלגלים</span><span class="price-value">₪120</span></div>
+      <div class="price-row anim-card"><span class="price-name">בדיקת רכב לפני קניה</span><span class="price-value">₪350</span></div>
+      <div class="price-row anim-card"><span class="price-name">תיקון פנצ'ר</span><span class="price-value">₪40</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ FAQ ══════════════════ -->
+<section class="section light anim-section">
+  <div class="section-inner">
+    <div class="section-header">
+      <h2>שאלות נפוצות</h2>
+      <p>תשובות לשאלות הכי נפוצות שלכם</p>
+      <div class="title-line"></div>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">כמה זמן לוקח כיוון פרונט?</div>
+        <div class="faq-a">כיוון פרונט אצלנו לוקח בדרך כלל 30–45 דקות. אפשר להמתין במקום.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">האם צריך לתאם תור מראש?</div>
+        <div class="faq-a">לרוב השירותים ניתן להגיע ללא תור. לבדיקת רכב לפני קניה מומלץ לתאם מראש.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">האם אתם מתקנים כל סוגי הצמיגים?</div>
+        <div class="faq-a">כן! אנו מטפלים בכל סוגי הצמיגים לכל סוגי הרכבים – מכוניות פרטיות, ג'יפים ומסחריים.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">מה כוללת בדיקת רכב לפני קניה?</div>
+        <div class="faq-a">בדיקה מקיפה של 150+ נקודות: מנוע, גוף, תיבת הילוכים, בלמים, צמיגים, מרחב נוסעים ועוד.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ CUSTOMER AREA ══════════════════ -->
+<section class="customer-section" id="customer">
+  <div class="customer-inner anim-section">
+    <p style="color:#F5C800;font-size:12px;font-weight:700;letter-spacing:3px;margin-bottom:12px;">איזור לקוחות</p>
+    <h2>מעקב סטטוס טיפול</h2>
+    <p>הזן את מספר הלוחית ו-4 הספרות האחרונות של הטלפון – ותוכל לעקוב בזמן אמת.</p>
+    <div class="search-box">
+      <input class="search-input" type="text" placeholder="מספר לוחית רישוי (למשל 123-45-678)" />
+      <input class="search-input" type="text" placeholder="4 ספרות אחרונות של הטלפון" />
+      <button class="search-btn">🔍 חפש טיפול</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ FOOTER ══════════════════ -->
+<footer class="footer">
+  <div class="footer-brand">אוטו ליין</div>
+  <div class="footer-info">
+    רחוב הדוגמה 1, עיר | טלפון: 050-000-0000<br/>
+    שעות: א'–ה' 08:00–18:00 | ו' 08:00–14:00
+  </div>
+  <div class="footer-links">
+    <a href="#">מדיניות פרטיות</a>
+    <a href="#">תנאי שימוש</a>
+    <a href="#">הצהרת נגישות</a>
+    <a href="#">Waze</a>
+    <a href="#">Google Maps</a>
+  </div>
+  <div class="footer-copy">© 2025 אוטו ליין. כל הזכויות שמורות.</div>
+</footer>
+
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+/* ── Hero entry timeline ── */
+const tl = gsap.timeline({ delay: 0.4 });
+
+tl.from('.eyebrow', { opacity: 0, y: 24, duration: 0.6, ease: 'power3.out' })
+  .from('.headline .word', { y: 80, opacity: 0, duration: 0.7, stagger: 0.08, ease: 'power4.out' }, '<0.1')
+  .from('.hero-sub',  { opacity: 0, y: 20, duration: 0.55, ease: 'power2.out' }, '<0.15')
+  .from('.cta-row > *', { opacity: 0, y: 20, duration: 0.5, stagger: 0.1, ease: 'power2.out' }, '<0.15')
+  .from('#hero-info', { opacity: 0, x: -50, duration: 0.8, ease: 'power3.out' }, '<-0.5')
+  .from('#scroll-ind', { opacity: 0, duration: 0.5 }, '<0.4');
+
+/* ── Floating deco circles ── */
+gsap.to('.deco-1', { y: -30, x: 15, duration: 6, ease: 'sine.inOut', yoyo: true, repeat: -1 });
+gsap.to('.deco-2', { y: 25, x: -12, duration: 7.5, ease: 'sine.inOut', yoyo: true, repeat: -1, delay: 1.5 });
+gsap.to('.deco-3', { y: -18, duration: 5, ease: 'sine.inOut', yoyo: true, repeat: -1, delay: 0.8 });
+
+/* ── Stats counter ── */
+const stats = [
+  { id: 'stat-0', end: 15, suffix: '+' },
+  { id: 'stat-1', end: 5000, suffix: '+' },
+  { id: 'stat-2', end: 4, suffix: '' },
+  { id: 'stat-3', end: 100, suffix: '%' },
+];
+
+stats.forEach(s => {
+  const el = document.getElementById(s.id);
+  const counter = { val: 0 };
+  gsap.to(counter, {
+    val: s.end,
+    duration: 2,
+    ease: 'power2.out',
+    scrollTrigger: { trigger: '#stats-bar', start: 'top 85%', toggleActions: 'play none none none' },
+    onUpdate() { el.textContent = Math.round(counter.val).toLocaleString('he') + s.suffix; },
+  });
+});
+
+/* ── Section headers fade up ── */
+gsap.utils.toArray('.anim-section').forEach(el => {
+  gsap.from(el, {
+    y: 48, opacity: 0, duration: 0.8, ease: 'power3.out',
+    scrollTrigger: { trigger: el, start: 'top 82%', toggleActions: 'play none none none' },
+  });
+});
+
+/* ── Staggered cards ── */
+['#services-grid', '.cars-grid', '.price-table', '.faq-list'].forEach(sel => {
+  const parent = document.querySelector(sel);
+  if (!parent) return;
+  gsap.from(parent.children, {
+    y: 60, opacity: 0, duration: 0.7, stagger: 0.1, ease: 'power3.out',
+    scrollTrigger: { trigger: parent, start: 'top 80%', toggleActions: 'play none none none' },
+  });
+});
+
+/* ── Promo card ── */
+gsap.from('.promo-card', {
+  y: 40, opacity: 0, duration: 0.8, ease: 'power3.out',
+  scrollTrigger: { trigger: '.promo-card', start: 'top 80%', toggleActions: 'play none none none' },
+});
+</script>
+</body>
+</html>

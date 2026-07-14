@@ -885,6 +885,7 @@
 | — | Fixed extra blank page on every ledger print (customer + supplier). Root cause: AppShell's `<main>` has a fixed `height: calc(100vh - var(--header-h))` + `overflowY:auto`, and `visibility:hidden` (used to hide on-screen content during print) doesn't collapse that box's layout height, so it printed as a trailing blank page. Added `main { height: auto !important; overflow: visible !important; }` to both files' `@media print` block | components/customer-tracking/CustomerTrackingClient.tsx, components/supplier-tracking/SupplierTrackingClient.tsx | done, tsc clean (bug-013) | ~1.2k |
 | 17:30 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | CSS: height, overflow | ~102 |
 | 17:31 | Session end: 2 writes across 2 files (CustomerTrackingClient.tsx, SupplierTrackingClient.tsx) | 15 reads | ~27049 tok |
+| — | Customer payments now show as their own row in the ledger (on-screen + print), with optional receipt (קבלה) tracking — issued yes/no + number. Migration 072 adds payment_date/receipt_issued/receipt_number to customer_ledger_payments (previously write-only, never read back into the UI). Print ledger's running balance rewritten to sort all debt/credit/payment rows chronologically *before* accumulating `running` (was a bug mid-implementation: computing running before sort gave wrong intermediate totals). Added a small print status icon per row (✓/◐/blank for debts, 🧾/💰 for payments) per user's ask, mirroring on-screen StatusChip. Not ported to supplier ledger (deliberately different/gross there) | supabase/migrations/072_customer_ledger_payment_receipt.sql, lib/debts/reconcileCustomerLedgerPayment.ts, components/customer-tracking/CustomerTrackingClient.tsx | done, tsc clean, not yet committed | ~9k |
 | 17:34 | Session end: 2 writes across 2 files (CustomerTrackingClient.tsx, SupplierTrackingClient.tsx) | 18 reads | ~27049 tok |
 | 17:36 | Created ../../../.claude/plans/synthetic-twirling-grove.md | — | ~2185 |
 | 17:41 | Created lib/utils/markCheckPaid.ts | — | ~414 |
@@ -894,3 +895,43 @@
 | 17:42 | Edited components/expenses/ScheduledPaymentsModal.tsx | modified ScheduledPaymentsModal() | ~71 |
 | 17:42 | Edited components/expenses/ScheduledPaymentsModal.tsx | added 2 condition(s) | ~289 |
 | 17:42 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: paidDate | ~141 |
+| 17:43 | Session end: 9 writes across 5 files (CustomerTrackingClient.tsx, SupplierTrackingClient.tsx, synthetic-twirling-grove.md, markCheckPaid.ts, ScheduledPaymentsModal.tsx) | 26 reads | ~4026 tok |
+| 17:45 | Session end: 9 writes across 5 files (CustomerTrackingClient.tsx, SupplierTrackingClient.tsx, synthetic-twirling-grove.md, markCheckPaid.ts, ScheduledPaymentsModal.tsx) | 27 reads | ~4026 tok |
+| 17:46 | Created components/checks/ChecksJournalClient.tsx | — | ~8641 |
+| 17:47 | Created app/(app)/checks/page.tsx | — | ~43 |
+| 17:47 | Edited components/layout/Sidebar.tsx | 2→3 lines | ~97 |
+| 17:47 | Edited components/layout/Sidebar.tsx | inline fix | ~35 |
+| 17:47 | Edited components/layout/Sidebar.tsx | 1→2 lines | ~78 |
+| 17:48 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | 2→1 lines | ~12 |
+| 17:48 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | added 1 import(s) | ~35 |
+| 17:49 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | 2→1 lines | ~16 |
+| 17:49 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | 3→2 lines | ~18 |
+| 17:49 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | removed 22 lines | ~20 |
+| 17:49 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | modified exportExcel() | ~152 |
+| 17:49 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | reduced (-9 lines) | ~196 |
+| 17:50 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | removed 69 lines | ~21 |
+| 17:51 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | CSS: textDecoration, display, alignItems | ~256 |
+| 17:51 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | inline fix | ~20 |
+| 17:51 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | removed 11 lines | ~23 |
+| 17:51 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | 6→9 lines | ~142 |
+| 17:52 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | removed 30 lines | ~16 |
+| 17:54 | Created supabase/migrations/072_customer_ledger_payment_receipt.sql | — | ~134 |
+| 17:54 | Edited lib/debts/reconcileCustomerLedgerPayment.ts | 6→9 lines | ~66 |
+| 17:54 | Edited lib/debts/reconcileCustomerLedgerPayment.ts | 4→7 lines | ~98 |
+| 17:54 | Edited components/customer-tracking/CustomerTrackingClient.tsx | expanded (+7 lines) | ~116 |
+| 17:55 | Edited components/customer-tracking/CustomerTrackingClient.tsx | added nullish coalescing | ~70 |
+| 17:55 | Edited components/customer-tracking/CustomerTrackingClient.tsx | 1→2 lines | ~48 |
+| 17:55 | Edited components/customer-tracking/CustomerTrackingClient.tsx | 1→3 lines | ~54 |
+| 17:55 | Edited components/customer-tracking/CustomerTrackingClient.tsx | added 1 condition(s) | ~159 |
+| 17:55 | Edited components/customer-tracking/CustomerTrackingClient.tsx | 2→3 lines | ~88 |
+| 17:55 | Edited components/customer-tracking/CustomerTrackingClient.tsx | 1→2 lines | ~37 |
+| 17:55 | Edited components/customer-tracking/CustomerTrackingClient.tsx | CSS: payment_date, receipt_issued, receipt_number | ~117 |
+| 17:56 | Edited components/customer-tracking/CustomerTrackingClient.tsx | CSS: alignItems, cursor, margin | ~324 |
+| 17:56 | Edited components/customer-tracking/CustomerTrackingClient.tsx | expanded (+15 lines) | ~1232 |
+| 17:57 | Edited components/customer-tracking/CustomerTrackingClient.tsx | modified fmt() | ~1043 |
+| 17:57 | Edited components/customer-tracking/CustomerTrackingClient.tsx | modified fmt() | ~903 |
+| 17:58 | Created ../../../../0411~1/AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/8c4bc7d5-59ef-4912-97ea-a0c1fe807875/scratchpad/verify-checks.js | — | ~421 |
+| 18:01 | Created ../../../../0411~1/AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/8c4bc7d5-59ef-4912-97ea-a0c1fe807875/scratchpad/verify-checks.js | — | ~450 |
+| 18:05 | New feature: יומן צ'קים — dedicated /checks page (month totals + filters by supplier/check-number range/date/status/search), pulls checks out of being buried in ScheduledPaymentsModal/supplier-tracking's old calendar tab; all check↔debt linkage/series/allocation logic reused unchanged | app/(app)/checks/page.tsx (new), components/checks/ChecksJournalClient.tsx (new), lib/utils/markCheckPaid.ts (new, shared mark-paid helper), ScheduledPaymentsModal.tsx (+initialOpenAdd/initialEditItem props), SupplierTrackingClient.tsx (removed calendar tab+print, added outbound /checks links), Sidebar.tsx (+nav item) | tsc clean; /checks + /supplier-tracking compile & render 200 in dev (unauth'd — dev-login creds in .env.local are stale/401, full authed click-through not verified) | ~9500 tok |
+| 18:01 | Session end: 44 writes across 11 files (CustomerTrackingClient.tsx, SupplierTrackingClient.tsx, synthetic-twirling-grove.md, markCheckPaid.ts, ScheduledPaymentsModal.tsx) | 32 reads | ~65235 tok |
+| 18:20 | Edited .gitignore | expanded (+10 lines) | ~73 |

@@ -43,3 +43,13 @@ next-env.d.ts
 # demo files
 checklist-demo.html
 /certificates
+
+# playwright
+/playwright-report/
+
+# OpenWolf runtime state (regenerated locally, not project source)
+.wolf/cron-state.json
+.wolf/designqc-report.json
+.wolf/suggestions.json
+.wolf/token-ledger.json
+.wolf/hooks/_session.json*
