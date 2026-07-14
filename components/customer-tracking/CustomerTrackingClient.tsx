@@ -39,6 +39,13 @@ interface Customer {
   opening_balance: number
 }
 
+interface CustomerLedgerPayment {
+  id: string; customer_ledger_debt_id: string; amount: number
+  payment_method: string; check_number: string | null; check_date: string | null
+  payment_date: string | null; receipt_issued: boolean; receipt_number: string | null
+  notes: string | null; created_at: string
+}
+
 type Filter = 'open' | 'closed' | 'all'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -59,6 +66,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10)
 const bal = (d: { amount: number; paid: number; direction: Direction }) =>
   d.direction === 'credit' ? -Number(d.amount) : Math.max(0, Number(d.amount) - Number(d.paid))
 const EMPTY_INV = (): InvoiceEntry => ({ type: 'invoice', number: '', amount: '', date: todayISO(), direction: 'charge', notes: '' })
+const paymentDateOf = (p: CustomerLedgerPayment) => p.payment_date ?? p.check_date ?? p.created_at.slice(0, 10)
 
 const waUrl = (phone: string, text: string) => {
   let digits = phone.replace(/\D/g, '')
@@ -93,6 +101,7 @@ export default function CustomerTrackingClient() {
 
   // Data
   const [customerDebts, setCustomerDebts] = useState<CustomerLedgerDebt[]>([])
+  const [customerPayments, setCustomerPayments] = useState<CustomerLedgerPayment[]>([])
   const [customers, setCustomers]         = useState<Customer[]>([])
 
   // Row selection
@@ -138,6 +147,8 @@ export default function CustomerTrackingClient() {
   const [payCheckNumber, setPayCheckNumber] = useState('')
   const [payCheckDate, setPayCheckDate]     = useState('')
   const [payRefNumber, setPayRefNumber]     = useState('')
+  const [payReceiptIssued, setPayReceiptIssued] = useState(false)
+  const [payReceiptNumber, setPayReceiptNumber] = useState('')
   const [payQuickAmount, setPayQuickAmount] = useState('')
   const [payQuickTarget, setPayQuickTarget] = useState('auto')
   const [paySaving, setPaySaving] = useState(false)
@@ -191,12 +202,14 @@ export default function CustomerTrackingClient() {
     const tid = await resolveTenant()
     if (!tid) return
     setLoading(true)
-    const [custDebtRes, custRes] = await Promise.all([
+    const [custDebtRes, custRes, custPayRes] = await Promise.all([
       supabase.from('customer_ledger_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
       supabase.from('customers').select('id,name,phone,opening_balance').eq('tenant_id', tid).order('name'),
+      supabase.from('customer_ledger_payments').select('*').eq('tenant_id', tid),
     ])
     if (custDebtRes.data) setCustomerDebts(custDebtRes.data)
     if (custRes.data)     setCustomers(custRes.data)
+    if (custPayRes.data)  setCustomerPayments(custPayRes.data)
     else if (custRes.error) showToast('שגיאה בטעינת לקוחות: ' + custRes.error.message, 'error')
     if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
     setLoading(false)
@@ -227,6 +240,7 @@ export default function CustomerTrackingClient() {
     const ch = supabase.channel('customer-tracking-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_ledger_debts' }, loadAll)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, loadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_ledger_payments' }, loadAll)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [supabase, loadAll])
@@ -330,6 +344,7 @@ export default function CustomerTrackingClient() {
     setPayCustomerId(customerId)
     setPayMethod('מזומן'); setPayDate(todayISO()); setPayCheckNumber(''); setPayCheckDate(todayISO())
     setPayRefNumber(''); setPayQuickAmount(''); setPayQuickTarget('auto')
+    setPayReceiptIssued(false); setPayReceiptNumber('')
     if (preselectId) {
       const d = customerDebts.find(x => x.id === preselectId)
       setPaySelectedIds(new Set([preselectId]))
@@ -407,6 +422,9 @@ export default function CustomerTrackingClient() {
       check_number: refNumber || null,
       check_date: payMethod === "צ'ק" ? (payCheckDate || null) : null,
       notes: null,
+      payment_date: payDate,
+      receipt_issued: payReceiptIssued,
+      receipt_number: payReceiptIssued ? (payReceiptNumber.trim() || null) : null,
     })
     if (error) { showToast('שגיאה בתשלום: ' + error, 'error'); setPaySaving(false); return }
 
@@ -703,41 +721,56 @@ export default function CustomerTrackingClient() {
                             </tr>
                           </thead>
                           <tbody>
-                            {monthDebts.flatMap(d => {
-                              const items = Array.isArray(d.invoices) && d.invoices.length > 0
-                                ? d.invoices
-                                : [{ type: d.doc_type ?? 'invoice', number: d.doc_number ?? '', amount: Number(d.amount) }]
-                              return items.map((item, idx) => (
-                                <tr
-                                  key={`${d.id}-${idx}`}
-                                  onClick={() => setSelectedId(selectedId === d.id ? null : d.id)}
-                                  className="tr-hover"
-                                  style={{ cursor: 'pointer', background: selectedId === d.id ? '#eff6ff' : d.is_closed && d.direction === 'charge' ? '#fafafa' : undefined }}
-                                >
-                                  <td style={tdSt}>
-                                    {item.number ? `#${item.number}` : '—'}
-                                    {d.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>{d.description}</div>}
-                                  </td>
-                                  <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
-                                  <td style={tdSt}><StatusChip debt={d} /></td>
-                                  <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? '#16a34a' : 'var(--danger)' }}>
-                                    {d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}
-                                  </td>
-                                  <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                    <button
-                                      onClick={e => { e.stopPropagation(); openDebtModal(d) }}
-                                      title="ערוך"
-                                      style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
-                                    >✏️</button>
-                                    <button
-                                      onClick={e => { e.stopPropagation(); deleteDebt(d.id) }}
-                                      title="מחק"
-                                      style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
-                                    >🗑</button>
-                                  </td>
-                                </tr>
-                              ))
-                            })}
+                            {(() => {
+                              const monthDebtIds = new Set(monthDebts.map(d => d.id))
+                              const debtRows = monthDebts.flatMap(d => {
+                                const items = Array.isArray(d.invoices) && d.invoices.length > 0
+                                  ? d.invoices
+                                  : [{ type: d.doc_type ?? 'invoice', number: d.doc_number ?? '', amount: Number(d.amount) }]
+                                return items.map((item, idx) => ({ kind: 'debt' as const, date: d.date, node: (
+                                  <tr
+                                    key={`${d.id}-${idx}`}
+                                    onClick={() => setSelectedId(selectedId === d.id ? null : d.id)}
+                                    className="tr-hover"
+                                    style={{ cursor: 'pointer', background: selectedId === d.id ? '#eff6ff' : d.is_closed && d.direction === 'charge' ? '#fafafa' : undefined }}
+                                  >
+                                    <td style={tdSt}>
+                                      {item.number ? `#${item.number}` : '—'}
+                                      {d.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>{d.description}</div>}
+                                    </td>
+                                    <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
+                                    <td style={tdSt}><StatusChip debt={d} /></td>
+                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? '#16a34a' : 'var(--danger)' }}>
+                                      {d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}
+                                    </td>
+                                    <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                      <button
+                                        onClick={e => { e.stopPropagation(); openDebtModal(d) }}
+                                        title="ערוך"
+                                        style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
+                                      >✏️</button>
+                                      <button
+                                        onClick={e => { e.stopPropagation(); deleteDebt(d.id) }}
+                                        title="מחק"
+                                        style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
+                                      >🗑</button>
+                                    </td>
+                                  </tr>
+                                ) }))
+                              })
+                              const paymentRows = customerPayments
+                                .filter(p => monthDebtIds.has(p.customer_ledger_debt_id) && monthKeyOf(paymentDateOf(p)) === mk)
+                                .map(p => ({ kind: 'payment' as const, date: paymentDateOf(p), node: (
+                                  <tr key={`pay-${p.id}`} style={{ background: '#f0fdf6' }}>
+                                    <td style={tdSt}>{p.receipt_issued ? `🧾 קבלה #${p.receipt_number || '—'}` : '💰 תשלום'}</td>
+                                    <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{paymentDateOf(p)}</td>
+                                    <td style={tdSt}><span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#dcfce7', color: '#16a34a', fontWeight: 600 }}>{p.payment_method}</span></td>
+                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: '#16a34a' }}>−{fmt(p.amount)}</td>
+                                    <td style={tdSt}></td>
+                                  </tr>
+                                ) }))
+                              return [...debtRows, ...paymentRows].sort((a, b) => a.date.localeCompare(b.date)).map(r => r.node)
+                            })()}
                           </tbody>
                           <tfoot>
                             <tr style={{ borderTop: '2px solid var(--border)', background: '#f8fafc' }}>
@@ -951,6 +984,17 @@ export default function CustomerTrackingClient() {
                   תאריך תשלום
                   <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="form-input" />
                 </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, marginTop: '12px', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={payReceiptIssued} onChange={e => setPayReceiptIssued(e.target.checked)} />
+                  🧾 הופקה קבלה
+                </label>
+                {payReceiptIssued && (
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600, marginTop: '6px' }}>
+                    מספר קבלה
+                    <input value={payReceiptNumber} onChange={e => setPayReceiptNumber(e.target.value)} placeholder="מספר קבלה..." className="form-input" style={{ margin: 0 }} />
+                  </label>
+                )}
               </>
             )}
 
@@ -1123,7 +1167,7 @@ export default function CustomerTrackingClient() {
                 <div style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>תקופה: {rangeLabel}</div>
                 <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {fmtDMY(new Date())}</div>
                 <table>
-                  <thead><tr><th>תאריך</th><th>מספר</th><th style={{ width: 46 }}>סוג</th><th>הערה</th><th>סכום</th><th>יתרה בפועל</th></tr></thead>
+                  <thead><tr><th>תאריך</th><th>מספר</th><th style={{ width: 46 }}>סוג</th><th style={{ width: 30 }}>מצב</th><th>הערה</th><th>סכום</th><th>יתרה בפועל</th></tr></thead>
                   <tbody>
                     {showOpeningRow && (
                       <tr style={{ fontWeight: 700, background: '#f5f5f5' }}>
@@ -1132,29 +1176,52 @@ export default function CustomerTrackingClient() {
                         <td>יתרת פתיחה</td>
                         <td>—</td>
                         <td>—</td>
+                        <td>—</td>
                         <td>{fmt(openingForReport)}</td>
                       </tr>
                     )}
-                    {debts.flatMap(d => {
-                      const items = Array.isArray(d.invoices) && d.invoices.length > 0 ? d.invoices : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]
-                      return items.map((item, idx) => {
-                        running += d.direction === 'credit' ? -Number(item.amount) : Number(item.amount)
-                        // Net out payments recorded against this debt once its rows are done,
-                        // matching bal()/openingForReport above — otherwise a payment never
-                        // shows up in the printed running balance even though it's listed as "שולם".
-                        if (idx === items.length - 1 && d.direction !== 'credit') running -= Number(d.paid)
-                        return (
-                          <tr key={`${d.id}-${idx}`}>
-                            <td>{fmtDMY(d.date)}</td>
-                            <td>{item.number || '—'}</td>
-                            <td style={{ width: 46, textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
-                            <td>{d.description || ''}</td>
-                            <td style={{ textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}</td>
-                            <td>{fmt(running)}</td>
-                          </tr>
-                        )
+                    {(() => {
+                      const debtIds = new Set(debts.map(d => d.id))
+                      // Build every printable event (debt/credit lines + payments), sort
+                      // chronologically FIRST, then walk the sorted list accumulating
+                      // `running` in that same order — payments net out at their own
+                      // recorded date instead of being lumped onto the debt's own row,
+                      // so the running balance reflects when money actually arrived.
+                      type Ev = { date: string; render: () => React.ReactNode }
+                      const events: Ev[] = []
+                      debts.forEach(d => {
+                        const items = Array.isArray(d.invoices) && d.invoices.length > 0 ? d.invoices : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]
+                        items.forEach((item, idx) => {
+                          const statusIcon = d.direction === 'credit' ? '—' : d.is_closed ? '✓' : Number(d.paid) > 0 ? '◐' : ''
+                          events.push({ date: d.date, render: () => (
+                            <tr key={`${d.id}-${idx}`}>
+                              <td>{fmtDMY(d.date)}</td>
+                              <td>{item.number || '—'}</td>
+                              <td style={{ width: 46, textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
+                              <td style={{ width: 30, textAlign: 'center', color: statusIcon === '✓' ? '#16a34a' : statusIcon === '◐' ? '#d97706' : undefined }}>{statusIcon}</td>
+                              <td>{d.description || ''}</td>
+                              <td style={{ textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}</td>
+                              <td>{fmt(running += d.direction === 'credit' ? -Number(item.amount) : Number(item.amount))}</td>
+                            </tr>
+                          ) })
+                        })
                       })
-                    })}
+                      customerPayments.filter(p => debtIds.has(p.customer_ledger_debt_id)).forEach(p => {
+                        const date = paymentDateOf(p)
+                        events.push({ date, render: () => (
+                          <tr key={`pay-${p.id}`} style={{ background: '#f5faf6' }}>
+                            <td>{fmtDMY(date)}</td>
+                            <td>—</td>
+                            <td style={{ width: 46 }}>תשלום</td>
+                            <td style={{ width: 30, textAlign: 'center' }}>{p.receipt_issued ? '🧾' : '💰'}</td>
+                            <td>{p.receipt_issued ? `קבלה #${p.receipt_number || '—'}` : p.payment_method}</td>
+                            <td style={{ textAlign: 'left' }}>−{fmt(p.amount)}</td>
+                            <td>{fmt(running -= Number(p.amount))}</td>
+                          </tr>
+                        ) })
+                      })
+                      return events.sort((a, b) => a.date.localeCompare(b.date)).map(ev => ev.render())
+                    })()}
                   </tbody>
                 </table>
                 <div style={{ marginTop: 16, fontWeight: 700, fontSize: 14 }}>
