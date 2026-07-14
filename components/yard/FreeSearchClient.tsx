@@ -81,7 +81,9 @@ export default function FreeSearchClient({ session, filterType }: Props) {
     setCameraOpen(false)
     const res = await fetch(`/api/yard/barcode?code=${encodeURIComponent(code)}`)
     if (!res.ok) { alert('לא נמצא פריט עם ברקוד זה'); return }
-    const item: SearchResult = await res.json()
+    const item: SearchResult | null = await res.json()
+    if (!item) { alert('לא נמצא פריט עם ברקוד זה'); return }
+    if (item.stock !== null && item.stock <= 0) { alert(`פריט אזל מהמלאי: ${item.name}`); return }
     if (item.type === 'tire') {
       setPickerItem(item)
     } else {

@@ -130,5 +130,29 @@
     "related_bugs": ["bug-009"],
     "occurrences": 1,
     "last_seen": "2026-07-13"
+  },
+  {
+    "id": "bug-011",
+    "timestamp": "2026-07-14T00:00:00.000Z",
+    "error_message": "בכרטסת לקוח סימנתי תשלום, המסך חישב נכון אבל בסיכום הסופי (הדפסת כרטסת) יתרת החוב לא הופחתה",
+    "file": "components/customer-tracking/CustomerTrackingClient.tsx",
+    "root_cause": "In the printMode==='ledger' printed table, the running 'יתרה בפועל' column only accumulated raw charge/credit amounts (`running += item.amount` or `-item.amount`) and never subtracted `d.paid` — unlike `openingForReport` right above it, which already nets payments via `bal(d)`. So a payment recorded on a debt correctly reduced the on-screen totals (which use bal()) but the printed ledger's final running balance stayed at the full charge amount, only showing the payment separately in the 'שולם' footer figure.",
+    "fix": "Subtract `Number(d.paid)` from `running` once per debt (on its last invoice-line item, for direction!=='credit') right after the existing charge/credit accumulation, so the in-range running balance stays consistent with openingForReport's bal()-based carry-in.",
+    "tags": ["customer-tracking", "print", "ledger", "balance", "payment", "running-total"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-07-14"
+  },
+  {
+    "id": "bug-012",
+    "timestamp": "2026-07-14T00:00:00.000Z",
+    "error_message": "בסריקת ברקוד ברחבה (הוספת מוצר לרכב בטיפול): פריט שאזל מהמלאי מציג 'ברקוד לא נמצא' במקום הודעת מלאי, ופריט אחר שנוסף בסריקה לא הוריד מהמלאי של המוצרים",
+    "file": "components/yard/WorkCardClient.tsx, components/yard/FreeSearchClient.tsx, app/api/yard/sessions/[id]/route.ts, supabase/migrations/053_yard_rpcs.sql",
+    "root_cause": "Two separate defects found in the same yard scan flow: (1) neither WorkCardClient.handleBarcodeScan nor FreeSearchClient.handleBarcode checked the matched item's `stock` field — a matched-but-out-of-stock product/tire was either added silently with no warning, or (in FreeSearchClient) `item` was accessed without a null-check, crashing instead of showing a clear message. (2) Stock deduction only happens once, when a yard session is archived (app/api/yard/sessions/[id]/route.ts PATCH status='archived'), via `decrement_tire_qty`/`decrement_product_qty` RPCs (migration 053_yard_rpcs.sql). Those RPCs run `UPDATE tires/products SET quantity = ...` but the real column on both tables is `qty` (confirmed in supabase/migrations/003_all_tables.sql) — `quantity` doesn't exist, so the UPDATE errors every time. The rpc() call's `error` was never checked in route.ts, so the failure was completely silent and stock never actually decremented, on any session, ever.",
+    "fix": "1) Added an explicit `item.stock !== null && item.stock <= 0` check in both scan handlers, showing 'פריט אזל מהמלאי: <name>' and returning before adding. Also fixed FreeSearchClient.handleBarcode to null-check `item` (the API returns HTTP 200 with a null body on no-match, so `!res.ok` never actually catches a real 'not found'). 2) Added migration 071_fix_yard_decrement_qty_column.sql with CREATE OR REPLACE for both RPCs pointing at `qty` instead of `quantity`. 3) Added error logging (console.error) around both rpc() calls in route.ts so a future failure surfaces instead of vanishing silently, per the bug-005 Do-Not-Repeat convention.",
+    "tags": ["yard", "barcode", "scan", "inventory", "stock", "qty", "rpc", "silent-failure", "column-mismatch"],
+    "related_bugs": ["bug-005"],
+    "occurrences": 1,
+    "last_seen": "2026-07-14"
   }
 ]

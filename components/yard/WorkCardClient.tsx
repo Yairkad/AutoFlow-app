@@ -266,6 +266,11 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       return
     }
 
+    if (item.stock !== null && item.stock <= 0) {
+      showError(`פריט אזל מהמלאי: ${item.name}`)
+      return
+    }
+
     if (item.type === 'tire') {
       setScanTireResult(item)
       return
