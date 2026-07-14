@@ -10,6 +10,7 @@ export interface CustomerPaymentMeta {
   check_number?: string | null
   check_date?: string | null
   notes?: string | null
+  receipt_issued?: boolean
 }
 
 // Applies a user-chosen allocation of a payment against specific
@@ -48,6 +49,7 @@ export async function reconcileCustomerLedgerPayment(
       check_number: paymentMeta.check_number ?? null,
       check_date: paymentMeta.check_date ?? null,
       notes: paymentMeta.notes ?? null,
+      receipt_issued: paymentMeta.receipt_issued ?? false,
     })
     if (insErr) return { error: insErr.message }
   }

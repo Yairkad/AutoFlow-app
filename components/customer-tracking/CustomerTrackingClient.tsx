@@ -39,6 +39,13 @@ interface Customer {
   opening_balance: number
 }
 
+interface CustomerLedgerPayment {
+  id: string; tenant_id: string; customer_ledger_debt_id: string
+  amount: number; payment_method: string
+  check_number: string | null; check_date: string | null
+  notes: string | null; receipt_issued: boolean; created_at: string
+}
+
 type Filter = 'open' | 'closed' | 'all'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -92,8 +99,9 @@ export default function CustomerTrackingClient() {
   const [loading, setLoading] = useState(true)
 
   // Data
-  const [customerDebts, setCustomerDebts] = useState<CustomerLedgerDebt[]>([])
-  const [customers, setCustomers]         = useState<Customer[]>([])
+  const [customerDebts, setCustomerDebts]       = useState<CustomerLedgerDebt[]>([])
+  const [customers, setCustomers]               = useState<Customer[]>([])
+  const [customerPayments, setCustomerPayments] = useState<CustomerLedgerPayment[]>([])
 
   // Row selection
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -140,6 +148,7 @@ export default function CustomerTrackingClient() {
   const [payRefNumber, setPayRefNumber]     = useState('')
   const [payQuickAmount, setPayQuickAmount] = useState('')
   const [payQuickTarget, setPayQuickTarget] = useState('auto')
+  const [payReceiptIssued, setPayReceiptIssued] = useState(false)
   const [paySaving, setPaySaving] = useState(false)
 
   // Quick-add-customer modal
@@ -191,13 +200,16 @@ export default function CustomerTrackingClient() {
     const tid = await resolveTenant()
     if (!tid) return
     setLoading(true)
-    const [custDebtRes, custRes] = await Promise.all([
+    const [custDebtRes, custRes, payRes] = await Promise.all([
       supabase.from('customer_ledger_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
       supabase.from('customers').select('id,name,phone,opening_balance').eq('tenant_id', tid).order('name'),
+      supabase.from('customer_ledger_payments').select('*').eq('tenant_id', tid).order('created_at', { ascending: false }),
     ])
     if (custDebtRes.data) setCustomerDebts(custDebtRes.data)
     if (custRes.data)     setCustomers(custRes.data)
     else if (custRes.error) showToast('שגיאה בטעינת לקוחות: ' + custRes.error.message, 'error')
+    if (payRes.data) setCustomerPayments(payRes.data)
+    else if (payRes.error) showToast('שגיאה בטעינת תשלומים: ' + payRes.error.message, 'error')
     if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
     setLoading(false)
   }, [supabase, resolveTenant, showToast, profile])
@@ -227,6 +239,7 @@ export default function CustomerTrackingClient() {
     const ch = supabase.channel('customer-tracking-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_ledger_debts' }, loadAll)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, loadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_ledger_payments' }, loadAll)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [supabase, loadAll])
@@ -329,7 +342,7 @@ export default function CustomerTrackingClient() {
   const openPayCustomer = (customerId: string | null, preselectId?: string) => {
     setPayCustomerId(customerId)
     setPayMethod('מזומן'); setPayDate(todayISO()); setPayCheckNumber(''); setPayCheckDate(todayISO())
-    setPayRefNumber(''); setPayQuickAmount(''); setPayQuickTarget('auto')
+    setPayRefNumber(''); setPayQuickAmount(''); setPayQuickTarget('auto'); setPayReceiptIssued(false)
     if (preselectId) {
       const d = customerDebts.find(x => x.id === preselectId)
       setPaySelectedIds(new Set([preselectId]))
@@ -407,6 +420,7 @@ export default function CustomerTrackingClient() {
       check_number: refNumber || null,
       check_date: payMethod === "צ'ק" ? (payCheckDate || null) : null,
       notes: null,
+      receipt_issued: payReceiptIssued,
     })
     if (error) { showToast('שגיאה בתשלום: ' + error, 'error'); setPaySaving(false); return }
 
@@ -425,6 +439,11 @@ export default function CustomerTrackingClient() {
 
   const toggleClose = async (id: string, current: boolean) => {
     await supabase.from('customer_ledger_debts').update({ is_closed: !current }).eq('id', id)
+    loadAll()
+  }
+
+  const toggleReceiptIssued = async (id: string, current: boolean) => {
+    await supabase.from('customer_ledger_payments').update({ receipt_issued: !current }).eq('id', id)
     loadAll()
   }
 
@@ -611,12 +630,25 @@ export default function CustomerTrackingClient() {
               if (!monthMap[mk]) monthMap[mk] = []
               monthMap[mk].push(d)
             })
-            const months = Object.keys(monthMap).sort().reverse()
 
-            return { cid, cust, totalBal, monthMap, months }
+            // Payments recorded against this customer's debts, grouped by the month
+            // they were actually received (not the debt's own month) — this is what
+            // makes a payment show up as its own line in the ledger.
+            const debtIds = new Set(debts.map(d => d.id))
+            const payments = customerPayments.filter(p => debtIds.has(p.customer_ledger_debt_id))
+            const payMonthMap: Record<string, CustomerLedgerPayment[]> = {}
+            payments.forEach(p => {
+              const mk = p.created_at.slice(0, 7)
+              if (!payMonthMap[mk]) payMonthMap[mk] = []
+              payMonthMap[mk].push(p)
+            })
+
+            const months = [...new Set([...Object.keys(monthMap), ...Object.keys(payMonthMap)])].sort().reverse()
+
+            return { cid, cust, totalBal, monthMap, payMonthMap, months }
           }).filter(Boolean) as {
             cid: string | null; cust: Customer | undefined; totalBal: number
-            monthMap: Record<string, CustomerLedgerDebt[]>; months: string[]
+            monthMap: Record<string, CustomerLedgerDebt[]>; payMonthMap: Record<string, CustomerLedgerPayment[]>; months: string[]
           }[]
 
           if (groups.length === 0) return (
@@ -657,9 +689,10 @@ export default function CustomerTrackingClient() {
                   </div>
 
                   {isOpen && group.months.map((mk, mIdx) => {
-                    const monthDebts = group.monthMap[mk]
+                    const monthDebts = group.monthMap[mk] ?? []
+                    const monthPayments = group.payMonthMap[mk] ?? []
                     const carryOver = group.months.slice(mIdx + 1).reduce(
-                      (s, m) => s + group.monthMap[m].reduce((ss, d) => ss + bal(d), 0), 0)
+                      (s, m) => s + (group.monthMap[m] ?? []).reduce((ss, d) => ss + bal(d), 0), 0)
                     const monthChargeTotal = monthDebts.filter(d => d.direction !== 'credit').reduce((s, d) => s + Number(d.amount), 0)
                     const monthCreditTotal = monthDebts.filter(d => d.direction === 'credit').reduce((s, d) => s + Number(d.amount), 0)
                     const monthNetTotal    = monthChargeTotal - monthCreditTotal
@@ -691,7 +724,7 @@ export default function CustomerTrackingClient() {
                         )}
 
                         {/* Invoices/credits table */}
-                        {!monthCollapsed && (
+                        {!monthCollapsed && monthDebts.length > 0 && (
                         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
                           <thead>
                             <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -752,6 +785,48 @@ export default function CustomerTrackingClient() {
                               </td>
                             </tr>
                           </tfoot>
+                        </table>
+                        )}
+
+                        {/* Payments received this month */}
+                        {!monthCollapsed && monthPayments.length > 0 && (
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <th style={thSt}>תשלום התקבל</th>
+                              <th style={thSt}>תאריך</th>
+                              <th style={thSt}>אמצעי</th>
+                              <th style={{ ...thSt, textAlign: 'left' }}>סכום</th>
+                              <th style={{ ...thSt, textAlign: 'center', width: '90px' }}>קבלה</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {monthPayments.map(p => (
+                              <tr key={p.id} style={{ background: '#f0fdf6' }}>
+                                <td style={tdSt}>
+                                  {p.check_number ? `#${p.check_number}` : '—'}
+                                  {p.notes && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>{p.notes}</div>}
+                                </td>
+                                <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{p.created_at.slice(0, 10)}</td>
+                                <td style={tdSt}>{p.payment_method}</td>
+                                <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: '#16a34a' }}>{fmt(p.amount)}</td>
+                                <td style={{ ...tdSt, textAlign: 'center' }}>
+                                  <button
+                                    onClick={() => toggleReceiptIssued(p.id, p.receipt_issued)}
+                                    title={p.receipt_issued ? 'קבלה הופקה — לחץ לביטול' : 'קבלה לא הופקה — לחץ לסימון'}
+                                    style={{
+                                      padding: '3px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                                      border: `1px solid ${p.receipt_issued ? '#bbf7d0' : '#fde68a'}`,
+                                      background: p.receipt_issued ? '#f0fdf4' : '#fffbeb',
+                                      color: p.receipt_issued ? '#16a34a' : '#92400e',
+                                    }}
+                                  >
+                                    {p.receipt_issued ? '🧾 יצאה' : '⏳ לא יצאה'}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
                         </table>
                         )}
                       </div>
@@ -951,6 +1026,11 @@ export default function CustomerTrackingClient() {
                   תאריך תשלום
                   <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="form-input" />
                 </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, marginTop: '12px', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={payReceiptIssued} onChange={e => setPayReceiptIssued(e.target.checked)} />
+                  🧾 קבלה הופקה על תשלום זה
+                </label>
               </>
             )}
 
@@ -1081,6 +1161,12 @@ export default function CustomerTrackingClient() {
               #print-area table { width: 100%; border-collapse: collapse; font-size: 13px; }
               #print-area th, #print-area td { border: 1px solid #333; padding: 6px 8px; text-align: right; }
               #print-area th { background: #eee; }
+              #print-area .pp-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4mm; padding-bottom: 4mm; border-bottom: 2px solid #000; }
+              #print-area .pp-biz { font-weight: bold; font-size: 13px; line-height: 1.4; }
+              #print-area .pp-biz-name { font-size: 16px; font-weight: 900; }
+              #print-area .pp-logo-wrap { text-align: center; }
+              #print-area .pp-logo-img { max-height: 110px; max-width: 240px; object-fit: contain; display: block; margin: 0 auto; }
+              #print-area .pp-logo-svc { font-size: 9px; text-align: center; font-weight: bold; margin-top: 4px; letter-spacing: 0.5px; color: #333; }
             }
           `}</style>
 
@@ -1116,9 +1202,25 @@ export default function CustomerTrackingClient() {
                 ? `${printDateFrom || 'ההתחלה'} — ${printDateTo || 'היום'}`
                 : 'כל התקופה'
 
+            const biz = profile?.tenant
+
             return (
               <div>
-                <h2 style={{ margin: '0 0 4px' }}>{tenantName} — כרטסת לקוח: {cust?.name ?? ''}</h2>
+                <div className="pp-hdr">
+                  <div className="pp-biz">
+                    <div className="pp-biz-name">{biz?.name ?? tenantName}</div>
+                    {biz?.sub_title      && <div style={{ fontSize: 12 }}>{biz.sub_title}</div>}
+                    {biz?.address        && <div>{biz.address}</div>}
+                    {biz?.phone          && <div>טל׳: {biz.phone}</div>}
+                    {biz?.license_number && <div>מס׳ רישיון מוסך: {biz.license_number}</div>}
+                    {biz?.tax_id         && <div>ע.מ./ח.פ: {biz.tax_id}</div>}
+                  </div>
+                  <div className="pp-logo-wrap">
+                    {biz?.logo_base64 && <img src={biz.logo_base64} alt="לוגו" className="pp-logo-img" />}
+                    <div className="pp-logo-svc">מוסך מורשה | פנצ׳רייה | פחחות | מכון בדיקת רכב | כיוון פרונט</div>
+                  </div>
+                </div>
+                <h2 style={{ margin: '0 0 4px' }}>כרטסת לקוח: {cust?.name ?? ''}</h2>
                 <div style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>תקופה: {rangeLabel}</div>
                 <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {fmtDMY(new Date())}</div>
                 <table>
