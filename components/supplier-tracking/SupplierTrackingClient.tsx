@@ -1455,6 +1455,7 @@ export default function SupplierTrackingClient() {
           <style>{`
             @media print {
               body * { visibility: hidden; }
+              main { height: auto !important; overflow: visible !important; }
               #print-area, #print-area * { visibility: visible; }
               #print-area { display: block !important; position: absolute; top: 0; right: 0; width: 100%; padding: 24px; direction: rtl; }
               #print-area table { width: 100%; border-collapse: collapse; font-size: 13px; }

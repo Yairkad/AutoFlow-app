@@ -881,3 +881,16 @@
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | — | Fixed 2 user-reported bugs: (1) customer ledger printed "כרטסת לקוח" running balance ("יתרה בפועל") never subtracted recorded payments, only opening-balance carry-in did — now nets `d.paid` per debt on its last row, matching bal()/openingForReport. (2) yard barcode scan: added missing out-of-stock check (`item.stock<=0` → "פריט אזל מהמלאי" instead of silently adding / crashing on null in FreeSearchClient); found root cause of stock never decrementing — decrement_tire_qty/decrement_product_qty RPCs (migration 053) updated a `quantity` column that doesn't exist (real column is `qty`), silently no-op'ing on every session archive since the rpc() error return was never checked | components/customer-tracking/CustomerTrackingClient.tsx, components/yard/WorkCardClient.tsx, components/yard/FreeSearchClient.tsx, app/api/yard/sessions/[id]/route.ts, supabase/migrations/071_fix_yard_decrement_qty_column.sql | done, tsc clean | ~3k |
+| 17:30 | Edited components/customer-tracking/CustomerTrackingClient.tsx | CSS: height, overflow | ~102 |
+| — | Fixed extra blank page on every ledger print (customer + supplier). Root cause: AppShell's `<main>` has a fixed `height: calc(100vh - var(--header-h))` + `overflowY:auto`, and `visibility:hidden` (used to hide on-screen content during print) doesn't collapse that box's layout height, so it printed as a trailing blank page. Added `main { height: auto !important; overflow: visible !important; }` to both files' `@media print` block | components/customer-tracking/CustomerTrackingClient.tsx, components/supplier-tracking/SupplierTrackingClient.tsx | done, tsc clean (bug-013) | ~1.2k |
+| 17:30 | Edited components/supplier-tracking/SupplierTrackingClient.tsx | CSS: height, overflow | ~102 |
+| 17:31 | Session end: 2 writes across 2 files (CustomerTrackingClient.tsx, SupplierTrackingClient.tsx) | 15 reads | ~27049 tok |
+| 17:34 | Session end: 2 writes across 2 files (CustomerTrackingClient.tsx, SupplierTrackingClient.tsx) | 18 reads | ~27049 tok |
+| 17:36 | Created ../../../.claude/plans/synthetic-twirling-grove.md | — | ~2185 |
+| 17:41 | Created lib/utils/markCheckPaid.ts | — | ~414 |
+| 17:41 | Session end: 4 writes across 4 files (CustomerTrackingClient.tsx, SupplierTrackingClient.tsx, synthetic-twirling-grove.md, markCheckPaid.ts) | 18 reads | ~29804 tok |
+| 17:42 | Edited components/expenses/ScheduledPaymentsModal.tsx | added 1 import(s) | ~98 |
+| 17:42 | Edited components/expenses/ScheduledPaymentsModal.tsx | 4→6 lines | ~54 |
+| 17:42 | Edited components/expenses/ScheduledPaymentsModal.tsx | modified ScheduledPaymentsModal() | ~71 |
+| 17:42 | Edited components/expenses/ScheduledPaymentsModal.tsx | added 2 condition(s) | ~289 |
+| 17:42 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: paidDate | ~141 |

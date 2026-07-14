@@ -154,5 +154,17 @@
     "related_bugs": ["bug-005"],
     "occurrences": 1,
     "last_seen": "2026-07-14"
+  },
+  {
+    "id": "bug-013",
+    "timestamp": "2026-07-14T00:00:00.000Z",
+    "error_message": "כל הדפסת כרטסת (לקוח/ספק) יוצאת עם דף ריק נוסף",
+    "file": "components/customer-tracking/CustomerTrackingClient.tsx, components/supplier-tracking/SupplierTrackingClient.tsx",
+    "root_cause": "Both ledger print flows use the 'hide everything via visibility:hidden, show #print-area via position:absolute' technique. `visibility:hidden` does not remove elements from layout flow, so AppShell's `<main>` (components/layout/AppShell.tsx) — which has an explicit `height: calc(100vh - var(--header-h))` + `overflowY:auto` — still occupies roughly one viewport-height's worth of empty box in the printed document, right alongside the absolutely-positioned print-area. The browser paginates for that leftover height, producing one extra blank page after the real content. (Header/Sidebar are `position:fixed` so they don't contribute — `main` was the only in-flow block with an explicit height.)",
+    "fix": "Added `main { height: auto !important; overflow: visible !important; }` inside both components' existing `@media print` blocks, so the shell's fixed-height scroll container collapses to zero contribution during print instead of leaving a blank trailing page.",
+    "tags": ["print", "ledger", "customer-tracking", "supplier-tracking", "AppShell", "blank-page", "visibility-hidden"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-07-14"
   }
 ]
