@@ -166,5 +166,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-07-14"
+  },
+  {
+    "id": "bug-014",
+    "timestamp": "2026-07-22T00:00:00.000Z",
+    "error_message": "בסייד-בר, כשעורכים סידור/קטגוריות ושומרים, בפעם הבאה שנכנסים לעריכה זה מציג את הסידור המקורי (ברירת מחדל) ולא את העריכה האחרונה שנשמרה",
+    "file": "components/layout/Sidebar.tsx, components/layout/SidebarLayoutEditor.tsx",
+    "root_cause": "SidebarLayoutEditor's open-effect always seeded its local editing state (`sections`) from the `defaultSections` prop. Sidebar.tsx passed the hardcoded module-level `SECTIONS` constant as `defaultSections` — never the current `activeSections` state (which reflects the last save, loaded from localStorage/tenant ui_settings on mount). So `onSave` correctly persisted the edit and updated `activeSections` (the sidebar itself rendered correctly), but reopening the editor modal re-read from the static default every time, discarding the save from the picker's own point of view.",
+    "fix": "Added a new `currentSections` prop to SidebarLayoutEditor, passed as `activeSections` from Sidebar.tsx. The open-effect now seeds `sections` from `currentSections` instead of `defaultSections`; `defaultSections` (the true SECTIONS constant) is kept only for the 'איפוס לברירת מחדל' reset button, which must still restore the real defaults, not the last save.",
+    "tags": ["sidebar", "layout-editor", "state-not-persisted", "default-vs-current", "localStorage"],
+    "related_bugs": ["bug-010", "bug-009"],
+    "occurrences": 1,
+    "last_seen": "2026-07-22"
   }
 ]

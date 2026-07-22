@@ -383,6 +383,7 @@ export default function Sidebar({
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
         defaultSections={SECTIONS}
+        currentSections={activeSections}
         allItems={NAV_ITEMS.filter(isModuleVisible).map(({ href, label, color }) => ({ href, label, color }))}
         hiddenHrefs={hiddenHrefs}
         tenantId={tenantId}

@@ -1163,3 +1163,14 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-07-22 10:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:53 | Edited components/layout/SidebarLayoutEditor.tsx | CSS: currentSections | ~214 |
+| 10:53 | Edited components/layout/Sidebar.tsx | 2→3 lines | ~54 |
+| 10:53 | Edited components/checks/ChecksJournalClient.tsx | 1→2 lines | ~56 |
+| 10:53 | Edited components/checks/ChecksJournalClient.tsx | expanded (+6 lines) | ~280 |
+| 10:54 | Sidebar layout editor: fixed edit-modal always resetting to hardcoded default order instead of last-saved layout (added currentSections prop) | components/layout/Sidebar.tsx, components/layout/SidebarLayoutEditor.tsx | done | ~300 tok |
+| 10:54 | ChecksJournalClient: summary row now also shows total paid (grandPaidTotal) alongside future-total, so filtering to paid checks isnt just 0 | components/checks/ChecksJournalClient.tsx | done | ~150 tok |
