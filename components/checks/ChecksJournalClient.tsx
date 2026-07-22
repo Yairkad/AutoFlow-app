@@ -182,6 +182,7 @@ export default function ChecksJournalClient() {
   }, [filtered])
 
   const grandTotal = filtered.filter(p => !p.is_paid).reduce((s, p) => s + Number(p.amount), 0)
+  const grandPaidTotal = filtered.filter(p => p.is_paid).reduce((s, p) => s + Number(p.amount), 0)
 
   // ── Row actions ─────────────────────────────────────────────────────────────
 
@@ -429,9 +430,15 @@ export default function ChecksJournalClient() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)' }}>סה״כ עתידי לתשלום (לפי הסינון)</span>
-            <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(grandTotal)}</span>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)' }}>סה״כ עתידי לתשלום (לפי הסינון)</span>
+              <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(grandTotal)}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)' }}>סה״כ ששולם (לפי הסינון)</span>
+              <span style={{ fontSize: '20px', fontWeight: 800, color: '#16a34a' }}>{fmt(grandPaidTotal)}</span>
+            </div>
           </div>
 
           {monthGroups.map(([mk, items]) => {

@@ -13,19 +13,20 @@ type Props = {
   open: boolean
   onClose: () => void
   defaultSections: SectionConfig[]
+  currentSections: SectionConfig[]
   allItems: ItemMeta[]
   hiddenHrefs: string[]
   tenantId: string | null
   onSave: (sections: SectionConfig[], hidden: string[]) => void
 }
 
-export default function SidebarLayoutEditor({ open, onClose, defaultSections, allItems, hiddenHrefs, tenantId, onSave }: Props) {
+export default function SidebarLayoutEditor({ open, onClose, defaultSections, currentSections, allItems, hiddenHrefs, tenantId, onSave }: Props) {
   const [sections, setSections] = useState<SectionConfig[]>([])
   const [hidden, setHidden]     = useState<string[]>([])
 
   useEffect(() => {
     if (open) {
-      setSections(defaultSections.map(s => ({ ...s, hrefs: [...s.hrefs] })))
+      setSections(currentSections.map(s => ({ ...s, hrefs: [...s.hrefs] })))
       setHidden([...hiddenHrefs])
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps

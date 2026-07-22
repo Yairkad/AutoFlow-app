@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-14T22:09:24.733Z
-> Files: 28 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-22T10:53:24.651Z
+> Files: 30 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -333,6 +333,7 @@
 
 ## components/checks/
 
+- `ChecksJournalClient.tsx` — fmt (~8993 tok)
 
 ## components/customers/
 
@@ -366,7 +367,8 @@
 
 ## components/layout/
 
-- `Sidebar.tsx` — NAV_ITEMS (~5460 tok)
+- `Sidebar.tsx` — NAV_ITEMS (~5359 tok)
+- `SidebarLayoutEditor.tsx` — SIDEBAR_LAYOUT_KEY (~3573 tok)
 
 ## components/products/
 
