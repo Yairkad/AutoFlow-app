@@ -1174,3 +1174,12 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:53 | Edited components/checks/ChecksJournalClient.tsx | expanded (+6 lines) | ~280 |
 | 10:54 | Sidebar layout editor: fixed edit-modal always resetting to hardcoded default order instead of last-saved layout (added currentSections prop) | components/layout/Sidebar.tsx, components/layout/SidebarLayoutEditor.tsx | done | ~300 tok |
 | 10:54 | ChecksJournalClient: summary row now also shows total paid (grandPaidTotal) alongside future-total, so filtering to paid checks isnt just 0 | components/checks/ChecksJournalClient.tsx | done | ~150 tok |
+
+## Session: 2026-07-27 10:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:51 | Edited components/debts/DebtsClient.tsx | expanded (+12 lines) | ~208 |
+| 10:52 | Edited components/debts/DebtsClient.tsx | added 8 condition(s) | ~714 |
+| 10:52 | Edited components/debts/DebtsClient.tsx | 5→6 lines | ~148 |
+| 10:52 | Edited components/debts/DebtsClient.tsx | added 1 condition(s) | ~1423 |

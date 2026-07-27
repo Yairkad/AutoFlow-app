@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-22T10:53:24.651Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-27T10:52:32.637Z
 > Files: 30 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -348,7 +348,7 @@
 ## components/debts/
 
 - `CallLogModal.tsx` — fmtDT (~1464 tok)
-- `DebtsClient.tsx` — fmt (~10481 tok)
+- `DebtsClient.tsx` — fmt (~12551 tok)
 
 ## components/documents/
 
