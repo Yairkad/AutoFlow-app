@@ -105,6 +105,18 @@ export default function DebtsClient() {
   // Transfers-pending-verification tab: show already-verified ones too?
   const [showVerifiedTransfers, setShowVerifiedTransfers] = useState(false)
 
+  // Add-transfer-to-verify modal (transfers tab)
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [trMode, setTrMode]   = useState<'existing' | 'new'>('existing')
+  const [trDebtId, setTrDebtId] = useState('')
+  const [trName, setTrName]   = useState('')
+  const [trPhone, setTrPhone] = useState('')
+  const [trDesc, setTrDesc]   = useState('')
+  const [trAmount, setTrAmount] = useState('')
+  const [trDate, setTrDate]     = useState(todayISO())
+  const [trReference, setTrReference] = useState('')
+  const [trSaving, setTrSaving] = useState(false)
+
   // ── Tenant ────────────────────────────────────────────────────────────────
 
   const resolveTenant = useCallback(async () => {
@@ -236,6 +248,60 @@ export default function DebtsClient() {
   const verifyTransfer = async (id: string) => {
     await supabase.from('customer_debt_payments').update({ transfer_verified: true, verified_date: todayISO() }).eq('id', id)
     loadAll()
+  }
+
+  // ── Add transfer-to-verify (transfers tab) ───────────────────────────────
+
+  const openTransferModal = () => {
+    setTrMode('existing'); setTrDebtId(''); setTrName(''); setTrPhone(''); setTrDesc('')
+    setTrAmount(''); setTrDate(todayISO()); setTrReference('')
+    setShowTransferModal(true)
+  }
+
+  const saveTransfer = async () => {
+    const amount = parseFloat(trAmount)
+    if (isNaN(amount) || amount <= 0) { showToast('סכום לא תקין', 'error'); return }
+    const tid = tenantIdRef.current!
+    setTrSaving(true)
+
+    let debtId = trDebtId
+    let debtAmount: number
+    let debtPaid: number
+
+    if (trMode === 'new') {
+      if (!trName.trim()) { showToast('נא למלא שם לקוח', 'error'); setTrSaving(false); return }
+      debtId = crypto.randomUUID()
+      debtAmount = amount
+      debtPaid = 0
+      const { error } = await supabase.from('customer_debts').insert({
+        id: debtId, tenant_id: tid, name: trName.trim(), phone: trPhone.trim() || null,
+        plate: null, amount, description: trDesc.trim() || null,
+        date: trDate, due_date: null, paid: 0, is_closed: false,
+      })
+      if (error) { showToast('שגיאה ביצירת החוב', 'error'); setTrSaving(false); return }
+    } else {
+      if (!debtId) { showToast('נא לבחור לקוח', 'error'); setTrSaving(false); return }
+      const existing = customerDebts.find(d => d.id === debtId)
+      if (!existing) { setTrSaving(false); return }
+      debtAmount = Number(existing.amount)
+      debtPaid = Number(existing.paid)
+    }
+
+    const newPaid  = Math.min(debtAmount, debtPaid + amount)
+    const isClosed = newPaid >= debtAmount
+    const { error: updErr } = await supabase.from('customer_debts').update({ paid: newPaid, is_closed: isClosed }).eq('id', debtId)
+    if (updErr) { showToast('שגיאה בשמירה', 'error'); setTrSaving(false); return }
+
+    const { error: payErr } = await supabase.from('customer_debt_payments').insert({
+      tenant_id: tid, customer_debt_id: debtId, amount,
+      payment_date: trDate, payment_method: 'העברה',
+      reference: trReference.trim() || null,
+      transfer_verified: false,
+    })
+    if (payErr) { showToast('שגיאה בשמירת ההעברה', 'error'); setTrSaving(false); return }
+
+    showToast('נוסף לרשימת אימות ✓', 'success')
+    setTrSaving(false); setShowTransferModal(false); loadAll()
   }
 
   // ── Filters ───────────────────────────────────────────────────────────────
@@ -486,6 +552,7 @@ export default function DebtsClient() {
       {tab === 'transfers' && (
         <div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
+            <Button onClick={openTransferModal}>+ הוסף העברה לבדיקה</Button>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>
               <input type="checkbox" checked={showVerifiedTransfers} onChange={e => setShowVerifiedTransfers(e.target.checked)} />
               הצג גם מאומתות
@@ -614,6 +681,67 @@ export default function DebtsClient() {
           </div>
         </div>
       )}
+      {/* ── ADD TRANSFER-TO-VERIFY MODAL ── */}
+      {showTransferModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowTransferModal(false)}>
+          <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '420px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>🏦 הוסף העברה לבדיקה</h3>
+            <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--text-muted)' }}>רישום חשבונית/העברה שצריך לוודא שהתקבלה בחשבון הבנק</p>
+
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
+              <button type="button" onClick={() => setTrMode('existing')} style={{
+                flex: 1, padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
+                border: `1px solid ${trMode === 'existing' ? 'var(--primary)' : 'var(--border)'}`,
+                background: trMode === 'existing' ? '#f0fdf4' : '#f8fafc',
+                color: trMode === 'existing' ? 'var(--primary)' : 'var(--text-muted)',
+              }}>לקוח קיים</button>
+              <button type="button" onClick={() => setTrMode('new')} style={{
+                flex: 1, padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
+                border: `1px solid ${trMode === 'new' ? 'var(--primary)' : 'var(--border)'}`,
+                background: trMode === 'new' ? '#f0fdf4' : '#f8fafc',
+                color: trMode === 'new' ? 'var(--primary)' : 'var(--text-muted)',
+              }}>חשבונית / לקוח חדש</button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '14px' }}>
+              {trMode === 'existing' ? (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                  לקוח *
+                  <select value={trDebtId} onChange={e => {
+                    const id = e.target.value
+                    setTrDebtId(id)
+                    const d = customerDebts.find(x => x.id === id)
+                    if (d) setTrAmount(String(bal(d).toFixed(2)))
+                  }} className="form-input">
+                    <option value="">בחר לקוח...</option>
+                    {customerDebts.filter(d => !d.is_closed).map(d => (
+                      <option key={d.id} value={d.id}>{d.name} — יתרה {fmt(bal(d))}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>שם לקוח *<input value={trName} onChange={e => setTrName(e.target.value)} placeholder="שם מלא" className="form-input" /></label>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>טלפון<input type="tel" value={trPhone} onChange={e => setTrPhone(e.target.value)} placeholder="050-0000000" className="form-input" /></label>
+                  </div>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>תיאור / מספר חשבונית<input value={trDesc} onChange={e => setTrDesc(e.target.value)} placeholder="לדוגמה: חשבונית 1234" className="form-input" /></label>
+                </>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>סכום (₪) *<input type="number" min="0.01" step="0.01" value={trAmount} onChange={e => setTrAmount(e.target.value)} placeholder="0.00" className="form-input" /></label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>תאריך העברה<input type="date" value={trDate} onChange={e => setTrDate(e.target.value)} className="form-input" /></label>
+              </div>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>מספר אסמכתא<input value={trReference} onChange={e => setTrReference(e.target.value)} placeholder="אופציונלי" className="form-input" /></label>
+            </div>
+            <div className="sticky-actions">
+              <Button variant="secondary" onClick={() => setShowTransferModal(false)}>ביטול</Button>
+              <Button loading={trSaving} onClick={saveTransfer}>💾 שמור</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── WHATSAPP EDIT MODAL ── */}
       {waModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setWaModal(null)}>
