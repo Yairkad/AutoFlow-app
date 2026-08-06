@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useProfile } from '@/lib/contexts/ProfileContext'
+import { useProfile, TenantRow } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import PageHeader from '@/components/ui/PageHeader'
 import SupplierDetailsTab from './SupplierDetailsTab'
@@ -167,6 +167,7 @@ export default function SuppliersClient() {
         <SupplierTrackingTab
           tenantId={tenantIdRef.current!}
           tenantName={tenantName}
+          tenant={(profile?.tenant ?? null) as TenantRow | null}
           suppliers={suppliers}
           supplierDebts={supplierDebts}
           scheduledPayments={scheduledPayments}

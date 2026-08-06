@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
+import { TenantRow } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
@@ -34,6 +35,7 @@ type Filter = 'open' | 'closed' | 'all'
 interface SupplierTrackingTabProps {
   tenantId: string
   tenantName: string
+  tenant: TenantRow | null
   suppliers: Supplier[]
   supplierDebts: SupplierDebt[]
   scheduledPayments: ScheduledPayment[]
@@ -75,7 +77,7 @@ const tdSt: React.CSSProperties = { padding: '8px 10px', verticalAlign: 'middle'
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SupplierTrackingTab({
-  tenantId, tenantName, suppliers, supplierDebts, scheduledPayments, debtPayments, recurringItems, expenseCats, openId, reload,
+  tenantId, tenantName, tenant, suppliers, supplierDebts, scheduledPayments, debtPayments, recurringItems, expenseCats, openId, reload,
 }: SupplierTrackingTabProps) {
   const supabase    = useRef(createClient()).current
   const { showToast } = useToast()
@@ -722,7 +724,7 @@ export default function SupplierTrackingTab({
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div>
+    <div id="supplier-tracking-root">
       <div>
           <div style={{ display: 'flex', gap: '10px', marginBottom: selectedId ? '8px' : '16px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Button onClick={() => openSuppModal()}>+ הוסף חשבונית/זיכוי</Button>
@@ -1649,11 +1651,14 @@ export default function SupplierTrackingTab({
             @media print {
               body * { visibility: hidden; }
               main { height: auto !important; overflow: visible !important; }
+              #supplier-tracking-root > *:not(#print-area) { display: none !important; }
               #print-area, #print-area * { visibility: visible; }
               #print-area { display: block !important; position: absolute; top: 0; right: 0; width: 100%; padding: 24px; direction: rtl; }
               #print-area table { width: 100%; border-collapse: collapse; font-size: 13px; }
               #print-area th, #print-area td { border: 1px solid #333; padding: 6px 8px; text-align: right; }
               #print-area th { background: #eee; }
+              #print-area tbody tr:nth-child(even) td { background: #f4f6f8; }
+              #print-area tbody tr:nth-child(odd) td { background: #fff; }
             }
           `}</style>
 
@@ -1682,18 +1687,52 @@ export default function SupplierTrackingTab({
 
             let running = openingForReport
             const showOpeningRow = openingForReport !== 0 || !!rangeStart
+            const actualBalance = running + chargeTotal - creditTotal - paidTotal
+
+            const debtDatesSorted = debts.map(d => d.date).sort()
+            const actualFrom = debtDatesSorted[0]
+            const actualTo = debtDatesSorted[debtDatesSorted.length - 1]
 
             const rangeLabel = printRangeMode === 'months'
               ? sortedPrintMonths.map(fmtMonth).join(', ')
               : printRangeMode === 'range'
-                ? `${printDateFrom || 'ההתחלה'} — ${printDateTo || 'היום'}`
-                : 'כל התקופה'
+                ? `${fmtDMY(printDateFrom || actualFrom || todayISO())} — ${fmtDMY(printDateTo || actualTo || todayISO())}`
+                : actualFrom && actualTo ? `${fmtDMY(actualFrom)} — ${fmtDMY(actualTo)}` : 'אין רשומות'
+
+            const supplierDebtIds = new Set(allDebts.map(d => d.id))
+            const recentPayments = debtPayments
+              .filter(p => supplierDebtIds.has(p.supplier_debt_id))
+              .map(p => {
+                const sp = p.scheduled_payment_id ? scheduledPayments.find(s => s.id === p.scheduled_payment_id) : null
+                const date = sp?.paid_date || sp?.due_date || (p.created_at ? p.created_at.slice(0, 10) : '')
+                const method = sp ? `צ'ק${sp.check_number ? ' מס׳ ' + sp.check_number : ''}` : 'תשלום ישיר'
+                return { id: p.id, date, amount: Number(p.amount), method }
+              })
+              .filter(p => p.date)
+              .sort((a, b) => b.date.localeCompare(a.date))
+              .slice(0, 8)
 
             return (
               <div>
-                <h2 style={{ margin: '0 0 4px' }}>{tenantName} — כרטסת ספק: {supp?.name ?? ''}</h2>
-                <div style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>תקופה: {rangeLabel}</div>
-                <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {fmtDMY(new Date())}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #000', paddingBottom: 10, marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 18, fontWeight: 900 }}>{tenantName}</div>
+                    {tenant?.sub_title && <div>{tenant.sub_title}</div>}
+                    {tenant?.address && <div>{tenant.address}</div>}
+                    {tenant?.phone && <div>טל׳: {tenant.phone}</div>}
+                    {tenant?.license_number && <div>מס׳ רישיון מוסך: {tenant.license_number}</div>}
+                  </div>
+                  {tenant?.logo_base64 && (
+                    <img src={tenant.logo_base64 as string} alt="לוגו" style={{ maxHeight: 80, maxWidth: 200, objectFit: 'contain' }} />
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+                  <h2 style={{ margin: 0, fontSize: 16 }}>כרטסת ספק: {supp?.name ?? ''}</h2>
+                  <div style={{ fontSize: 12, color: '#555' }}>תאריך: {fmtDMY(new Date())}</div>
+                </div>
+                <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תקופה: {rangeLabel}</div>
+
                 <table>
                   <thead><tr><th>תאריך</th><th>מספר</th><th style={{ width: 46 }}>סוג</th><th>הערה</th><th>סכום</th><th>יתרה בפועל</th></tr></thead>
                   <tbody>
@@ -1715,7 +1754,7 @@ export default function SupplierTrackingTab({
                           <tr key={`${d.id}-${idx}`}>
                             <td>{fmtDMY(d.date)}</td>
                             <td>{item.number || '—'}</td>
-                            <td style={{ width: 46, textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
+                            <td style={{ width: 46, textAlign: d.direction === 'credit' ? 'left' : 'right', fontWeight: d.direction === 'credit' ? 700 : 400 }}>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
                             <td>{d.description || ''}</td>
                             <td style={{ textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}</td>
                             <td>{fmt(running)}</td>
@@ -1726,8 +1765,26 @@ export default function SupplierTrackingTab({
                   </tbody>
                 </table>
                 <div style={{ marginTop: 16, fontWeight: 700, fontSize: 14 }}>
-                  סה&quot;כ חיוב: {fmt(chargeTotal)} &nbsp; | &nbsp; סה&quot;כ זיכוי: {fmt(creditTotal)} &nbsp; | &nbsp; שולם: {fmt(paidTotal)} &nbsp; | &nbsp; יתרה בפועל: {fmt(running)}
+                  סה&quot;כ חיוב: {fmt(chargeTotal)} &nbsp; | &nbsp; סה&quot;כ זיכוי: {fmt(creditTotal)} &nbsp; | &nbsp; שולם: {fmt(paidTotal)} &nbsp; | &nbsp; יתרה בפועל: {fmt(actualBalance)}
                 </div>
+
+                {recentPayments.length > 0 && (
+                  <div style={{ marginTop: 24 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>היסטוריית תשלומים אחרונים</div>
+                    <table>
+                      <thead><tr><th>תאריך</th><th>אמצעי תשלום</th><th>סכום</th></tr></thead>
+                      <tbody>
+                        {recentPayments.map(p => (
+                          <tr key={p.id}>
+                            <td>{fmtDMY(p.date)}</td>
+                            <td>{p.method}</td>
+                            <td>{fmt(p.amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )
           })()}
