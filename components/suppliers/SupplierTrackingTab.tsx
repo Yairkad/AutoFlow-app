@@ -195,6 +195,7 @@ export default function SupplierTrackingTab({
   const [printMonths, setPrintMonths] = useState<Set<string>>(new Set())
   const [printDateFrom, setPrintDateFrom] = useState('')
   const [printDateTo, setPrintDateTo] = useState('')
+  const [printIncludeHistory, setPrintIncludeHistory] = useState(true)
 
   const printSupplierMonths = (() => {
     const set = new Set(supplierDebts.filter(d => d.supplier_id === printSupplierId).map(d => monthKeyOf(d.date)))
@@ -1627,6 +1628,11 @@ export default function SupplierTrackingTab({
                   </>
                 )}
 
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', marginBottom: '10px', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={printIncludeHistory} onChange={e => setPrintIncludeHistory(e.target.checked)} />
+                  כלול היסטוריית תשלומים אחרונים
+                </label>
+
                 <Button
                   onClick={() => { setShowPrintChoice(false); setPrintMode('ledger') }}
                   disabled={!printSupplierId || (printRangeMode === 'months' && printMonths.size === 0)}
@@ -1649,16 +1655,19 @@ export default function SupplierTrackingTab({
         <div id="print-area" style={{ display: 'none' }}>
           <style>{`
             @media print {
-              body * { visibility: hidden; }
+              body * { visibility: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               main { height: auto !important; overflow: visible !important; }
               #supplier-tracking-root > *:not(#print-area) { display: none !important; }
-              #print-area, #print-area * { visibility: visible; }
+              #print-area, #print-area * { visibility: visible; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               #print-area { display: block !important; position: absolute; top: 0; right: 0; width: 100%; padding: 24px; direction: rtl; }
               #print-area table { width: 100%; border-collapse: collapse; font-size: 13px; }
               #print-area th, #print-area td { border: 1px solid #333; padding: 6px 8px; text-align: right; }
               #print-area th { background: #eee; }
-              #print-area tbody tr:nth-child(even) td { background: #f4f6f8; }
+              #print-area tbody tr:nth-child(even) td { background: #e5e9ee; }
               #print-area tbody tr:nth-child(odd) td { background: #fff; }
+              #print-area tbody tr.opening-row td { background: #d8dde3 !important; font-weight: 700; }
+              #print-area table.history-table { font-size: 10.5px; }
+              #print-area table.history-table th, #print-area table.history-table td { padding: 2px 6px; }
             }
           `}</style>
 
@@ -1737,7 +1746,7 @@ export default function SupplierTrackingTab({
                   <thead><tr><th>תאריך</th><th>מספר</th><th style={{ width: 46 }}>סוג</th><th>הערה</th><th>סכום</th><th>יתרה בפועל</th></tr></thead>
                   <tbody>
                     {showOpeningRow && (
-                      <tr style={{ fontWeight: 700, background: '#f5f5f5' }}>
+                      <tr className="opening-row" style={{ fontWeight: 700 }}>
                         <td>—</td>
                         <td>—</td>
                         <td>יתרת פתיחה</td>
@@ -1768,10 +1777,10 @@ export default function SupplierTrackingTab({
                   סה&quot;כ חיוב: {fmt(chargeTotal)} &nbsp; | &nbsp; סה&quot;כ זיכוי: {fmt(creditTotal)} &nbsp; | &nbsp; שולם: {fmt(paidTotal)} &nbsp; | &nbsp; יתרה בפועל: {fmt(actualBalance)}
                 </div>
 
-                {recentPayments.length > 0 && (
-                  <div style={{ marginTop: 24 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>היסטוריית תשלומים אחרונים</div>
-                    <table>
+                {printIncludeHistory && recentPayments.length > 0 && (
+                  <div style={{ marginTop: 18 }}>
+                    <div style={{ fontWeight: 700, fontSize: 11, marginBottom: 4 }}>היסטוריית תשלומים אחרונים</div>
+                    <table className="history-table">
                       <thead><tr><th>תאריך</th><th>אמצעי תשלום</th><th>סכום</th></tr></thead>
                       <tbody>
                         {recentPayments.map(p => (
