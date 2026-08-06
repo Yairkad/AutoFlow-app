@@ -209,7 +209,7 @@ export default function SupplierTrackingTab({
 
   useEffect(() => {
     if (!printMode) return
-    const t = setTimeout(() => window.print(), 150)
+    const t = setTimeout(() => window.print(), 300)
     const onAfterPrint = () => { setPrintMode(null) }
     window.addEventListener('afterprint', onAfterPrint)
     return () => { clearTimeout(t); window.removeEventListener('afterprint', onAfterPrint) }
@@ -1654,18 +1654,22 @@ export default function SupplierTrackingTab({
       {printMode && (
         <div id="print-area" style={{ display: 'none' }}>
           <style>{`
+            html, body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
             @media print {
-              body * { visibility: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              body * { visibility: hidden; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
               main { height: auto !important; overflow: visible !important; }
               #supplier-tracking-root > *:not(#print-area) { display: none !important; }
-              #print-area, #print-area * { visibility: visible; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              #print-area, #print-area * { visibility: visible; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
               #print-area { display: block !important; position: absolute; top: 0; right: 0; width: 100%; padding: 24px; direction: rtl; }
               #print-area table { width: 100%; border-collapse: collapse; font-size: 13px; }
               #print-area th, #print-area td { border: 1px solid #333; padding: 6px 8px; text-align: right; }
-              #print-area th { background: #eee; }
-              #print-area tbody tr:nth-child(even) td { background: #e5e9ee; }
-              #print-area tbody tr:nth-child(odd) td { background: #fff; }
-              #print-area tbody tr.opening-row td { background: #d8dde3 !important; font-weight: 700; }
+              #print-area th { background: #eee !important; }
+              #print-area tbody tr:nth-child(even) td { background: #e2e7ed !important; }
+              #print-area tbody tr:nth-child(odd) td { background: #fff !important; }
+              #print-area tbody tr:nth-child(even) td:first-child { border-right: 4px solid #94a3b8; }
+              #print-area tbody tr:nth-child(odd) td:first-child { border-right: 4px solid transparent; }
+              #print-area tbody tr.opening-row td { background: #ccd3db !important; font-weight: 700; }
+              #print-area tbody tr.opening-row td:first-child { border-right: 4px solid #475569 !important; }
               #print-area table.history-table { font-size: 10.5px; }
               #print-area table.history-table th, #print-area table.history-table td { padding: 2px 6px; }
             }

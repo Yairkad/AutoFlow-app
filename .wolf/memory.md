@@ -1226,3 +1226,16 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:03 | Edited components/customers/CustomerTrackingTab.tsx | CSS: tenant | ~37 |
 | 11:03 | Edited components/customers/CustomerTrackingTab.tsx | modified CustomerTrackingTab() | ~44 |
 | 11:04 | Edited components/customers/CustomerTrackingTab.tsx | expanded (+15 lines) | ~394 |
+
+## Session: 2026-08-06 11:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-08-06 12:22
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:27 | Edited components/suppliers/SupplierTrackingTab.tsx | modified not() | ~488 |
+| 12:27 | Edited components/suppliers/SupplierTrackingTab.tsx | CSS: td, td, td | ~189 |
+| 12:27 | Edited components/suppliers/SupplierTrackingTab.tsx | 150 → 300 | ~15 |

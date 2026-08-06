@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-06T11:04:01.736Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-06T12:27:46.637Z
 > Files: 31 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -392,7 +392,7 @@
 - `shared.ts` — Shared types/helpers for the merged /suppliers page (SupplierDetailsTab + SupplierTrackingTab). (~750 tok)
 - `SupplierDetailsTab.tsx` — former `SuppliersClient.tsx` body (profile/rolodex list+detail), now props-driven, no own fetch (~5000 tok)
 - `SuppliersClient.tsx` — SuppliersClient (~2411 tok)
-- `SupplierTrackingTab.tsx` — fmtDMY (~31074 tok)
+- `SupplierTrackingTab.tsx` — fmtDMY (~31246 tok)
 
 ## components/test-transfer/
 
