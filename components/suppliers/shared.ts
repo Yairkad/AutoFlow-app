@@ -68,6 +68,7 @@ export interface ScheduledPayment {
 
 export interface SupplierDebtPayment {
   id: string; supplier_debt_id: string; scheduled_payment_id: string | null; amount: number
+  created_at: string
 }
 
 export const fmt = (n: number) =>
