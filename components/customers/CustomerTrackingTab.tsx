@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
+import { TenantRow } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
@@ -31,6 +32,7 @@ type Filter = 'open' | 'closed' | 'all'
 interface CustomerTrackingTabProps {
   tenantId: string
   tenantName: string
+  tenant: TenantRow | null
   customers: Customer[]
   customerDebts: CustomerLedgerDebt[]
   customerPayments: CustomerLedgerPayment[]
@@ -70,7 +72,7 @@ const tdSt: React.CSSProperties = { padding: '8px 10px', verticalAlign: 'middle'
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CustomerTrackingTab({
-  tenantId, tenantName, customers, customerDebts, customerPayments, recurringItems, openId, reload,
+  tenantId, tenantName, tenant, customers, customerDebts, customerPayments, recurringItems, openId, reload,
 }: CustomerTrackingTabProps) {
   const supabase    = useRef(createClient()).current
   const { showToast } = useToast()
@@ -1403,9 +1405,24 @@ export default function CustomerTrackingTab({
 
             return (
               <div>
-                <h2 style={{ margin: '0 0 4px' }}>{tenantName} — כרטסת לקוח: {cust?.name ?? ''}</h2>
-                <div style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>תקופה: {rangeLabel}</div>
-                <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {fmtDMY(new Date())}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #000', paddingBottom: 10, marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 18, fontWeight: 900 }}>{tenantName}</div>
+                    {tenant?.sub_title && <div>{tenant.sub_title}</div>}
+                    {tenant?.address && <div>{tenant.address}</div>}
+                    {tenant?.phone && <div>טל׳: {tenant.phone}</div>}
+                    {tenant?.license_number && <div>מס׳ רישיון מוסך: {tenant.license_number}</div>}
+                  </div>
+                  {tenant?.logo_base64 && (
+                    <img src={tenant.logo_base64 as string} alt="לוגו" style={{ maxHeight: 80, maxWidth: 200, objectFit: 'contain' }} />
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
+                  <h2 style={{ margin: 0, fontSize: 16 }}>כרטסת לקוח: {cust?.name ?? ''}</h2>
+                  <div style={{ fontSize: 12, color: '#555' }}>תאריך: {fmtDMY(new Date())}</div>
+                </div>
+                <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תקופה: {rangeLabel}</div>
                 <table>
                   <thead><tr><th>תאריך</th><th>מספר</th><th style={{ width: 46 }}>סוג</th><th style={{ width: 30 }}>מצב</th><th>הערה</th><th>סכום</th><th>יתרה בפועל</th></tr></thead>
                   <tbody>

@@ -1208,3 +1208,21 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:39 | Edited components/suppliers/SupplierTrackingTab.tsx | 2→2 lines | ~34 |
 | 10:39 | Edited components/suppliers/SupplierTrackingTab.tsx | CSS: font-weight | ~94 |
 | 10:39 | Edited components/suppliers/SupplierTrackingTab.tsx | 14→14 lines | ~216 |
+
+## Session: 2026-08-06 10:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-08-06 11:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:02 | Edited components/employees/EmployeesClient.tsx | CSS: rows | ~515 |
+| 11:03 | Edited components/employees/EmployeesClient.tsx | expanded (+9 lines) | ~166 |
+| 11:03 | Edited components/customers/CustomersClient.tsx | inline fix | ~20 |
+| 11:03 | Edited components/customers/CustomersClient.tsx | added optional chaining | ~58 |
+| 11:03 | Edited components/customers/CustomerTrackingTab.tsx | added 1 import(s) | ~46 |
+| 11:03 | Edited components/customers/CustomerTrackingTab.tsx | CSS: tenant | ~37 |
+| 11:03 | Edited components/customers/CustomerTrackingTab.tsx | modified CustomerTrackingTab() | ~44 |
+| 11:04 | Edited components/customers/CustomerTrackingTab.tsx | expanded (+15 lines) | ~394 |

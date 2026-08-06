@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-06T10:39:55.006Z
-> Files: 30 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-06T11:04:01.736Z
+> Files: 31 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -338,8 +338,8 @@
 ## components/customers/
 
 - `CustomerDetailsTab.tsx` — CustomerDetailsTab (~7374 tok)
-- `CustomersClient.tsx` — CustomersClient (~1809 tok)
-- `CustomerTrackingTab.tsx` — fmtDMY (~25755 tok)
+- `CustomersClient.tsx` — CustomersClient (~1831 tok)
+- `CustomerTrackingTab.tsx` — fmtDMY (~25648 tok)
 - `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~674 tok)
 
 ## components/dashboard/
@@ -355,6 +355,7 @@
 
 ## components/employees/
 
+- `EmployeesClient.tsx` — Convert "MM/YYYY" → "YYYY-MM" for date comparisons (~19050 tok)
 
 ## components/expenses/
 

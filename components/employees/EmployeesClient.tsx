@@ -837,6 +837,29 @@ export default function EmployeesClient() {
     XLSX.writeFile(wb, 'עובדים.xlsx')
   }
 
+  // Report of every off-payslip addition/deduction in the current period, per employee, with a net total row.
+  function exportAdjustmentsExcel() {
+    const rows: Record<string, string | number>[] = []
+    curSals.forEach(sal => {
+      const emp = employees.find(e => e.id === sal.employee_id)
+      if (!emp) return
+      const adds = sal.additions || []
+      const deds = sal.deductions || []
+      if (adds.length === 0 && deds.length === 0) return
+      adds.forEach(a => rows.push({ 'שם עובד': emp.full_name, סוג: 'תוספת', תיאור: a.label, סכום: Number(a.amount) || 0 }))
+      deds.forEach(d => rows.push({ 'שם עובד': emp.full_name, סוג: 'ניכוי', תיאור: d.label, סכום: Number(d.amount) || 0 }))
+      const totalAdds = adds.reduce((s, a) => s + (Number(a.amount) || 0), 0)
+      const totalDeds = deds.reduce((s, d) => s + (Number(d.amount) || 0), 0)
+      rows.push({ 'שם עובד': emp.full_name, סוג: 'סה"כ נטו', תיאור: '', סכום: totalAdds - totalDeds })
+      rows.push({ 'שם עובד': '', סוג: '', תיאור: '', סכום: '' })
+    })
+    if (rows.length === 0) { showToast('אין תוספות או ניכויים בתקופה זו', 'info'); return }
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'תוספות וניכויים')
+    XLSX.writeFile(wb, `תוספות וניכויים - ${periodLabel(period)}.xlsx`)
+  }
+
   // ── Main render ──────────────────────────────────────────────────────────────
 
   return (
@@ -939,6 +962,15 @@ export default function EmployeesClient() {
             >
               {initingPeriod ? '⏳ יוצר...' : '🔄 אתחל חודש'}
             </button>
+            <button
+              onClick={exportAdjustmentsExcel}
+              title="ייצוא כל התוספות והניכויים חוץ-תלוש בחודש זה, לפי עובד"
+              style={{
+                padding: '7px 14px', borderRadius: '8px', border: '1.5px solid #bfdbfe',
+                cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+                fontFamily: 'inherit', background: '#eff6ff', color: '#1d4ed8',
+              }}
+            >📊 דוח תוספות/ניכויים</button>
           </div>
 
           {/* Salary tip */}
