@@ -202,5 +202,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-09"
+  },
+  {
+    "id": "bug-017",
+    "timestamp": "2026-08-09T00:00:00.000Z",
+    "error_message": "בספקים ולקוחות: כשיש זיכוי פתוח וללוחצים 'שלם הכל' בחלון תשלום, הסכום שממולא גבוה מהיתרה האמיתית (למשל יתרה אמיתית 6,000 אבל 'שלם הכל' מילא כ-9,000; אותו דבר בלקוחות: 6,112 בפועל מול כ-6,200 שמולא)",
+    "file": "components/suppliers/SupplierTrackingTab.tsx, components/customers/CustomerTrackingTab.tsx",
+    "root_cause": "In both files, `payOpenDebts` (the list of open invoices offered in the payment modal) is filtered to `direction === 'charge'` only — credit rows (`direction === 'credit'`) never appear there (they're also always saved already-closed, per the existing 2026-07-07 Decision Log entry, so `!d.is_closed` would exclude them anyway). `selectAllPayDebts()` (the '☑ שלם הכל' button) filled every open invoice's full gross `bal(d)` (amount-paid) with NO subtraction of the supplier/customer's open credit total — unlike the correctly-computed 'יתרה כוללת' shown on the regular card (`totalBal = debts.reduce((s,d) => s + bal(d), 0)` over ALL debts including credits, where `bal()` already returns credits as negative). So the on-screen balance was right, but the payment modal's auto-fill overstated the amount to collect/pay by exactly the open credit amount. `applyQuickAmount` (manually-typed total) was not affected — the user supplies the amount there, the function only spreads it.",
+    "fix": "Added `payOpenCreditTotal` (sum of that supplier's/customer's open `direction==='credit'` debts) in both files. Rewrote `selectAllPayDebts()` to walk the open invoices oldest-first (same order as `applyQuickAmount`'s auto spread) and net the running credit pool against each invoice's balance before filling it — an invoice fully absorbed by credit is left unchecked/unfilled — so the sum of filled amounts now matches the real net balance. Added a small explanatory note next to the '☑ שלם הכל' button (only when `payOpenCreditTotal > 0`) stating the open credit amount and that it's netted automatically, so the reduced total isn't a mystery.",
+    "tags": ["suppliers", "customers", "payment", "credit", "bal", "pay-all", "net-balance"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-08-09"
   }
 ]

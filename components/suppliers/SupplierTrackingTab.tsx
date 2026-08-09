@@ -455,6 +455,12 @@ export default function SupplierTrackingTab({
   // ── Payment (one or several open debts of one supplier, in one action) ────
 
   const payOpenDebts = supplierDebts.filter(d => d.supplier_id === paySupplierId && !d.is_closed && d.direction === 'charge')
+  // Credits are always saved already-closed (see Decision Log), so they never
+  // appear in payOpenDebts above — but the amount owed still needs to net them
+  // out, or "שלם הכל" overstates the total by exactly the open credit.
+  const payOpenCreditTotal = supplierDebts
+    .filter(d => d.supplier_id === paySupplierId && d.direction === 'credit')
+    .reduce((s, d) => s + Number(d.amount), 0)
   const payDebtsByMonth = (() => {
     const map: Record<string, SupplierDebt[]> = {}
     payOpenDebts.forEach(d => {
@@ -524,9 +530,26 @@ export default function SupplierTrackingTab({
     })
   }
 
+  // "שלם הכל" — fills every open invoice at its full balance, EXCEPT any open
+  // credit for this supplier is first netted out against the oldest invoices
+  // (same oldest-first order as applyQuickAmount's auto spread), so the total
+  // matches the supplier's real net balance instead of the gross invoice sum.
   const selectAllPayDebts = () => {
-    setPaySelectedIds(new Set(payOpenDebts.map(d => d.id)))
-    setPayAllocAmounts(Object.fromEntries(payOpenDebts.map(d => [d.id, String(bal(d).toFixed(2))])))
+    const sorted = [...payOpenDebts].sort((a, b) => a.date.localeCompare(b.date))
+    let creditLeft = payOpenCreditTotal
+    const ids = new Set<string>()
+    const allocs: Record<string, string> = {}
+    for (const d of sorted) {
+      const gross = bal(d)
+      const reduceBy = Math.min(gross, creditLeft)
+      creditLeft -= reduceBy
+      const net = gross - reduceBy
+      if (net <= 0) continue
+      ids.add(d.id)
+      allocs[d.id] = net.toFixed(2)
+    }
+    setPaySelectedIds(ids)
+    setPayAllocAmounts(allocs)
   }
 
   const submitPayment = async () => {
@@ -1175,6 +1198,11 @@ export default function SupplierTrackingTab({
                   <span style={{ fontSize: '13px', fontWeight: 600 }}>בחר אילו חודשים לשלם</span>
                   <button type="button" onClick={selectAllPayDebts} style={{ padding: '4px 10px', background: '#f0fdf4', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>☑ שלם הכל</button>
                 </div>
+                {payOpenCreditTotal > 0 && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '-4px 0 8px' }}>
+                    לספק זה זיכוי פתוח בסך {fmt(payOpenCreditTotal)} — מנוכה אוטומטית ב&quot;שלם הכל&quot; מהחשבוניות הישנות ביותר
+                  </div>
+                )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
                   {payDebtsByMonth.map(([mk, debts]) => (
                     <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
