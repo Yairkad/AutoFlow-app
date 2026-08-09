@@ -307,6 +307,28 @@ export default function SupplierTrackingTab({
     showToast('נמחק', 'success'); setSelectedId(null); reload()
   }
 
+  // Undo a wrong payment allocation on a specific invoice (e.g. from the old
+  // "שלם הכל" bug that ignored open credits) — deletes its supplier_debt_payments
+  // rows and reopens it, WITHOUT touching the underlying check/expense record.
+  // A check-linked allocation reappears under "לא משובץ" for correct re-allocation;
+  // a direct-payment (cash/credit/transfer) allocation leaves its "expenses" row
+  // untouched, which the user needs to fix separately if it was wrong.
+  const resetDebtPayments = async (d: SupplierDebt) => {
+    const linked = debtPayments.filter(dp => dp.supplier_debt_id === d.id)
+    if (linked.length === 0) return
+    const hasDirectPayment = linked.some(dp => !dp.scheduled_payment_id)
+    const msg = hasDirectPayment
+      ? 'לבטל את שיוך התשלום לרשומה זו? הצ\'קים המקושרים (אם יש) יחזרו ל"לא משובץ". שים לב: חלק מהתשלום נרשם כתשלום ישיר (מזומן/אשראי/העברה) — רשומת ההוצאה המתאימה ב"הוצאות" לא תימחק אוטומטית, יש לתקן/למחוק אותה שם בנפרד אם צריך.'
+      : 'לבטל את שיוך התשלום לרשומה זו? הצ\'ק/ים המקושרים יחזרו לרשימת "לא משובץ" ותוכל לשבץ אותם מחדש בסכום הנכון.'
+    if (!confirm(msg)) return
+    const { error: delErr } = await supabase.from('supplier_debt_payments').delete().eq('supplier_debt_id', d.id)
+    if (delErr) { showToast('שגיאה: ' + delErr.message, 'error'); return }
+    const { error: updErr } = await supabase.from('supplier_debts').update({ paid: 0, is_closed: false }).eq('id', d.id)
+    if (updErr) { showToast('שגיאה: ' + updErr.message, 'error'); return }
+    showToast('התשלום בוטל — הרשומה חזרה לפתוחה', 'success')
+    setSelectedId(null); reload()
+  }
+
   const addDebtForSupplier = (suppId: string) => {
     setEditSupp(null); setSSupplier(suppId); setSNotes(''); setSInvoices([EMPTY_INV()])
     setShowSuppModal(true)
@@ -1023,6 +1045,13 @@ export default function SupplierTrackingTab({
                                         title="מחק"
                                         style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
                                       >🗑</button>
+                                      {Number(d.paid) > 0 && (
+                                        <button
+                                          onClick={e => { e.stopPropagation(); resetDebtPayments(d) }}
+                                          title="בטל שיוך תשלום"
+                                          style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
+                                        >↩</button>
+                                      )}
                                     </td>
                                   </tr>
                                 ))

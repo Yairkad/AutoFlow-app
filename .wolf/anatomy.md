@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-09T10:07:43.388Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-09T11:49:33.777Z
 > Files: 40 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -27,7 +27,7 @@
 
 ## ../../../root/.claude/plans/
 
-- `inherited-roaming-stonebraker.md` — תיקון: "שלם הכל" מתעלם מזיכויים פתוחים (ספקים + לקוחות) (~972 tok)
+- `inherited-roaming-stonebraker.md` — תיקון נתונים היסטוריים: כלי "ביטול שיוך תשלום" לספקים/לקוחות (~986 tok)
 
 ## ./
 
@@ -349,7 +349,7 @@
 
 - `CustomerDetailsTab.tsx` — CustomerDetailsTab (~7374 tok)
 - `CustomersClient.tsx` — CustomersClient (~1809 tok)
-- `CustomerTrackingTab.tsx` — fmtDMY (~25733 tok)
+- `CustomerTrackingTab.tsx` — fmtDMY (~26250 tok)
 - `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~674 tok)
 
 ## components/dashboard/
@@ -401,7 +401,7 @@
 - `shared.ts` — Shared types/helpers for the merged /suppliers page (SupplierDetailsTab + SupplierTrackingTab). (~750 tok)
 - `SupplierDetailsTab.tsx` — former `SuppliersClient.tsx` body (profile/rolodex list+detail), now props-driven, no own fetch (~5000 tok)
 - `SuppliersClient.tsx` — SuppliersClient (~2411 tok)
-- `SupplierTrackingTab.tsx` — fmtDMY (~32530 tok)
+- `SupplierTrackingTab.tsx` — fmtDMY (~33142 tok)
 
 ## components/test-transfer/
 

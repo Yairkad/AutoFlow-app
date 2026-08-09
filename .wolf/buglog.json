@@ -214,5 +214,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-09"
+  },
+  {
+    "id": "bug-018",
+    "timestamp": "2026-08-09T00:00:00.000Z",
+    "error_message": "לאחר bug-017: ספק 'קוגול' היה עם חוב נטו של כ-6,000 אבל לפני התיקון המשתמש לחץ 'שלם הכל' (הבאגי) ונתן סדרת צ'קים על הסכום הגולמי המנופח — כל החשבוניות נסגרו במלואן והזיכויים (כ-9,000) נשארו בלתי-מנוצלים, כך שיתרת הספק בכרטסת קפצה לזיכוי של כ-9,000 במקום החוב האמיתי. אין דרך במסך לתקן שיוך תשלום שגוי בלי למחוק את כל רשומת החוב.",
+    "file": "components/suppliers/SupplierTrackingTab.tsx, components/customers/CustomerTrackingTab.tsx",
+    "root_cause": "Not a new code bug — this is fallout data from bug-017 (payments already made against the inflated pre-fix total). The screen had no way to undo just the payment allocation on an invoice; `deleteSuppDebt`/`deleteDebt` only delete the entire debt row, not the (possibly wrong) payments linked to it.",
+    "fix": "Added `resetDebtPayments(d)` in both files (new '↩ בטל שיוך תשלום' button next to the existing ✏️/🗑 icons on every invoice row with `paid > 0`): deletes the linked `supplier_debt_payments`/`customer_ledger_payments` rows and resets the debt to `paid: 0, is_closed: false`, WITHOUT touching the underlying check (`scheduled_payments`) or the `expenses`/`income` row that payment created. For suppliers, a check that was only linked to that invoice automatically reappears under the existing '⚠ לא משובץ' (unlinked payments) section, which already has a correct, fully-manual retroactive-allocation flow (`allocatingPayment`/`toggleAllocDebt`) unaffected by bug-017 — so the check can be re-allocated at the right net amount. Customers have no check/unlinked-payment system, so the debt there just reopens directly. A `confirm()` before the reset warns, when any of the payments being undone is a direct payment (cash/credit/transfer, no linked check), that the corresponding `expenses`/`income` record is NOT auto-corrected and needs fixing separately on the Expenses/Income page — otherwise re-paying could double-count that money.",
+    "tags": ["suppliers", "customers", "payment", "credit", "data-correction", "undo", "supplier_debt_payments", "related-to-bug-017"],
+    "related_bugs": ["bug-017"],
+    "occurrences": 1,
+    "last_seen": "2026-08-09"
   }
 ]

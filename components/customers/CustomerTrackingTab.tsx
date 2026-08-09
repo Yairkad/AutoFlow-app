@@ -278,6 +278,23 @@ export default function CustomerTrackingTab({
     showToast('נמחק', 'success'); setSelectedId(null); reload()
   }
 
+  // Undo a wrong payment allocation on a specific invoice (e.g. from the old
+  // "שלם הכל" bug that ignored open credits) — deletes its customer_ledger_payments
+  // rows and reopens it, WITHOUT touching the "income" record those payments created.
+  // Unlike suppliers, customer payments have no check/unlinked-payment system to
+  // fall back into — the debt just becomes open again for a fresh, correct payment.
+  const resetDebtPayments = async (d: CustomerLedgerDebt) => {
+    const linked = customerPayments.filter(p => p.customer_ledger_debt_id === d.id)
+    if (linked.length === 0) return
+    if (!confirm('לבטל את שיוך התשלום לרשומה זו? הרשומה תחזור לפתוחה. שים לב: רשומת ה"הכנסה" שנוצרה מהתשלום לא נמחקת אוטומטית — יש לתקן/למחוק אותה בנפרד בעמוד ההכנסות אם צריך.')) return
+    const { error: delErr } = await supabase.from('customer_ledger_payments').delete().eq('customer_ledger_debt_id', d.id)
+    if (delErr) { showToast('שגיאה: ' + delErr.message, 'error'); return }
+    const { error: updErr } = await supabase.from('customer_ledger_debts').update({ paid: 0, is_closed: false }).eq('id', d.id)
+    if (updErr) { showToast('שגיאה: ' + updErr.message, 'error'); return }
+    showToast('התשלום בוטל — הרשומה חזרה לפתוחה', 'success')
+    setSelectedId(null); reload()
+  }
+
   const addDebtForCustomer = (custId: string) => {
     setEditDebt(null); setDCustomer(custId); setDNotes(''); setDInvoices([EMPTY_INV()])
     setShowDebtModal(true)
@@ -900,6 +917,13 @@ export default function CustomerTrackingTab({
                                         title="מחק"
                                         style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
                                       >🗑</button>
+                                      {Number(d.paid) > 0 && (
+                                        <button
+                                          onClick={e => { e.stopPropagation(); resetDebtPayments(d) }}
+                                          title="בטל שיוך תשלום"
+                                          style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
+                                        >↩</button>
+                                      )}
                                     </td>
                                   </tr>
                                 ) }))
