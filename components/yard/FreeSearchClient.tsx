@@ -36,6 +36,12 @@ export default function FreeSearchClient({ session, filterType }: Props) {
   const [pickerItem,  setPickerItem]  = useState<SearchResult | null>(null)
   const scanRef = useRef<HTMLInputElement>(null)
 
+  // Keyboard hidden by default — the full inventory list is already cached/shown
+  // for browsing by scroll; the on-screen keyboard only needs to appear while the
+  // user is actively typing a search, otherwise it used to permanently cover the
+  // results (unlike TireSearchClient, which already toggles its keyboard the same way).
+  const [showKeyboard, setShowKeyboard] = useState(false)
+
   const existingNames = new Set((session.yard_session_items ?? []).map(i => i.name))
   const title = filterType === 'all' ? 'כל המלאי' : 'אביזרים לרכב'
 
@@ -98,27 +104,30 @@ export default function FreeSearchClient({ session, filterType }: Props) {
     setPickerItem(null)
     setSaving(true)
     const finalPrice = pickerItem.price
+    const posArr = positions.length > 0 ? positions : [null]
+    const now = Date.now()
+
+    // One batched POST for all positions (instead of one request per position),
+    // and stash every pending item so the work card shows all of them instantly.
+    const pendingItems = posArr.map((pos, i) => ({
+      id: `pending-${now}-${i}`, session_id: session.id, tenant_id: '',
+      item_type: 'tire', ref_id: pickerItem.id, name: pickerItem.name, sku: pickerItem.sku,
+      quantity: 1, unit_price: finalPrice, original_price: pickerItem.price,
+      price_modified: false, tire_position: pos,
+      created_at: new Date().toISOString(),
+    }))
     try {
-      sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify({
-        id: `pending-${Date.now()}`, session_id: session.id, tenant_id: '',
-        item_type: 'tire', ref_id: pickerItem.id, name: pickerItem.name, sku: pickerItem.sku,
-        quantity: 1, unit_price: finalPrice, original_price: pickerItem.price,
-        price_modified: false, tire_position: positions[0] ?? null,
-        created_at: new Date().toISOString(),
-      }))
+      sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify(pendingItems))
     } catch {}
     router.push(`/yard/${session.id}`)
-    const posArr = positions.length > 0 ? positions : [null]
-    posArr.forEach(pos => {
-      fetch(`/api/yard/sessions/${session.id}/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          item_type: 'tire', ref_id: pickerItem.id, name: pickerItem.name, sku: pickerItem.sku,
-          quantity: 1, unit_price: finalPrice, original_price: pickerItem.price,
-          price_modified: false, tire_position: pos,
-        }),
-      })
+    fetch(`/api/yard/sessions/${session.id}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(posArr.map(pos => ({
+        item_type: 'tire', ref_id: pickerItem.id, name: pickerItem.name, sku: pickerItem.sku,
+        quantity: 1, unit_price: finalPrice, original_price: pickerItem.price,
+        price_modified: false, tire_position: pos,
+      }))),
     })
   }
 
@@ -261,11 +270,22 @@ export default function FreeSearchClient({ session, filterType }: Props) {
           inputMode="none"
           value={query}
           onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') search(query) }}
+          onFocus={() => setShowKeyboard(true)}
+          onKeyDown={e => { if (e.key === 'Enter') { search(query); setShowKeyboard(false) } }}
           placeholder="חפש מוצר, צמיג, שירות..."
           className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium bg-white outline-none"
           style={{ padding: '10px 14px' }}
         />
+        {showKeyboard && (
+          <button
+            onClick={() => setShowKeyboard(false)}
+            className="rounded-xl border-2 border-slate-300 font-bold text-slate-600 bg-white flex-shrink-0 active:bg-slate-100 transition-colors"
+            style={{ width: '40px', height: '40px', fontSize: '16px' }}
+            aria-label="סגור מקלדת"
+          >
+            ⌄
+          </button>
+        )}
         <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
           <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">−</button>
           <span className="w-9 text-center font-bold border-x-2 border-slate-200 h-10 flex items-center justify-center">{qty}</span>
@@ -286,7 +306,7 @@ export default function FreeSearchClient({ session, filterType }: Props) {
             {results.map((r, i) => (
               <div
                 key={r.id}
-                onClick={() => { setSelected(r); setPrice(r.price) }}
+                onClick={() => { setSelected(r); setPrice(r.price); setShowKeyboard(false) }}
                 className="flex items-center cursor-pointer transition-colors"
                 style={{
                   minHeight: '62px',
@@ -327,12 +347,15 @@ export default function FreeSearchClient({ session, filterType }: Props) {
         </button>
       </div>
 
-      {/* Custom keyboard — pinned at bottom */}
-      <HebrewNumKeyboard
-        value={query}
-        onChange={setQuery}
-        onConfirm={() => search(query)}
-      />
+      {/* Custom keyboard — pinned at bottom, only while actively typing so the
+          results list gets the full screen the rest of the time */}
+      {showKeyboard && !scanMode && (
+        <HebrewNumKeyboard
+          value={query}
+          onChange={setQuery}
+          onConfirm={() => { search(query); setShowKeyboard(false) }}
+        />
+      )}
 
       {/* Duplicate confirm */}
       {confirm && (

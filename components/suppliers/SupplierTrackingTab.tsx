@@ -189,7 +189,7 @@ export default function SupplierTrackingTab({
 
   // Styled printing — pick what to print, then render a hidden print-only area
   const [showPrintChoice, setShowPrintChoice] = useState(false)
-  const [printMode, setPrintMode] = useState<'ledger' | null>(null)
+  const [printMode, setPrintMode] = useState<'ledger' | 'open-summary' | null>(null)
   const [printSupplierId, setPrintSupplierId] = useState<string>('')
   const [printRangeMode, setPrintRangeMode] = useState<'all' | 'months' | 'range'>('all')
   const [printMonths, setPrintMonths] = useState<Set<string>>(new Set())
@@ -455,6 +455,12 @@ export default function SupplierTrackingTab({
   // ── Payment (one or several open debts of one supplier, in one action) ────
 
   const payOpenDebts = supplierDebts.filter(d => d.supplier_id === paySupplierId && !d.is_closed && d.direction === 'charge')
+  // Credits are always saved already-closed (see Decision Log), so they never
+  // appear in payOpenDebts above — but the amount owed still needs to net them
+  // out, or "שלם הכל" overstates the total by exactly the open credit.
+  const payOpenCreditTotal = supplierDebts
+    .filter(d => d.supplier_id === paySupplierId && d.direction === 'credit')
+    .reduce((s, d) => s + Number(d.amount), 0)
   const payDebtsByMonth = (() => {
     const map: Record<string, SupplierDebt[]> = {}
     payOpenDebts.forEach(d => {
@@ -524,9 +530,26 @@ export default function SupplierTrackingTab({
     })
   }
 
+  // "שלם הכל" — fills every open invoice at its full balance, EXCEPT any open
+  // credit for this supplier is first netted out against the oldest invoices
+  // (same oldest-first order as applyQuickAmount's auto spread), so the total
+  // matches the supplier's real net balance instead of the gross invoice sum.
   const selectAllPayDebts = () => {
-    setPaySelectedIds(new Set(payOpenDebts.map(d => d.id)))
-    setPayAllocAmounts(Object.fromEntries(payOpenDebts.map(d => [d.id, String(bal(d).toFixed(2))])))
+    const sorted = [...payOpenDebts].sort((a, b) => a.date.localeCompare(b.date))
+    let creditLeft = payOpenCreditTotal
+    const ids = new Set<string>()
+    const allocs: Record<string, string> = {}
+    for (const d of sorted) {
+      const gross = bal(d)
+      const reduceBy = Math.min(gross, creditLeft)
+      creditLeft -= reduceBy
+      const net = gross - reduceBy
+      if (net <= 0) continue
+      ids.add(d.id)
+      allocs[d.id] = net.toFixed(2)
+    }
+    setPaySelectedIds(ids)
+    setPayAllocAmounts(allocs)
   }
 
   const submitPayment = async () => {
@@ -1175,6 +1198,11 @@ export default function SupplierTrackingTab({
                   <span style={{ fontSize: '13px', fontWeight: 600 }}>בחר אילו חודשים לשלם</span>
                   <button type="button" onClick={selectAllPayDebts} style={{ padding: '4px 10px', background: '#f0fdf4', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>☑ שלם הכל</button>
                 </div>
+                {payOpenCreditTotal > 0 && (
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '-4px 0 8px' }}>
+                    לספק זה זיכוי פתוח בסך {fmt(payOpenCreditTotal)} — מנוכה אוטומטית ב&quot;שלם הכל&quot; מהחשבוניות הישנות ביותר
+                  </div>
+                )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
                   {payDebtsByMonth.map(([mk, debts]) => (
                     <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
@@ -1633,6 +1661,18 @@ export default function SupplierTrackingTab({
                   style={{ width: '100%' }}
                 >🖨️ הדפס כרטסת</Button>
               </div>
+
+              <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>סיכום חובות פתוחים — כל הספקים</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                  טבלה אחת: כל ספק עם יתרה פתוחה, מפורק לפי חודשים, עם סה&quot;כ לכל ספק
+                </div>
+                <Button
+                  onClick={() => { setShowPrintChoice(false); setPrintMode('open-summary') }}
+                  style={{ width: '100%' }}
+                >📋 הדפס סיכום חובות פתוחים</Button>
+              </div>
+
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
                 להדפסת יומן צ׳קים — <Link href="/checks" style={{ color: 'var(--primary)', fontWeight: 600 }}>עברו ליומן הצ׳קים</Link>
               </div>
@@ -1784,6 +1824,86 @@ export default function SupplierTrackingTab({
                       </tbody>
                     </table>
                   </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {printMode === 'open-summary' && (() => {
+            const rows = suppliers
+              .map(s => {
+                const debts = supplierDebts.filter(d => d.supplier_id === s.id)
+                const byMonth = new Map<string, number>()
+                for (const d of debts) {
+                  const b = bal(d)
+                  if (!b) continue
+                  const mk = monthKeyOf(d.date)
+                  byMonth.set(mk, (byMonth.get(mk) ?? 0) + b)
+                }
+                const total = [...byMonth.values()].reduce((s2, v) => s2 + v, 0)
+                return { supplier: s, byMonth, total }
+              })
+              .filter(r => r.total > 0)
+              .sort((a, b) => a.supplier.name.localeCompare(b.supplier.name, 'he'))
+
+            const months = [...new Set(rows.flatMap(r => [...r.byMonth.keys()]))].sort()
+            const monthTotals = new Map<string, number>(months.map(mk => [mk, 0]))
+            let grandTotal = 0
+            for (const r of rows) {
+              for (const mk of months) monthTotals.set(mk, (monthTotals.get(mk) ?? 0) + (r.byMonth.get(mk) ?? 0))
+              grandTotal += r.total
+            }
+
+            return (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #000', paddingBottom: 10, marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 18, fontWeight: 900 }}>{tenantName}</div>
+                    {tenant?.sub_title && <div>{tenant.sub_title}</div>}
+                    {tenant?.address && <div>{tenant.address}</div>}
+                    {tenant?.phone && <div>טל׳: {tenant.phone}</div>}
+                    {tenant?.license_number && <div>מס׳ רישיון מוסך: {tenant.license_number}</div>}
+                  </div>
+                  {tenant?.logo_base64 && (
+                    <img src={tenant.logo_base64 as string} alt="לוגו" style={{ maxHeight: 80, maxWidth: 200, objectFit: 'contain' }} />
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+                  <h2 style={{ margin: 0, fontSize: 16 }}>סיכום חובות פתוחים — כל הספקים</h2>
+                  <div style={{ fontSize: 12, color: '#555' }}>תאריך: {fmtDMY(new Date())}</div>
+                </div>
+
+                {rows.length === 0 ? (
+                  <div style={{ fontSize: 13, color: '#555' }}>אין ספקים עם חוב פתוח</div>
+                ) : (
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ספק</th>
+                        {months.map(mk => <th key={mk}>{fmtMonth(mk)}</th>)}
+                        <th>סה&quot;כ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(r => (
+                        <tr key={r.supplier.id}>
+                          <td style={{ fontWeight: 700 }}>{r.supplier.name}</td>
+                          {months.map(mk => (
+                            <td key={mk}>{r.byMonth.has(mk) ? fmt(r.byMonth.get(mk)!) : '—'}</td>
+                          ))}
+                          <td style={{ fontWeight: 700 }}>{fmt(r.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr style={{ fontWeight: 700, background: '#eee' }}>
+                        <td>סה&quot;כ כללי</td>
+                        {months.map(mk => <td key={mk}>{fmt(monthTotals.get(mk) ?? 0)}</td>)}
+                        <td>{fmt(grandTotal)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 )}
               </div>
             )

@@ -68,12 +68,13 @@ export function minutesSince(dateStr: string): number {
 }
 
 export interface SearchResult {
-  id:     string
-  type:   'tire' | 'product' | 'service'
-  name:   string
-  sku:    string | null
-  price:  number
-  stock:  number | null
-  size?:  string
-  brand?: string
+  id:        string
+  type:      'tire' | 'product' | 'service'
+  name:      string
+  sku:       string | null
+  price:     number
+  stock:     number | null
+  size?:     string
+  brand?:    string
+  location?: string   // tires only — warehouse shelf location
 }
