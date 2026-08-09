@@ -105,28 +105,47 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     return () => { supabase.removeChannel(ch) }
   }, [session.id]) // eslint-disable-line
 
-  // On mount: pick up item written by search page before navigating back
+  // On mount: pick up item(s) written by search page before navigating back
+  // (search pages may store a single object or an array — one item per tire position)
   useEffect(() => {
     try {
       const key = `yard-pending-${initialSession.id}`
       const raw = sessionStorage.getItem(key)
       if (!raw) return
       sessionStorage.removeItem(key)
-      const pendingItem: YardSessionItem = JSON.parse(raw)
+      const parsed = JSON.parse(raw)
+      const pendingItems: YardSessionItem[] = Array.isArray(parsed) ? parsed : [parsed]
       setSession(s => {
-        if (s.yard_session_items.some(i => i.ref_id === pendingItem.ref_id && i.name === pendingItem.name)) return s
-        return { ...s, yard_session_items: [...s.yard_session_items, pendingItem] }
+        const existing = new Set(s.yard_session_items.map(i => `${i.ref_id}|${i.name}|${i.tire_position ?? ''}`))
+        const toAdd = pendingItems.filter(p => !existing.has(`${p.ref_id}|${p.name}|${p.tire_position ?? ''}`))
+        if (toAdd.length === 0) return s
+        return { ...s, yard_session_items: [...s.yard_session_items, ...toAdd] }
       })
     } catch {}
   }, []) // eslint-disable-line
 
-  // Sync from server (router.refresh) — keep any still-unconfirmed temp/pending items
+  // Sync from server (router.refresh) — keep any still-unconfirmed temp/pending items.
+  // Matched by CONTENT (item_type + ref_id + tire_position + name), not by id — a
+  // pending/temp item's client-generated id never equals its real DB id once the
+  // server confirms it, so id-based matching would keep it forever (duplicate row,
+  // and price/qty edits against it would always fail — the item's id never exists
+  // server-side). Consume one server match per pending item with the same key.
   useEffect(() => {
     setSession(prev => {
-      const serverIds = new Set(initialSession.yard_session_items.map(i => i.id))
-      const stillLocal = prev.yard_session_items.filter(
-        i => (i.id.startsWith('temp-') || i.id.startsWith('pending-')) && !serverIds.has(i.id)
-      )
+      const keyOf = (i: { item_type: string; ref_id: string | null; tire_position: TirePosition | null; name: string }) =>
+        `${i.item_type}|${i.ref_id ?? ''}|${i.tire_position ?? ''}|${i.name}`
+      const serverCounts = new Map<string, number>()
+      for (const i of initialSession.yard_session_items) {
+        const k = keyOf(i)
+        serverCounts.set(k, (serverCounts.get(k) ?? 0) + 1)
+      }
+      const stillLocal = prev.yard_session_items.filter(i => {
+        if (!(i.id.startsWith('temp-') || i.id.startsWith('pending-'))) return false
+        const k = keyOf(i)
+        const remaining = serverCounts.get(k) ?? 0
+        if (remaining > 0) { serverCounts.set(k, remaining - 1); return false }
+        return true
+      })
       return { ...initialSession, yard_session_items: [...initialSession.yard_session_items, ...stillLocal] }
     })
   }, [initialSession]) // eslint-disable-line
@@ -611,9 +630,15 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
             {items.length === 0 ? (
               <div className="p-5 text-center text-slate-400">הסל ריק</div>
             ) : (
-              items.map(item => (
-                <div key={item.id} className="flex items-center border-b border-slate-100 last:border-0" style={{ gap: '8px', padding: '8px 14px' }}>
-                  <button onClick={() => openEditItem(item)} className="flex-1 min-w-0 text-right">
+              items.map(item => {
+                // Items added from another page (search/tire) start out with a
+                // client-generated id until the server confirms them a moment later —
+                // editing price/qty/delete against a not-yet-confirmed id always fails
+                // server-side, so those controls stay disabled until it syncs.
+                const isSyncing = item.id.startsWith('temp-') || item.id.startsWith('pending-')
+                return (
+                <div key={item.id} className="flex items-center border-b border-slate-100 last:border-0" style={{ gap: '8px', padding: '8px 14px', opacity: isSyncing ? 0.55 : 1 }}>
+                  <button onClick={() => !isSyncing && openEditItem(item)} disabled={isSyncing} className="flex-1 min-w-0 text-right">
                     <div className="font-semibold text-slate-900" style={{ fontSize: '14px' }}>
                       {item.name}
                       {item.tire_position && (
@@ -627,30 +652,37 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
                       {item.price_modified && (
                         <span className="bg-amber-100 text-amber-700 rounded font-bold" style={{ fontSize: '11px', padding: '1px 5px' }}>שונה</span>
                       )}
+                      {isSyncing && (
+                        <span className="text-blue-500 font-semibold" style={{ fontSize: '11px' }}>⏳ מסתנכרן...</span>
+                      )}
                     </div>
                   </button>
-                  <button onClick={() => openEditItem(item)} className="font-bold text-blue-600 whitespace-nowrap flex-shrink-0" style={{ fontSize: '15px' }}>
+                  <button onClick={() => !isSyncing && openEditItem(item)} disabled={isSyncing} className="font-bold text-blue-600 whitespace-nowrap flex-shrink-0" style={{ fontSize: '15px' }}>
                     {(item.unit_price * item.quantity).toLocaleString()}₪
                   </button>
                   <div className="flex items-center flex-shrink-0" style={{ gap: '2px' }}>
                     <button
                       onClick={() => changeQty(item, -1)}
-                      className="font-black text-slate-400 hover:text-red-500 leading-none active:scale-90 transition-all"
+                      disabled={isSyncing}
+                      className="font-black text-slate-400 hover:text-red-500 leading-none active:scale-90 transition-all disabled:opacity-40"
                       style={{ fontSize: '22px', width: '26px', textAlign: 'center' }}
                     >−</button>
                     <button
                       onClick={() => changeQty(item, 1)}
-                      className="font-black text-green-600 hover:text-green-800 leading-none active:scale-90 transition-all"
+                      disabled={isSyncing}
+                      className="font-black text-green-600 hover:text-green-800 leading-none active:scale-90 transition-all disabled:opacity-40"
                       style={{ fontSize: '22px', width: '26px', textAlign: 'center' }}
                     >+</button>
                   </div>
                   <button
                     onClick={() => deleteItem(item)}
-                    className="text-slate-300 hover:text-red-500 leading-none flex-shrink-0 transition-colors"
+                    disabled={isSyncing}
+                    className="text-slate-300 hover:text-red-500 leading-none flex-shrink-0 transition-colors disabled:opacity-40"
                     style={{ fontSize: '18px' }}
                   >🗑</button>
                 </div>
-              ))
+                )
+              })
             )}
           </div>
 

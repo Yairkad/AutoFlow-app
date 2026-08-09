@@ -128,6 +128,13 @@ export default function YardDashboard({ initialSessions }: Props) {
       {/* Bottom buttons */}
       <div className="flex-shrink-0 flex flex-col gap-2" style={{ padding: '14px' }}>
         <button
+          onClick={() => router.push('/yard/tire-lookup')}
+          className="w-full text-white font-bold flex items-center justify-center gap-2.5 transition-all active:scale-[.98]"
+          style={{ borderRadius: '12px', padding: '16px', fontSize: '17px', background: '#1d4ed8' }}
+        >
+          🔍 בדיקת מלאי צמיגים
+        </button>
+        <button
           onClick={() => { if (newCarLoading) return; setNewCarLoading(true); router.push('/yard/new') }}
           disabled={newCarLoading}
           className="w-full text-white font-bold flex items-center justify-center gap-2.5 transition-all"

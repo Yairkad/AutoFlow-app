@@ -189,7 +189,7 @@ export default function SupplierTrackingTab({
 
   // Styled printing — pick what to print, then render a hidden print-only area
   const [showPrintChoice, setShowPrintChoice] = useState(false)
-  const [printMode, setPrintMode] = useState<'ledger' | null>(null)
+  const [printMode, setPrintMode] = useState<'ledger' | 'open-summary' | null>(null)
   const [printSupplierId, setPrintSupplierId] = useState<string>('')
   const [printRangeMode, setPrintRangeMode] = useState<'all' | 'months' | 'range'>('all')
   const [printMonths, setPrintMonths] = useState<Set<string>>(new Set())
@@ -1633,6 +1633,18 @@ export default function SupplierTrackingTab({
                   style={{ width: '100%' }}
                 >🖨️ הדפס כרטסת</Button>
               </div>
+
+              <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>סיכום חובות פתוחים — כל הספקים</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                  טבלה אחת: כל ספק עם יתרה פתוחה, מפורק לפי חודשים, עם סה&quot;כ לכל ספק
+                </div>
+                <Button
+                  onClick={() => { setShowPrintChoice(false); setPrintMode('open-summary') }}
+                  style={{ width: '100%' }}
+                >📋 הדפס סיכום חובות פתוחים</Button>
+              </div>
+
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
                 להדפסת יומן צ׳קים — <Link href="/checks" style={{ color: 'var(--primary)', fontWeight: 600 }}>עברו ליומן הצ׳קים</Link>
               </div>
@@ -1784,6 +1796,86 @@ export default function SupplierTrackingTab({
                       </tbody>
                     </table>
                   </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {printMode === 'open-summary' && (() => {
+            const rows = suppliers
+              .map(s => {
+                const debts = supplierDebts.filter(d => d.supplier_id === s.id)
+                const byMonth = new Map<string, number>()
+                for (const d of debts) {
+                  const b = bal(d)
+                  if (!b) continue
+                  const mk = monthKeyOf(d.date)
+                  byMonth.set(mk, (byMonth.get(mk) ?? 0) + b)
+                }
+                const total = [...byMonth.values()].reduce((s2, v) => s2 + v, 0)
+                return { supplier: s, byMonth, total }
+              })
+              .filter(r => r.total > 0)
+              .sort((a, b) => a.supplier.name.localeCompare(b.supplier.name, 'he'))
+
+            const months = [...new Set(rows.flatMap(r => [...r.byMonth.keys()]))].sort()
+            const monthTotals = new Map<string, number>(months.map(mk => [mk, 0]))
+            let grandTotal = 0
+            for (const r of rows) {
+              for (const mk of months) monthTotals.set(mk, (monthTotals.get(mk) ?? 0) + (r.byMonth.get(mk) ?? 0))
+              grandTotal += r.total
+            }
+
+            return (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #000', paddingBottom: 10, marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 18, fontWeight: 900 }}>{tenantName}</div>
+                    {tenant?.sub_title && <div>{tenant.sub_title}</div>}
+                    {tenant?.address && <div>{tenant.address}</div>}
+                    {tenant?.phone && <div>טל׳: {tenant.phone}</div>}
+                    {tenant?.license_number && <div>מס׳ רישיון מוסך: {tenant.license_number}</div>}
+                  </div>
+                  {tenant?.logo_base64 && (
+                    <img src={tenant.logo_base64 as string} alt="לוגו" style={{ maxHeight: 80, maxWidth: 200, objectFit: 'contain' }} />
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+                  <h2 style={{ margin: 0, fontSize: 16 }}>סיכום חובות פתוחים — כל הספקים</h2>
+                  <div style={{ fontSize: 12, color: '#555' }}>תאריך: {fmtDMY(new Date())}</div>
+                </div>
+
+                {rows.length === 0 ? (
+                  <div style={{ fontSize: 13, color: '#555' }}>אין ספקים עם חוב פתוח</div>
+                ) : (
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ספק</th>
+                        {months.map(mk => <th key={mk}>{fmtMonth(mk)}</th>)}
+                        <th>סה&quot;כ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(r => (
+                        <tr key={r.supplier.id}>
+                          <td style={{ fontWeight: 700 }}>{r.supplier.name}</td>
+                          {months.map(mk => (
+                            <td key={mk}>{r.byMonth.has(mk) ? fmt(r.byMonth.get(mk)!) : '—'}</td>
+                          ))}
+                          <td style={{ fontWeight: 700 }}>{fmt(r.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr style={{ fontWeight: 700, background: '#eee' }}>
+                        <td>סה&quot;כ כללי</td>
+                        {months.map(mk => <td key={mk}>{fmt(monthTotals.get(mk) ?? 0)}</td>)}
+                        <td>{fmt(grandTotal)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 )}
               </div>
             )

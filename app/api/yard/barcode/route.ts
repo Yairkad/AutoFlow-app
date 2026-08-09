@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const { data: tire } = await sb
     .from('tires')
-    .select('id,brand,width,profile,rim,speed_idx,load_idx,sell_price,qty,sku')
+    .select('id,brand,width,profile,rim,speed_idx,load_idx,sell_price,qty,sku,location')
     .eq('tenant_id', tenantId)
     .eq('sku', code)
     .maybeSingle()
@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
       stock: tire.qty,
       size,
       brand: tire.brand ?? undefined,
+      location: tire.location ?? undefined,
     }
     return NextResponse.json(result)
   }

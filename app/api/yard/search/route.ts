@@ -11,6 +11,7 @@ export interface SearchResult {
   stock:      number | null
   size?:      string   // tires only
   brand?:     string   // tires only
+  location?:  string   // tires only — warehouse shelf location
 }
 
 // GET /api/yard/search?q=TEXT&type=all|tire|product|service
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
   if (type === 'all' || type === 'tire') {
     let tireQuery = supabase
       .from('tires')
-      .select('id, brand, width, profile, rim, speed_idx, load_idx, sell_price, qty, sku')
+      .select('id, brand, width, profile, rim, speed_idx, load_idx, sell_price, qty, sku, location')
       .eq('tenant_id', profile.tenant_id)
       .gt('qty', 0)
 
@@ -67,6 +68,7 @@ export async function GET(req: NextRequest) {
         stock: t.qty,
         size,
         brand: t.brand ?? undefined,
+        location: t.location ?? undefined,
       })
     }
   }

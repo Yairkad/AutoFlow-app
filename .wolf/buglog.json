@@ -178,5 +178,29 @@
     "related_bugs": ["bug-010", "bug-009"],
     "occurrences": 1,
     "last_seen": "2026-07-22"
+  },
+  {
+    "id": "bug-015",
+    "timestamp": "2026-08-09T00:00:00.000Z",
+    "error_message": "ברחבה: בחירת כמה צמיגים (כמה פוזיציות גלגל) לוקחת הרבה זמן להיכנס לכרטיס הרכב, ולפעמים עריכת מחיר על פריט שזה עתה נוסף נכשלת בשגיאה 'שגיאה בעדכון מחיר — נסה שוב'",
+    "file": "components/yard/TireSearchClient.tsx, components/yard/FreeSearchClient.tsx, components/yard/WorkCardClient.tsx",
+    "root_cause": "Two compounding defects in the same flow: (1) TireSearchClient.submitWithPosition/FreeSearchClient.submitTireWithPosition sent one unbatched, unawaited POST per selected tire position instead of a single batched request (the endpoint already supports a batch array body) — multiplying round-trips felt slow, and only the FIRST position's item was ever written to the `yard-pending-<sessionId>` sessionStorage key WorkCardClient reads on mount, so the other positions were invisible until a slower realtime-triggered `router.refresh()` landed. (2) WorkCardClient's reconciliation effect (kept 'still-unconfirmed' local temp/pending items across a server refresh) matched by client-generated id: `!serverIds.has(i.id)`. A pending item's fake id (`pending-...`) never equals its real DB id once the server confirms it, so that condition was always true — the fake item was kept FOREVER (never replaced by the real one), duplicating the row and leaving it permanently addressed by an id that does not exist server-side. Any subsequent price-edit/qty-change PATCH against that id 404/500'd server-side (`.eq('id', itemId).single()` finds no row), which is exactly the 'שגיאה בעדכון מחיר' the user saw — not intermittent, but guaranteed for every item added via these two search pages.",
+    "fix": "TireSearchClient.submitWithPosition and FreeSearchClient.submitTireWithPosition now build one pending item per position and POST them all in a single batched request (array body), and stash the FULL array in sessionStorage instead of just the first item. WorkCardClient's pending-pickup effect now accepts either a single object or an array (backward compatible) and adds all of them, with tire_position included in the existing-item dedup key (previously ref_id+name only, which would have incorrectly collapsed multiple positions of the same tire into one). WorkCardClient's reconciliation effect now matches pending/temp items to fresh server items by CONTENT (item_type+ref_id+tire_position+name, consuming one server match per pending item) instead of by id, so a confirmed item actually replaces its temporary stand-in. As defense in depth, cart rows whose id still starts with `temp-`/`pending-` now show a '⏳ מסתנכרן...' label and have their price-edit/qty/delete controls disabled until the real id lands, so a PATCH can never be sent against a nonexistent id.",
+    "tags": ["yard", "tire", "session-items", "sessionStorage", "pending-id", "race-condition", "reconciliation", "price-edit"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-08-09"
+  },
+  {
+    "id": "bug-016",
+    "timestamp": "2026-08-09T00:00:00.000Z",
+    "error_message": "במסכי 'אביזרים לרכב' ו'כל המלאי' ברחבה, המקלדת המותאמת-אישית (HebrewNumKeyboard) מכסה את כל המסך ולא רואים את רשימת המלאי",
+    "file": "components/yard/FreeSearchClient.tsx",
+    "root_cause": "FreeSearchClient (used for both /yard/[id]/search?type=product and ?type=all — same component, different filterType) rendered its bottom-pinned HebrewNumKeyboard unconditionally, with no state ever hiding it — unlike the sibling TireSearchClient, which already toggles its own on-screen keyboard via a `showKeyboard` state (hidden after search confirms, reopened on input focus). The always-on keyboard (~250px, on top of the plate header/nav/scan rows/search row/add button that already fill most of a mobile screen) left the results list almost no height, permanently — not just while typing.",
+    "fix": "Added the same `showKeyboard` toggle pattern already proven in TireSearchClient: default false (FreeSearchClient already preloads/caches the full inventory list for scroll-browsing, so there is no reason to show a keyboard before the user asks to type), opens on the search input's onFocus, closes after a confirmed search or after selecting a result, plus a small manual close (⌄) button next to the input for dismissing without picking a result.",
+    "tags": ["yard", "keyboard", "ui", "FreeSearchClient", "TireSearchClient-pattern", "layout"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-08-09"
   }
 ]

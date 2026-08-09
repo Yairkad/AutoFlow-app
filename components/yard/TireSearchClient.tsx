@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import type { YardSession, SearchResult, TirePosition } from '@/lib/yard/types'
+import type { YardSession, YardSessionItem, SearchResult, TirePosition } from '@/lib/yard/types'
 import { formatPlate } from '@/lib/yard/types'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
 import TireKeyboard from '@/components/yard/TireKeyboard'
@@ -119,50 +119,33 @@ export default function TireSearchClient({ session }: Props) {
     setShowPicker(false)
     setSaving(true)
     const finalPrice = price ?? item.price
+    const posArr = positions.length > 0 ? positions : [null]
+    const now = Date.now()
 
-    if (positions.length === 0) {
-      try {
-        sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify({
-          id: `pending-${Date.now()}`, session_id: session.id, tenant_id: '',
-          item_type: 'tire', ref_id: item.id, name: item.name, sku: item.sku,
-          quantity: 1, unit_price: finalPrice, original_price: item.price,
-          price_modified: finalPrice !== item.price, tire_position: null,
-          created_at: new Date().toISOString(),
-        }))
-      } catch {}
-      router.push(`/yard/${session.id}`)
-      fetch(`/api/yard/sessions/${session.id}/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          item_type: 'tire', ref_id: item.id, name: item.name, sku: item.sku,
-          quantity: 1, unit_price: finalPrice, original_price: item.price,
-          price_modified: finalPrice !== item.price, tire_position: null,
-        }),
-      })
-    } else {
-      try {
-        sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify({
-          id: `pending-${Date.now()}`, session_id: session.id, tenant_id: '',
-          item_type: 'tire', ref_id: item.id, name: item.name, sku: item.sku,
-          quantity: 1, unit_price: finalPrice, original_price: item.price,
-          price_modified: finalPrice !== item.price, tire_position: positions[0],
-          created_at: new Date().toISOString(),
-        }))
-      } catch {}
-      router.push(`/yard/${session.id}`)
-      positions.forEach(pos => {
-        fetch(`/api/yard/sessions/${session.id}/items`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            item_type: 'tire', ref_id: item.id, name: item.name, sku: item.sku,
-            quantity: 1, unit_price: finalPrice, original_price: item.price,
-            price_modified: finalPrice !== item.price, tire_position: pos,
-          }),
-        })
-      })
-    }
+    // One item per position, all inserted in a single batched request — sending
+    // one POST per position multiplied round-trips and made adding several
+    // positions feel slow. All pending items are stashed together so the work
+    // card can show every position instantly instead of only the first one.
+    const pendingItems: YardSessionItem[] = posArr.map((pos, i) => ({
+      id: `pending-${now}-${i}`, session_id: session.id, tenant_id: '',
+      item_type: 'tire', ref_id: item.id, name: item.name, sku: item.sku,
+      quantity: 1, unit_price: finalPrice, original_price: item.price,
+      price_modified: finalPrice !== item.price, tire_position: pos,
+      created_at: new Date().toISOString(),
+    }))
+    try {
+      sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify(pendingItems))
+    } catch {}
+    router.push(`/yard/${session.id}`)
+    fetch(`/api/yard/sessions/${session.id}/items`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(posArr.map(pos => ({
+        item_type: 'tire', ref_id: item.id, name: item.name, sku: item.sku,
+        quantity: 1, unit_price: finalPrice, original_price: item.price,
+        price_modified: finalPrice !== item.price, tire_position: pos,
+      }))),
+    })
   }
 
   return (
@@ -299,9 +282,10 @@ export default function TireSearchClient({ session }: Props) {
                   }}>
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-slate-800" style={{ fontSize: '15px' }}>{r.name}</div>
-                    {r.stock != null && (
-                      <div className="text-slate-400 font-medium" style={{ fontSize: '13px', marginTop: '2px' }}>מלאי: {r.stock} יח׳</div>
-                    )}
+                    <div className="text-slate-400 font-medium flex items-center" style={{ fontSize: '13px', marginTop: '2px', gap: '8px' }}>
+                      {r.stock != null && <span>מלאי: {r.stock} יח׳</span>}
+                      {r.location && <span>📍 {r.location}</span>}
+                    </div>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <div className="font-black text-blue-600" style={{ fontSize: '16px' }}>{r.price.toLocaleString()}₪</div>

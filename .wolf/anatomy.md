@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-06T10:22:53.548Z
-> Files: 30 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-09T09:03:18.412Z
+> Files: 40 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -24,6 +24,10 @@
 
 ## ../../../AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/b832685e-2011-43a5-a71e-5b15984bedbf/scratchpad/
 
+
+## ../../../root/.claude/plans/
+
+- `inherited-roaming-stonebraker.md` — תיקונים דחופים למסוף רחבה (Yard Console) (~2859 tok)
 
 ## ./
 
@@ -179,12 +183,14 @@
 
 ## app/api/yard/barcode/
 
+- `route.ts` — GET /api/yard/barcode?code=XXXXX — exact SKU match across tires and products (~509 tok)
 
 ## app/api/yard/receive/
 
 
 ## app/api/yard/search/
 
+- `route.ts` — Next.js API route: GET (~1059 tok)
 
 ## app/api/yard/services/
 
@@ -321,6 +327,10 @@
 ## app/yard/receive/
 
 
+## app/yard/tire-lookup/
+
+- `page.tsx` — TireLookupPage (~90 tok)
+
 ## components/alignment/
 
 
@@ -391,7 +401,7 @@
 - `shared.ts` — Shared types/helpers for the merged /suppliers page (SupplierDetailsTab + SupplierTrackingTab). (~750 tok)
 - `SupplierDetailsTab.tsx` — former `SuppliersClient.tsx` body (profile/rolodex list+detail), now props-driven, no own fetch (~5000 tok)
 - `SuppliersClient.tsx` — SuppliersClient (~2411 tok)
-- `SupplierTrackingTab.tsx` — fmtDMY (~30824 tok)
+- `SupplierTrackingTab.tsx` — fmtDMY (~32131 tok)
 
 ## components/test-transfer/
 
@@ -406,6 +416,11 @@
 
 ## components/yard/
 
+- `FreeSearchClient.tsx` — TYPE_LABEL (~5162 tok)
+- `TireLookupClient.tsx` — normalizeTireSize (~1826 tok)
+- `TireSearchClient.tsx` — normalizeTireSize (~3880 tok)
+- `WorkCardClient.tsx` — WorkCardClient (~10490 tok)
+- `YardDashboard.tsx` — YardDashboard (~1847 tok)
 
 ## lib/
 
@@ -432,6 +447,7 @@
 
 ## lib/yard/
 
+- `types.ts` — Exports TirePosition, YardSessionItem, YardSession, YardService + 5 more (~634 tok)
 
 ## public/
 
