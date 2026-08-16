@@ -205,13 +205,14 @@ export async function setupRootFolders(accessToken: string, businessName: string
     createFolder(accessToken, 'רכבים', rootId),
     createFolder(accessToken, 'בדיקות קניה', rootId),
     createFolder(accessToken, 'מסמכים', rootId),
+    createFolder(accessToken, 'ספקים', rootId),
   ])
   return rootId
 }
 
 // ── Merge all duplicate root folders into one ──────────────────────────────
 
-const SUB_FOLDERS = ['רכבים', 'בדיקות קניה', 'מסמכים']
+const SUB_FOLDERS = ['רכבים', 'בדיקות קניה', 'מסמכים', 'ספקים']
 
 export async function mergeRootFolders(
   accessToken: string,

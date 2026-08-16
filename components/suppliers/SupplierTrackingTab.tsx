@@ -12,6 +12,7 @@ import Modal from '@/components/ui/Modal'
 import { reconcileSupplierPayment } from '@/lib/debts/reconcileSupplierPayment'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
+import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import VatToggle from '@/components/ui/VatToggle'
 import UnitToggle from '@/components/ui/UnitToggle'
 import { withVat, withoutVat } from '@/lib/utils/vat'
@@ -28,6 +29,9 @@ interface InvoiceEntry {
   date: string
   direction: Direction
   notes: string
+  driveFileId?: string
+  driveFileName?: string
+  driveFileUrl?: string
 }
 
 type Filter = 'open' | 'closed' | 'all'
@@ -115,6 +119,16 @@ export default function SupplierTrackingTab({
   const [sNotes, setSNotes]       = useState('')
   const [sInvoices, setSInvoices] = useState<InvoiceEntry[]>([EMPTY_INV()])
   const [sSaving, setSsaving]     = useState(false)
+
+  // Scan/attach invoice file (Google Drive)
+  const [driveConnected, setDriveConnected] = useState(false)
+  const [uploadingLineIdx, setUploadingLineIdx] = useState<number | null>(null)
+  const [scannerForLine, setScannerForLine] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch(`/api/drive/status?tenant_id=${tenantId}`)
+      .then(r => r.json()).then(d => setDriveConnected(!!d.connected)).catch(() => {})
+  }, [tenantId])
 
   // Retroactively allocate an already-issued check/payment against open debts
   const [allocatingPayment, setAllocatingPayment] = useState<ScheduledPayment | null>(null)
@@ -237,10 +251,10 @@ export default function SupplierTrackingTab({
     if (d) {
       setEditSupp(d); setSSupplier(d.supplier_id ?? ''); setSNotes('')
       const existing = Array.isArray(d.invoices) && d.invoices.length > 0
-        ? d.invoices.map(i => ({ type: i.type as 'invoice' | 'karteset', number: i.number, amount: String(i.amount), date: d.date, direction: d.direction, notes: d.description ?? '' }))
+        ? d.invoices.map(i => ({ type: i.type as 'invoice' | 'karteset', number: i.number, amount: String(i.amount), date: d.date, direction: d.direction, notes: d.description ?? '', driveFileId: i.drive_file_id, driveFileName: i.drive_file_name, driveFileUrl: i.drive_file_url }))
         : d.doc_number
-          ? [{ type: (d.doc_type ?? 'invoice') as 'invoice' | 'karteset', number: d.doc_number, amount: String(d.amount), date: d.date, direction: d.direction, notes: d.description ?? '' }]
-          : [{ ...EMPTY_INV(), date: d.date, direction: d.direction, notes: d.description ?? '' }]
+          ? [{ type: (d.doc_type ?? 'invoice') as 'invoice' | 'karteset', number: d.doc_number, amount: String(d.amount), date: d.date, direction: d.direction, notes: d.description ?? '', driveFileId: d.drive_file_id ?? undefined, driveFileName: d.drive_file_name ?? undefined, driveFileUrl: d.drive_file_url ?? undefined }]
+          : [{ ...EMPTY_INV(), date: d.date, direction: d.direction, notes: d.description ?? '', driveFileId: d.drive_file_id ?? undefined, driveFileName: d.drive_file_name ?? undefined, driveFileUrl: d.drive_file_url ?? undefined }]
       setSInvoices(existing)
     } else {
       setEditSupp(null); setSSupplier(''); setSNotes(''); setSInvoices([EMPTY_INV()])
@@ -253,6 +267,37 @@ export default function SupplierTrackingTab({
   const updateInvoiceLine = (i: number, field: keyof InvoiceEntry, val: string) =>
     setSInvoices(prev => prev.map((inv, idx) => idx === i ? { ...inv, [field]: val } : inv))
 
+  const clearInvoiceLineFile = (i: number) =>
+    setSInvoices(prev => prev.map((inv, idx) => idx === i ? { ...inv, driveFileId: undefined, driveFileName: undefined, driveFileUrl: undefined } : inv))
+
+  // Attach a scanned invoice file (from a file picker fed by the user's scanner software, or from
+  // the in-app camera scanner) to one invoice line — uploaded straight to the tenant's Drive folder.
+  const attachScanToLine = async (i: number, file: File) => {
+    setUploadingLineIdx(i)
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('tenant_id', tenantId)
+    fd.append('sub_folder', 'ספקים')
+    const supplierName = suppliers.find(s => s.id === sSupplier)?.name
+    if (supplierName) fd.append('item_name', supplierName)
+    try {
+      const res  = await fetch('/api/drive/upload', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (data.id) {
+        setSInvoices(prev => prev.map((inv, idx) => idx === i
+          ? { ...inv, driveFileId: data.id, driveFileName: data.name, driveFileUrl: data.webViewLink }
+          : inv))
+        showToast('הקובץ צורף ✓', 'success')
+      } else {
+        showToast(data.error || 'שגיאה בהעלאה', 'error')
+      }
+    } catch {
+      showToast('שגיאת רשת', 'error')
+    } finally {
+      setUploadingLineIdx(null)
+    }
+  }
+
   const invoicesTotal = sInvoices.reduce((s, inv) => s + (inv.direction === 'credit' ? -1 : 1) * (parseFloat(inv.amount) || 0), 0)
 
   const saveSuppDebt = async () => {
@@ -264,7 +309,10 @@ export default function SupplierTrackingTab({
 
     if (editSupp) {
       // Editing an existing row (possibly a legacy multi-invoice bundle) — single-row update
-      const invoicesData = validLines.map(i => ({ type: i.type, number: i.number.trim(), amount: parseFloat(i.amount) || 0 }))
+      const invoicesData = validLines.map(i => ({
+        type: i.type, number: i.number.trim(), amount: parseFloat(i.amount) || 0,
+        ...(i.driveFileId ? { drive_file_id: i.driveFileId, drive_file_name: i.driveFileName, drive_file_url: i.driveFileUrl } : {}),
+      }))
       const total = invoicesData.reduce((s, i) => s + i.amount, 0)
       const row = {
         supplier_id: sSupplier || null,
@@ -275,6 +323,9 @@ export default function SupplierTrackingTab({
         doc_number: validLines[0]?.number.trim() || null,
         direction: validLines[0]?.direction ?? 'charge',
         invoices: invoicesData,
+        drive_file_id: validLines[0]?.driveFileId || null,
+        drive_file_name: validLines[0]?.driveFileName || null,
+        drive_file_url: validLines[0]?.driveFileUrl || null,
       }
       const { error } = await supabase.from('supplier_debts').update(row).eq('id', editSupp.id)
       if (error) { showToast('שגיאה בעדכון', 'error'); setSsaving(false); return }
@@ -291,6 +342,9 @@ export default function SupplierTrackingTab({
         doc_number: l.number.trim() || null,
         direction: l.direction,
         invoices: [],
+        drive_file_id: l.driveFileId || null,
+        drive_file_name: l.driveFileName || null,
+        drive_file_url: l.driveFileUrl || null,
         paid: 0,
         is_closed: l.direction === 'credit',
       }))
@@ -995,7 +1049,7 @@ export default function SupplierTrackingTab({
                               {monthDebts.flatMap(d => {
                                 const items = Array.isArray(d.invoices) && d.invoices.length > 0
                                   ? d.invoices
-                                  : [{ type: d.doc_type ?? 'invoice', number: d.doc_number ?? '', amount: Number(d.amount) }]
+                                  : [{ type: d.doc_type ?? 'invoice', number: d.doc_number ?? '', amount: Number(d.amount), drive_file_url: d.drive_file_url ?? undefined, drive_file_name: d.drive_file_name ?? undefined }]
                                 return items.map((item, idx) => (
                                   <tr
                                     key={`${d.id}-${idx}`}
@@ -1005,6 +1059,11 @@ export default function SupplierTrackingTab({
                                   >
                                     <td style={tdSt}>
                                       {item.number ? `#${item.number}` : '—'}
+                                      {item.drive_file_url ? (
+                                        <a href={item.drive_file_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} title={item.drive_file_name || 'פתח קובץ מצורף'} style={{ marginRight: 4 }}>📎</a>
+                                      ) : (
+                                        <span title="אין קובץ חשבונית מצורף" style={{ marginRight: 4, opacity: 0.25 }}>📎</span>
+                                      )}
                                       {d.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>{d.description}</div>}
                                     </td>
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
@@ -1141,6 +1200,33 @@ export default function SupplierTrackingTab({
                         <input type="date" value={inv.date} onChange={e => updateInvoiceLine(i, 'date', e.target.value)} className="form-input" style={{ margin: 0 }} />
                       </div>
                       <input value={inv.notes} onChange={e => updateInvoiceLine(i, 'notes', e.target.value)} placeholder="הערות לשורה זו (אופציונלי)..." className="form-input" style={{ margin: 0 }} />
+
+                      {/* ── Scan / attach the invoice document itself ── */}
+                      {!driveConnected ? (
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>יש לחבר Google Drive בהגדרות כדי לצרף קובץ חשבונית סרוק</div>
+                      ) : inv.driveFileUrl ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                          <a href={inv.driveFileUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontWeight: 600 }}>📎 {inv.driveFileName || 'קובץ מצורף'} — פתח ✓</a>
+                          <button type="button" onClick={() => clearInvoiceLineFile(i)} style={{ padding: '2px 6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px' }}>הסר</button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <input
+                            type="file" id={`scan-file-${i}`} accept="application/pdf,image/*" style={{ display: 'none' }}
+                            onChange={e => { const f = e.target.files?.[0]; if (f) attachScanToLine(i, f); e.target.value = '' }}
+                          />
+                          <label htmlFor={`scan-file-${i}`} style={{
+                            padding: '5px 10px', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: '6px',
+                            fontSize: '11px', fontWeight: 600, cursor: uploadingLineIdx === i ? 'default' : 'pointer', color: 'var(--text)',
+                          }}>
+                            {uploadingLineIdx === i ? 'מעלה...' : '📎 צרף קובץ סרוק'}
+                          </label>
+                          <button type="button" onClick={() => setScannerForLine(i)} disabled={uploadingLineIdx === i} style={{
+                            padding: '5px 10px', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: '6px',
+                            fontSize: '11px', fontWeight: 600, cursor: uploadingLineIdx === i ? 'default' : 'pointer', color: 'var(--text)',
+                          }}>📷 סרוק במצלמה</button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1165,6 +1251,13 @@ export default function SupplierTrackingTab({
             </div>
           </div>
         </div>
+      )}
+
+      {scannerForLine !== null && (
+        <DocumentScannerModal
+          onComplete={file => { const idx = scannerForLine; setScannerForLine(null); attachScanToLine(idx, file) }}
+          onClose={() => setScannerForLine(null)}
+        />
       )}
 
       {/* ── PAYMENT MODAL — pick one or several open debts + payment method ── */}
