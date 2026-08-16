@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-09T10:07:43.388Z
-> Files: 40 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-16T08:56:57.906Z
+> Files: 43 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -28,6 +28,7 @@
 ## ../../../root/.claude/plans/
 
 - `inherited-roaming-stonebraker.md` — תיקון: "שלם הכל" מתעלם מזיכויים פתוחים (ספקים + לקוחות) (~972 tok)
+- `modular-puzzling-flame.md` — סריקת חשבונית ספק ושמירה מסודרת ב-Drive (~1844 tok)
 
 ## ./
 
@@ -398,10 +399,10 @@
 
 ## components/suppliers/
 
-- `shared.ts` — Shared types/helpers for the merged /suppliers page (SupplierDetailsTab + SupplierTrackingTab). (~750 tok)
+- `shared.ts` — Shared types/helpers for the merged /suppliers page (SupplierDetailsTab + SupplierTrackingTab). (~798 tok)
 - `SupplierDetailsTab.tsx` — former `SuppliersClient.tsx` body (profile/rolodex list+detail), now props-driven, no own fetch (~5000 tok)
 - `SuppliersClient.tsx` — SuppliersClient (~2411 tok)
-- `SupplierTrackingTab.tsx` — fmtDMY (~32530 tok)
+- `SupplierTrackingTab.tsx` — fmtDMY (~34219 tok)
 
 ## components/test-transfer/
 
@@ -424,6 +425,7 @@
 
 ## lib/
 
+- `drive.ts` — Google Drive API v3 helpers (server-side only) (~2929 tok)
 
 ## lib/auth/
 
@@ -458,6 +460,7 @@
 ## supabase/migrations/
 
 - `076_customer_debt_due_date_calls_payments.sql` — "Occasional debtors" (customer_debts, the ad-hoc table behind /debts) get: (~474 tok)
+- `077_supplier_debt_scan.sql` — Attach scanned invoice files (Google Drive) to supplier debts (~64 tok)
 
 ## tests/
 

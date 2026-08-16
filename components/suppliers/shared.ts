@@ -33,7 +33,10 @@ export interface SupplierDebt {
   doc_type: string | null
   doc_number: string | null
   direction: Direction
-  invoices: { type: string; number: string; amount: number; description?: string }[] | null
+  invoices: { type: string; number: string; amount: number; description?: string; drive_file_id?: string; drive_file_name?: string; drive_file_url?: string }[] | null
+  drive_file_id: string | null
+  drive_file_name: string | null
+  drive_file_url: string | null
   recurring_item_id: string | null
   meter_prev: number | null
   meter_curr: number | null
