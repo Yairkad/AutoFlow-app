@@ -10,6 +10,7 @@ import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import { reconcileSupplierPayment } from '@/lib/debts/reconcileSupplierPayment'
+import { netAllocation } from '@/lib/debts/netAllocation'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
@@ -614,6 +615,7 @@ export default function SupplierTrackingTab({
   const payOpenCreditTotal = supplierDebts
     .filter(d => d.supplier_id === paySupplierId && d.direction === 'credit')
     .reduce((s, d) => s + Number(d.amount), 0)
+  const payNetMap = netAllocation(payOpenDebts, payOpenCreditTotal)
   const payDebtsByMonth = (() => {
     const map: Record<string, SupplierDebt[]> = {}
     payOpenDebts.forEach(d => {
@@ -652,7 +654,7 @@ export default function SupplierTrackingTab({
       const allocs: Record<string, string> = {}
       for (const d of sorted) {
         if (remaining <= 0) break
-        const take = Math.min(bal(d), remaining)
+        const take = Math.min(payNetMap.get(d.id) ?? 0, remaining)
         if (take <= 0) continue
         ids.add(d.id)
         allocs[d.id] = take.toFixed(2)
@@ -663,7 +665,7 @@ export default function SupplierTrackingTab({
     } else {
       const d = payOpenDebts.find(x => x.id === payQuickTarget)
       if (!d) return
-      const take = Math.min(bal(d), amt)
+      const take = Math.min(payNetMap.get(d.id) ?? 0, amt)
       setPaySelectedIds(new Set([d.id]))
       setPayAllocAmounts({ [d.id]: take.toFixed(2) })
     }
@@ -677,32 +679,45 @@ export default function SupplierTrackingTab({
         setPayAllocAmounts(a => { const c = { ...a }; delete c[d.id]; return c })
       } else {
         next.add(d.id)
-        setPayAllocAmounts(a => ({ ...a, [d.id]: a[d.id] ?? String(bal(d).toFixed(2)) }))
+        setPayAllocAmounts(a => ({ ...a, [d.id]: a[d.id] ?? String((payNetMap.get(d.id) ?? 0).toFixed(2)) }))
       }
       return next
     })
   }
 
-  // "שלם הכל" — fills every open invoice at its full balance, EXCEPT any open
-  // credit for this supplier is first netted out against the oldest invoices
-  // (same oldest-first order as applyQuickAmount's auto spread), so the total
-  // matches the supplier's real net balance instead of the gross invoice sum.
+  // "שלם הכל" — fills every open invoice at its net-of-credit balance (payNetMap already
+  // nets any open credit for this supplier out against the oldest invoices first).
   const selectAllPayDebts = () => {
-    const sorted = [...payOpenDebts].sort((a, b) => a.date.localeCompare(b.date))
-    let creditLeft = payOpenCreditTotal
     const ids = new Set<string>()
     const allocs: Record<string, string> = {}
-    for (const d of sorted) {
-      const gross = bal(d)
-      const reduceBy = Math.min(gross, creditLeft)
-      creditLeft -= reduceBy
-      const net = gross - reduceBy
-      if (net <= 0) continue
-      ids.add(d.id)
-      allocs[d.id] = net.toFixed(2)
+    for (const [id, net] of payNetMap) {
+      ids.add(id)
+      allocs[id] = net.toFixed(2)
     }
     setPaySelectedIds(ids)
     setPayAllocAmounts(allocs)
+  }
+
+  // Select/deselect every open debt of one month at once (net-of-credit amounts, same as selectAllPayDebts).
+  const toggleMonthPayDebts = (mk: string) => {
+    const monthDebts = payDebtsByMonth.find(([k]) => k === mk)?.[1] ?? []
+    const allSelected = monthDebts.length > 0 && monthDebts.every(d => paySelectedIds.has(d.id))
+    setPaySelectedIds(prev => {
+      const next = new Set(prev)
+      monthDebts.forEach(d => {
+        if (allSelected) next.delete(d.id)
+        else if ((payNetMap.get(d.id) ?? 0) > 0) next.add(d.id)
+      })
+      return next
+    })
+    setPayAllocAmounts(prev => {
+      const next = { ...prev }
+      monthDebts.forEach(d => {
+        if (allSelected) delete next[d.id]
+        else { const net = payNetMap.get(d.id); if (net && net > 0) next[d.id] = net.toFixed(2) }
+      })
+      return next
+    })
   }
 
   const submitPayment = async () => {
@@ -749,6 +764,10 @@ export default function SupplierTrackingTab({
   // ── Retroactive allocation of an already-issued check/payment ─────────────
 
   const allocOpenDebts = supplierDebts.filter(d => d.supplier_id === allocatingPayment?.supplier_id && (allocShowClosed || !d.is_closed) && d.direction === 'charge')
+  const allocOpenCreditTotal = supplierDebts
+    .filter(d => d.supplier_id === allocatingPayment?.supplier_id && d.direction === 'credit')
+    .reduce((s, d) => s + Number(d.amount), 0)
+  const allocNetMap = netAllocation(allocOpenDebts.filter(d => !d.is_closed), allocOpenCreditTotal)
   const allocDebtsByMonth = (() => {
     const map: Record<string, SupplierDebt[]> = {}
     allocOpenDebts.forEach(d => {
@@ -779,10 +798,38 @@ export default function SupplierTrackingTab({
       } else {
         next.add(d.id)
         const remaining = (allocatingPayment?.amount ?? 0) - allocTotalSelected
-        setAllocAmounts(a => ({ ...a, [d.id]: a[d.id] ?? String(Math.max(0, Math.min(bal(d), remaining || bal(d))).toFixed(2)) }))
+        const net = allocNetMap.get(d.id) ?? bal(d)
+        setAllocAmounts(a => ({ ...a, [d.id]: a[d.id] ?? String(Math.max(0, Math.min(net, remaining || net)).toFixed(2)) }))
       }
       return next
     })
+  }
+
+  // Select/deselect every debt of one month at once, filling sequentially (oldest-first,
+  // net-of-credit) from whatever's left of the check's total — same cap logic as toggleAllocDebt.
+  const toggleMonthAllocDebts = (mk: string) => {
+    const monthDebts = (allocDebtsByMonth.find(([k]) => k === mk)?.[1] ?? [])
+      .slice().sort((a, b) => a.date.localeCompare(b.date))
+    const allSelected = monthDebts.length > 0 && monthDebts.every(d => allocSelectedIds.has(d.id))
+    if (allSelected) {
+      setAllocSelectedIds(prev => { const next = new Set(prev); monthDebts.forEach(d => next.delete(d.id)); return next })
+      setAllocAmounts(prev => { const next = { ...prev }; monthDebts.forEach(d => delete next[d.id]); return next })
+      return
+    }
+    let remaining = (allocatingPayment?.amount ?? 0) - allocTotalSelected
+    const newIds: string[] = []
+    const newAmounts: Record<string, string> = {}
+    for (const d of monthDebts) {
+      if (allocSelectedIds.has(d.id)) continue
+      const net = allocNetMap.get(d.id) ?? bal(d)
+      const take = Math.max(0, Math.min(net, remaining || net))
+      if (take <= 0) continue
+      newIds.push(d.id)
+      newAmounts[d.id] = take.toFixed(2)
+      remaining -= take
+    }
+    setAllocSelectedIds(prev => { const next = new Set(prev); newIds.forEach(id => next.add(id)); return next })
+    setAllocAmounts(prev => ({ ...prev, ...newAmounts }))
   }
 
   const submitAllocatePayment = async () => {
@@ -1403,7 +1450,12 @@ export default function SupplierTrackingTab({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
                   {payDebtsByMonth.map(([mk, debts]) => (
                     <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', marginBottom: 4 }}>{fmtMonth(mk)}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
+                        <button type="button" onClick={() => toggleMonthPayDebts(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
+                          {debts.every(d => paySelectedIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                        </button>
+                      </div>
                       {debts.map(d => {
                         const checked = paySelectedIds.has(d.id)
                         return (
@@ -1516,7 +1568,12 @@ export default function SupplierTrackingTab({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '260px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
                   {allocDebtsByMonth.map(([mk, debts]) => (
                     <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', marginBottom: 4 }}>{fmtMonth(mk)}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
+                        <button type="button" onClick={() => toggleMonthAllocDebts(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
+                          {debts.every(d => allocSelectedIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                        </button>
+                      </div>
                       {debts.map(d => {
                         const checked = allocSelectedIds.has(d.id)
                         return (

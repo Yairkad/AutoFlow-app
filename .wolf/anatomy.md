@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-17T07:59:26.424Z
-> Files: 43 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-17T09:18:01.352Z
+> Files: 45 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -28,7 +28,7 @@
 ## ../../../root/.claude/plans/
 
 - `inherited-roaming-stonebraker.md` — תיקון: "שלם הכל" מתעלם מזיכויים פתוחים (ספקים + לקוחות) (~972 tok)
-- `modular-puzzling-flame.md` — סריקת חשבונית ספק ושמירה מסודרת ב-Drive (~1844 tok)
+- `modular-puzzling-flame.md` — תיקון חישוב סכומי תשלום/צ'קים מול חובות ספק (זיכוי פתוח) + בחירת חודש שלם (~1801 tok)
 
 ## ./
 
@@ -350,7 +350,7 @@
 
 - `CustomerDetailsTab.tsx` — CustomerDetailsTab (~7374 tok)
 - `CustomersClient.tsx` — CustomersClient (~1809 tok)
-- `CustomerTrackingTab.tsx` — fmtDMY (~25733 tok)
+- `CustomerTrackingTab.tsx` — fmtDMY (~26056 tok)
 - `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~674 tok)
 
 ## components/dashboard/
@@ -369,6 +369,7 @@
 
 ## components/expenses/
 
+- `ScheduledPaymentsModal.tsx` — monthKeyOf (~15303 tok)
 
 ## components/inspections/
 
@@ -402,7 +403,7 @@
 - `shared.ts` — Shared types/helpers for the merged /suppliers page (SupplierDetailsTab + SupplierTrackingTab). (~798 tok)
 - `SupplierDetailsTab.tsx` — former `SuppliersClient.tsx` body (profile/rolodex list+detail), now props-driven, no own fetch (~5000 tok)
 - `SuppliersClient.tsx` — SuppliersClient (~2411 tok)
-- `SupplierTrackingTab.tsx` — fmtDMY (~35696 tok)
+- `SupplierTrackingTab.tsx` — fmtDMY (~36671 tok)
 
 ## components/test-transfer/
 
@@ -436,6 +437,7 @@
 
 ## lib/debts/
 
+- `netAllocation.ts` — Exports NetAllocationDebtInput, netAllocation (~253 tok)
 
 ## lib/hooks/
 

@@ -1300,3 +1300,35 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-08-17 08:30
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:44 | Created ../../../root/.claude/plans/modular-puzzling-flame.md | — | ~1921 |
+
+## Session: 2026-08-17 09:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:14 | Created lib/debts/netAllocation.ts | — | ~253 |
+| 09:14 | Edited components/suppliers/SupplierTrackingTab.tsx | added 1 import(s) | ~40 |
+| 09:14 | Edited components/suppliers/SupplierTrackingTab.tsx | 4→5 lines | ~78 |
+| 09:14 | Edited components/suppliers/SupplierTrackingTab.tsx | modified if() | ~485 |
+| 09:14 | Edited components/suppliers/SupplierTrackingTab.tsx | 2→6 lines | ~140 |
+| 09:14 | Edited components/suppliers/SupplierTrackingTab.tsx | 3→4 lines | ~80 |
+| 09:15 | Edited components/customers/CustomerTrackingTab.tsx | added 1 import(s) | ~43 |
+| 09:15 | Edited components/customers/CustomerTrackingTab.tsx | 4→5 lines | ~78 |
+| 09:15 | Edited components/customers/CustomerTrackingTab.tsx | modified if() | ~487 |
+| 09:15 | Edited components/expenses/ScheduledPaymentsModal.tsx | added 1 import(s) | ~44 |
+| 09:15 | Edited components/expenses/ScheduledPaymentsModal.tsx | 3→4 lines | ~90 |
+| 09:15 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: data | ~659 |
+| 09:16 | Edited components/expenses/ScheduledPaymentsModal.tsx | 3→6 lines | ~156 |
+| 09:16 | Edited components/suppliers/SupplierTrackingTab.tsx | added optional chaining | ~270 |
+| 09:16 | Edited components/suppliers/SupplierTrackingTab.tsx | 4→9 lines | ~245 |
+| 09:17 | Edited components/suppliers/SupplierTrackingTab.tsx | added optional chaining | ~435 |
+| 09:17 | Edited components/suppliers/SupplierTrackingTab.tsx | 4→9 lines | ~247 |
+| 09:17 | Edited components/customers/CustomerTrackingTab.tsx | added optional chaining | ~270 |
+| 09:17 | Edited components/customers/CustomerTrackingTab.tsx | 4→9 lines | ~245 |
+| 09:17 | Edited components/expenses/ScheduledPaymentsModal.tsx | added optional chaining | ~304 |
+| 09:18 | Edited components/expenses/ScheduledPaymentsModal.tsx | 4→9 lines | ~237 |

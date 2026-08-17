@@ -8,6 +8,7 @@ import Modal from '@/components/ui/Modal'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { reconcileSupplierPayment, DebtAllocation } from '@/lib/debts/reconcileSupplierPayment'
+import { netAllocation } from '@/lib/debts/netAllocation'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
 import { markScheduledPaymentPaid } from '@/lib/utils/markCheckPaid'
@@ -174,6 +175,7 @@ export default function ScheduledPaymentsModal({
   const [openDebts,      setOpenDebts]      = useState<OpenSupplierDebt[]>([])
   const [selectedDebtIds, setSelectedDebtIds] = useState<Set<string>>(new Set())
   const [debtAllocAmounts, setDebtAllocAmounts] = useState<Record<string, string>>({})
+  const [openCreditTotal, setOpenCreditTotal] = useState<number>(0)
 
   // Pay modal
   const [payOpen,   setPayOpen]   = useState(false)
@@ -208,24 +210,35 @@ export default function ScheduledPaymentsModal({
   const pendingInitialAllocRef = useRef<{ supplierId: string; ids: string[]; amounts: Record<string, string> } | null>(null)
 
   const fetchOpenDebtsAndSeed = useCallback(async (supplierId: string) => {
-    if (!supplierId) { setOpenDebts([]); setSelectedDebtIds(new Set()); setDebtAllocAmounts({}); return }
-    const { data } = await supabase
-      .from('supplier_debts')
-      .select('id, date, amount, paid')
-      .eq('supplier_id', supplierId)
-      .eq('is_closed', false)
-      .order('date', { ascending: true })
+    if (!supplierId) { setOpenDebts([]); setSelectedDebtIds(new Set()); setDebtAllocAmounts({}); setOpenCreditTotal(0); return }
+    const [{ data }, { data: creditRows }] = await Promise.all([
+      supabase
+        .from('supplier_debts')
+        .select('id, date, amount, paid')
+        .eq('supplier_id', supplierId)
+        .eq('is_closed', false)
+        .order('date', { ascending: true }),
+      // Credits are always saved already-closed, so they never show up in the open-debts
+      // query above — but the check amount still needs to net them out against the oldest
+      // debts, or the suggested per-debt amounts overstate what's actually owed.
+      supabase
+        .from('supplier_debts')
+        .select('amount')
+        .eq('supplier_id', supplierId)
+        .eq('direction', 'credit'),
+    ])
     const debts = data ?? []
     setOpenDebts(debts)
+    const creditTotal = (creditRows ?? []).reduce((s, r) => s + Number(r.amount), 0)
+    setOpenCreditTotal(creditTotal)
+    const netMap = netAllocation(debts, creditTotal)
 
     const pending = pendingInitialAllocRef.current
     if (pending && pending.supplierId === supplierId) {
       const validIds = pending.ids.filter(id => debts.some(d => d.id === id))
       setSelectedDebtIds(new Set(validIds))
       setDebtAllocAmounts(Object.fromEntries(validIds.map(id => {
-        const d = debts.find(x => x.id === id)!
-        const balance = Number(d.amount) - Number(d.paid)
-        return [id, pending.amounts[id] ?? String(balance.toFixed(2))]
+        return [id, pending.amounts[id] ?? String((netMap.get(id) ?? 0).toFixed(2))]
       })))
       pendingInitialAllocRef.current = null
     } else {
@@ -246,8 +259,8 @@ export default function ScheduledPaymentsModal({
         setDebtAllocAmounts(a => { const c = { ...a }; delete c[debt.id]; return c })
       } else {
         next.add(debt.id)
-        const balance = Number(debt.amount) - Number(debt.paid)
-        setDebtAllocAmounts(a => ({ ...a, [debt.id]: a[debt.id] ?? String(balance.toFixed(2)) }))
+        const net = netAllocation(openDebts, openCreditTotal).get(debt.id) ?? 0
+        setDebtAllocAmounts(a => ({ ...a, [debt.id]: a[debt.id] ?? String(net.toFixed(2)) }))
       }
       return next
     })
@@ -684,6 +697,29 @@ export default function ScheduledPaymentsModal({
     return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]))
   })()
 
+  // Select/deselect every open debt of one month at once (net-of-credit amounts, same as toggleDebtSelected).
+  const toggleMonthDebtSelected = (mk: string) => {
+    const monthDebts = debtsByMonth.find(([k]) => k === mk)?.[1] ?? []
+    const netMap = netAllocation(openDebts, openCreditTotal)
+    const allSelected = monthDebts.length > 0 && monthDebts.every(d => selectedDebtIds.has(d.id))
+    setSelectedDebtIds(prev => {
+      const next = new Set(prev)
+      monthDebts.forEach(d => {
+        if (allSelected) next.delete(d.id)
+        else if ((netMap.get(d.id) ?? 0) > 0) next.add(d.id)
+      })
+      return next
+    })
+    setDebtAllocAmounts(prev => {
+      const next = { ...prev }
+      monthDebts.forEach(d => {
+        if (allSelected) delete next[d.id]
+        else { const net = netMap.get(d.id); if (net && net > 0) next[d.id] = net.toFixed(2) }
+      })
+      return next
+    })
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -1016,9 +1052,17 @@ export default function ScheduledPaymentsModal({
             <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, background: '#fafafa', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>שיבוץ מול חובות פתוחים של הספק (אופציונלי)</div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>סמן אילו חודשים התשלום הזה סוגר. חודש שלא תסמן לא ייגע כלל.</div>
+              {openCreditTotal > 0 && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>לספק זה זיכוי פתוח בסך {fmt(openCreditTotal)} — מנוכה אוטומטית מהחשבוניות הישנות ביותר בסכומים המוצעים למטה.</div>
+              )}
               {debtsByMonth.map(([mk, debts]) => (
                 <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', marginBottom: 4 }}>{fmtMonthShort(mk)}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonthShort(mk)}</span>
+                    <button type="button" onClick={() => toggleMonthDebtSelected(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
+                      {debts.every(d => selectedDebtIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                    </button>
+                  </div>
                   {debts.map(d => {
                     const balance = Number(d.amount) - Number(d.paid)
                     const checked = selectedDebtIds.has(d.id)
