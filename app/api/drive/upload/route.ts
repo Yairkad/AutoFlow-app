@@ -9,6 +9,7 @@ export async function POST(req: Request) {
     const tenantId  = formData.get('tenant_id') as string | null
     const subFolder = formData.get('sub_folder') as string | null   // e.g. 'רכבים'
     const itemName  = formData.get('item_name')  as string | null   // e.g. plate number
+    const periodName = formData.get('period_name') as string | null // e.g. 'אוגוסט 2026' — optional extra nesting level under item_name
     const directFolderId = formData.get('folder_id') as string | null  // direct folder ID (bypass sub_folder logic)
 
     if (!file || !tenantId) {
@@ -41,6 +42,9 @@ export async function POST(req: Request) {
       }
       if (itemName && targetFolderId) {
         targetFolderId = await getOrCreateFolder(accessToken, itemName, targetFolderId)
+      }
+      if (periodName && targetFolderId) {
+        targetFolderId = await getOrCreateFolder(accessToken, periodName, targetFolderId)
       }
     }
 

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-17T11:31:08.212Z
-> Files: 46 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-17T11:34:26.294Z
+> Files: 47 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -163,6 +163,7 @@
 
 ## app/api/drive/upload/
 
+- `route.ts` — Next.js API route: POST (~754 tok)
 
 ## app/api/employees/complete-registration/
 
@@ -407,7 +408,7 @@
 - `shared.ts` — Shared types/helpers for the merged /suppliers page (SupplierDetailsTab + SupplierTrackingTab). (~798 tok)
 - `SupplierDetailsTab.tsx` — former `SuppliersClient.tsx` body (profile/rolodex list+detail), now props-driven, no own fetch (~5000 tok)
 - `SuppliersClient.tsx` — SuppliersClient (~2411 tok)
-- `SupplierTrackingTab.tsx` — fmtDMY (~37234 tok)
+- `SupplierTrackingTab.tsx` — fmtDMY (~37267 tok)
 
 ## components/test-transfer/
 

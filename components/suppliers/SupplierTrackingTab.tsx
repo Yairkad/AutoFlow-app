@@ -384,6 +384,8 @@ export default function SupplierTrackingTab({
       fd.append('sub_folder', 'ספקים')
       const supplierName = suppliers.find(s => s.id === sSupplier)?.name
       if (supplierName) fd.append('item_name', supplierName)
+      const invDate = sInvoices[i]?.date
+      if (invDate) fd.append('period_name', fmtMonth(monthKeyOf(invDate)))
 
       const res = await fetch('/api/drive/upload', { method: 'POST', body: fd })
       if (res.status === 413) {
