@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-17T11:34:26.294Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-17T11:59:50.126Z
 > Files: 47 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -374,7 +374,7 @@
 
 ## components/expenses/
 
-- `ScheduledPaymentsModal.tsx` — monthKeyOf (~15336 tok)
+- `ScheduledPaymentsModal.tsx` — monthKeyOf (~15616 tok)
 
 ## components/inspections/
 

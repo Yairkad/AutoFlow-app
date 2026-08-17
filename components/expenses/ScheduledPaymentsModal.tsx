@@ -353,10 +353,29 @@ export default function ScheduledPaymentsModal({
     if (insRes.error) { setSaving(false); showToast('שגיאה: ' + insRes.error.message, 'error'); return }
 
     const allocations = buildAllocations()
-    if (allocations.length > 0) {
-      const primaryId = insRes.data?.[0]?.id ?? null
-      const { error: reconErr } = await reconcileSupplierPayment(supabase, tenantId, allocations, primaryId)
-      if (reconErr) { showToast('הצ׳קים נשמרו, אך שיבוץ החוב נכשל: ' + reconErr, 'error') }
+    if (allocations.length > 0 && insRes.data && insRes.data.length > 0) {
+      // Spread the selected debt allocations across the series' checks in order (each check
+      // absorbs up to its own amount) — dumping everything onto the first check's id would
+      // leave every other check in the series unlinked, showing up as "not yet allocated".
+      const checkIds = insRes.data.map(r => r.id)
+      let checkIdx = 0
+      let checkRemaining = seriesPreview[0]?.amount ?? 0
+      let reconErr: string | null = null
+      for (const alloc of allocations) {
+        let left = alloc.amount
+        while (left > 0.004 && checkIdx < checkIds.length && !reconErr) {
+          if (checkRemaining <= 0.004) { checkIdx++; checkRemaining = seriesPreview[checkIdx]?.amount ?? 0; continue }
+          const take = Math.min(left, checkRemaining)
+          const { error } = await reconcileSupplierPayment(
+            supabase, tenantId, [{ supplier_debt_id: alloc.supplier_debt_id, amount: take }], checkIds[checkIdx],
+          )
+          if (error) { reconErr = error; break }
+          left -= take
+          checkRemaining -= take
+        }
+        if (reconErr) break
+      }
+      if (reconErr) showToast('הצ׳קים נשמרו, אך שיבוץ החוב נכשל: ' + reconErr, 'error')
     }
 
     setSaving(false)
