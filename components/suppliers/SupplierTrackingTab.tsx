@@ -274,8 +274,15 @@ export default function SupplierTrackingTab({
   // the in-app camera scanner) to one invoice line — uploaded straight to the tenant's Drive folder.
   const attachScanToLine = async (i: number, file: File) => {
     setUploadingLineIdx(i)
+    // Name the uploaded file after the invoice number (if the user already typed one in),
+    // so the file itself is identifiable in Drive without opening it.
+    const invNumber = sInvoices[i]?.number.trim()
+    const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : ''
+    const uploadFile = invNumber
+      ? new File([file], `${invNumber.replace(/[\\/:*?"<>|]/g, '_')}${ext}`, { type: file.type })
+      : file
     const fd = new FormData()
-    fd.append('file', file)
+    fd.append('file', uploadFile)
     fd.append('tenant_id', tenantId)
     fd.append('sub_folder', 'ספקים')
     const supplierName = suppliers.find(s => s.id === sSupplier)?.name

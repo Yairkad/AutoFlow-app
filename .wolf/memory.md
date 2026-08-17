@@ -1274,3 +1274,14 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 08:56 | Edited components/suppliers/SupplierTrackingTab.tsx | added 1 import(s) | ~35 |
 | 08:56 | Edited components/suppliers/SupplierTrackingTab.tsx | expanded (+7 lines) | ~108 |
 | 08:56 | Edited components/suppliers/SupplierTrackingTab.tsx | 14→19 lines | ~497 |
+
+## Session: 2026-08-16 10:41
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-08-17 07:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:44 | Edited components/suppliers/SupplierTrackingTab.tsx | added optional chaining | ~182 |
