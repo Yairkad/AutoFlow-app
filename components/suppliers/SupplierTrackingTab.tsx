@@ -10,6 +10,7 @@ import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import { reconcileSupplierPayment } from '@/lib/debts/reconcileSupplierPayment'
+import { netAllocation } from '@/lib/debts/netAllocation'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
@@ -75,8 +76,7 @@ const invNumOf = (s: string | null | undefined) => {
 // code even runs, so we stay safely under that for anything we can shrink client-side.
 const MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 
-// Downscale/recompress an oversized image (camera capture or a large photo) so it clears the
-// upload limit. PDFs can't be safely recompressed client-side, so those are left as-is.
+// Downscale/recompress an oversized image (camera capture or a large photo) so it clears the upload limit.
 async function compressImageIfNeeded(file: File): Promise<File> {
   if (!file.type.startsWith('image/') || file.size <= MAX_UPLOAD_BYTES) return file
   try {
@@ -104,6 +104,49 @@ async function compressImageIfNeeded(file: File): Promise<File> {
     for (const quality of [0.8, 0.6, 0.45, 0.3]) {
       const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', quality))
       if (blob && blob.size <= MAX_UPLOAD_BYTES) return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' })
+    }
+    return file
+  } catch {
+    return file
+  }
+}
+
+// Re-rasterize an oversized scanned PDF (each page → JPEG at a shrinking quality) and rebuild
+// a smaller PDF, so a high-DPI scan from external scanner software also clears the upload limit.
+async function compressPdfIfNeeded(file: File): Promise<File> {
+  if (file.type !== 'application/pdf' || file.size <= MAX_UPLOAD_BYTES) return file
+  try {
+    const [{ getDocument, GlobalWorkerOptions }, { PDFDocument: PDFLibDocument }] = await Promise.all([
+      import('pdfjs-dist'),
+      import('pdf-lib'),
+    ])
+    GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
+    const srcBytes = await file.arrayBuffer()
+    const baseName = file.name.replace(/\.\w+$/, '') || 'scan'
+    for (const quality of [0.7, 0.5, 0.35, 0.25]) {
+      const loadingTask = getDocument({ data: srcBytes.slice(0) })
+      const pdfDoc = await loadingTask.promise
+      const out = await PDFLibDocument.create()
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i)
+        const viewport = page.getViewport({ scale: 1.5 })
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.round(viewport.width)
+        canvas.height = Math.round(viewport.height)
+        const canvasContext = canvas.getContext('2d')
+        if (!canvasContext) continue
+        await page.render({ canvasContext, viewport }).promise
+        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', quality))
+        if (!blob) continue
+        const img = await out.embedJpg(await blob.arrayBuffer())
+        const p = out.addPage([img.width, img.height])
+        p.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height })
+      }
+      await loadingTask.destroy()
+      const outBytes = await out.save()
+      if (outBytes.byteLength <= MAX_UPLOAD_BYTES) {
+        return new File([outBytes.buffer as ArrayBuffer], `${baseName}.pdf`, { type: 'application/pdf' })
+      }
     }
     return file
   } catch {
@@ -322,14 +365,10 @@ export default function SupplierTrackingTab({
   const attachScanToLine = async (i: number, file: File) => {
     setUploadingLineIdx(i)
     try {
-      const shrunk = await compressImageIfNeeded(file)
+      let shrunk = await compressImageIfNeeded(file)
+      shrunk = await compressPdfIfNeeded(shrunk)
       if (shrunk.size > MAX_UPLOAD_BYTES) {
-        showToast(
-          shrunk.type === 'application/pdf' || file.type === 'application/pdf'
-            ? 'הקובץ גדול מדי להעלאה (מקסימום כ-4MB). נסו לסרוק שוב ברזולוציה/איכות נמוכה יותר בתוכנת הסריקה.'
-            : 'הקובץ גדול מדי להעלאה גם אחרי דחיסה (מקסימום כ-4MB).',
-          'error',
-        )
+        showToast('הקובץ גדול מדי להעלאה גם אחרי דחיסה (מקסימום כ-4MB). נסו לסרוק שוב ברזולוציה/איכות נמוכה יותר.', 'error')
         return
       }
       // Name the uploaded file after the invoice number (if the user already typed one in),
@@ -345,6 +384,8 @@ export default function SupplierTrackingTab({
       fd.append('sub_folder', 'ספקים')
       const supplierName = suppliers.find(s => s.id === sSupplier)?.name
       if (supplierName) fd.append('item_name', supplierName)
+      const invDate = sInvoices[i]?.date
+      if (invDate) fd.append('period_name', fmtMonth(monthKeyOf(invDate)))
 
       const res = await fetch('/api/drive/upload', { method: 'POST', body: fd })
       if (res.status === 413) {
@@ -611,9 +652,11 @@ export default function SupplierTrackingTab({
   // Credits are always saved already-closed (see Decision Log), so they never
   // appear in payOpenDebts above — but the amount owed still needs to net them
   // out, or "שלם הכל" overstates the total by exactly the open credit.
-  const payOpenCreditTotal = supplierDebts
+  const payOpenCredits = supplierDebts
     .filter(d => d.supplier_id === paySupplierId && d.direction === 'credit')
-    .reduce((s, d) => s + Number(d.amount), 0)
+    .map(d => ({ date: d.date, amount: Number(d.amount) }))
+  const payOpenCreditTotal = payOpenCredits.reduce((s, c) => s + c.amount, 0)
+  const payNetMap = netAllocation(payOpenDebts, payOpenCredits)
   const payDebtsByMonth = (() => {
     const map: Record<string, SupplierDebt[]> = {}
     payOpenDebts.forEach(d => {
@@ -652,7 +695,7 @@ export default function SupplierTrackingTab({
       const allocs: Record<string, string> = {}
       for (const d of sorted) {
         if (remaining <= 0) break
-        const take = Math.min(bal(d), remaining)
+        const take = Math.min(payNetMap.get(d.id) ?? 0, remaining)
         if (take <= 0) continue
         ids.add(d.id)
         allocs[d.id] = take.toFixed(2)
@@ -663,7 +706,7 @@ export default function SupplierTrackingTab({
     } else {
       const d = payOpenDebts.find(x => x.id === payQuickTarget)
       if (!d) return
-      const take = Math.min(bal(d), amt)
+      const take = Math.min(payNetMap.get(d.id) ?? 0, amt)
       setPaySelectedIds(new Set([d.id]))
       setPayAllocAmounts({ [d.id]: take.toFixed(2) })
     }
@@ -677,32 +720,45 @@ export default function SupplierTrackingTab({
         setPayAllocAmounts(a => { const c = { ...a }; delete c[d.id]; return c })
       } else {
         next.add(d.id)
-        setPayAllocAmounts(a => ({ ...a, [d.id]: a[d.id] ?? String(bal(d).toFixed(2)) }))
+        setPayAllocAmounts(a => ({ ...a, [d.id]: a[d.id] ?? String((payNetMap.get(d.id) ?? 0).toFixed(2)) }))
       }
       return next
     })
   }
 
-  // "שלם הכל" — fills every open invoice at its full balance, EXCEPT any open
-  // credit for this supplier is first netted out against the oldest invoices
-  // (same oldest-first order as applyQuickAmount's auto spread), so the total
-  // matches the supplier's real net balance instead of the gross invoice sum.
+  // "שלם הכל" — fills every open invoice at its net-of-credit balance (payNetMap already
+  // nets any open credit for this supplier out against the oldest invoices first).
   const selectAllPayDebts = () => {
-    const sorted = [...payOpenDebts].sort((a, b) => a.date.localeCompare(b.date))
-    let creditLeft = payOpenCreditTotal
     const ids = new Set<string>()
     const allocs: Record<string, string> = {}
-    for (const d of sorted) {
-      const gross = bal(d)
-      const reduceBy = Math.min(gross, creditLeft)
-      creditLeft -= reduceBy
-      const net = gross - reduceBy
-      if (net <= 0) continue
-      ids.add(d.id)
-      allocs[d.id] = net.toFixed(2)
+    for (const [id, net] of payNetMap) {
+      ids.add(id)
+      allocs[id] = net.toFixed(2)
     }
     setPaySelectedIds(ids)
     setPayAllocAmounts(allocs)
+  }
+
+  // Select/deselect every open debt of one month at once (net-of-credit amounts, same as selectAllPayDebts).
+  const toggleMonthPayDebts = (mk: string) => {
+    const monthDebts = payDebtsByMonth.find(([k]) => k === mk)?.[1] ?? []
+    const allSelected = monthDebts.length > 0 && monthDebts.every(d => paySelectedIds.has(d.id))
+    setPaySelectedIds(prev => {
+      const next = new Set(prev)
+      monthDebts.forEach(d => {
+        if (allSelected) next.delete(d.id)
+        else if ((payNetMap.get(d.id) ?? 0) > 0) next.add(d.id)
+      })
+      return next
+    })
+    setPayAllocAmounts(prev => {
+      const next = { ...prev }
+      monthDebts.forEach(d => {
+        if (allSelected) delete next[d.id]
+        else { const net = payNetMap.get(d.id); if (net && net > 0) next[d.id] = net.toFixed(2) }
+      })
+      return next
+    })
   }
 
   const submitPayment = async () => {
@@ -749,6 +805,10 @@ export default function SupplierTrackingTab({
   // ── Retroactive allocation of an already-issued check/payment ─────────────
 
   const allocOpenDebts = supplierDebts.filter(d => d.supplier_id === allocatingPayment?.supplier_id && (allocShowClosed || !d.is_closed) && d.direction === 'charge')
+  const allocOpenCredits = supplierDebts
+    .filter(d => d.supplier_id === allocatingPayment?.supplier_id && d.direction === 'credit')
+    .map(d => ({ date: d.date, amount: Number(d.amount) }))
+  const allocNetMap = netAllocation(allocOpenDebts.filter(d => !d.is_closed), allocOpenCredits)
   const allocDebtsByMonth = (() => {
     const map: Record<string, SupplierDebt[]> = {}
     allocOpenDebts.forEach(d => {
@@ -779,10 +839,38 @@ export default function SupplierTrackingTab({
       } else {
         next.add(d.id)
         const remaining = (allocatingPayment?.amount ?? 0) - allocTotalSelected
-        setAllocAmounts(a => ({ ...a, [d.id]: a[d.id] ?? String(Math.max(0, Math.min(bal(d), remaining || bal(d))).toFixed(2)) }))
+        const net = allocNetMap.get(d.id) ?? bal(d)
+        setAllocAmounts(a => ({ ...a, [d.id]: a[d.id] ?? String(Math.max(0, Math.min(net, remaining || net)).toFixed(2)) }))
       }
       return next
     })
+  }
+
+  // Select/deselect every debt of one month at once, filling sequentially (oldest-first,
+  // net-of-credit) from whatever's left of the check's total — same cap logic as toggleAllocDebt.
+  const toggleMonthAllocDebts = (mk: string) => {
+    const monthDebts = (allocDebtsByMonth.find(([k]) => k === mk)?.[1] ?? [])
+      .slice().sort((a, b) => a.date.localeCompare(b.date))
+    const allSelected = monthDebts.length > 0 && monthDebts.every(d => allocSelectedIds.has(d.id))
+    if (allSelected) {
+      setAllocSelectedIds(prev => { const next = new Set(prev); monthDebts.forEach(d => next.delete(d.id)); return next })
+      setAllocAmounts(prev => { const next = { ...prev }; monthDebts.forEach(d => delete next[d.id]); return next })
+      return
+    }
+    let remaining = (allocatingPayment?.amount ?? 0) - allocTotalSelected
+    const newIds: string[] = []
+    const newAmounts: Record<string, string> = {}
+    for (const d of monthDebts) {
+      if (allocSelectedIds.has(d.id)) continue
+      const net = allocNetMap.get(d.id) ?? bal(d)
+      const take = Math.max(0, Math.min(net, remaining || net))
+      if (take <= 0) continue
+      newIds.push(d.id)
+      newAmounts[d.id] = take.toFixed(2)
+      remaining -= take
+    }
+    setAllocSelectedIds(prev => { const next = new Set(prev); newIds.forEach(id => next.add(id)); return next })
+    setAllocAmounts(prev => ({ ...prev, ...newAmounts }))
   }
 
   const submitAllocatePayment = async () => {
@@ -1397,13 +1485,18 @@ export default function SupplierTrackingTab({
                 </div>
                 {payOpenCreditTotal > 0 && (
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '-4px 0 8px' }}>
-                    לספק זה זיכוי פתוח בסך {fmt(payOpenCreditTotal)} — מנוכה אוטומטית ב&quot;שלם הכל&quot; מהחשבוניות הישנות ביותר
+                    לספק זה זיכוי פתוח בסך {fmt(payOpenCreditTotal)} — מנוכה אוטומטית ב&quot;שלם הכל&quot; מהחשבוניות הישנות ביותר שתאריכן זהה או מאוחר לתאריך הזיכוי
                   </div>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
                   {payDebtsByMonth.map(([mk, debts]) => (
                     <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', marginBottom: 4 }}>{fmtMonth(mk)}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
+                        <button type="button" onClick={() => toggleMonthPayDebts(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
+                          {debts.every(d => paySelectedIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                        </button>
+                      </div>
                       {debts.map(d => {
                         const checked = paySelectedIds.has(d.id)
                         return (
@@ -1516,7 +1609,12 @@ export default function SupplierTrackingTab({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '260px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
                   {allocDebtsByMonth.map(([mk, debts]) => (
                     <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', marginBottom: 4 }}>{fmtMonth(mk)}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
+                        <button type="button" onClick={() => toggleMonthAllocDebts(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
+                          {debts.every(d => allocSelectedIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                        </button>
+                      </div>
                       {debts.map(d => {
                         const checked = allocSelectedIds.has(d.id)
                         return (

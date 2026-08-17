@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-17T07:59:26.424Z
-> Files: 43 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-17T11:59:50.126Z
+> Files: 47 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -28,7 +28,7 @@
 ## ../../../root/.claude/plans/
 
 - `inherited-roaming-stonebraker.md` — תיקון: "שלם הכל" מתעלם מזיכויים פתוחים (ספקים + לקוחות) (~972 tok)
-- `modular-puzzling-flame.md` — סריקת חשבונית ספק ושמירה מסודרת ב-Drive (~1844 tok)
+- `modular-puzzling-flame.md` — תיקון חישוב סכומי תשלום/צ'קים מול חובות ספק (זיכוי פתוח) + בחירת חודש שלם (~1801 tok)
 
 ## ./
 
@@ -163,6 +163,7 @@
 
 ## app/api/drive/upload/
 
+- `route.ts` — Next.js API route: POST (~754 tok)
 
 ## app/api/employees/complete-registration/
 
@@ -289,6 +290,10 @@
 ## app/terms/
 
 
+## app/test-pdf-compress/
+
+- `page.tsx` — MAX_UPLOAD_BYTES (~1470 tok)
+
 ## app/test-transfer/
 
 
@@ -350,7 +355,7 @@
 
 - `CustomerDetailsTab.tsx` — CustomerDetailsTab (~7374 tok)
 - `CustomersClient.tsx` — CustomersClient (~1809 tok)
-- `CustomerTrackingTab.tsx` — fmtDMY (~25733 tok)
+- `CustomerTrackingTab.tsx` — fmtDMY (~26090 tok)
 - `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~674 tok)
 
 ## components/dashboard/
@@ -369,6 +374,7 @@
 
 ## components/expenses/
 
+- `ScheduledPaymentsModal.tsx` — monthKeyOf (~15616 tok)
 
 ## components/inspections/
 
@@ -402,7 +408,7 @@
 - `shared.ts` — Shared types/helpers for the merged /suppliers page (SupplierDetailsTab + SupplierTrackingTab). (~798 tok)
 - `SupplierDetailsTab.tsx` — former `SuppliersClient.tsx` body (profile/rolodex list+detail), now props-driven, no own fetch (~5000 tok)
 - `SuppliersClient.tsx` — SuppliersClient (~2411 tok)
-- `SupplierTrackingTab.tsx` — fmtDMY (~35696 tok)
+- `SupplierTrackingTab.tsx` — fmtDMY (~37267 tok)
 
 ## components/test-transfer/
 
@@ -436,6 +442,7 @@
 
 ## lib/debts/
 
+- `netAllocation.ts` — Exports NetAllocationDebtInput, NetAllocationCreditInput, netAllocation (~440 tok)
 
 ## lib/hooks/
 

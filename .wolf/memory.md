@@ -1295,3 +1295,84 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 07:56 | Edited components/suppliers/SupplierTrackingTab.tsx | 5→9 lines | ~323 |
 | 07:58 | Edited components/suppliers/SupplierTrackingTab.tsx | added error handling | ~520 |
 | 07:59 | Edited components/suppliers/SupplierTrackingTab.tsx | added 2 condition(s) | ~572 |
+
+## Session: 2026-08-17 08:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-08-17 08:30
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:44 | Created ../../../root/.claude/plans/modular-puzzling-flame.md | — | ~1921 |
+
+## Session: 2026-08-17 09:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:14 | Created lib/debts/netAllocation.ts | — | ~253 |
+| 09:14 | Edited components/suppliers/SupplierTrackingTab.tsx | added 1 import(s) | ~40 |
+| 09:14 | Edited components/suppliers/SupplierTrackingTab.tsx | 4→5 lines | ~78 |
+| 09:14 | Edited components/suppliers/SupplierTrackingTab.tsx | modified if() | ~485 |
+| 09:14 | Edited components/suppliers/SupplierTrackingTab.tsx | 2→6 lines | ~140 |
+| 09:14 | Edited components/suppliers/SupplierTrackingTab.tsx | 3→4 lines | ~80 |
+| 09:15 | Edited components/customers/CustomerTrackingTab.tsx | added 1 import(s) | ~43 |
+| 09:15 | Edited components/customers/CustomerTrackingTab.tsx | 4→5 lines | ~78 |
+| 09:15 | Edited components/customers/CustomerTrackingTab.tsx | modified if() | ~487 |
+| 09:15 | Edited components/expenses/ScheduledPaymentsModal.tsx | added 1 import(s) | ~44 |
+| 09:15 | Edited components/expenses/ScheduledPaymentsModal.tsx | 3→4 lines | ~90 |
+| 09:15 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: data | ~659 |
+| 09:16 | Edited components/expenses/ScheduledPaymentsModal.tsx | 3→6 lines | ~156 |
+| 09:16 | Edited components/suppliers/SupplierTrackingTab.tsx | added optional chaining | ~270 |
+| 09:16 | Edited components/suppliers/SupplierTrackingTab.tsx | 4→9 lines | ~245 |
+| 09:17 | Edited components/suppliers/SupplierTrackingTab.tsx | added optional chaining | ~435 |
+| 09:17 | Edited components/suppliers/SupplierTrackingTab.tsx | 4→9 lines | ~247 |
+| 09:17 | Edited components/customers/CustomerTrackingTab.tsx | added optional chaining | ~270 |
+| 09:17 | Edited components/customers/CustomerTrackingTab.tsx | 4→9 lines | ~245 |
+| 09:17 | Edited components/expenses/ScheduledPaymentsModal.tsx | added optional chaining | ~304 |
+| 09:18 | Edited components/expenses/ScheduledPaymentsModal.tsx | 4→9 lines | ~237 |
+
+## Session: 2026-08-17 09:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-08-17 10:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:10 | Created lib/debts/netAllocation.ts | — | ~440 |
+| 11:10 | Edited components/suppliers/SupplierTrackingTab.tsx | CSS: date, amount | ~91 |
+| 11:10 | Edited components/suppliers/SupplierTrackingTab.tsx | reduce() → map() | ~84 |
+| 11:10 | Edited components/suppliers/SupplierTrackingTab.tsx | 5→5 lines | ~102 |
+| 11:11 | Edited components/customers/CustomerTrackingTab.tsx | CSS: date, amount | ~91 |
+| 11:11 | Edited components/customers/CustomerTrackingTab.tsx | inline fix | ~48 |
+| 11:11 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: date, amount | ~50 |
+| 11:11 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: date, amount | ~330 |
+| 11:11 | Edited components/expenses/ScheduledPaymentsModal.tsx | inline fix | ~22 |
+| 11:11 | Edited components/expenses/ScheduledPaymentsModal.tsx | inline fix | ~16 |
+| 11:11 | Edited components/expenses/ScheduledPaymentsModal.tsx | 3→3 lines | ~90 |
+| 11:19 | Edited components/suppliers/SupplierTrackingTab.tsx | modified compressImageIfNeeded() | ~50 |
+| 11:20 | Edited components/suppliers/SupplierTrackingTab.tsx | added 3 condition(s) | ~570 |
+| 11:21 | Edited components/suppliers/SupplierTrackingTab.tsx | modified for() | ~286 |
+| 11:21 | Edited components/suppliers/SupplierTrackingTab.tsx | modified if() | ~87 |
+| 11:21 | Edited components/suppliers/SupplierTrackingTab.tsx | modified if() | ~59 |
+| 11:24 | Created app/test-pdf-compress/page.tsx | — | ~1158 |
+| 11:24 | Edited proxy.ts | 2→3 lines | ~12 |
+| 11:25 | Edited app/test-pdf-compress/page.tsx | modified if() | ~36 |
+| 11:26 | Edited app/test-pdf-compress/page.tsx | CSS: type | ~39 |
+| 11:29 | Edited components/suppliers/SupplierTrackingTab.tsx | added 1 condition(s) | ~121 |
+| 11:29 | Edited app/test-pdf-compress/page.tsx | added 1 condition(s) | ~105 |
+| 11:30 | Edited app/test-pdf-compress/page.tsx | modified for() | ~374 |
+| 11:30 | Edited app/test-pdf-compress/page.tsx | modified for() | ~187 |
+| 11:31 | Edited proxy.ts | 3→2 lines | ~5 |
+| 11:34 | Edited app/api/drive/upload/route.ts | 3→4 lines | ~122 |
+| 11:34 | Edited app/api/drive/upload/route.ts | added 1 condition(s) | ~81 |
+| 11:34 | Edited components/suppliers/SupplierTrackingTab.tsx | added 1 condition(s) | ~83 |
+
+## Session: 2026-08-17 11:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:59 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: reconErr, supplier_debt_id, amount | ~376 |
