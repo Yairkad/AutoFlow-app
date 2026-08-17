@@ -1353,3 +1353,17 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:11 | Edited components/expenses/ScheduledPaymentsModal.tsx | inline fix | ~22 |
 | 11:11 | Edited components/expenses/ScheduledPaymentsModal.tsx | inline fix | ~16 |
 | 11:11 | Edited components/expenses/ScheduledPaymentsModal.tsx | 3→3 lines | ~90 |
+| 11:19 | Edited components/suppliers/SupplierTrackingTab.tsx | modified compressImageIfNeeded() | ~50 |
+| 11:20 | Edited components/suppliers/SupplierTrackingTab.tsx | added 3 condition(s) | ~570 |
+| 11:21 | Edited components/suppliers/SupplierTrackingTab.tsx | modified for() | ~286 |
+| 11:21 | Edited components/suppliers/SupplierTrackingTab.tsx | modified if() | ~87 |
+| 11:21 | Edited components/suppliers/SupplierTrackingTab.tsx | modified if() | ~59 |
+| 11:24 | Created app/test-pdf-compress/page.tsx | — | ~1158 |
+| 11:24 | Edited proxy.ts | 2→3 lines | ~12 |
+| 11:25 | Edited app/test-pdf-compress/page.tsx | modified if() | ~36 |
+| 11:26 | Edited app/test-pdf-compress/page.tsx | CSS: type | ~39 |
+| 11:29 | Edited components/suppliers/SupplierTrackingTab.tsx | added 1 condition(s) | ~121 |
+| 11:29 | Edited app/test-pdf-compress/page.tsx | added 1 condition(s) | ~105 |
+| 11:30 | Edited app/test-pdf-compress/page.tsx | modified for() | ~374 |
+| 11:30 | Edited app/test-pdf-compress/page.tsx | modified for() | ~187 |
+| 11:31 | Edited proxy.ts | 3→2 lines | ~5 |
