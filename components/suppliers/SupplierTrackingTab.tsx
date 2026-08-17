@@ -64,6 +64,53 @@ const todayISO = () => new Date().toISOString().slice(0, 10)
 const monthISO = () => new Date().toISOString().slice(0, 7)
 const EMPTY_INV = (): InvoiceEntry => ({ type: 'invoice', number: '', amount: '', date: todayISO(), direction: 'charge', notes: '' })
 
+// Numeric value of an invoice number for sorting (e.g. "475810" → 475810). Non-numeric/missing
+// numbers sort last so they don't scramble an otherwise well-defined numeric order.
+const invNumOf = (s: string | null | undefined) => {
+  const digits = (s ?? '').replace(/\D/g, '')
+  return digits ? parseInt(digits, 10) : Number.POSITIVE_INFINITY
+}
+
+// Vercel's serverless functions reject request bodies over ~4.5MB with a 413 before our route
+// code even runs, so we stay safely under that for anything we can shrink client-side.
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024
+
+// Downscale/recompress an oversized image (camera capture or a large photo) so it clears the
+// upload limit. PDFs can't be safely recompressed client-side, so those are left as-is.
+async function compressImageIfNeeded(file: File): Promise<File> {
+  if (!file.type.startsWith('image/') || file.size <= MAX_UPLOAD_BYTES) return file
+  try {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image()
+      el.onload = () => resolve(el)
+      el.onerror = reject
+      el.src = dataUrl
+    })
+    const maxSide = 2000
+    const scale = Math.min(1, maxSide / Math.max(img.width, img.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(img.width * scale)
+    canvas.height = Math.round(img.height * scale)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    const baseName = file.name.replace(/\.\w+$/, '') || 'scan'
+    for (const quality of [0.8, 0.6, 0.45, 0.3]) {
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', quality))
+      if (blob && blob.size <= MAX_UPLOAD_BYTES) return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' })
+    }
+    return file
+  } catch {
+    return file
+  }
+}
+
 const monthKeyOf = (iso: string) => iso.slice(0, 7)
 const HEB_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
 const fmtMonth = (key: string) => { const [y, m] = key.split('-'); return `${HEB_MONTHS[parseInt(m) - 1]} ${y}` }
@@ -274,14 +321,36 @@ export default function SupplierTrackingTab({
   // the in-app camera scanner) to one invoice line — uploaded straight to the tenant's Drive folder.
   const attachScanToLine = async (i: number, file: File) => {
     setUploadingLineIdx(i)
-    const fd = new FormData()
-    fd.append('file', file)
-    fd.append('tenant_id', tenantId)
-    fd.append('sub_folder', 'ספקים')
-    const supplierName = suppliers.find(s => s.id === sSupplier)?.name
-    if (supplierName) fd.append('item_name', supplierName)
     try {
-      const res  = await fetch('/api/drive/upload', { method: 'POST', body: fd })
+      const shrunk = await compressImageIfNeeded(file)
+      if (shrunk.size > MAX_UPLOAD_BYTES) {
+        showToast(
+          shrunk.type === 'application/pdf' || file.type === 'application/pdf'
+            ? 'הקובץ גדול מדי להעלאה (מקסימום כ-4MB). נסו לסרוק שוב ברזולוציה/איכות נמוכה יותר בתוכנת הסריקה.'
+            : 'הקובץ גדול מדי להעלאה גם אחרי דחיסה (מקסימום כ-4MB).',
+          'error',
+        )
+        return
+      }
+      // Name the uploaded file after the invoice number (if the user already typed one in),
+      // so the file itself is identifiable in Drive without opening it.
+      const invNumber = sInvoices[i]?.number.trim()
+      const ext = shrunk.name.includes('.') ? shrunk.name.slice(shrunk.name.lastIndexOf('.')) : ''
+      const uploadFile = invNumber
+        ? new File([shrunk], `${invNumber.replace(/[\\/:*?"<>|]/g, '_')}${ext}`, { type: shrunk.type })
+        : shrunk
+      const fd = new FormData()
+      fd.append('file', uploadFile)
+      fd.append('tenant_id', tenantId)
+      fd.append('sub_folder', 'ספקים')
+      const supplierName = suppliers.find(s => s.id === sSupplier)?.name
+      if (supplierName) fd.append('item_name', supplierName)
+
+      const res = await fetch('/api/drive/upload', { method: 'POST', body: fd })
+      if (res.status === 413) {
+        showToast('הקובץ גדול מדי להעלאה (מקסימום כ-4MB). נסו לסרוק שוב ברזולוציה/איכות נמוכה יותר.', 'error')
+        return
+      }
       const data = await res.json()
       if (data.id) {
         setSInvoices(prev => prev.map((inv, idx) => idx === i
@@ -300,10 +369,40 @@ export default function SupplierTrackingTab({
 
   const invoicesTotal = sInvoices.reduce((s, inv) => s + (inv.direction === 'credit' ? -1 : 1) * (parseFloat(inv.amount) || 0), 0)
 
+  // Existing invoice numbers already recorded for the selected supplier (other than the row being
+  // edited), used to warn against re-entering the same invoice by mistake.
+  const existingInvoiceNumbers = (() => {
+    const set = new Set<string>()
+    if (!sSupplier) return set
+    supplierDebts
+      .filter(d => d.supplier_id === sSupplier && d.id !== editSupp?.id)
+      .forEach(d => {
+        if (Array.isArray(d.invoices) && d.invoices.length > 0) {
+          d.invoices.forEach(i => { if (i.number.trim()) set.add(i.number.trim().toLowerCase()) })
+        } else if (d.doc_number?.trim()) {
+          set.add(d.doc_number.trim().toLowerCase())
+        }
+      })
+    return set
+  })()
+
+  const isDuplicateInvoiceNumber = (i: number) => {
+    const num = sInvoices[i]?.number.trim().toLowerCase()
+    if (!num) return false
+    if (existingInvoiceNumbers.has(num)) return true
+    return sInvoices.some((other, idx) => idx !== i && other.number.trim().toLowerCase() === num)
+  }
+
   const saveSuppDebt = async () => {
     const validLines = sInvoices.filter(i => i.number.trim() || parseFloat(i.amount) > 0)
     if (validLines.length === 0) { showToast('נא למלא לפחות שורה אחת', 'error'); return }
     if (validLines.some(l => !l.date)) { showToast('נא לבחור תאריך לכל שורה', 'error'); return }
+    const dupNumbers = [...new Set(
+      sInvoices.map((_, i) => isDuplicateInvoiceNumber(i) ? sInvoices[i].number.trim() : null).filter(Boolean)
+    )]
+    if (dupNumbers.length > 0) {
+      if (!confirm(`מספר חשבונית ${dupNumbers.join(', ')} כבר קיים אצל ספק זה. לשמור בכל זאת?`)) return
+    }
     const tid = tenantId!
     setSsaving(true)
 
@@ -859,6 +958,7 @@ export default function SupplierTrackingTab({
             const allSuppIds = [...new Set(supplierDebts.map(d => d.supplier_id))]
             const groups = allSuppIds.map(sid => {
               const debts = supplierDebts.filter(d => d.supplier_id === sid)
+                .sort((a, b) => b.date.localeCompare(a.date) || (invNumOf(a.doc_number) - invNumOf(b.doc_number)))
               const supp = suppliers.find(s => s.id === sid)
               const totalBal = debts.reduce((s, d) => s + bal(d), 0)
 
@@ -1048,7 +1148,7 @@ export default function SupplierTrackingTab({
                             <tbody>
                               {monthDebts.flatMap(d => {
                                 const items = Array.isArray(d.invoices) && d.invoices.length > 0
-                                  ? d.invoices
+                                  ? [...d.invoices].sort((a, b) => invNumOf(a.number) - invNumOf(b.number))
                                   : [{ type: d.doc_type ?? 'invoice', number: d.doc_number ?? '', amount: Number(d.amount), drive_file_url: d.drive_file_url ?? undefined, drive_file_name: d.drive_file_name ?? undefined }]
                                 return items.map((item, idx) => (
                                   <tr
@@ -1195,10 +1295,14 @@ export default function SupplierTrackingTab({
                         )}
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                        <input value={inv.number} onChange={e => updateInvoiceLine(i, 'number', e.target.value)} placeholder="מספר חשבונית..." className="form-input" style={{ margin: 0 }} />
+                        <input value={inv.number} onChange={e => updateInvoiceLine(i, 'number', e.target.value)} placeholder="מספר חשבונית..." className="form-input"
+                          style={{ margin: 0, borderColor: isDuplicateInvoiceNumber(i) ? 'var(--danger)' : undefined }} />
                         <input type="number" min="0" step="0.01" value={inv.amount} onChange={e => updateInvoiceLine(i, 'amount', e.target.value)} placeholder="סכום..." className="form-input" style={{ margin: 0 }} />
                         <input type="date" value={inv.date} onChange={e => updateInvoiceLine(i, 'date', e.target.value)} className="form-input" style={{ margin: 0 }} />
                       </div>
+                      {isDuplicateInvoiceNumber(i) && (
+                        <div style={{ fontSize: '11px', color: 'var(--danger)', fontWeight: 600 }}>⚠ מספר חשבונית זה כבר קיים אצל ספק זה</div>
+                      )}
                       <input value={inv.notes} onChange={e => updateInvoiceLine(i, 'notes', e.target.value)} placeholder="הערות לשורה זו (אופציונלי)..." className="form-input" style={{ margin: 0 }} />
 
                       {/* ── Scan / attach the invoice document itself ── */}
@@ -1797,7 +1901,8 @@ export default function SupplierTrackingTab({
 
           {printMode === 'ledger' && (() => {
             const supp = suppliers.find(s => s.id === printSupplierId)
-            const allDebts = supplierDebts.filter(d => d.supplier_id === printSupplierId).sort((a, b) => a.date.localeCompare(b.date))
+            const allDebts = supplierDebts.filter(d => d.supplier_id === printSupplierId)
+              .sort((a, b) => a.date.localeCompare(b.date) || (invNumOf(a.doc_number) - invNumOf(b.doc_number)))
 
             const sortedPrintMonths = [...printMonths].sort()
             const rangeStart = printRangeMode === 'months' && sortedPrintMonths.length > 0
@@ -1880,7 +1985,9 @@ export default function SupplierTrackingTab({
                       </tr>
                     )}
                     {debts.flatMap(d => {
-                      const items = Array.isArray(d.invoices) && d.invoices.length > 0 ? d.invoices : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]
+                      const items = Array.isArray(d.invoices) && d.invoices.length > 0
+                        ? [...d.invoices].sort((a, b) => invNumOf(a.number) - invNumOf(b.number))
+                        : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]
                       return items.map((item, idx) => {
                         running += d.direction === 'credit' ? -Number(item.amount) : Number(item.amount)
                         return (

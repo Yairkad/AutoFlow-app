@@ -1274,3 +1274,24 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 08:56 | Edited components/suppliers/SupplierTrackingTab.tsx | added 1 import(s) | ~35 |
 | 08:56 | Edited components/suppliers/SupplierTrackingTab.tsx | expanded (+7 lines) | ~108 |
 | 08:56 | Edited components/suppliers/SupplierTrackingTab.tsx | 14→19 lines | ~497 |
+
+## Session: 2026-08-16 10:41
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-08-17 07:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:44 | Edited components/suppliers/SupplierTrackingTab.tsx | added optional chaining | ~182 |
+| 07:52 | Edited components/suppliers/SupplierTrackingTab.tsx | added nullish coalescing | ~115 |
+| 07:54 | Edited components/suppliers/SupplierTrackingTab.tsx | 2→3 lines | ~72 |
+| 07:55 | Edited components/suppliers/SupplierTrackingTab.tsx | 5→5 lines | ~157 |
+| 07:55 | Edited components/suppliers/SupplierTrackingTab.tsx | 1→2 lines | ~58 |
+| 07:55 | Edited components/suppliers/SupplierTrackingTab.tsx | 1→3 lines | ~77 |
+| 07:55 | Edited components/suppliers/SupplierTrackingTab.tsx | added optional chaining | ~332 |
+| 07:55 | Edited components/suppliers/SupplierTrackingTab.tsx | added 2 condition(s) | ~152 |
+| 07:56 | Edited components/suppliers/SupplierTrackingTab.tsx | 5→9 lines | ~323 |
+| 07:58 | Edited components/suppliers/SupplierTrackingTab.tsx | added error handling | ~520 |
+| 07:59 | Edited components/suppliers/SupplierTrackingTab.tsx | added 2 condition(s) | ~572 |
