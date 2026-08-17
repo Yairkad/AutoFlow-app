@@ -1342,3 +1342,14 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 11:10 | Created lib/debts/netAllocation.ts | — | ~440 |
+| 11:10 | Edited components/suppliers/SupplierTrackingTab.tsx | CSS: date, amount | ~91 |
+| 11:10 | Edited components/suppliers/SupplierTrackingTab.tsx | reduce() → map() | ~84 |
+| 11:10 | Edited components/suppliers/SupplierTrackingTab.tsx | 5→5 lines | ~102 |
+| 11:11 | Edited components/customers/CustomerTrackingTab.tsx | CSS: date, amount | ~91 |
+| 11:11 | Edited components/customers/CustomerTrackingTab.tsx | inline fix | ~48 |
+| 11:11 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: date, amount | ~50 |
+| 11:11 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: date, amount | ~330 |
+| 11:11 | Edited components/expenses/ScheduledPaymentsModal.tsx | inline fix | ~22 |
+| 11:11 | Edited components/expenses/ScheduledPaymentsModal.tsx | inline fix | ~16 |
+| 11:11 | Edited components/expenses/ScheduledPaymentsModal.tsx | 3→3 lines | ~90 |

@@ -430,10 +430,11 @@ export default function CustomerTrackingTab({
   // Credits are always saved already-closed (see Decision Log), so they never
   // appear in payOpenDebts above — but the amount owed still needs to net them
   // out, or "שלם הכל" overstates the total by exactly the open credit.
-  const payOpenCreditTotal = customerDebts
+  const payOpenCredits = customerDebts
     .filter(d => d.customer_id === payCustomerId && d.direction === 'credit')
-    .reduce((s, d) => s + Number(d.amount), 0)
-  const payNetMap = netAllocation(payOpenDebts, payOpenCreditTotal)
+    .map(d => ({ date: d.date, amount: Number(d.amount) }))
+  const payOpenCreditTotal = payOpenCredits.reduce((s, c) => s + c.amount, 0)
+  const payNetMap = netAllocation(payOpenDebts, payOpenCredits)
   const payDebtsByMonth = (() => {
     const map: Record<string, CustomerLedgerDebt[]> = {}
     payOpenDebts.forEach(d => {
@@ -1194,7 +1195,7 @@ export default function CustomerTrackingTab({
                 </div>
                 {payOpenCreditTotal > 0 && (
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '-4px 0 8px' }}>
-                    ללקוח זה זיכוי פתוח בסך {fmt(payOpenCreditTotal)} — מנוכה אוטומטית ב&quot;שלם הכל&quot; מהחשבוניות הישנות ביותר
+                    ללקוח זה זיכוי פתוח בסך {fmt(payOpenCreditTotal)} — מנוכה אוטומטית ב&quot;שלם הכל&quot; מהחשבוניות הישנות ביותר שתאריכן זהה או מאוחר לתאריך הזיכוי
                   </div>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>

@@ -612,10 +612,11 @@ export default function SupplierTrackingTab({
   // Credits are always saved already-closed (see Decision Log), so they never
   // appear in payOpenDebts above — but the amount owed still needs to net them
   // out, or "שלם הכל" overstates the total by exactly the open credit.
-  const payOpenCreditTotal = supplierDebts
+  const payOpenCredits = supplierDebts
     .filter(d => d.supplier_id === paySupplierId && d.direction === 'credit')
-    .reduce((s, d) => s + Number(d.amount), 0)
-  const payNetMap = netAllocation(payOpenDebts, payOpenCreditTotal)
+    .map(d => ({ date: d.date, amount: Number(d.amount) }))
+  const payOpenCreditTotal = payOpenCredits.reduce((s, c) => s + c.amount, 0)
+  const payNetMap = netAllocation(payOpenDebts, payOpenCredits)
   const payDebtsByMonth = (() => {
     const map: Record<string, SupplierDebt[]> = {}
     payOpenDebts.forEach(d => {
@@ -764,10 +765,10 @@ export default function SupplierTrackingTab({
   // ── Retroactive allocation of an already-issued check/payment ─────────────
 
   const allocOpenDebts = supplierDebts.filter(d => d.supplier_id === allocatingPayment?.supplier_id && (allocShowClosed || !d.is_closed) && d.direction === 'charge')
-  const allocOpenCreditTotal = supplierDebts
+  const allocOpenCredits = supplierDebts
     .filter(d => d.supplier_id === allocatingPayment?.supplier_id && d.direction === 'credit')
-    .reduce((s, d) => s + Number(d.amount), 0)
-  const allocNetMap = netAllocation(allocOpenDebts.filter(d => !d.is_closed), allocOpenCreditTotal)
+    .map(d => ({ date: d.date, amount: Number(d.amount) }))
+  const allocNetMap = netAllocation(allocOpenDebts.filter(d => !d.is_closed), allocOpenCredits)
   const allocDebtsByMonth = (() => {
     const map: Record<string, SupplierDebt[]> = {}
     allocOpenDebts.forEach(d => {
@@ -1444,7 +1445,7 @@ export default function SupplierTrackingTab({
                 </div>
                 {payOpenCreditTotal > 0 && (
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '-4px 0 8px' }}>
-                    לספק זה זיכוי פתוח בסך {fmt(payOpenCreditTotal)} — מנוכה אוטומטית ב&quot;שלם הכל&quot; מהחשבוניות הישנות ביותר
+                    לספק זה זיכוי פתוח בסך {fmt(payOpenCreditTotal)} — מנוכה אוטומטית ב&quot;שלם הכל&quot; מהחשבוניות הישנות ביותר שתאריכן זהה או מאוחר לתאריך הזיכוי
                   </div>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>

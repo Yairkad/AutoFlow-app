@@ -175,7 +175,7 @@ export default function ScheduledPaymentsModal({
   const [openDebts,      setOpenDebts]      = useState<OpenSupplierDebt[]>([])
   const [selectedDebtIds, setSelectedDebtIds] = useState<Set<string>>(new Set())
   const [debtAllocAmounts, setDebtAllocAmounts] = useState<Record<string, string>>({})
-  const [openCreditTotal, setOpenCreditTotal] = useState<number>(0)
+  const [openCredits, setOpenCredits] = useState<{ date: string; amount: number }[]>([])
 
   // Pay modal
   const [payOpen,   setPayOpen]   = useState(false)
@@ -210,7 +210,7 @@ export default function ScheduledPaymentsModal({
   const pendingInitialAllocRef = useRef<{ supplierId: string; ids: string[]; amounts: Record<string, string> } | null>(null)
 
   const fetchOpenDebtsAndSeed = useCallback(async (supplierId: string) => {
-    if (!supplierId) { setOpenDebts([]); setSelectedDebtIds(new Set()); setDebtAllocAmounts({}); setOpenCreditTotal(0); return }
+    if (!supplierId) { setOpenDebts([]); setSelectedDebtIds(new Set()); setDebtAllocAmounts({}); setOpenCredits([]); return }
     const [{ data }, { data: creditRows }] = await Promise.all([
       supabase
         .from('supplier_debts')
@@ -219,19 +219,20 @@ export default function ScheduledPaymentsModal({
         .eq('is_closed', false)
         .order('date', { ascending: true }),
       // Credits are always saved already-closed, so they never show up in the open-debts
-      // query above — but the check amount still needs to net them out against the oldest
-      // debts, or the suggested per-debt amounts overstate what's actually owed.
+      // query above — but the check amount still needs to net them out (a credit can only
+      // offset debts dated on/after it) or the suggested per-debt amounts overstate what's
+      // actually owed.
       supabase
         .from('supplier_debts')
-        .select('amount')
+        .select('date, amount')
         .eq('supplier_id', supplierId)
         .eq('direction', 'credit'),
     ])
     const debts = data ?? []
     setOpenDebts(debts)
-    const creditTotal = (creditRows ?? []).reduce((s, r) => s + Number(r.amount), 0)
-    setOpenCreditTotal(creditTotal)
-    const netMap = netAllocation(debts, creditTotal)
+    const credits = (creditRows ?? []).map(r => ({ date: r.date, amount: Number(r.amount) }))
+    setOpenCredits(credits)
+    const netMap = netAllocation(debts, credits)
 
     const pending = pendingInitialAllocRef.current
     if (pending && pending.supplierId === supplierId) {
@@ -259,7 +260,7 @@ export default function ScheduledPaymentsModal({
         setDebtAllocAmounts(a => { const c = { ...a }; delete c[debt.id]; return c })
       } else {
         next.add(debt.id)
-        const net = netAllocation(openDebts, openCreditTotal).get(debt.id) ?? 0
+        const net = netAllocation(openDebts, openCredits).get(debt.id) ?? 0
         setDebtAllocAmounts(a => ({ ...a, [debt.id]: a[debt.id] ?? String(net.toFixed(2)) }))
       }
       return next
@@ -700,7 +701,7 @@ export default function ScheduledPaymentsModal({
   // Select/deselect every open debt of one month at once (net-of-credit amounts, same as toggleDebtSelected).
   const toggleMonthDebtSelected = (mk: string) => {
     const monthDebts = debtsByMonth.find(([k]) => k === mk)?.[1] ?? []
-    const netMap = netAllocation(openDebts, openCreditTotal)
+    const netMap = netAllocation(openDebts, openCredits)
     const allSelected = monthDebts.length > 0 && monthDebts.every(d => selectedDebtIds.has(d.id))
     setSelectedDebtIds(prev => {
       const next = new Set(prev)
@@ -1052,8 +1053,8 @@ export default function ScheduledPaymentsModal({
             <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, background: '#fafafa', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>שיבוץ מול חובות פתוחים של הספק (אופציונלי)</div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>סמן אילו חודשים התשלום הזה סוגר. חודש שלא תסמן לא ייגע כלל.</div>
-              {openCreditTotal > 0 && (
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>לספק זה זיכוי פתוח בסך {fmt(openCreditTotal)} — מנוכה אוטומטית מהחשבוניות הישנות ביותר בסכומים המוצעים למטה.</div>
+              {openCredits.length > 0 && (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>לספק זה זיכוי פתוח בסך {fmt(openCredits.reduce((s, c) => s + c.amount, 0))} — מנוכה אוטומטית מהחשבוניות הישנות ביותר שתאריכן זהה או מאוחר לתאריך הזיכוי, בסכומים המוצעים למטה.</div>
               )}
               {debtsByMonth.map(([mk, debts]) => (
                 <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>

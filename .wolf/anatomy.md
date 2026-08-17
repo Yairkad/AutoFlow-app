@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-17T09:18:01.352Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-17T11:11:52.334Z
 > Files: 45 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -350,7 +350,7 @@
 
 - `CustomerDetailsTab.tsx` — CustomerDetailsTab (~7374 tok)
 - `CustomersClient.tsx` — CustomersClient (~1809 tok)
-- `CustomerTrackingTab.tsx` — fmtDMY (~26056 tok)
+- `CustomerTrackingTab.tsx` — fmtDMY (~26090 tok)
 - `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~674 tok)
 
 ## components/dashboard/
@@ -369,7 +369,7 @@
 
 ## components/expenses/
 
-- `ScheduledPaymentsModal.tsx` — monthKeyOf (~15303 tok)
+- `ScheduledPaymentsModal.tsx` — monthKeyOf (~15336 tok)
 
 ## components/inspections/
 
@@ -403,7 +403,7 @@
 - `shared.ts` — Shared types/helpers for the merged /suppliers page (SupplierDetailsTab + SupplierTrackingTab). (~798 tok)
 - `SupplierDetailsTab.tsx` — former `SuppliersClient.tsx` body (profile/rolodex list+detail), now props-driven, no own fetch (~5000 tok)
 - `SuppliersClient.tsx` — SuppliersClient (~2411 tok)
-- `SupplierTrackingTab.tsx` — fmtDMY (~36671 tok)
+- `SupplierTrackingTab.tsx` — fmtDMY (~36706 tok)
 
 ## components/test-transfer/
 
@@ -437,7 +437,7 @@
 
 ## lib/debts/
 
-- `netAllocation.ts` — Exports NetAllocationDebtInput, netAllocation (~253 tok)
+- `netAllocation.ts` — Exports NetAllocationDebtInput, NetAllocationCreditInput, netAllocation (~440 tok)
 
 ## lib/hooks/
 
