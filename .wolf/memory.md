@@ -1483,3 +1483,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:21 | Edited components/customers/CustomerTrackingTab.tsx | expanded (+8 lines) | ~254 |
 | 11:22 | Edited components/customers/CustomerTrackingTab.tsx | added optional chaining | ~232 |
 | 11:22 | Fixed payments in a month with no invoice never rendering on-screen (counted in total but invisible as a row) — real incident, customer payment appeared to vanish; also added payment delete + bulk-delete-all-payments-for-customer | components/customers/CustomerTrackingTab.tsx | tsc clean; see bug-022 | ~2800 |
+| 11:27 | Edited .gitignore | 6→9 lines | ~62 |

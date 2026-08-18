@@ -53,3 +53,6 @@ checklist-demo.html
 .wolf/suggestions.json
 .wolf/token-ledger.json
 .wolf/hooks/_session.json*
+
+# Supabase CLI local cache
+supabase/.temp
