@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T08:12:19.646Z
-> Files: 48 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T08:27:52.678Z
+> Files: 49 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -349,7 +349,7 @@
 
 ## components/checks/
 
-- `ChecksJournalClient.tsx` — fmt (~8993 tok)
+- `ChecksJournalClient.tsx` — fmt (~9074 tok)
 
 ## components/customers/
 
@@ -375,7 +375,7 @@
 
 ## components/expenses/
 
-- `ScheduledPaymentsModal.tsx` — monthKeyOf (~15616 tok)
+- `ScheduledPaymentsModal.tsx` — monthKeyOf (~15697 tok)
 
 ## components/inspections/
 
@@ -444,6 +444,7 @@
 ## lib/debts/
 
 - `netAllocation.ts` — Exports NetAllocationDebtInput, NetAllocationCreditInput, netAllocation (~440 tok)
+- `reverseSupplierPayment.ts` — Undoes everything reconcileSupplierPayment.ts did for a given scheduled_payment (~524 tok)
 
 ## lib/hooks/
 

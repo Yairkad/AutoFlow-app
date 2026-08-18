@@ -12,6 +12,7 @@ import Modal from '@/components/ui/Modal'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
 import { markScheduledPaymentPaid } from '@/lib/utils/markCheckPaid'
+import { reverseSupplierPayment } from '@/lib/debts/reverseSupplierPayment'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -207,8 +208,10 @@ export default function ChecksJournalClient() {
   }
 
   const deleteRow = async (id: string) => {
-    const ok = await confirm({ msg: "למחוק צ'ק זה?", icon: '🗑️' })
+    const ok = await confirm({ msg: "למחוק צ'ק זה? כל שיוך שלו לחשבוניות ספק יבוטל והיתרה תיפתח מחדש.", icon: '🗑️' })
     if (!ok) return
+    const { error: revErr } = await reverseSupplierPayment(supabase, id)
+    if (revErr) { showToast('שגיאה בביטול שיוך החוב: ' + revErr, 'error'); return }
     await supabase.from('scheduled_payments').delete().eq('id', id)
     showToast('נמחק', 'success')
     load()

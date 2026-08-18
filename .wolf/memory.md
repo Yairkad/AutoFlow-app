@@ -1384,3 +1384,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 08:12 | Edited components/employees/EmployeesClient.tsx | added optional chaining | ~1035 |
 | 08:12 | Edited components/employees/EmployeesClient.tsx | 3→6 lines | ~85 |
 | 08:14 | Added bulk print button for salary additions/deductions (user reported the previously-requested button was missing — it had never actually been implemented) | components/employees/EmployeesClient.tsx | tsc clean | ~1200 |
+| 08:26 | Created lib/debts/reverseSupplierPayment.ts | — | ~524 |
+| 08:27 | Edited components/checks/ChecksJournalClient.tsx | added 1 import(s) | ~64 |
+| 08:27 | Edited components/checks/ChecksJournalClient.tsx | CSS: error | ~130 |
+| 08:27 | Edited components/expenses/ScheduledPaymentsModal.tsx | added 1 import(s) | ~66 |
+| 08:27 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: error | ~137 |
+| 08:29 | Fixed check deletion not reversing supplier debt allocation (invoices stuck showing "partial"/"paid" forever after deleting the check that caused it); explained partial-payment display logic to user | lib/debts/reverseSupplierPayment.ts, ChecksJournalClient.tsx, ScheduledPaymentsModal.tsx | tsc clean; see bug-018 | ~2600 |

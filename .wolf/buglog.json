@@ -214,5 +214,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-09"
+  },
+  {
+    "id": "bug-018",
+    "timestamp": "2026-08-18T00:00:00.000Z",
+    "error_message": "User couldn't understand why some supplier invoices show 'חלקי' (partially charged) — and asked whether the ability to cancel/undo a check payment (to reset it) had disappeared",
+    "file": "components/checks/ChecksJournalClient.tsx, components/expenses/ScheduledPaymentsModal.tsx",
+    "root_cause": "Two separate issues, one by design and one a real bug. (1) By design (see 2026-07-05 Decision Log 'Debt is settled at check hand-over'): reconcileSupplierPayment() runs at CHECK-CREATION time, not when the check later clears — so supplier_debts.paid rises the moment a check is written, and any invoice not fully covered by that one check's allocation shows StatusChip's 'חלקי' (paid>0, not yet is_closed) — expected, but confusing without an explanation anywhere in the UI. (2) Real bug: `deleteRow`/`del` (the 🗑️ delete button for a scheduled_payments row in both files) did a bare `supabase.from('scheduled_payments').delete()` with no reversal step. supplier_debt_payments.scheduled_payment_id is `ON DELETE SET NULL` (migration 062), not CASCADE, so deleting a check left its supplier_debt_payments row(s) orphaned (unlinked, but still counted) and supplier_debts.paid/is_closed permanently stuck at whatever the check had allocated — there was no way, in the UI or the data model, to actually undo a check's effect on an invoice by deleting it. This is exactly the 'reset' the user was expecting and not finding.",
+    "fix": "Added lib/debts/reverseSupplierPayment.ts (mirrors reconcileSupplierPayment.ts): given a scheduled_payment_id, looks up its supplier_debt_payments rows, subtracts each amount back off the linked supplier_debts.paid (recomputing is_closed), then deletes the junction rows. Wired into both delete sites — called BEFORE the scheduled_payments row itself is deleted, since the link needed to find affected debts is destroyed once that id is gone. Also reworded both delete confirmation dialogs to say the debt allocation will be reversed and the balance reopened, so the behavior is explicit up front.",
+    "tags": ["suppliers", "checks", "scheduled_payments", "supplier_debt_payments", "reconciliation", "delete", "orphaned-state", "partial-payment"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-08-18"
   }
 ]
