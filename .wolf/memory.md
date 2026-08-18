@@ -1490,3 +1490,10 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 12:01 | Opened PR #24 (critical fix: payment in month with no invoice invisible on-screen; added payment delete + bulk delete) | — | https://github.com/Yairkad/AutoFlow-app/pull/24 | ~300 |
+
+## Session: 2026-08-18 20:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:15 | Synced repo with GitHub: stashed stray local changes (dup memory.md session-stub headers, pre-existing missing "הדמית מסוף" demo PNGs), fast-forward pulled 42 commits (PRs #20-#24), resolved memory.md stash-pop conflict by keeping upstream history and dropping the empty local stubs | .wolf/memory.md | clean, up to date with origin/main | ~400 |
+| 20:20 | User confirmed deleting the stale "הדמית מסוף" demo-screenshot folder (5 PNGs, already gone from disk) — staged and committed the deletion | הדמית מסוף/*.PNG | committed | ~100 |
