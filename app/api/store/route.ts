@@ -10,12 +10,17 @@ async function forward(req: NextRequest): Promise<NextResponse> {
   const pathAndQuery = Buffer.from(encoded, 'base64').toString('utf-8')
   const target = `${SUPABASE_URL}${pathAndQuery}`
 
-  // Forward all headers except host and encoding
+  // Forward all headers except host and encoding. Explicitly request an
+  // uncompressed response (instead of just dropping accept-encoding) so
+  // there's no chance of a compressed body going out with the
+  // content-encoding header stripped below -- that mismatch makes the
+  // client try to parse still-compressed bytes as plain JSON and fail.
   const headers = new Headers()
   req.headers.forEach((value, key) => {
     if (key === 'host' || key === 'accept-encoding') return
     headers.set(key, value)
   })
+  headers.set('accept-encoding', 'identity')
 
   const hasBody = req.method !== 'GET' && req.method !== 'HEAD'
 
