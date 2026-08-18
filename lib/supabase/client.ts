@@ -13,21 +13,10 @@ function proxyFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Respo
   if (url.startsWith(SUPABASE_URL)) {
     const pathAndQuery = url.slice(SUPABASE_URL.length) // e.g. /rest/v1/products
     const encoded = btoa(unescape(encodeURIComponent(pathAndQuery)))
-    console.log('[DEBUG-PROXY] routed via proxy', url, '->', `${PROXY_URL}?p=${encoded}`)
-    return fetch(`${PROXY_URL}?p=${encoded}`, { ...init }).then(res => {
-      console.log('[DEBUG-PROXY] proxy fetch resolved', res.status)
-      return res
-    }).catch(err => {
-      console.log('[DEBUG-PROXY] proxy fetch THREW', String(err))
-      throw err
-    })
+    return fetch(`${PROXY_URL}?p=${encoded}`, { ...init })
   }
 
-  console.log('[DEBUG-PROXY] NOT routed via proxy (direct fetch)', url, 'SUPABASE_URL=', SUPABASE_URL)
-  return fetch(input, init).catch(err => {
-    console.log('[DEBUG-PROXY] direct fetch THREW', String(err))
-    throw err
-  })
+  return fetch(input, init)
 }
 
 export function createClient() {

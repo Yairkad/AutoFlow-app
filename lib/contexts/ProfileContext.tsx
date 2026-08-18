@@ -48,49 +48,36 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    try {
-      console.log('[DEBUG-PROFILE] load() started')
-      const getUserRes = await sb.auth.getUser()
-      console.log('[DEBUG-PROFILE] getUser result', JSON.stringify(getUserRes))
-      const user = getUserRes.data.user
-      if (!user) { console.log('[DEBUG-PROFILE] no user, stopping'); setProfile(null); setLoading(false); return }
+    const { data: { user } } = await sb.auth.getUser()
+    if (!user) { setProfile(null); setLoading(false); return }
 
-      const profileRes = await sb.from('profiles')
-        .select('full_name, tenant_id, role, allowed_modules')
-        .eq('id', user.id)
-        .single()
-      console.log('[DEBUG-PROFILE] profiles result', JSON.stringify(profileRes))
-      const p = profileRes.data
+    const { data: p } = await sb.from('profiles')
+      .select('full_name, tenant_id, role, allowed_modules')
+      .eq('id', user.id)
+      .single()
 
-      if (!p) { console.log('[DEBUG-PROFILE] no profile row, stopping'); setProfile(null); setLoading(false); return }
+    if (!p) { setProfile(null); setLoading(false); return }
 
-      const tenantRes = await sb.from('tenants')
-        .select('*')
-        .eq('id', p.tenant_id)
-        .single()
-      console.log('[DEBUG-PROFILE] tenant result', JSON.stringify(tenantRes))
-      const tenant = tenantRes.data
+    const { data: tenant } = await sb.from('tenants')
+      .select('*')
+      .eq('id', p.tenant_id)
+      .single()
 
-      setProfile({
-        userId: user.id,
-        email: user.email ?? '',
-        fullName: p.full_name ?? null,
-        tenantId: p.tenant_id,
-        role: p.role,
-        isAdmin: p.role === 'admin' || p.role === 'super_admin',
-        allowedModules: p.allowed_modules ?? [],
-        tenant: (tenant as TenantRow) ?? null,
-      })
-      setLoading(false)
-      console.log('[DEBUG-PROFILE] setProfile done')
+    setProfile({
+      userId: user.id,
+      email: user.email ?? '',
+      fullName: p.full_name ?? null,
+      tenantId: p.tenant_id,
+      role: p.role,
+      isAdmin: p.role === 'admin' || p.role === 'super_admin',
+      allowedModules: p.allowed_modules ?? [],
+      tenant: (tenant as TenantRow) ?? null,
+    })
+    setLoading(false)
 
-      // Checks past their due_date are settled automatically — no manual "שולם" click needed.
-      if (p.role === 'admin' || p.role === 'super_admin') {
-        autoMarkOverdueChecksPaid(sb, p.tenant_id).catch(() => {})
-      }
-    } catch (err) {
-      console.log('[DEBUG-PROFILE] THREW', String(err), (err as Error)?.stack)
-      setLoading(false)
+    // Checks past their due_date are settled automatically — no manual "שולם" click needed.
+    if (p.role === 'admin' || p.role === 'super_admin') {
+      autoMarkOverdueChecksPaid(sb, p.tenant_id).catch(() => {})
     }
   }, [sb])
 

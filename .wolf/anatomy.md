@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T18:45:08.342Z
-> Files: 5 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T22:58:21.236Z
+> Files: 8 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -177,6 +177,7 @@
 
 ## app/api/store/
 
+- `route.ts` — Next.js API route: GET, POST, PUT, PATCH, DELETE (~672 tok)
 
 ## app/api/yard/barcode/
 
@@ -366,6 +367,7 @@
 
 ## components/layout/
 
+- `AppShell.tsx` — AppShell (~330 tok)
 
 ## components/products/
 
@@ -405,6 +407,7 @@
 
 ## lib/contexts/
 
+- `ProfileContext.tsx` — ProfileContext (~776 tok)
 
 ## lib/debts/
 

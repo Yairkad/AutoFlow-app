@@ -1513,3 +1513,36 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 21:40 | Edited app/api/admin/generate-invite/route.ts | inline fix | ~28 |
 | 21:41 | Diagnosed prod outage (bug-023): NEXT_PUBLIC_APP_URL trailing slash → double-slash proxy URL → silent 308 on every Supabase call → ProfileContext swallowed the error, user saw "unauthorized" view | lib/supabase/client.ts + 3 more | fixed in code, user still needs to fix Vercel env var + redeploy | logged to buglog.json/cerebrum.md |
 | 21:45 | Created ../../../.claude/plans/moonlit-bubbling-moler.md | — | ~2207 |
+
+## Session: 2026-08-18 01:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-08-18 01:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:36 | Edited lib/contexts/ProfileContext.tsx | added optional chaining | ~515 |
+| 01:37 | Session end: 1 writes across 1 files (ProfileContext.tsx) | 2 reads | ~515 tok |
+| 01:39 | Session end: 1 writes across 1 files (ProfileContext.tsx) | 2 reads | ~515 tok |
+| 01:40 | Session end: 1 writes across 1 files (ProfileContext.tsx) | 2 reads | ~515 tok |
+| 01:42 | Edited lib/supabase/client.ts | modified proxyFetch() | ~283 |
+| 01:43 | Edited components/layout/AppShell.tsx | CSS: onLine | ~94 |
+
+## Session: 2026-08-18 01:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-08-18 01:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 01:48 | Edited app/api/store/route.ts | 6→11 lines | ~161 |
+| 01:50 | Session end: 1 writes across 1 files (route.ts) | 0 reads | ~161 tok |
+| 01:52 | Edited lib/contexts/ProfileContext.tsx | CSS: data, data, data | ~305 |
+| 01:52 | Edited lib/supabase/client.ts | reduced (-11 lines) | ~81 |
+| 01:54 | Session end: 3 writes across 3 files (route.ts, ProfileContext.tsx, client.ts) | 3 reads | ~547 tok |
+| 01:58 | Edited components/layout/AppShell.tsx | 5→3 lines | ~13 |
+| 02:00 | RESOLVED bug-023: production outage was app/api/store/route.ts forwarding compressed bytes with content-encoding stripped, mislabeled by supabase-js as AuthRetryableFetchError status:0. Fixed via accept-encoding:identity upstream. Confirmed live by user. Removed diagnostic logging, corrected buglog.json/cerebrum.md (earlier trailing-slash fix was real but not the cause) | app/api/store/route.ts + cleanup of 3 files | production confirmed working | ~200 |
