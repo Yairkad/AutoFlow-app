@@ -1465,3 +1465,11 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:34 | Edited components/customers/CustomerDetailsTab.tsx | 8→5 lines | ~96 |
 | 10:35 | Redesigned customer ledger balance model (phase 1: customers only) — flat Σcharges−Σcredits−Σpayments instead of per-invoice paid/is_closed allocation; is_closed becomes a cosmetic tag | lib/debts/ledger.ts, lib/debts/reconcileCustomerLedgerPayment.ts, components/customers/{shared,CustomerTrackingTab,CustomerDetailsTab,CustomersClient}.tsx, supabase/migrations/079_customer_ledger_payments_direct_link.sql | tsc clean; approved plan witty-roaming-quail.md | ~9500 |
 | 10:36 | Opened PR #22 (customer ledger balance redesign, phase 1) on new branch claude/simplify-customer-ledger-balance | — | https://github.com/Yairkad/AutoFlow-app/pull/22 | ~300 |
+
+## Session: 2026-08-18 10:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:59 | Edited components/customers/CustomerTrackingTab.tsx | added nullish coalescing | ~860 |
+| 11:00 | Fixed "מזג תשלומים" merge succeeding but on-screen list still showing all rows separately — grouping was print-only, never applied on-screen | components/customers/CustomerTrackingTab.tsx | tsc clean; see bug-021 | ~1400 |
+| 11:01 | Opened PR #23 (fix: merged payments not reflected on-screen) | — | https://github.com/Yairkad/AutoFlow-app/pull/23 | ~300 |
