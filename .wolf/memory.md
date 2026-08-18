@@ -1489,3 +1489,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 12:01 | Opened PR #24 (critical fix: payment in month with no invoice invisible on-screen; added payment delete + bulk delete) | — | https://github.com/Yairkad/AutoFlow-app/pull/24 | ~300 |
