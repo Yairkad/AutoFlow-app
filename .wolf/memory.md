@@ -1473,3 +1473,13 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:59 | Edited components/customers/CustomerTrackingTab.tsx | added nullish coalescing | ~860 |
 | 11:00 | Fixed "מזג תשלומים" merge succeeding but on-screen list still showing all rows separately — grouping was print-only, never applied on-screen | components/customers/CustomerTrackingTab.tsx | tsc clean; see bug-021 | ~1400 |
 | 11:01 | Opened PR #23 (fix: merged payments not reflected on-screen) | — | https://github.com/Yairkad/AutoFlow-app/pull/23 | ~300 |
+
+## Session: 2026-08-18 11:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:20 | Edited components/customers/CustomerTrackingTab.tsx | added 1 condition(s) | ~213 |
+| 11:21 | Edited components/customers/CustomerTrackingTab.tsx | added 3 condition(s) | ~477 |
+| 11:21 | Edited components/customers/CustomerTrackingTab.tsx | expanded (+8 lines) | ~254 |
+| 11:22 | Edited components/customers/CustomerTrackingTab.tsx | added optional chaining | ~232 |
+| 11:22 | Fixed payments in a month with no invoice never rendering on-screen (counted in total but invisible as a row) — real incident, customer payment appeared to vanish; also added payment delete + bulk-delete-all-payments-for-customer | components/customers/CustomerTrackingTab.tsx | tsc clean; see bug-022 | ~2800 |
