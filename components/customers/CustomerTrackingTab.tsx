@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
-import { reconcileCustomerLedgerPayment } from '@/lib/debts/reconcileCustomerLedgerPayment'
-import { netAllocation } from '@/lib/debts/netAllocation'
+import { recordCustomerPayment } from '@/lib/debts/reconcileCustomerLedgerPayment'
+import { balanceOf, buildLedger, RawLedgerEvent } from '@/lib/debts/ledger'
 import QuickAddCustomerModal, { QuickCustomer } from '@/components/customers/QuickAddCustomerModal'
 import VatToggle from '@/components/ui/VatToggle'
 import UnitToggle from '@/components/ui/UnitToggle'
@@ -82,6 +82,26 @@ export default function CustomerTrackingTab({
   // Row selection
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  // Manual merge of old customer_ledger_payments rows into one payment_group_id (for
+  // payments recorded before migration 078 existed, so they also print as a single line)
+  const [mergeCid, setMergeCid] = useState<string | null>(null)
+  const [mergeSelected, setMergeSelected] = useState<Set<string>>(new Set())
+  const toggleMergeSelected = (id: string) => setMergeSelected(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
+  const mergePayments = async () => {
+    if (mergeSelected.size < 2) return
+    const newGroupId = crypto.randomUUID()
+    const { error } = await supabase.from('customer_ledger_payments')
+      .update({ payment_group_id: newGroupId }).in('id', Array.from(mergeSelected))
+    if (error) { showToast('שגיאה במיזוג: ' + error.message, 'error'); return }
+    showToast('התשלומים מוזגו לשורה אחת ✓', 'success')
+    setMergeCid(null); setMergeSelected(new Set())
+    reload()
+  }
+
   // Which customer cards are expanded (collapsed by default — click to open detail)
   const [openCustomerKeys, setOpenCustomerKeys] = useState<Set<string>>(new Set())
   const customerKeyOf = (cid: string | null) => cid ?? '__none__'
@@ -110,13 +130,15 @@ export default function CustomerTrackingTab({
   const [dInvoices, setDInvoices] = useState<InvoiceEntry[]>([EMPTY_INV()])
   const [dSaving, setDSaving]     = useState(false)
 
-  // Payment modal — pays one or several open debts of one customer at once.
-  // No check-series/calendar system for customers — a single "צ'ק" payment
-  // just carries an optional check number/date inline.
+  // Payment modal — records one flat amount for a customer (2026-08-18 redesign: no more
+  // per-invoice allocation). No check-series/calendar system for customers — a single "צ'ק"
+  // payment just carries an optional check number/date inline.
   const [showPayModal, setShowPayModal]   = useState(false)
   const [payCustomerId, setPayCustomerId] = useState<string | null>(null)
-  const [paySelectedIds, setPaySelectedIds] = useState<Set<string>>(new Set())
-  const [payAllocAmounts, setPayAllocAmounts] = useState<Record<string, string>>({})
+  const [payAmount, setPayAmount] = useState('')
+  // Optional, purely cosmetic: which invoices this payment covers, for reference only —
+  // sets is_closed=true on confirm, never affects any amount/balance.
+  const [payTagIds, setPayTagIds] = useState<Set<string>>(new Set())
   const [payMethod, setPayMethod] = useState<PaymentMethod>('מזומן')
   const [payDate, setPayDate]     = useState(todayISO())
   const [payCheckNumber, setPayCheckNumber] = useState('')
@@ -124,8 +146,6 @@ export default function CustomerTrackingTab({
   const [payRefNumber, setPayRefNumber]     = useState('')
   const [payReceiptIssued, setPayReceiptIssued] = useState(false)
   const [payReceiptNumber, setPayReceiptNumber] = useState('')
-  const [payQuickAmount, setPayQuickAmount] = useState('')
-  const [payQuickTarget, setPayQuickTarget] = useState('auto')
   const [paySaving, setPaySaving] = useState(false)
 
   // Quick-add-customer modal
@@ -424,136 +444,59 @@ export default function CustomerTrackingTab({
     setMrSaving(false); setMeterReadItem(null); reload()
   }
 
-  // ── Payment (one or several open debts of one customer, in one action) ────
+  // ── Payment (one flat amount for a customer — no invoice allocation) ───────
 
-  const payOpenDebts = customerDebts.filter(d => d.customer_id === payCustomerId && !d.is_closed && d.direction === 'charge')
-  // Credits are always saved already-closed (see Decision Log), so they never
-  // appear in payOpenDebts above — but the amount owed still needs to net them
-  // out, or "שלם הכל" overstates the total by exactly the open credit.
-  const payOpenCredits = customerDebts
-    .filter(d => d.customer_id === payCustomerId && d.direction === 'credit')
-    .map(d => ({ date: d.date, amount: Number(d.amount) }))
-  const payOpenCreditTotal = payOpenCredits.reduce((s, c) => s + c.amount, 0)
-  const payNetMap = netAllocation(payOpenDebts, payOpenCredits)
+  // Charge invoices not yet manually tagged "🏷 מכוסה" — purely a reference list the user can
+  // optionally check off after recording a payment, never used to compute any amount.
+  const payUntaggedDebts = customerDebts.filter(d => d.customer_id === payCustomerId && !d.is_closed && d.direction === 'charge')
   const payDebtsByMonth = (() => {
     const map: Record<string, CustomerLedgerDebt[]> = {}
-    payOpenDebts.forEach(d => {
+    payUntaggedDebts.forEach(d => {
       const mk = monthKeyOf(d.date)
       if (!map[mk]) map[mk] = []
       map[mk].push(d)
     })
     return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]))
   })()
-  const payTotalSelected = Array.from(paySelectedIds).reduce((s, id) => s + (parseFloat(payAllocAmounts[id] ?? '0') || 0), 0)
 
   const openPayCustomer = (customerId: string | null, preselectId?: string) => {
     setPayCustomerId(customerId)
+    setPayAmount('')
     setPayMethod('מזומן'); setPayDate(todayISO()); setPayCheckNumber(''); setPayCheckDate(todayISO())
-    setPayRefNumber(''); setPayQuickAmount(''); setPayQuickTarget('auto')
+    setPayRefNumber('')
     setPayReceiptIssued(false); setPayReceiptNumber('')
-    if (preselectId) {
-      const d = customerDebts.find(x => x.id === preselectId)
-      setPaySelectedIds(new Set([preselectId]))
-      setPayAllocAmounts(d ? { [preselectId]: String(bal(d).toFixed(2)) } : {})
-    } else {
-      setPaySelectedIds(new Set()); setPayAllocAmounts({})
-    }
+    setPayTagIds(preselectId ? new Set([preselectId]) : new Set())
     setShowPayModal(true)
   }
 
-  // Quick-fill: type one total amount, either spread oldest-open-first (auto)
-  // or apply the whole amount to one chosen invoice (partial payment support) —
-  // just pre-fills the manual checkbox/amount list below, user can still edit before confirming.
-  const applyQuickAmount = () => {
-    const amt = parseFloat(payQuickAmount) || 0
-    if (amt <= 0) { showToast('סכום לא תקין', 'error'); return }
-    if (payQuickTarget === 'auto') {
-      const sorted = [...payOpenDebts].sort((a, b) => a.date.localeCompare(b.date))
-      let remaining = amt
-      const ids = new Set<string>()
-      const allocs: Record<string, string> = {}
-      for (const d of sorted) {
-        if (remaining <= 0) break
-        const take = Math.min(payNetMap.get(d.id) ?? 0, remaining)
-        if (take <= 0) continue
-        ids.add(d.id)
-        allocs[d.id] = take.toFixed(2)
-        remaining -= take
-      }
-      setPaySelectedIds(ids)
-      setPayAllocAmounts(allocs)
-    } else {
-      const d = payOpenDebts.find(x => x.id === payQuickTarget)
-      if (!d) return
-      const take = Math.min(payNetMap.get(d.id) ?? 0, amt)
-      setPaySelectedIds(new Set([d.id]))
-      setPayAllocAmounts({ [d.id]: take.toFixed(2) })
-    }
-  }
-
-  const togglePayDebt = (d: CustomerLedgerDebt) => {
-    setPaySelectedIds(prev => {
+  const togglePayTag = (id: string) => {
+    setPayTagIds(prev => {
       const next = new Set(prev)
-      if (next.has(d.id)) {
-        next.delete(d.id)
-        setPayAllocAmounts(a => { const c = { ...a }; delete c[d.id]; return c })
-      } else {
-        next.add(d.id)
-        setPayAllocAmounts(a => ({ ...a, [d.id]: a[d.id] ?? String((payNetMap.get(d.id) ?? 0).toFixed(2)) }))
-      }
+      if (next.has(id)) next.delete(id); else next.add(id)
       return next
     })
   }
 
-  // "שלם הכל" — fills every open invoice at its net-of-credit balance (payNetMap already
-  // nets any open credit for this customer out against the oldest invoices first).
-  const selectAllPayDebts = () => {
-    const ids = new Set<string>()
-    const allocs: Record<string, string> = {}
-    for (const [id, net] of payNetMap) {
-      ids.add(id)
-      allocs[id] = net.toFixed(2)
-    }
-    setPaySelectedIds(ids)
-    setPayAllocAmounts(allocs)
-  }
-
-  // Select/deselect every open debt of one month at once (net-of-credit amounts, same as selectAllPayDebts).
-  const toggleMonthPayDebts = (mk: string) => {
+  const toggleMonthPayTags = (mk: string) => {
     const monthDebts = payDebtsByMonth.find(([k]) => k === mk)?.[1] ?? []
-    const allSelected = monthDebts.length > 0 && monthDebts.every(d => paySelectedIds.has(d.id))
-    setPaySelectedIds(prev => {
+    const allSelected = monthDebts.length > 0 && monthDebts.every(d => payTagIds.has(d.id))
+    setPayTagIds(prev => {
       const next = new Set(prev)
-      monthDebts.forEach(d => {
-        if (allSelected) next.delete(d.id)
-        else if ((payNetMap.get(d.id) ?? 0) > 0) next.add(d.id)
-      })
-      return next
-    })
-    setPayAllocAmounts(prev => {
-      const next = { ...prev }
-      monthDebts.forEach(d => {
-        if (allSelected) delete next[d.id]
-        else { const net = payNetMap.get(d.id); if (net && net > 0) next[d.id] = net.toFixed(2) }
-      })
+      monthDebts.forEach(d => { if (allSelected) next.delete(d.id); else next.add(d.id) })
       return next
     })
   }
 
   const submitPayment = async () => {
-    if (paySelectedIds.size === 0) { showToast('בחר לפחות שורה אחת לתשלום', 'error'); return }
+    const amount = parseFloat(payAmount) || 0
+    if (amount <= 0) { showToast('סכום לא תקין', 'error'); return }
     const tid = tenantId
-    if (!tid) return
-
-    const allocations = Array.from(paySelectedIds)
-      .map(id => ({ customer_ledger_debt_id: id, amount: parseFloat(payAllocAmounts[id] ?? '0') || 0 }))
-      .filter(a => a.amount > 0)
-    if (allocations.length === 0) { showToast('סכום לא תקין', 'error'); return }
+    if (!tid || !payCustomerId) return
 
     const refNumber = payMethod === "צ'ק" ? payCheckNumber : payMethod === 'העברה' ? payRefNumber : ''
 
     setPaySaving(true)
-    const { error } = await reconcileCustomerLedgerPayment(supabase, tid, allocations, {
+    const { error } = await recordCustomerPayment(supabase, tid, payCustomerId, amount, {
       payment_method: payMethod,
       check_number: refNumber || null,
       check_date: payMethod === "צ'ק" ? (payCheckDate || null) : null,
@@ -564,11 +507,14 @@ export default function CustomerTrackingTab({
     })
     if (error) { showToast('שגיאה בתשלום: ' + error, 'error'); setPaySaving(false); return }
 
-    const total = allocations.reduce((s, a) => s + a.amount, 0)
+    if (payTagIds.size > 0) {
+      await supabase.from('customer_ledger_debts').update({ is_closed: true }).in('id', Array.from(payTagIds))
+    }
+
     const custName = customers.find(c => c.id === payCustomerId)?.name ?? 'לקוח'
     await supabase.from('income').insert({
       tenant_id: tid, date: payDate, category: 'לקוחות',
-      description: `תשלום מלקוח ${custName}`, amount: total,
+      description: `תשלום מלקוח ${custName}`, amount,
       customer_id: payCustomerId, payment_method: payMethod,
       payment_ref: refNumber || null,
     })
@@ -577,6 +523,7 @@ export default function CustomerTrackingTab({
     setPaySaving(false); setShowPayModal(false); reload()
   }
 
+  // Purely cosmetic "🏷 מכוסה" tag — never affects any amount/balance (see lib/debts/ledger.ts).
   const toggleClose = async (id: string, current: boolean) => {
     await supabase.from('customer_ledger_debts').update({ is_closed: !current }).eq('id', id)
     reload()
@@ -584,7 +531,7 @@ export default function CustomerTrackingTab({
 
   // ── Filters ───────────────────────────────────────────────────────────────
 
-  const openCustTotal = customerDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
+  const openCustTotal = balanceOf(customerDebts, customerPayments)
 
   // ── Selected item info ────────────────────────────────────────────────────
 
@@ -603,13 +550,13 @@ export default function CustomerTrackingTab({
     }}>{label}</button>
   )
 
+  // No more per-invoice paid/partial status — "🏷 מכוסה" is a manual, cosmetic reference tag
+  // only (kept out of the green/"paid" color family on purpose, see lib/debts/ledger.ts).
   const StatusChip = ({ debt }: { debt: CustomerLedgerDebt }) => {
     if (debt.direction === 'credit')
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>זיכוי</span>
     if (debt.is_closed)
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>שולם ✓</span>
-    if (Number(debt.paid) > 0)
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef3c7', color: 'var(--warning)', fontWeight: 600 }}>חלקי</span>
+      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f5f3ff', color: '#7c3aed', fontWeight: 600 }}>🏷 מכוסה</span>
     return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>חיוב</span>
   }
 
@@ -626,10 +573,18 @@ export default function CustomerTrackingTab({
     const wb = XLSX.utils.book_new()
     const rows = customerDebts.map(d => ({
       לקוח: customers.find(c => c.id === d.customer_id)?.name ?? '', מספר: d.doc_number ?? '',
-      סוג: d.direction === 'credit' ? 'זיכוי' : 'חיוב', סכום: d.amount, שולם: d.paid, יתרה: bal(d),
-      תאריך: d.date, סטטוס: d.is_closed ? 'סגור' : 'פתוח', תיאור: d.description ?? '',
+      סוג: d.direction === 'credit' ? 'זיכוי' : 'חיוב', סכום: d.amount,
+      תאריך: d.date, מכוסה: d.is_closed ? 'כן' : 'לא', תיאור: d.description ?? '',
     }))
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'חשבוניות וזיכויים')
+
+    const paymentRows = customerPayments.map(p => ({
+      לקוח: customers.find(c => c.id === p.customer_id)?.name ?? '',
+      סכום: p.amount, תאריך: p.payment_date ?? p.check_date ?? p.created_at.slice(0, 10),
+      אמצעי: p.payment_method, קבלה: p.receipt_issued ? (p.receipt_number || 'כן') : '',
+    }))
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(paymentRows), 'תשלומים')
+
     XLSX.writeFile(wb, 'מעקב-לקוחות.xlsx')
   }
 
@@ -658,12 +613,12 @@ export default function CustomerTrackingTab({
       const customer = custName ? customers.find(c => c.name === custName) : undefined
       const direction: Direction = String(r['סוג'] ?? '').includes('זיכוי') ? 'credit' : 'charge'
       const amount = parseFloat(String(r['סכום'] ?? '')) || 0
-      const paid   = direction === 'credit' ? 0 : (parseFloat(String(r['שולם'] ?? '')) || 0)
-      const isClosed = direction === 'credit' || String(r['סטטוס'] ?? '').includes('סגור') || paid >= amount && amount > 0
+      // is_closed is just the optional cosmetic "🏷 מכוסה" tag — no paid/balance math here.
+      const isClosed = direction === 'credit' || String(r['מכוסה'] ?? r['סטטוס'] ?? '').trim() === 'כן' || String(r['סטטוס'] ?? '').includes('סגור')
       return {
         id: crypto.randomUUID(), tenant_id: tid,
         customer_id: customer?.id ?? null,
-        amount, paid, direction, is_closed: isClosed,
+        amount, paid: 0, direction, is_closed: isClosed,
         date: parseDate(r['תאריך']),
         doc_type: 'invoice', doc_number: String(r['מספר'] ?? '').trim() || null,
         description: String(r['תיאור'] ?? '').trim() || null,
@@ -718,15 +673,15 @@ export default function CustomerTrackingTab({
               <button
                 onClick={() => {
                   const cust = customers.find(c => c.id === selectedDebt.customer_id)!
-                  setWaModal({ phone: cust.phone!, text: `שלום ${cust.name}, ברצוני לבדוק חוב בסך ${fmt(bal(selectedDebt))}.\nתודה!\n${tenantName}` })
+                  setWaModal({ phone: cust.phone!, text: `שלום ${cust.name}, ברצוני לבדוק חוב בסך ${fmt(balanceOf(customerDebts.filter(d => d.customer_id === cust.id), customerPayments.filter(p => p.customer_id === cust.id)))}.\nתודה!\n${tenantName}` })
                 }}
                 style={{ padding: '5px 12px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
               >💬 ווצאפ</button>
             )}
-            {!selectedDebt.is_closed && bal(selectedDebt) > 0 && selectedDebt.direction === 'charge' && (
+            {!selectedDebt.is_closed && selectedDebt.direction === 'charge' && (
               <button onClick={() => openPayCustomer(selectedDebt.customer_id, selectedId)} style={{ padding: '5px 12px', background: '#f0fdf6', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>₪ שלם</button>
             )}
-            <button onClick={() => toggleClose(selectedId, selectedDebt.is_closed)} style={{ padding: '5px 10px', background: selectedDebt.is_closed ? '#fef2f2' : '#f0fdf6', color: selectedDebt.is_closed ? 'var(--danger)' : '#16a34a', border: '1px solid', borderColor: selectedDebt.is_closed ? '#fecaca' : '#bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>{selectedDebt.is_closed ? '↩ פתח' : '✓ סגור'}</button>
+            <button onClick={() => toggleClose(selectedId, selectedDebt.is_closed)} title="סימון קוסמטי בלבד, לצורך מעקב — לא משפיע על היתרה" style={{ padding: '5px 10px', background: selectedDebt.is_closed ? '#fef2f2' : '#f5f3ff', color: selectedDebt.is_closed ? 'var(--danger)' : '#7c3aed', border: '1px solid', borderColor: selectedDebt.is_closed ? '#fecaca' : '#ddd6fe', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>{selectedDebt.is_closed ? '↩ בטל תיוג' : '🏷 תייג כמכוסה'}</button>
             <button onClick={() => openDebtModal(selectedDebt)} style={{ padding: '5px 10px', background: '#f0f9ff', color: 'var(--accent)', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>✏️ ערוך</button>
             <button onClick={() => deleteDebt(selectedId)} style={{ padding: '5px 10px', background: '#fef2f2', color: 'var(--danger)', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>🗑 מחק</button>
             <button onClick={() => setSelectedId(null)} style={{ padding: '5px 8px', background: 'transparent', color: 'var(--text-muted)', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>✕</button>
@@ -737,8 +692,9 @@ export default function CustomerTrackingTab({
           const allCustIds = [...new Set(customerDebts.map(d => d.customer_id))]
           const groups = allCustIds.map(cid => {
             const debts = customerDebts.filter(d => d.customer_id === cid)
+            const payments = customerPayments.filter(p => p.customer_id === cid)
             const cust = customers.find(c => c.id === cid)
-            const totalBal = debts.reduce((s, d) => s + bal(d), 0)
+            const totalBal = balanceOf(debts, payments)
 
             if (search.trim()) {
               const q = search.toLowerCase()
@@ -757,9 +713,9 @@ export default function CustomerTrackingTab({
             })
             const months = Object.keys(monthMap).sort().reverse()
 
-            return { cid, cust, totalBal, monthMap, months }
+            return { cid, cust, totalBal, payments, monthMap, months }
           }).filter(Boolean) as {
-            cid: string | null; cust: Customer | undefined; totalBal: number
+            cid: string | null; cust: Customer | undefined; totalBal: number; payments: CustomerLedgerPayment[]
             monthMap: Record<string, CustomerLedgerDebt[]>; months: string[]
           }[]
 
@@ -797,11 +753,32 @@ export default function CustomerTrackingTab({
                           + הוסף
                         </button>
                       )}
+                      {group.cid && (
+                        <button
+                          onClick={() => { setMergeCid(mergeCid === group.cid ? null : group.cid); setMergeSelected(new Set()) }}
+                          title="מזג כמה שורות תשלום ישנות (מלפני שהמערכת שמרה קיבוץ) לשורה אחת בהדפסה"
+                          style={{
+                            padding: '4px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
+                            background: mergeCid === group.cid ? '#7c3aed' : 'transparent',
+                            color: mergeCid === group.cid ? '#fff' : '#7c3aed',
+                            border: '1px solid #7c3aed',
+                          }}>
+                          🔗 מזג תשלומים
+                        </button>
+                      )}
                     </div>
                   </div>
 
                   {isOpen && (
                   <>
+
+                  {mergeCid === group.cid && (
+                    <div style={{ background: '#f5f3ff', borderBottom: '1px solid #ddd6fe', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '12px', color: '#5b21b6' }}>סמן 2+ שורות תשלום למיזוג לשורה אחת בהדפסה (נבחרו: {mergeSelected.size})</span>
+                      <Button size="sm" onClick={mergePayments} disabled={mergeSelected.size < 2}>🔗 מזג</Button>
+                      <Button size="sm" variant="secondary" onClick={() => { setMergeCid(null); setMergeSelected(new Set()) }}>ביטול</Button>
+                    </div>
+                  )}
 
                   {group.cid && (() => {
                     const items = recurringItems.filter(it => it.customer_id === group.cid)
@@ -838,13 +815,13 @@ export default function CustomerTrackingTab({
 
                   {group.months.map((mk, mIdx) => {
                     const monthDebts = group.monthMap[mk]
-                    const carryOver = group.months.slice(mIdx + 1).reduce(
-                      (s, m) => s + group.monthMap[m].reduce((ss, d) => ss + bal(d), 0), 0)
+                    // Each month shows its own charges-minus-credits — payments aren't tied to a
+                    // month, they simply reduce the customer's overall balance shown up top.
                     const monthChargeTotal = monthDebts.filter(d => d.direction !== 'credit').reduce((s, d) => s + Number(d.amount), 0)
                     const monthCreditTotal = monthDebts.filter(d => d.direction === 'credit').reduce((s, d) => s + Number(d.amount), 0)
                     const monthNetTotal    = monthChargeTotal - monthCreditTotal
-                    const monthPaidTotal   = monthDebts.reduce((s, d) => s + Number(d.paid), 0)
-                    const monthBalance     = monthDebts.reduce((s, d) => s + bal(d), 0)
+                    const monthPayments    = group.payments.filter(p => monthKeyOf(paymentDateOf(p)) === mk)
+                    const monthPaidTotal   = monthPayments.reduce((s, p) => s + Number(p.amount), 0)
                     const monthCollapsed   = !expandedMonthKeys.has(monthKeyFor(group.cid, mk))
 
                     return (
@@ -856,19 +833,10 @@ export default function CustomerTrackingTab({
                         >
                           <span style={{ display: 'inline-block', transition: 'transform .15s', transform: monthCollapsed ? 'rotate(0deg)' : 'rotate(90deg)', color: 'var(--text-muted)', fontSize: '12px' }}>›</span>
                           <span style={{ fontWeight: 700, fontSize: '14px', color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
-                          {monthBalance <= 0
-                            ? <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>סגור ✓</span>
-                            : <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>פתוח</span>}
-                          <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthBalance > 0 ? 'var(--danger)' : '#16a34a' }}>
-                            יתרה: {fmt(monthBalance)}
+                          <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthNetTotal > 0 ? 'var(--danger)' : '#16a34a' }}>
+                            נטו לחודש: {fmt(monthNetTotal)}
                           </span>
                         </div>
-
-                        {!monthCollapsed && carryOver !== 0 && (
-                          <div style={{ padding: '7px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', marginBottom: '10px', fontSize: '13px', color: '#92400e', fontWeight: 600 }}>
-                            ↩ יתרה מחודשים קודמים: {fmt(carryOver)}
-                          </div>
-                        )}
 
                         {/* Invoices/credits table */}
                         {!monthCollapsed && (
@@ -884,7 +852,6 @@ export default function CustomerTrackingTab({
                           </thead>
                           <tbody>
                             {(() => {
-                              const monthDebtIds = new Set(monthDebts.map(d => d.id))
                               const debtRows = monthDebts.flatMap(d => {
                                 const items = Array.isArray(d.invoices) && d.invoices.length > 0
                                   ? d.invoices
@@ -920,17 +887,26 @@ export default function CustomerTrackingTab({
                                   </tr>
                                 ) }))
                               })
-                              const paymentRows = customerPayments
-                                .filter(p => monthDebtIds.has(p.customer_ledger_debt_id) && monthKeyOf(paymentDateOf(p)) === mk)
-                                .map(p => ({ kind: 'payment' as const, date: paymentDateOf(p), node: (
-                                  <tr key={`pay-${p.id}`} style={{ background: '#f0fdf6' }}>
-                                    <td style={tdSt}>{p.receipt_issued ? `🧾 קבלה #${p.receipt_number || '—'}` : '💰 תשלום'}</td>
+                              const paymentRows = monthPayments
+                                .map(p => {
+                                  const merging = mergeCid === group.cid
+                                  const selected = mergeSelected.has(p.id)
+                                  return { kind: 'payment' as const, date: paymentDateOf(p), node: (
+                                  <tr
+                                    key={`pay-${p.id}`}
+                                    onClick={merging ? () => toggleMergeSelected(p.id) : undefined}
+                                    style={{ background: selected ? '#ddd6fe' : '#f0fdf6', cursor: merging ? 'pointer' : undefined }}
+                                  >
+                                    <td style={tdSt}>
+                                      {merging && <input type="checkbox" checked={selected} onChange={() => toggleMergeSelected(p.id)} style={{ marginLeft: '6px' }} />}
+                                      {p.receipt_issued ? `🧾 קבלה #${p.receipt_number || '—'}` : '💰 תשלום'}
+                                    </td>
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{paymentDateOf(p)}</td>
                                     <td style={tdSt}><span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#dcfce7', color: '#16a34a', fontWeight: 600 }}>{p.payment_method}</span></td>
                                     <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: '#16a34a' }}>−{fmt(p.amount)}</td>
                                     <td style={tdSt}></td>
                                   </tr>
-                                ) }))
+                                ) } })
                               return [...debtRows, ...paymentRows].sort((a, b) => a.date.localeCompare(b.date)).map(r => r.node)
                             })()}
                           </tbody>
@@ -941,8 +917,7 @@ export default function CustomerTrackingTab({
                                   <span>סה&quot;כ חיוב: <strong style={{ color: 'var(--text)' }}>{fmt(monthChargeTotal)}</strong></span>
                                   {monthCreditTotal > 0 && <span>סה&quot;כ זיכוי: <strong style={{ color: 'var(--danger)' }}>{fmt(monthCreditTotal)}</strong></span>}
                                   <span>נטו: <strong style={{ color: 'var(--text)' }}>{fmt(monthNetTotal)}</strong></span>
-                                  {monthPaidTotal > 0 && <span>שולם: <strong style={{ color: '#16a34a' }}>{fmt(monthPaidTotal)}</strong></span>}
-                                  <span>יתרה: <strong style={{ color: monthBalance > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(monthBalance)}</strong></span>
+                                  {monthPaidTotal > 0 && <span>שולם בחודש זה: <strong style={{ color: '#16a34a' }}>{fmt(monthPaidTotal)}</strong></span>}
                                 </div>
                               </td>
                             </tr>
@@ -1162,138 +1137,98 @@ export default function CustomerTrackingTab({
         </div>
       )}
 
-      {/* ── PAYMENT MODAL — pick one or several open debts + payment method ── */}
+      {/* ── PAYMENT MODAL — one flat amount for the customer, no invoice allocation ── */}
       {showPayModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowPayModal(false)}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>₪ תשלום מ{customers.find(c => c.id === payCustomerId)?.name ?? 'לקוח'}</h3>
 
-            {payOpenDebts.length === 0 ? (
-              <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>אין חובות פתוחים ללקוח זה</div>
-            ) : (
-              <>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', margin: '14px 0', padding: '10px', background: '#f8fafc', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, flex: 1 }}>
-                    סכום שהתקבל
-                    <input type="number" step="0.01" value={payQuickAmount} onChange={e => setPayQuickAmount(e.target.value)} placeholder="0.00" className="form-input" style={{ margin: 0 }} />
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, flex: 1.6 }}>
-                    שיוך
-                    <select value={payQuickTarget} onChange={e => setPayQuickTarget(e.target.value)} className="form-input" style={{ margin: 0 }}>
-                      <option value="auto">אוטומטי (מהישן ביותר)</option>
-                      {payOpenDebts.map(d => (
-                        <option key={d.id} value={d.id}>{d.doc_number ? `#${d.doc_number} · ` : ''}{fmtDMY(d.date)} · יתרה {fmt(bal(d))}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <button type="button" onClick={applyQuickAmount} style={{ padding: '8px 14px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>החל</button>
-                </div>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600, marginTop: '14px' }}>
+              סכום שהתקבל
+              <input type="number" step="0.01" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="0.00" className="form-input" autoFocus />
+            </label>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0 8px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 600 }}>בחר אילו חודשים לשלם</span>
-                  <button type="button" onClick={selectAllPayDebts} style={{ padding: '4px 10px', background: '#f0fdf4', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>☑ שלם הכל</button>
+            <div style={{ marginTop: '16px' }}>
+              <label style={{ fontSize: '13px', fontWeight: 500 }}>אמצעי תשלום</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
+                {(['מזומן', 'אשראי', 'העברה', "צ'ק"] as PaymentMethod[]).map(m => (
+                  <button key={m} type="button" onClick={() => setPayMethod(m)} style={{
+                    padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
+                    border: `1px solid ${payMethod === m ? 'var(--primary)' : 'var(--border)'}`,
+                    background: payMethod === m ? '#f0fdf4' : '#f8fafc',
+                    color: payMethod === m ? 'var(--primary)' : 'var(--text-muted)',
+                  }}>
+                    {m === 'מזומן' ? '💵' : m === 'אשראי' ? '💳' : m === "צ'ק" ? '📝' : '🏦'} {m}
+                  </button>
+                ))}
+              </div>
+              {payMethod === "צ'ק" && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
+                    מספר צ׳ק
+                    <input value={payCheckNumber} onChange={e => setPayCheckNumber(e.target.value)} placeholder="אופציונלי" className="form-input" style={{ margin: 0 }} />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
+                    תאריך פירעון הצ׳ק
+                    <input type="date" value={payCheckDate} onChange={e => setPayCheckDate(e.target.value)} className="form-input" style={{ margin: 0 }} />
+                  </label>
                 </div>
-                {payOpenCreditTotal > 0 && (
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '-4px 0 8px' }}>
-                    ללקוח זה זיכוי פתוח בסך {fmt(payOpenCreditTotal)} — מנוכה אוטומטית ב&quot;שלם הכל&quot; מהחשבוניות הישנות ביותר שתאריכן זהה או מאוחר לתאריך הזיכוי
-                  </div>
-                )}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
+              )}
+              {payMethod === 'העברה' && (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
+                  מספר אסמכתא
+                  <input value={payRefNumber} onChange={e => setPayRefNumber(e.target.value)} placeholder="אופציונלי" className="form-input" style={{ margin: 0 }} />
+                </label>
+              )}
+            </div>
+
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600, marginTop: '12px' }}>
+              תאריך תשלום
+              <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="form-input" />
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, marginTop: '12px', cursor: 'pointer' }}>
+              <input type="checkbox" checked={payReceiptIssued} onChange={e => setPayReceiptIssued(e.target.checked)} />
+              🧾 הופקה קבלה
+            </label>
+            {payReceiptIssued && (
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600, marginTop: '6px' }}>
+                מספר קבלה
+                <input value={payReceiptNumber} onChange={e => setPayReceiptNumber(e.target.value)} placeholder="מספר קבלה..." className="form-input" style={{ margin: 0 }} />
+              </label>
+            )}
+
+            {payDebtsByMonth.length > 0 && (
+              <div style={{ marginTop: '18px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>🏷 תייג אילו חשבוניות תשלום זה מכסה <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(אופציונלי, לצורך מעקב בלבד — לא משפיע על הסכום)</span></div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
                   {payDebtsByMonth.map(([mk, debts]) => (
                     <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
-                        <button type="button" onClick={() => toggleMonthPayDebts(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
-                          {debts.every(d => paySelectedIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                        <button type="button" onClick={() => toggleMonthPayTags(mk)} style={{ padding: '1px 8px', background: 'transparent', color: '#7c3aed', border: '1px solid #ddd6fe', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
+                          {debts.every(d => payTagIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
                         </button>
                       </div>
-                      {debts.map(d => {
-                        const checked = paySelectedIds.has(d.id)
-                        return (
-                          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                            <input type="checkbox" checked={checked} onChange={() => togglePayDebt(d)} />
-                            <span style={{ fontSize: 12, flex: 1, color: 'var(--text-muted)' }}>
-                              {d.doc_number ? `#${d.doc_number} · ` : ''}{d.date} · יתרה {fmt(bal(d))}
-                            </span>
-                            {checked && (
-                              <input
-                                type="number" step="0.01"
-                                value={payAllocAmounts[d.id] ?? ''}
-                                onChange={e => setPayAllocAmounts(a => ({ ...a, [d.id]: e.target.value }))}
-                                style={{ width: 90, padding: '4px 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 6 }}
-                              />
-                            )}
-                          </div>
-                        )
-                      })}
+                      {debts.map(d => (
+                        <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <input type="checkbox" checked={payTagIds.has(d.id)} onChange={() => togglePayTag(d.id)} />
+                          <span style={{ fontSize: 12, flex: 1, color: 'var(--text-muted)' }}>
+                            {d.doc_number ? `#${d.doc_number} · ` : ''}{d.date} · {fmt(bal(d))}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
-                {paySelectedIds.size > 0 && (
-                  <div style={{ fontSize: 13, fontWeight: 700, marginTop: 8, textAlign: 'left' }}>
-                    סה&quot;כ לתשלום: {fmt(payTotalSelected)}
-                  </div>
-                )}
-
-                <div style={{ marginTop: '16px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: 500 }}>אמצעי תשלום</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
-                    {(['מזומן', 'אשראי', 'העברה', "צ'ק"] as PaymentMethod[]).map(m => (
-                      <button key={m} type="button" onClick={() => setPayMethod(m)} style={{
-                        padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
-                        border: `1px solid ${payMethod === m ? 'var(--primary)' : 'var(--border)'}`,
-                        background: payMethod === m ? '#f0fdf4' : '#f8fafc',
-                        color: payMethod === m ? 'var(--primary)' : 'var(--text-muted)',
-                      }}>
-                        {m === 'מזומן' ? '💵' : m === 'אשראי' ? '💳' : m === "צ'ק" ? '📝' : '🏦'} {m}
-                      </button>
-                    ))}
-                  </div>
-                  {payMethod === "צ'ק" && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '8px' }}>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
-                        מספר צ׳ק
-                        <input value={payCheckNumber} onChange={e => setPayCheckNumber(e.target.value)} placeholder="אופציונלי" className="form-input" style={{ margin: 0 }} />
-                      </label>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
-                        תאריך פירעון הצ׳ק
-                        <input type="date" value={payCheckDate} onChange={e => setPayCheckDate(e.target.value)} className="form-input" style={{ margin: 0 }} />
-                      </label>
-                    </div>
-                  )}
-                  {payMethod === 'העברה' && (
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
-                      מספר אסמכתא
-                      <input value={payRefNumber} onChange={e => setPayRefNumber(e.target.value)} placeholder="אופציונלי" className="form-input" style={{ margin: 0 }} />
-                    </label>
-                  )}
-                </div>
-
-                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600, marginTop: '12px' }}>
-                  תאריך תשלום
-                  <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="form-input" />
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, marginTop: '12px', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={payReceiptIssued} onChange={e => setPayReceiptIssued(e.target.checked)} />
-                  🧾 הופקה קבלה
-                </label>
-                {payReceiptIssued && (
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600, marginTop: '6px' }}>
-                    מספר קבלה
-                    <input value={payReceiptNumber} onChange={e => setPayReceiptNumber(e.target.value)} placeholder="מספר קבלה..." className="form-input" style={{ margin: 0 }} />
-                  </label>
-                )}
-              </>
+              </div>
             )}
 
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowPayModal(false)}>ביטול</Button>
-              {payOpenDebts.length > 0 && (
-                <Button loading={paySaving} onClick={submitPayment} style={{ background: '#16a34a', borderColor: '#16a34a' }}>
-                  ✓ אשר תשלום
-                </Button>
-              )}
+              <Button loading={paySaving} onClick={submitPayment} style={{ background: '#16a34a', borderColor: '#16a34a' }}>
+                ✓ אשר תשלום
+              </Button>
             </div>
           </div>
         </div>
@@ -1421,27 +1356,30 @@ export default function CustomerTrackingTab({
           {printMode === 'ledger' && (() => {
             const cust = customers.find(c => c.id === printCustomerId)
             const allDebts = customerDebts.filter(d => d.customer_id === printCustomerId).sort((a, b) => a.date.localeCompare(b.date))
+            const allPayments = customerPayments.filter(p => p.customer_id === printCustomerId)
 
             const sortedPrintMonths = [...printMonths].sort()
             const rangeStart = printRangeMode === 'months' && sortedPrintMonths.length > 0
               ? `${sortedPrintMonths[0]}-01`
               : printRangeMode === 'range' ? (printDateFrom || null) : null
 
-            const inRange = (d: CustomerLedgerDebt) => {
-              if (printRangeMode === 'months') return sortedPrintMonths.length === 0 || printMonths.has(monthKeyOf(d.date))
-              if (printRangeMode === 'range') return (!printDateFrom || d.date >= printDateFrom) && (!printDateTo || d.date <= printDateTo)
+            const inRangeDate = (date: string) => {
+              if (printRangeMode === 'months') return sortedPrintMonths.length === 0 || printMonths.has(monthKeyOf(date))
+              if (printRangeMode === 'range') return (!printDateFrom || date >= printDateFrom) && (!printDateTo || date <= printDateTo)
               return true
             }
 
-            const debts = allDebts.filter(inRange)
+            const debts = allDebts.filter(d => inRangeDate(d.date))
+            const payments = allPayments.filter(p => inRangeDate(paymentDateOf(p)))
             const priorDebts = rangeStart ? allDebts.filter(d => d.date < rangeStart) : []
-            const openingForReport = (cust?.opening_balance ?? 0) + priorDebts.reduce((s, d) => s + bal(d), 0)
+            const priorPayments = rangeStart ? allPayments.filter(p => paymentDateOf(p) < rangeStart) : []
+            const openingForReport = (cust?.opening_balance ?? 0) + balanceOf(priorDebts, priorPayments)
 
             const chargeTotal = debts.filter(d => d.direction !== 'credit').reduce((s, d) => s + Number(d.amount), 0)
             const creditTotal = debts.filter(d => d.direction === 'credit').reduce((s, d) => s + Number(d.amount), 0)
-            const paidTotal   = debts.reduce((s, d) => s + Number(d.paid), 0)
+            const paidTotal   = payments.reduce((s, p) => s + Number(p.amount), 0)
+            const closingBalance = openingForReport + chargeTotal - creditTotal - paidTotal
 
-            let running = openingForReport
             const showOpeningRow = openingForReport !== 0 || !!rangeStart
 
             const rangeLabel = printRangeMode === 'months'
@@ -1450,13 +1388,44 @@ export default function CustomerTrackingTab({
                 ? `${printDateFrom || 'ההתחלה'} — ${printDateTo || 'היום'}`
                 : 'כל התקופה'
 
+            // One "אשר תשלום" click historically split across several invoices, each getting its
+            // own customer_ledger_payments row sharing a payment_group_id (legacy data — new
+            // payments are always already a single row). Regroup by that id so the printed
+            // ledger shows one line per real-world payment either way.
+            const paymentGroups = new Map<string, CustomerLedgerPayment[]>()
+            payments.forEach(p => {
+              const key = p.payment_group_id ?? p.id
+              const arr = paymentGroups.get(key)
+              if (arr) arr.push(p); else paymentGroups.set(key, [p])
+            })
+
+            type Ev =
+              | { kind: 'debt'; d: CustomerLedgerDebt; number: string; amount: number }
+              | { kind: 'payment'; first: CustomerLedgerPayment; amount: number }
+            const rawEvents: RawLedgerEvent<Ev>[] = []
+            debts.forEach(d => {
+              const items = Array.isArray(d.invoices) && d.invoices.length > 0 ? d.invoices : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]
+              items.forEach(item => {
+                rawEvents.push({
+                  date: d.date,
+                  delta: d.direction === 'credit' ? -Number(item.amount) : Number(item.amount),
+                  data: { kind: 'debt', d, number: item.number, amount: Number(item.amount) },
+                })
+              })
+            })
+            paymentGroups.forEach(group => {
+              const total = group.reduce((s, g) => s + Number(g.amount), 0)
+              rawEvents.push({ date: paymentDateOf(group[0]), delta: -total, data: { kind: 'payment', first: group[0], amount: total } })
+            })
+            const ledgerEvents = buildLedger(rawEvents, openingForReport)
+
             return (
               <div>
                 <h2 style={{ margin: '0 0 4px' }}>{tenantName} — כרטסת לקוח: {cust?.name ?? ''}</h2>
                 <div style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>תקופה: {rangeLabel}</div>
                 <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {fmtDMY(new Date())}</div>
                 <table>
-                  <thead><tr><th>תאריך</th><th>מספר</th><th style={{ width: 46 }}>סוג</th><th style={{ width: 30 }}>מצב</th><th>הערה</th><th>סכום</th><th>יתרה בפועל</th></tr></thead>
+                  <thead><tr><th>תאריך</th><th>מספר</th><th style={{ width: 46 }}>סוג</th><th style={{ width: 30 }}>🏷</th><th>הערה</th><th>סכום</th><th>יתרה</th></tr></thead>
                   <tbody>
                     {showOpeningRow && (
                       <tr style={{ fontWeight: 700, background: '#f5f5f5' }}>
@@ -1469,66 +1438,38 @@ export default function CustomerTrackingTab({
                         <td>{fmt(openingForReport)}</td>
                       </tr>
                     )}
-                    {(() => {
-                      const debtIds = new Set(debts.map(d => d.id))
-                      // Build every printable event (debt/credit lines + payments), sort
-                      // chronologically FIRST, then walk the sorted list accumulating
-                      // `running` in that same order — payments net out at their own
-                      // recorded date instead of being lumped onto the debt's own row,
-                      // so the running balance reflects when money actually arrived.
-                      type Ev = { date: string; render: () => React.ReactNode }
-                      const events: Ev[] = []
-                      debts.forEach(d => {
-                        const items = Array.isArray(d.invoices) && d.invoices.length > 0 ? d.invoices : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]
-                        items.forEach((item, idx) => {
-                          const statusIcon = d.direction === 'credit' ? '—' : d.is_closed ? '✓' : Number(d.paid) > 0 ? '◐' : ''
-                          events.push({ date: d.date, render: () => (
-                            <tr key={`${d.id}-${idx}`}>
-                              <td>{fmtDMY(d.date)}</td>
-                              <td>{item.number || '—'}</td>
-                              <td style={{ width: 46, textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
-                              <td style={{ width: 30, textAlign: 'center', color: statusIcon === '✓' ? '#16a34a' : statusIcon === '◐' ? '#d97706' : undefined }}>{statusIcon}</td>
-                              <td>{d.description || ''}</td>
-                              <td style={{ textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}</td>
-                              <td>{fmt(running += d.direction === 'credit' ? -Number(item.amount) : Number(item.amount))}</td>
-                            </tr>
-                          ) })
-                        })
-                      })
-                      // One "אשר תשלום" click can split across several invoices, each
-                      // getting its own customer_ledger_payments row (reconcileCustomerLedgerPayment).
-                      // Regroup those by payment_group_id so the printed ledger shows one line
-                      // for what the customer actually transferred, not one per invoice it covered.
-                      // Only the portion allocated to in-range debts (debtIds) is summed — the rest
-                      // is already folded into openingForReport, same as before this grouping.
-                      const groups = new Map<string, typeof customerPayments>()
-                      customerPayments.filter(p => debtIds.has(p.customer_ledger_debt_id)).forEach(p => {
-                        const key = p.payment_group_id ?? p.id
-                        const arr = groups.get(key)
-                        if (arr) arr.push(p); else groups.set(key, [p])
-                      })
-                      groups.forEach(group => {
-                        const p = group[0]
-                        const total = group.reduce((s, g) => s + Number(g.amount), 0)
-                        const date = paymentDateOf(p)
-                        events.push({ date, render: () => (
-                          <tr key={`pay-${p.payment_group_id ?? p.id}`} style={{ background: '#f5faf6' }}>
-                            <td>{fmtDMY(date)}</td>
-                            <td>—</td>
-                            <td style={{ width: 46 }}>תשלום</td>
-                            <td style={{ width: 30, textAlign: 'center' }}>{p.receipt_issued ? '🧾' : '💰'}</td>
-                            <td>{p.receipt_issued ? `קבלה #${p.receipt_number || '—'}` : p.payment_method}</td>
-                            <td style={{ textAlign: 'left' }}>−{fmt(total)}</td>
-                            <td>{fmt(running -= total)}</td>
+                    {ledgerEvents.map((ev, idx) => {
+                      if (ev.data.kind === 'debt') {
+                        const { d, number, amount } = ev.data
+                        return (
+                          <tr key={`d-${d.id}-${idx}`}>
+                            <td>{fmtDMY(d.date)}</td>
+                            <td>{number || '—'}</td>
+                            <td style={{ width: 46, textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
+                            <td style={{ width: 30, textAlign: 'center' }}>{d.is_closed ? '🏷' : ''}</td>
+                            <td>{d.description || ''}</td>
+                            <td style={{ textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? '−' : ''}{fmt(amount)}</td>
+                            <td>{fmt(ev.runningBalance)}</td>
                           </tr>
-                        ) })
-                      })
-                      return events.sort((a, b) => a.date.localeCompare(b.date)).map(ev => ev.render())
-                    })()}
+                        )
+                      }
+                      const { first, amount } = ev.data
+                      return (
+                        <tr key={`p-${first.id}-${idx}`} style={{ background: '#f5faf6' }}>
+                          <td>{fmtDMY(paymentDateOf(first))}</td>
+                          <td>—</td>
+                          <td style={{ width: 46 }}>תשלום</td>
+                          <td style={{ width: 30, textAlign: 'center' }}>{first.receipt_issued ? '🧾' : '💰'}</td>
+                          <td>{first.receipt_issued ? `קבלה #${first.receipt_number || '—'}` : first.payment_method}</td>
+                          <td style={{ textAlign: 'left' }}>−{fmt(amount)}</td>
+                          <td>{fmt(ev.runningBalance)}</td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
                 <div style={{ marginTop: 16, fontWeight: 700, fontSize: 14 }}>
-                  סה&quot;כ חיוב: {fmt(chargeTotal)} &nbsp; | &nbsp; סה&quot;כ זיכוי: {fmt(creditTotal)} &nbsp; | &nbsp; שולם: {fmt(paidTotal)} &nbsp; | &nbsp; יתרה בפועל: {fmt(running)}
+                  סה&quot;כ חיוב: {fmt(chargeTotal)} &nbsp; | &nbsp; סה&quot;כ זיכוי: {fmt(creditTotal)} &nbsp; | &nbsp; שולם: {fmt(paidTotal)} &nbsp; | &nbsp; יתרה: {fmt(closingBalance)}
                 </div>
               </div>
             )

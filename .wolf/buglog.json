@@ -238,5 +238,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-18"
+  },
+  {
+    "id": "bug-020",
+    "timestamp": "2026-08-18T00:00:00.000Z",
+    "error_message": "לקוח (מאיר וזנה) שסימנתי לו את כל החשבוניות כ'סגור' עדיין מראה יתרת חוב גבוהה מדי (9,672 בעוד שבפועל צריך לצאת 9,491 — פער של 181)",
+    "file": "components/customers/shared.ts, components/suppliers/shared.ts",
+    "root_cause": "bal() in both shared.ts files computed the balance purely from amount/paid (`direction==='credit' ? -amount : max(0, amount-paid)`) and completely ignored `is_closed`. `is_closed` is also settable independently via the manual '✓ סגור'/'↩ פתח' toggle (toggleClose in both CustomerTrackingTab.tsx and SupplierTrackingTab.tsx), which only flips the boolean and never touches `paid`. User's actual flow: a payment got allocated across several invoices, one invoice ended up partially paid (showing '◐ חלקי'), and to make it stop showing partial the user manually clicked '✓ סגור' on it instead of recording the rest of the payment. The invoice then displayed 'שולם ✓' (StatusChip reads is_closed first) while bal() kept silently counting its full unpaid remainder (amount-paid) into every total that sums bal() over all debts without a separate `!is_closed` filter — specifically the customer/supplier card's main 'יתרה כוללת' (totalBal, no is_closed filter) and the per-month 'יתרה' (monthBalance) shown right below it. So the invoice looked settled but its leftover balance kept inflating the headline number the whole account is judged by.",
+    "fix": "bal() in both components/customers/shared.ts and components/suppliers/shared.ts now checks is_closed before falling back to the amount-paid math: credit rows keep returning -amount (unchanged), but a charge row with is_closed=true now returns 0 regardless of paid vs amount, matching what the '✓ סגור' button is supposed to mean (nothing more owed) instead of only affecting the status badge. Confirmed no summation site relies on the old ignore-is_closed behavior — every place that already filtered `!d.is_closed` before summing (openCustTotal/openSuppTotal, totalDebt in CustomerDetailsTab) is unaffected since those debts were already excluded; only the previously-unfiltered totals (totalBal, monthBalance, print running balances) actually change, correctly. Did NOT touch components/debts/DebtsClient.tsx's own separate local `bal()` (same formula, same latent gap) — every summation there already pre-filters `!is_closed`, so it has no live symptom; flagged in cerebrum for later if that ever changes.",
+    "tags": ["customers", "suppliers", "bal", "is_closed", "balance-calculation", "toggleClose", "financial-total"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-08-18"
   }
 ]

@@ -77,8 +77,15 @@ export interface SupplierDebtPayment {
 export const fmt = (n: number) =>
   `₪${Number(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-export const bal = (d: { amount: number; paid: number; direction?: Direction }) =>
-  d.direction === 'credit' ? -Number(d.amount) : Math.max(0, Number(d.amount) - Number(d.paid))
+// is_closed is a manual "✓ סגור" override (independent of paid — see toggleClose):
+// once a charge is closed, it contributes 0 to the balance regardless of paid vs
+// amount, otherwise a manually-closed-but-not-fully-paid debt still displayed
+// "שולם ✓" while silently still counting its unpaid remainder in every total.
+export const bal = (d: { amount: number; paid: number; direction?: Direction; is_closed?: boolean }) => {
+  if (d.direction === 'credit') return -Number(d.amount)
+  if (d.is_closed) return 0
+  return Math.max(0, Number(d.amount) - Number(d.paid))
+}
 
 // Format phone → WhatsApp URL
 export const waUrl = (phone: string, text: string) => {
