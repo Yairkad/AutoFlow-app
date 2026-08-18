@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T08:27:52.678Z
-> Files: 49 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T09:06:04.110Z
+> Files: 51 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -355,8 +355,8 @@
 
 - `CustomerDetailsTab.tsx` — CustomerDetailsTab (~7374 tok)
 - `CustomersClient.tsx` — CustomersClient (~1809 tok)
-- `CustomerTrackingTab.tsx` — fmtDMY (~26090 tok)
-- `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~674 tok)
+- `CustomerTrackingTab.tsx` — fmtDMY (~26394 tok)
+- `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~683 tok)
 
 ## components/dashboard/
 
@@ -444,6 +444,7 @@
 ## lib/debts/
 
 - `netAllocation.ts` — Exports NetAllocationDebtInput, NetAllocationCreditInput, netAllocation (~440 tok)
+- `reconcileCustomerLedgerPayment.ts` — Exports CustomerDebtAllocation, CustomerPaymentMeta, reconcileCustomerLedgerPayment (~715 tok)
 - `reverseSupplierPayment.ts` — Undoes everything reconcileSupplierPayment.ts did for a given scheduled_payment (~524 tok)
 
 ## lib/hooks/
@@ -470,6 +471,7 @@
 
 - `076_customer_debt_due_date_calls_payments.sql` — "Occasional debtors" (customer_debts, the ad-hoc table behind /debts) get: (~474 tok)
 - `077_supplier_debt_scan.sql` — Attach scanned invoice files (Google Drive) to supplier debts (~64 tok)
+- `078_customer_ledger_payment_group.sql` — A single "אשר תשלום" click can split one transfer/check across several (~218 tok)
 
 ## tests/
 

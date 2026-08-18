@@ -18,12 +18,17 @@ export interface CustomerPaymentMeta {
 // Applies a user-chosen allocation of a payment against specific
 // customer_ledger_debts rows. Mirrors reconcileSupplierPayment.ts — no
 // scheduled-payment concept here since customers have no check-series flow.
+// All customer_ledger_payments rows inserted by one call share a single
+// payment_group_id, so the ledger UI can display one submission (one
+// transfer/check that happened to be split across several invoices) as a
+// single line instead of one line per invoice it touched.
 export async function reconcileCustomerLedgerPayment(
   supabase: SupabaseClient,
   tenantId: string,
   allocations: CustomerDebtAllocation[],
   paymentMeta: CustomerPaymentMeta,
 ): Promise<{ error: string | null }> {
+  const paymentGroupId = crypto.randomUUID()
   for (const alloc of allocations) {
     if (alloc.amount <= 0) continue
 
@@ -54,6 +59,7 @@ export async function reconcileCustomerLedgerPayment(
       payment_date: paymentMeta.payment_date,
       receipt_issued: paymentMeta.receipt_issued,
       receipt_number: paymentMeta.receipt_issued ? (paymentMeta.receipt_number ?? null) : null,
+      payment_group_id: paymentGroupId,
     })
     if (insErr) return { error: insErr.message }
   }

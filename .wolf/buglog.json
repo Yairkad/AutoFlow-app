@@ -226,5 +226,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-18"
+  },
+  {
+    "id": "bug-019",
+    "timestamp": "2026-08-18T00:00:00.000Z",
+    "error_message": "בהדפסת כרטסת לקוח: תשלום אחד שהלקוח העביר מופיע כמה פעמים ברצף (\"תשלומים תשלומים תשלומים\") במקום שורה אחת עם הסכום המלא",
+    "file": "components/customers/CustomerTrackingTab.tsx, lib/debts/reconcileCustomerLedgerPayment.ts",
+    "root_cause": "This was the deliberate 2026-07-14 design (see Decision Log): one 'אשר תשלום' click that splits across several open invoices inserts one customer_ledger_payments row PER invoice it covers, and the printed/on-screen ledger renders each of those rows as its own 'תשלום' line — so a single bank transfer that happened to close 4 invoices printed as 4 separate payment lines with the sub-amounts, not the one number the customer actually sent. Flagged as a possible future concern in that same decision log entry ('avoids a cross-date-range double-counting bug') but not revisited until the actual user found it confusing in the printed output.",
+    "fix": "Added customer_ledger_payments.payment_group_id (migration 078) — reconcileCustomerLedgerPayment() now generates one crypto.randomUUID() per call and stamps every row it inserts with it, so all the per-invoice rows from a single payment submission share one id. The print block in CustomerTrackingTab.tsx groups customerPayments by payment_group_id (falling back to the row's own id for pre-migration legacy rows with no group) before rendering, summing only the portion allocated to in-range debts (same debtIds filter as before) into one printed line, with the running-balance decrement applied once per group instead of once per row — preserves the exact double-counting-avoidance the original per-row design relied on. On-screen by-month view was deliberately left as-is (per-row) since the user only reported the print output as confusing — same copy-not-share scoping this codebase already uses between print and on-screen ledgers.",
+    "tags": ["customers", "print", "customer_ledger_payments", "payment_group_id", "ledger", "duplicate-rows"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-08-18"
   }
 ]

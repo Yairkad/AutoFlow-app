@@ -57,7 +57,7 @@ export interface CustomerLedgerPayment {
   id: string; customer_ledger_debt_id: string; amount: number
   payment_method: string; check_number: string | null; check_date: string | null
   payment_date: string | null; receipt_issued: boolean; receipt_number: string | null
-  notes: string | null; created_at: string
+  notes: string | null; created_at: string; payment_group_id: string | null
 }
 
 export const fmt = (n: number) =>
