@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T09:38:46.013Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T09:51:53.263Z
 > Files: 51 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -356,7 +356,7 @@
 - `CustomerDetailsTab.tsx` — CustomerDetailsTab (~7374 tok)
 - `CustomersClient.tsx` — CustomersClient (~1809 tok)
 - `CustomerTrackingTab.tsx` — fmtDMY (~27308 tok)
-- `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~683 tok)
+- `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~796 tok)
 
 ## components/dashboard/
 
@@ -406,7 +406,7 @@
 
 ## components/suppliers/
 
-- `shared.ts` — Shared types/helpers for the merged /suppliers page (SupplierDetailsTab + SupplierTrackingTab). (~798 tok)
+- `shared.ts` — Shared types/helpers for the merged /suppliers page (SupplierDetailsTab + SupplierTrackingTab). (~911 tok)
 - `SupplierDetailsTab.tsx` — former `SuppliersClient.tsx` body (profile/rolodex list+detail), now props-driven, no own fetch (~5000 tok)
 - `SuppliersClient.tsx` — SuppliersClient (~2411 tok)
 - `SupplierTrackingTab.tsx` — fmtDMY (~37267 tok)

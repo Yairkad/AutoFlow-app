@@ -65,8 +65,15 @@ export const fmt = (n: number) =>
 
 // direction: 'charge' = the customer owes the business more (invoice on credit),
 // 'credit' = reduces what the customer owes (credit note/refund).
-export const bal = (d: { amount: number; paid: number; direction?: Direction }) =>
-  d.direction === 'credit' ? -Number(d.amount) : Math.max(0, Number(d.amount) - Number(d.paid))
+// is_closed is a manual "✓ סגור" override (independent of paid — see toggleClose):
+// once a charge is closed, it contributes 0 to the balance regardless of paid vs
+// amount, otherwise a manually-closed-but-not-fully-paid invoice still displayed
+// "שולם ✓" while silently still counting its unpaid remainder in every total.
+export const bal = (d: { amount: number; paid: number; direction?: Direction; is_closed?: boolean }) => {
+  if (d.direction === 'credit') return -Number(d.amount)
+  if (d.is_closed) return 0
+  return Math.max(0, Number(d.amount) - Number(d.paid))
+}
 
 export const waUrl = (phone: string, text: string) => {
   let digits = phone.replace(/\D/g, '')

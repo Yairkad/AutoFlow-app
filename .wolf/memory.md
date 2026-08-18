@@ -1423,3 +1423,6 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 09:38 | Edited components/customers/CustomerTrackingTab.tsx | CSS: cursor, marginLeft | ~474 |
 | 09:41 | Added manual "merge payments" UI for historical customer_ledger_payments rows lacking payment_group_id (user chose manual selection over an automatic heuristic backfill) | components/customers/CustomerTrackingTab.tsx | tsc clean | ~1800 |
 | 09:41 | Opened PR #21 (manual merge tool for historical split customer payments) | — | https://github.com/Yairkad/AutoFlow-app/pull/21 | ~300 |
+| 09:51 | Edited components/customers/shared.ts | added 2 condition(s) | ~207 |
+| 09:51 | Edited components/suppliers/shared.ts | added 2 condition(s) | ~164 |
+| 09:54 | Fixed bal() in customers/suppliers shared.ts silently ignoring is_closed, so manually-closing a partially-paid invoice via "✓ סגור" inflated the account total instead of zeroing it (real customer: 9,672 shown vs 9,491 actual, diff 181) | components/customers/shared.ts, components/suppliers/shared.ts | tsc clean; see bug-020 | ~2200 |
