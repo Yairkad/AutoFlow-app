@@ -1,7 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const PROXY_URL    = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000') + '/api/store'
+const PROXY_URL    = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') + '/api/store'
 
 // Custom fetch: hides the real Supabase path inside an x-target header
 // so Netfree never sees supabase.co or auth/v1/token in the URL.

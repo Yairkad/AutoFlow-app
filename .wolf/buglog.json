@@ -274,5 +274,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-18"
+  },
+  {
+    "id": "bug-023",
+    "timestamp": "2026-08-18T00:00:00.000Z",
+    "error_message": "Production (Vercel) completely broken for the owner's own account: dashboard shows only 'ראשי'/'עובדים' (as if unauthenticated/no permissions), avatar never gets a name, zero console errors, persists across logout+incognito+fresh login. User initially suspected a granted DB-access flow ('DIRKT') had changed something, but that turned out to be an unrelated 'Reset database password' click on Supabase's raw postgres:// connection string (app never uses a direct Postgres connection anywhere — confirmed via grep — so that action was a red herring).",
+    "file": "lib/supabase/client.ts, app/api/employees/invite/route.ts, app/api/drive/callback/route.ts, app/api/admin/generate-invite/route.ts",
+    "root_cause": "lib/supabase/client.ts's proxyFetch (the 'Netfree-evasion' proxy noted in cerebrum) builds PROXY_URL as `(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000') + '/api/store'` with no trailing-slash guard. NEXT_PUBLIC_APP_URL in the live Vercel production env had a trailing slash, producing a double-slash URL (e.g. `https://auto-flow-app.vercel.app//api/store?p=...`) for every single proxied Supabase call (confirmed live in the Network tab: the /auth/v1/user call showed exactly this double-slash and Vercel responded 308 Permanent Redirect instead of the real Supabase response). Because ProfileContext.tsx's load() destructures only `{ data }` from every sb.auth.getUser()/sb.from(...).select() call and never checks `error` (same class as bug-005/bug-012), the 308-instead-of-JSON response caused user/profile to silently resolve to null with zero console output — Sidebar then rendered only the two module:null nav items (ראשי/עובדים) and the avatar had no fullName to show. Confirmed independent of session: happened even after a full logout + incognito + fresh login, which ruled out any cookie/session-identity explanation and pointed at something structural in every request.",
+    "fix": "Added `.replace(/\\/$/, '')` before appending a path in all 4 call sites that build a URL from NEXT_PUBLIC_APP_URL (lib/supabase/client.ts's PROXY_URL being the critical one — it silently broke the entire authenticated app; the other 3 in employees/invite, drive/callback, admin/generate-invite only affected generated email/redirect links, lower severity but same bug shape). This makes the app resilient regardless of whether the env var itself has a trailing slash. User still needs to fix/verify NEXT_PUBLIC_APP_URL in Vercel's dashboard directly (remove the trailing slash) as a cleanup, but the code fix alone is sufficient to resolve the outage once deployed.",
+    "tags": ["production-outage", "NEXT_PUBLIC_APP_URL", "proxy", "trailing-slash", "308-redirect", "silent-failure", "ProfileContext", "vercel-env-var"],
+    "related_bugs": ["bug-005", "bug-012"],
+    "occurrences": 1,
+    "last_seen": "2026-08-18"
   }
 ]

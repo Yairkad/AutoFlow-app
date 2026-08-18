@@ -8,7 +8,7 @@ export async function GET(req: Request) {
   const tenantId = searchParams.get('state')   // we passed tenant_id as state
   const error    = searchParams.get('error')
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://auto-flow-app.vercel.app'
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://auto-flow-app.vercel.app').replace(/\/$/, '')
 
   if (error || !code || !tenantId) {
     return NextResponse.redirect(`${appUrl}/settings?drive=error`)

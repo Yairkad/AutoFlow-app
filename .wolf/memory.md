@@ -1497,3 +1497,19 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 20:15 | Synced repo with GitHub: stashed stray local changes (dup memory.md session-stub headers, pre-existing missing "הדמית מסוף" demo PNGs), fast-forward pulled 42 commits (PRs #20-#24), resolved memory.md stash-pop conflict by keeping upstream history and dropping the empty local stubs | .wolf/memory.md | clean, up to date with origin/main | ~400 |
 | 20:20 | User confirmed deleting the stale "הדמית מסוף" demo-screenshot folder (5 PNGs, already gone from disk) — staged and committed the deletion | הדמית מסוף/*.PNG | committed | ~100 |
+| 20:50 | Created ../../../.claude/plans/moonlit-bubbling-moler.md | — | ~34 |
+| 20:50 | Session end: 1 writes across 1 files (moonlit-bubbling-moler.md) | 6 reads | ~36 tok |
+
+## Session: 2026-08-18 20:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:36 | Created ../../../.claude/plans/moonlit-bubbling-moler.md | — | ~483 |
+| 21:36 | Session end: 1 writes across 1 files (moonlit-bubbling-moler.md) | 19 reads | ~517 tok |
+| 21:37 | Session end: 1 writes across 1 files (moonlit-bubbling-moler.md) | 19 reads | ~517 tok |
+| 21:40 | Edited lib/supabase/client.ts | inline fix | ~33 |
+| 21:40 | Edited app/api/employees/invite/route.ts | inline fix | ~28 |
+| 21:40 | Edited app/api/drive/callback/route.ts | inline fix | ~31 |
+| 21:40 | Edited app/api/admin/generate-invite/route.ts | inline fix | ~28 |
+| 21:41 | Diagnosed prod outage (bug-023): NEXT_PUBLIC_APP_URL trailing slash → double-slash proxy URL → silent 308 on every Supabase call → ProfileContext swallowed the error, user saw "unauthorized" view | lib/supabase/client.ts + 3 more | fixed in code, user still needs to fix Vercel env var + redeploy | logged to buglog.json/cerebrum.md |
+| 21:45 | Created ../../../.claude/plans/moonlit-bubbling-moler.md | — | ~2207 |

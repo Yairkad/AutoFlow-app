@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '')
 
   const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { tenant_id: profile.tenant_id },
