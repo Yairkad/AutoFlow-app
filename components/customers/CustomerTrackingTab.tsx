@@ -529,6 +529,25 @@ export default function CustomerTrackingTab({
     reload()
   }
 
+  // Deleting a payment under the simplified model needs no reversal anywhere — the balance is
+  // always recomputed fresh from raw amounts (balanceOf), never stored per-invoice. `ids` covers
+  // every raw row behind one displayed line (a merged/grouped payment is deleted as a whole).
+  const deletePayments = async (ids: string[]) => {
+    if (!confirm(ids.length > 1 ? `למחוק תשלום זה (${ids.length} רשומות מוזגו)?` : 'למחוק תשלום זה?')) return
+    await supabase.from('customer_ledger_payments').delete().in('id', ids)
+    showToast('נמחק', 'success'); reload()
+  }
+
+  // For starting a customer's payment history over from scratch — deletes every payment ever
+  // recorded for them (not the invoices/credits themselves). Confirms by typing the customer's
+  // name, since this is bulk and irreversible.
+  const deleteAllPaymentsForCustomer = async (custId: string, custName: string, count: number) => {
+    const typed = prompt(`פעולה זו תמחק את כל ${count} התשלומים של ${custName} לצמיתות (לא את החשבוניות עצמן).\nלאישור, הקלד את שם הלקוח: ${custName}`)
+    if (typed !== custName) { if (typed !== null) showToast('השם לא תואם — בוטל', 'error'); return }
+    await supabase.from('customer_ledger_payments').delete().eq('customer_id', custId)
+    showToast('כל התשלומים נמחקו ✓', 'success'); reload()
+  }
+
   // ── Filters ───────────────────────────────────────────────────────────────
 
   const openCustTotal = balanceOf(customerDebts, customerPayments)
@@ -711,6 +730,13 @@ export default function CustomerTrackingTab({
               if (!monthMap[mk]) monthMap[mk] = []
               monthMap[mk].push(d)
             })
+            // A payment recorded in a month with no invoice of its own still needs a month
+            // block to render under — otherwise it's counted correctly in totalBal (below)
+            // but has nowhere on screen to show up, and looks like it silently vanished.
+            payments.forEach(p => {
+              const mk = monthKeyOf(paymentDateOf(p))
+              if (!monthMap[mk]) monthMap[mk] = []
+            })
             const months = Object.keys(monthMap).sort().reverse()
 
             return { cid, cust, totalBal, payments, monthMap, months }
@@ -764,6 +790,14 @@ export default function CustomerTrackingTab({
                             border: '1px solid #7c3aed',
                           }}>
                           🔗 מזג תשלומים
+                        </button>
+                      )}
+                      {group.cid && group.payments.length > 0 && (
+                        <button
+                          onClick={() => deleteAllPaymentsForCustomer(group.cid!, group.cust?.name ?? '', group.payments.length)}
+                          title="מחיקת כל התשלומים של הלקוח, כדי להתחיל תיעוד תשלומים מחדש (לא נוגע בחשבוניות)"
+                          style={{ padding: '4px 12px', background: 'transparent', color: 'var(--danger)', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                          🗑 מחק כל התשלומים
                         </button>
                       )}
                     </div>
@@ -920,7 +954,15 @@ export default function CustomerTrackingTab({
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{paymentDateOf(p)}</td>
                                     <td style={tdSt}><span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#dcfce7', color: '#16a34a', fontWeight: 600 }}>{p.payment_method}</span></td>
                                     <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: '#16a34a' }}>−{fmt(total)}</td>
-                                    <td style={tdSt}></td>
+                                    <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                                      {!merging && (
+                                        <button
+                                          onClick={e => { e.stopPropagation(); deletePayments(rowGroup.map(g => g.id)) }}
+                                          title="מחק תשלום"
+                                          style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
+                                        >🗑</button>
+                                      )}
+                                    </td>
                                   </tr>
                                 ) } })
                               return [...debtRows, ...paymentRows].sort((a, b) => a.date.localeCompare(b.date)).map(r => r.node)

@@ -262,5 +262,17 @@
     "related_bugs": ["bug-019"],
     "occurrences": 1,
     "last_seen": "2026-08-18"
+  },
+  {
+    "id": "bug-022",
+    "timestamp": "2026-08-18T00:00:00.000Z",
+    "error_message": "אחרי תשלום, המשתמש לא רואה את התשלום בתצוגת המסך, אבל היתרה הכוללת כן ירדה (עד אפס) — 'משהו מוזר ודפוק עם כל המערכת'",
+    "file": "components/customers/CustomerTrackingTab.tsx",
+    "root_cause": "In the customer-groups render, the accordion's per-month blocks (`group.months`) were built ONLY from `customerDebts` dates — `monthMap` never looked at `payments` at all. `totalBal` (balanceOf(debts, payments)) correctly includes every payment regardless of date, so the headline balance was accurate. But a payment recorded in a calendar month where that customer has no invoice of its own (a very normal case — e.g. paying this month against an older unpaid invoice) has no month key in `monthMap`, so `months.map(...)` never iterates a block it could render under. The payment amount was fully counted in the total the whole time; it just had nowhere on screen to display as a row. This is exactly what it looks like when a user says a payment 'disappeared' while the balance still reflects it.",
+    "fix": "After building `monthMap` from debts, also walk `payments` and ensure `monthKeyOf(paymentDateOf(p))` exists as a key (empty debt array if it's a new key) before deriving `months` from `Object.keys(monthMap)`. A payment-only month now gets its own block (header shows ₪0 net charge for that month, the payment row itself, and the existing 'שולם בחודש זה' tfoot line).",
+    "tags": ["customers", "balanceOf", "month-grouping", "payment-visibility", "regression"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-08-18"
   }
 ]

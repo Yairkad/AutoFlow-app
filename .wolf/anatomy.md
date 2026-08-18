@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T10:59:10.885Z
-> Files: 54 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T11:27:51.797Z
+> Files: 55 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -36,6 +36,7 @@
 - `_tmp_manual_verify.mjs` — API routes: GET (1 endpoints) (~537 tok)
 - `_tmp_manual_verify2.mjs` — API routes: GET (1 endpoints) (~1012 tok)
 - `_tmp_verify_migration.mjs` — env: count (~749 tok)
+- `.gitignore` — Git ignore rules (~213 tok)
 - `package.json` — Node.js package manifest (~328 tok)
 - `proxy.ts` — ── Public paths – no auth needed ────────────────────────────────────────── (~1219 tok)
 
@@ -356,7 +357,7 @@
 
 - `CustomerDetailsTab.tsx` — CustomerDetailsTab (~7150 tok)
 - `CustomersClient.tsx` — CustomersClient (~1820 tok)
-- `CustomerTrackingTab.tsx` — fmtDMY (~25671 tok)
+- `CustomerTrackingTab.tsx` — fmtDMY (~26534 tok)
 - `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~811 tok)
 
 ## components/dashboard/
