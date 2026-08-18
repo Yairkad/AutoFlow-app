@@ -1376,3 +1376,11 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 11:59 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: reconErr, supplier_debt_id, amount | ~376 |
+
+## Session: 2026-08-18 08:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:12 | Edited components/employees/EmployeesClient.tsx | added optional chaining | ~1035 |
+| 08:12 | Edited components/employees/EmployeesClient.tsx | 3→6 lines | ~85 |
+| 08:14 | Added bulk print button for salary additions/deductions (user reported the previously-requested button was missing — it had never actually been implemented) | components/employees/EmployeesClient.tsx | tsc clean | ~1200 |

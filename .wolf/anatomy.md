@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-17T11:59:50.126Z
-> Files: 47 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T08:12:19.646Z
+> Files: 48 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -371,6 +371,7 @@
 
 ## components/employees/
 
+- `EmployeesClient.tsx` — Convert "MM/YYYY" → "YYYY-MM" for date comparisons; salary tab has printAdjustments() for bulk-printing all employees' additions/deductions (~20300 tok)
 
 ## components/expenses/
 

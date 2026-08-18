@@ -626,6 +626,76 @@ export default function EmployeesClient() {
     )
   }
 
+  // ── Print: all employees' additions/deductions for the period ────────────────
+
+  function printAdjustments() {
+    const rows = periodEmps
+      .map(e => {
+        const sal = salaryFor(e.id)
+        const adds = sal?.additions || []
+        const deds = sal?.deductions || []
+        return {
+          emp: e, adds, deds,
+          addTotal: adds.reduce((s, a) => s + (Number(a.amount) || 0), 0),
+          dedTotal: deds.reduce((s, d) => s + (Number(d.amount) || 0), 0),
+        }
+      })
+      .filter(r => r.adds.length > 0 || r.deds.length > 0)
+
+    if (!rows.length) { alert('אין תוספות או ניכויים חוץ תלוש לתקופה זו'); return }
+
+    const grandAdd = rows.reduce((s, r) => s + r.addTotal, 0)
+    const grandDed = rows.reduce((s, r) => s + r.dedTotal, 0)
+    const bizName = profile?.tenant?.name || ''
+
+    const rowsHtml = rows.map(r => `
+      <tr>
+        <td style="font-weight:700;text-align:right;padding:6px 8px;">${r.emp.full_name}</td>
+        <td style="text-align:right;padding:6px 8px;">
+          ${r.adds.length ? r.adds.map(a => `<div>${a.label}: <b>${fmt(a.amount)}</b></div>`).join('') : '<span style="color:#999">—</span>'}
+        </td>
+        <td style="text-align:right;padding:6px 8px;">
+          ${r.deds.length ? r.deds.map(d => `<div>${d.label}: <b>${fmt(d.amount)}</b></div>`).join('') : '<span style="color:#999">—</span>'}
+        </td>
+        <td style="text-align:center;padding:6px 8px;color:#16a34a;font-weight:700;">${r.addTotal ? '+' + fmt(r.addTotal) : ''}</td>
+        <td style="text-align:center;padding:6px 8px;color:#dc2626;font-weight:700;">${r.dedTotal ? '−' + fmt(r.dedTotal) : ''}</td>
+      </tr>`).join('')
+
+    const html = `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>תוספות וניכויים – ${periodLabel(period)}</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
+@page { size: A4 portrait; margin: 12mm 15mm; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; font-size: 12px; }
+h1 { font-size: 16px; font-weight: 900; margin-bottom: 2px; }
+.sub { font-size: 12px; color: #555; margin-bottom: 14px; }
+table { width: 100%; border-collapse: collapse; }
+th { background: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; border: 1px solid #ccc; padding: 6px 8px; font-size: 11.5px; text-align: right; }
+td { border: 1px solid #ccc; vertical-align: top; }
+tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 8px; }
+</style>
+</head>
+<body>
+  <h1>${bizName ? bizName + ' – ' : ''}תוספות וניכויים חוץ תלוש</h1>
+  <div class="sub">תקופה: ${periodLabel(period)} &nbsp;|&nbsp; הודפס: ${new Date().toLocaleDateString('he-IL')}</div>
+  <table>
+    <thead><tr><th>עובד</th><th>תוספות</th><th>ניכויים</th><th style="width:80px">סה״כ תוספות</th><th style="width:80px">סה״כ ניכויים</th></tr></thead>
+    <tbody>${rowsHtml}</tbody>
+    <tfoot><tr><td colspan="3" style="text-align:left">סה״כ</td><td style="text-align:center;color:#16a34a">+${fmt(grandAdd)}</td><td style="text-align:center;color:#dc2626">−${fmt(grandDed)}</td></tr></tfoot>
+  </table>
+  <script>window.onload=function(){window.print()}<\/script>
+</body></html>`
+
+    const w = window.open('', '_blank')
+    if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
+    w.document.write(html)
+    w.document.close()
+  }
+
   // ── Render: salary table ─────────────────────────────────────────────────────
 
   function renderSalaryTable() {
@@ -926,6 +996,9 @@ export default function EmployeesClient() {
               </select>
             </div>
             {renderSalarySummary()}
+            <Button variant="secondary" size="sm" onClick={printAdjustments} title="הדפס את כל התוספות והניכויים חוץ תלוש של החודש הנבחר">
+              🖨️ הדפס תוספות/ניכויים
+            </Button>
             <button
               onClick={initPeriodRecords}
               disabled={initingPeriod}
