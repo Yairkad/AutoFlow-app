@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T22:58:21.236Z
-> Files: 8 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T23:03:27.998Z
+> Files: 10 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -349,6 +349,7 @@
 
 ## components/debts/
 
+- `DebtsClient.tsx` — fmt (~12742 tok)
 
 ## components/documents/
 
@@ -395,6 +396,7 @@
 
 ## components/ui/
 
+- `RowActionsMenu.tsx` — RowActionsMenu (~806 tok)
 
 ## components/yard/
 

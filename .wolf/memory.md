@@ -1546,3 +1546,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 01:54 | Session end: 3 writes across 3 files (route.ts, ProfileContext.tsx, client.ts) | 3 reads | ~547 tok |
 | 01:58 | Edited components/layout/AppShell.tsx | 5→3 lines | ~13 |
 | 02:00 | RESOLVED bug-023: production outage was app/api/store/route.ts forwarding compressed bytes with content-encoding stripped, mislabeled by supabase-js as AuthRetryableFetchError status:0. Fixed via accept-encoding:identity upstream. Confirmed live by user. Removed diagnostic logging, corrected buglog.json/cerebrum.md (earlier trailing-slash fix was real but not the cause) | app/api/store/route.ts + cleanup of 3 files | production confirmed working | ~200 |
+| 02:02 | Session end: 4 writes across 4 files (route.ts, ProfileContext.tsx, client.ts, AppShell.tsx) | 6 reads | ~931 tok |
+| 02:02 | Created components/ui/RowActionsMenu.tsx | — | ~806 |
+| 02:03 | Edited components/debts/DebtsClient.tsx | added 1 import(s) | ~59 |
+| 02:03 | Edited components/debts/DebtsClient.tsx | removed 4 lines | ~7 |
+| 02:03 | Edited components/debts/DebtsClient.tsx | — | ~0 |
