@@ -1470,3 +1470,5 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 10:59 | Edited components/customers/CustomerTrackingTab.tsx | added nullish coalescing | ~860 |
+| 11:00 | Fixed "מזג תשלומים" merge succeeding but on-screen list still showing all rows separately — grouping was print-only, never applied on-screen | components/customers/CustomerTrackingTab.tsx | tsc clean; see bug-021 | ~1400 |

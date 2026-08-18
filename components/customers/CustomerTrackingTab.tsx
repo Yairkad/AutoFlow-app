@@ -887,23 +887,39 @@ export default function CustomerTrackingTab({
                                   </tr>
                                 ) }))
                               })
-                              const paymentRows = monthPayments
-                                .map(p => {
-                                  const merging = mergeCid === group.cid
-                                  const selected = mergeSelected.has(p.id)
+                              const merging = mergeCid === group.cid
+                              // While actively picking rows to merge, show every raw row so each
+                              // can be selected individually. Otherwise, collapse rows that already
+                              // share a payment_group_id (via the merge tool, or new same-submission
+                              // payments) into one displayed line — matches the print grouping, so
+                              // "merge" visibly does something here instead of only in print.
+                              const paymentRows = (merging ? monthPayments.map(p => [p]) : (() => {
+                                const byGroup = new Map<string, CustomerLedgerPayment[]>()
+                                monthPayments.forEach(p => {
+                                  const key = p.payment_group_id ?? p.id
+                                  const arr = byGroup.get(key)
+                                  if (arr) arr.push(p); else byGroup.set(key, [p])
+                                })
+                                return Array.from(byGroup.values())
+                              })())
+                                .map(rowGroup => {
+                                  const p = rowGroup[0]
+                                  const total = rowGroup.reduce((s, g) => s + Number(g.amount), 0)
+                                  const selected = rowGroup.every(g => mergeSelected.has(g.id))
+                                  const toggleGroup = () => rowGroup.forEach(g => toggleMergeSelected(g.id))
                                   return { kind: 'payment' as const, date: paymentDateOf(p), node: (
                                   <tr
                                     key={`pay-${p.id}`}
-                                    onClick={merging ? () => toggleMergeSelected(p.id) : undefined}
+                                    onClick={merging ? toggleGroup : undefined}
                                     style={{ background: selected ? '#ddd6fe' : '#f0fdf6', cursor: merging ? 'pointer' : undefined }}
                                   >
                                     <td style={tdSt}>
-                                      {merging && <input type="checkbox" checked={selected} onChange={() => toggleMergeSelected(p.id)} style={{ marginLeft: '6px' }} />}
+                                      {merging && <input type="checkbox" checked={selected} onChange={toggleGroup} style={{ marginLeft: '6px' }} />}
                                       {p.receipt_issued ? `🧾 קבלה #${p.receipt_number || '—'}` : '💰 תשלום'}
                                     </td>
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{paymentDateOf(p)}</td>
                                     <td style={tdSt}><span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#dcfce7', color: '#16a34a', fontWeight: 600 }}>{p.payment_method}</span></td>
-                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: '#16a34a' }}>−{fmt(p.amount)}</td>
+                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: '#16a34a' }}>−{fmt(total)}</td>
                                     <td style={tdSt}></td>
                                   </tr>
                                 ) } })

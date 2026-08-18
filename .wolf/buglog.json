@@ -250,5 +250,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-18"
+  },
+  {
+    "id": "bug-021",
+    "timestamp": "2026-08-18T00:00:00.000Z",
+    "error_message": "לוחץ 'מיזוג תשלומים', מקבל הודעת הצלחה, אבל בפועל עדיין רואה 10 שורות תשלום נפרדות",
+    "file": "components/customers/CustomerTrackingTab.tsx",
+    "root_cause": "The '🔗 מזג תשלומים' tool (bug-019/PR21) correctly sets a shared payment_group_id on the selected customer_ledger_payments rows, and the PRINTED ledger (bug-019's fix, later rebuilt on buildLedger() in the ledger redesign) does group rows by payment_group_id before rendering — but the ON-SCREEN by-month payment list (a separate render block, copy-not-share per this codebase's convention) was never updated to do the same grouping. It always mapped one raw row to one displayed <tr>, so a successful merge changed the underlying data but produced zero visible change on the screen the user was actually looking at.",
+    "fix": "Grouped the on-screen paymentRows by payment_group_id (falling back to the row's own id) the same way the print block does. When not actively in merge-select mode, rows sharing a group id collapse into a single displayed line with the summed amount. While actively selecting rows to merge (mergeCid === group.cid), raw rows are still shown individually so specific ones can be picked — checking/clicking one now toggles every row in whatever group it already belongs to, not just itself.",
+    "tags": ["customers", "payment_group_id", "merge-tool", "on-screen-vs-print", "copy-not-share"],
+    "related_bugs": ["bug-019"],
+    "occurrences": 1,
+    "last_seen": "2026-08-18"
   }
 ]
