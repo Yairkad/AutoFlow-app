@@ -1422,3 +1422,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 09:38 | Edited components/customers/CustomerTrackingTab.tsx | expanded (+8 lines) | ~252 |
 | 09:38 | Edited components/customers/CustomerTrackingTab.tsx | CSS: cursor, marginLeft | ~474 |
 | 09:41 | Added manual "merge payments" UI for historical customer_ledger_payments rows lacking payment_group_id (user chose manual selection over an automatic heuristic backfill) | components/customers/CustomerTrackingTab.tsx | tsc clean | ~1800 |
+| 09:41 | Opened PR #21 (manual merge tool for historical split customer payments) | — | https://github.com/Yairkad/AutoFlow-app/pull/21 | ~300 |
