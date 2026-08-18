@@ -143,6 +143,7 @@ export default function CustomersClient() {
           tenantId={tenantIdRef.current!}
           customers={customers}
           debts={customerDebts}
+          payments={customerPayments}
           categories={categories}
           openId={openId}
           onOpenTracking={openTracking}

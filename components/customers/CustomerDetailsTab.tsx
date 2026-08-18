@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
-import { Customer, CustomerLedgerDebt, fmt, bal, waUrl } from './shared'
+import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, fmt, bal, waUrl } from './shared'
+import { balanceOf } from '@/lib/debts/ledger'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -21,6 +22,7 @@ interface CustomerDetailsTabProps {
   tenantId: string
   customers: Customer[]
   debts: CustomerLedgerDebt[]
+  payments: CustomerLedgerPayment[]
   categories: string[]
   openId: string | null
   onOpenTracking: (customerId: string) => void
@@ -30,7 +32,7 @@ interface CustomerDetailsTabProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CustomerDetailsTab({
-  tenantId, customers, debts, categories, openId, onOpenTracking, reload,
+  tenantId, customers, debts, payments, categories, openId, onOpenTracking, reload,
 }: CustomerDetailsTabProps) {
   const supabase = useRef(createClient()).current
   const { showToast } = useToast()
@@ -126,9 +128,9 @@ export default function CustomerDetailsTab({
     (c.phone?.includes(search) ?? false)
   )
 
-  const custDebts      = (custId: string) => debts.filter(d => d.customer_id === custId)
-  const totalDebt      = (custId: string) => custDebts(custId).filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
-  const openDebtsCount = (custId: string) => custDebts(custId).filter(d => !d.is_closed).length
+  const custDebts       = (custId: string) => debts.filter(d => d.customer_id === custId)
+  const custPayments    = (custId: string) => payments.filter(p => p.customer_id === custId)
+  const totalDebt       = (custId: string) => balanceOf(custDebts(custId), custPayments(custId))
 
   const selectedDebts     = selected ? custDebts(selected.id) : []
   const selectedOpenTotal = selected ? totalDebt(selected.id) : 0
@@ -179,7 +181,6 @@ export default function CustomerDetailsTab({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
               {filtered.map(c => {
                 const debt     = totalDebt(c.id)
-                const openCnt  = openDebtsCount(c.id)
                 const isActive = selected?.id === c.id
                 return (
                   <div
@@ -227,10 +228,9 @@ export default function CustomerDetailsTab({
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                       {/* Debt badge */}
-                      {openCnt > 0 ? (
+                      {debt > 0 ? (
                         <div style={{ textAlign: 'left', flexShrink: 0 }}>
                           <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(debt)}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{openCnt} חובות</div>
                         </div>
                       ) : (
                         <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, flexShrink: 0 }}>✓ נקי</span>
@@ -406,11 +406,8 @@ export default function CustomerDetailsTab({
                               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{d.date}</div>
                             </div>
                             <div style={{ textAlign: 'left', flexShrink: 0 }}>
-                              <div style={{ fontWeight: 700, color: d.is_closed ? '#16a34a' : 'var(--danger)' }}>
-                                {d.is_closed ? '✓ שולם' : `יתרה: ${fmt(bal(d))}`}
-                              </div>
-                              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                {fmt(d.paid)} / {fmt(d.amount)}
+                              <div style={{ fontWeight: 700, color: d.is_closed ? '#7c3aed' : 'var(--text)' }}>
+                                {d.is_closed ? '🏷 מכוסה' : fmt(bal(d))}
                               </div>
                             </div>
                           </div>

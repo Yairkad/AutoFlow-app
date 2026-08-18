@@ -1426,3 +1426,41 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 09:51 | Edited components/customers/shared.ts | added 2 condition(s) | ~207 |
 | 09:51 | Edited components/suppliers/shared.ts | added 2 condition(s) | ~164 |
 | 09:54 | Fixed bal() in customers/suppliers shared.ts silently ignoring is_closed, so manually-closing a partially-paid invoice via "✓ סגור" inflated the account total instead of zeroing it (real customer: 9,672 shown vs 9,491 actual, diff 181) | components/customers/shared.ts, components/suppliers/shared.ts | tsc clean; see bug-020 | ~2200 |
+| 10:00 | Created ../../../root/.claude/plans/witty-roaming-quail.md | — | ~49 |
+| 10:09 | Created ../../../root/.claude/plans/witty-roaming-quail.md | — | ~2184 |
+| 10:13 | Created ../../../root/.claude/plans/witty-roaming-quail.md | — | ~1843 |
+
+## Session: 2026-08-18 10:23
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:24 | Created lib/debts/ledger.ts | — | ~454 |
+| 10:24 | Created supabase/migrations/079_customer_ledger_payments_direct_link.sql | — | ~333 |
+| 10:24 | Created lib/debts/reconcileCustomerLedgerPayment.ts | — | ~405 |
+| 10:25 | Edited components/customers/shared.ts | 21→19 lines | ~359 |
+| 10:25 | Edited components/customers/CustomerTrackingTab.tsx | CSS: redesign, cosmetic | ~327 |
+| 10:26 | Edited components/customers/CustomerTrackingTab.tsx | 7→7 lines | ~154 |
+| 10:26 | Edited components/customers/CustomerTrackingTab.tsx | CSS: id, is_closed | ~898 |
+| 10:27 | Edited components/customers/CustomerTrackingTab.tsx | 8→9 lines | ~121 |
+| 10:27 | Edited components/customers/CustomerTrackingTab.tsx | Number() → only() | ~230 |
+| 10:27 | Edited components/customers/CustomerTrackingTab.tsx | bal() → slice() | ~257 |
+| 10:27 | Edited components/customers/CustomerTrackingTab.tsx | CSS: paid | ~282 |
+| 10:28 | Edited components/customers/CustomerTrackingTab.tsx | 16→16 lines | ~535 |
+| 10:28 | Edited components/customers/CustomerTrackingTab.tsx | 4→5 lines | ~92 |
+| 10:28 | Edited components/customers/CustomerTrackingTab.tsx | CSS: payments | ~88 |
+| 10:29 | Edited components/customers/CustomerTrackingTab.tsx | reduced (-9 lines) | ~584 |
+| 10:29 | Edited components/customers/CustomerTrackingTab.tsx | 3→2 lines | ~32 |
+| 10:29 | Edited components/customers/CustomerTrackingTab.tsx | 3→2 lines | ~31 |
+| 10:29 | Edited components/customers/CustomerTrackingTab.tsx | 4→3 lines | ~90 |
+| 10:30 | Edited components/customers/CustomerTrackingTab.tsx | reduced (-40 lines) | ~1954 |
+| 10:32 | Edited components/customers/CustomerTrackingTab.tsx | added 1 condition(s) | ~2054 |
+| 10:32 | Edited components/customers/CustomersClient.tsx | 5→6 lines | ~59 |
+| 10:33 | Edited components/customers/CustomerDetailsTab.tsx | 3→5 lines | ~145 |
+| 10:33 | Edited components/customers/CustomerDetailsTab.tsx | added 1 import(s) | ~41 |
+| 10:33 | Edited components/customers/CustomerDetailsTab.tsx | CSS: payments | ~48 |
+| 10:33 | Edited components/customers/CustomerDetailsTab.tsx | inline fix | ~24 |
+| 10:33 | Edited components/customers/CustomerDetailsTab.tsx | 5→3 lines | ~80 |
+| 10:33 | Edited components/customers/CustomerDetailsTab.tsx | 3→2 lines | ~30 |
+| 10:33 | Edited components/customers/CustomerDetailsTab.tsx | 9→8 lines | ~136 |
+| 10:34 | Edited components/customers/CustomerDetailsTab.tsx | 8→5 lines | ~96 |
+| 10:35 | Redesigned customer ledger balance model (phase 1: customers only) — flat Σcharges−Σcredits−Σpayments instead of per-invoice paid/is_closed allocation; is_closed becomes a cosmetic tag | lib/debts/ledger.ts, lib/debts/reconcileCustomerLedgerPayment.ts, components/customers/{shared,CustomerTrackingTab,CustomerDetailsTab,CustomersClient}.tsx, supabase/migrations/079_customer_ledger_payments_direct_link.sql | tsc clean; approved plan witty-roaming-quail.md | ~9500 |

@@ -1,10 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 
-export interface CustomerDebtAllocation {
-  customer_ledger_debt_id: string
-  amount: number
-}
-
 export interface CustomerPaymentMeta {
   payment_method: string
   check_number?: string | null
@@ -15,53 +10,30 @@ export interface CustomerPaymentMeta {
   receipt_number?: string | null
 }
 
-// Applies a user-chosen allocation of a payment against specific
-// customer_ledger_debts rows. Mirrors reconcileSupplierPayment.ts — no
-// scheduled-payment concept here since customers have no check-series flow.
-// All customer_ledger_payments rows inserted by one call share a single
-// payment_group_id, so the ledger UI can display one submission (one
-// transfer/check that happened to be split across several invoices) as a
-// single line instead of one line per invoice it touched.
-export async function reconcileCustomerLedgerPayment(
+// Records a customer payment as one flat amount against the customer — not allocated to any
+// specific customer_ledger_debt row. The balance is Σcharges − Σcredits − Σpayments
+// (lib/debts/ledger.ts), so no per-debt paid/is_closed bookkeeping happens here at all.
+export async function recordCustomerPayment(
   supabase: SupabaseClient,
   tenantId: string,
-  allocations: CustomerDebtAllocation[],
+  customerId: string,
+  amount: number,
   paymentMeta: CustomerPaymentMeta,
 ): Promise<{ error: string | null }> {
-  const paymentGroupId = crypto.randomUUID()
-  for (const alloc of allocations) {
-    if (alloc.amount <= 0) continue
+  if (amount <= 0) return { error: 'סכום לא תקין' }
 
-    const { data: debt, error: fetchErr } = await supabase
-      .from('customer_ledger_debts')
-      .select('id, amount, paid')
-      .eq('id', alloc.customer_ledger_debt_id)
-      .single()
-    if (fetchErr || !debt) return { error: fetchErr?.message ?? 'חוב לא נמצא' }
-
-    const newPaid  = Number(debt.paid) + alloc.amount
-    const isClosed = newPaid >= Number(debt.amount)
-
-    const { error: updErr } = await supabase
-      .from('customer_ledger_debts')
-      .update({ paid: newPaid, is_closed: isClosed })
-      .eq('id', debt.id)
-    if (updErr) return { error: updErr.message }
-
-    const { error: insErr } = await supabase.from('customer_ledger_payments').insert({
-      tenant_id: tenantId,
-      customer_ledger_debt_id: debt.id,
-      amount: alloc.amount,
-      payment_method: paymentMeta.payment_method,
-      check_number: paymentMeta.check_number ?? null,
-      check_date: paymentMeta.check_date ?? null,
-      notes: paymentMeta.notes ?? null,
-      payment_date: paymentMeta.payment_date,
-      receipt_issued: paymentMeta.receipt_issued,
-      receipt_number: paymentMeta.receipt_issued ? (paymentMeta.receipt_number ?? null) : null,
-      payment_group_id: paymentGroupId,
-    })
-    if (insErr) return { error: insErr.message }
-  }
-  return { error: null }
+  const { error } = await supabase.from('customer_ledger_payments').insert({
+    tenant_id: tenantId,
+    customer_id: customerId,
+    customer_ledger_debt_id: null,
+    amount,
+    payment_method: paymentMeta.payment_method,
+    check_number: paymentMeta.check_number ?? null,
+    check_date: paymentMeta.check_date ?? null,
+    notes: paymentMeta.notes ?? null,
+    payment_date: paymentMeta.payment_date,
+    receipt_issued: paymentMeta.receipt_issued,
+    receipt_number: paymentMeta.receipt_issued ? (paymentMeta.receipt_number ?? null) : null,
+  })
+  return { error: error?.message ?? null }
 }

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T09:51:53.263Z
-> Files: 51 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T10:34:00.487Z
+> Files: 54 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -29,6 +29,7 @@
 
 - `inherited-roaming-stonebraker.md` — תיקון: "שלם הכל" מתעלם מזיכויים פתוחים (ספקים + לקוחות) (~972 tok)
 - `modular-puzzling-flame.md` — תיקון חישוב סכומי תשלום/צ'קים מול חובות ספק (זיכוי פתוח) + בחירת חודש שלם (~1801 tok)
+- `witty-roaming-quail.md` — פישוט מודל היתרה בכרטסת לקוחות (שלב 1 מתוך 2 — לקוחות קודם) (~1727 tok)
 
 ## ./
 
@@ -353,10 +354,10 @@
 
 ## components/customers/
 
-- `CustomerDetailsTab.tsx` — CustomerDetailsTab (~7374 tok)
-- `CustomersClient.tsx` — CustomersClient (~1809 tok)
-- `CustomerTrackingTab.tsx` — fmtDMY (~27308 tok)
-- `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~796 tok)
+- `CustomerDetailsTab.tsx` — CustomerDetailsTab (~7150 tok)
+- `CustomersClient.tsx` — CustomersClient (~1820 tok)
+- `CustomerTrackingTab.tsx` — fmtDMY (~25304 tok)
+- `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~811 tok)
 
 ## components/dashboard/
 
@@ -443,8 +444,9 @@
 
 ## lib/debts/
 
+- `ledger.ts` — Shared balance math for the simplified customer/supplier ledger model: a total is just (~454 tok)
 - `netAllocation.ts` — Exports NetAllocationDebtInput, NetAllocationCreditInput, netAllocation (~440 tok)
-- `reconcileCustomerLedgerPayment.ts` — Exports CustomerDebtAllocation, CustomerPaymentMeta, reconcileCustomerLedgerPayment (~715 tok)
+- `reconcileCustomerLedgerPayment.ts` — Exports CustomerPaymentMeta, recordCustomerPayment (~405 tok)
 - `reverseSupplierPayment.ts` — Undoes everything reconcileSupplierPayment.ts did for a given scheduled_payment (~524 tok)
 
 ## lib/hooks/
@@ -472,6 +474,7 @@
 - `076_customer_debt_due_date_calls_payments.sql` — "Occasional debtors" (customer_debts, the ad-hoc table behind /debts) get: (~474 tok)
 - `077_supplier_debt_scan.sql` — Attach scanned invoice files (Google Drive) to supplier debts (~64 tok)
 - `078_customer_ledger_payment_group.sql` — A single "אשר תשלום" click can split one transfer/check across several (~218 tok)
+- `079_customer_ledger_payments_direct_link.sql` — Customer ledger moves from "payment allocated to specific invoices" to a simple running (~333 tok)
 
 ## tests/
 
