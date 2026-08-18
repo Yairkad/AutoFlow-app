@@ -1465,3 +1465,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:34 | Edited components/customers/CustomerDetailsTab.tsx | 8→5 lines | ~96 |
 | 10:35 | Redesigned customer ledger balance model (phase 1: customers only) — flat Σcharges−Σcredits−Σpayments instead of per-invoice paid/is_closed allocation; is_closed becomes a cosmetic tag | lib/debts/ledger.ts, lib/debts/reconcileCustomerLedgerPayment.ts, components/customers/{shared,CustomerTrackingTab,CustomerDetailsTab,CustomersClient}.tsx, supabase/migrations/079_customer_ledger_payments_direct_link.sql | tsc clean; approved plan witty-roaming-quail.md | ~9500 |
 | 10:36 | Opened PR #22 (customer ledger balance redesign, phase 1) on new branch claude/simplify-customer-ledger-balance | — | https://github.com/Yairkad/AutoFlow-app/pull/22 | ~300 |
+
+## Session: 2026-08-18 10:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
