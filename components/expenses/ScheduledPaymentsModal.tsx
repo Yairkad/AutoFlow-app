@@ -8,6 +8,7 @@ import Modal from '@/components/ui/Modal'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { reconcileSupplierPayment, DebtAllocation } from '@/lib/debts/reconcileSupplierPayment'
+import { reverseSupplierPayment } from '@/lib/debts/reverseSupplierPayment'
 import { netAllocation } from '@/lib/debts/netAllocation'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
@@ -446,8 +447,10 @@ export default function ScheduledPaymentsModal({
   // ── Delete ─────────────────────────────────────────────────────────────────
 
   const del = async (id: string) => {
-    const ok = await confirm({ msg: 'למחוק תשלום מתוזמן זה?', icon: '🗑️' })
+    const ok = await confirm({ msg: 'למחוק תשלום מתוזמן זה? כל שיוך שלו לחשבוניות ספק יבוטל והיתרה תיפתח מחדש.', icon: '🗑️' })
     if (!ok) return
+    const { error: revErr } = await reverseSupplierPayment(supabase, id)
+    if (revErr) { showToast('שגיאה בביטול שיוך החוב: ' + revErr, 'error'); return }
     await supabase.from('scheduled_payments').delete().eq('id', id)
     showToast('נמחק', 'success')
     fetch()

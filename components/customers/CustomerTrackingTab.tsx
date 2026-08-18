@@ -1495,17 +1495,31 @@ export default function CustomerTrackingTab({
                           ) })
                         })
                       })
+                      // One "אשר תשלום" click can split across several invoices, each
+                      // getting its own customer_ledger_payments row (reconcileCustomerLedgerPayment).
+                      // Regroup those by payment_group_id so the printed ledger shows one line
+                      // for what the customer actually transferred, not one per invoice it covered.
+                      // Only the portion allocated to in-range debts (debtIds) is summed — the rest
+                      // is already folded into openingForReport, same as before this grouping.
+                      const groups = new Map<string, typeof customerPayments>()
                       customerPayments.filter(p => debtIds.has(p.customer_ledger_debt_id)).forEach(p => {
+                        const key = p.payment_group_id ?? p.id
+                        const arr = groups.get(key)
+                        if (arr) arr.push(p); else groups.set(key, [p])
+                      })
+                      groups.forEach(group => {
+                        const p = group[0]
+                        const total = group.reduce((s, g) => s + Number(g.amount), 0)
                         const date = paymentDateOf(p)
                         events.push({ date, render: () => (
-                          <tr key={`pay-${p.id}`} style={{ background: '#f5faf6' }}>
+                          <tr key={`pay-${p.payment_group_id ?? p.id}`} style={{ background: '#f5faf6' }}>
                             <td>{fmtDMY(date)}</td>
                             <td>—</td>
                             <td style={{ width: 46 }}>תשלום</td>
                             <td style={{ width: 30, textAlign: 'center' }}>{p.receipt_issued ? '🧾' : '💰'}</td>
                             <td>{p.receipt_issued ? `קבלה #${p.receipt_number || '—'}` : p.payment_method}</td>
-                            <td style={{ textAlign: 'left' }}>−{fmt(p.amount)}</td>
-                            <td>{fmt(running -= Number(p.amount))}</td>
+                            <td style={{ textAlign: 'left' }}>−{fmt(total)}</td>
+                            <td>{fmt(running -= total)}</td>
                           </tr>
                         ) })
                       })
