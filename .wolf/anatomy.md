@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T09:06:04.110Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T09:38:46.013Z
 > Files: 51 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -355,7 +355,7 @@
 
 - `CustomerDetailsTab.tsx` — CustomerDetailsTab (~7374 tok)
 - `CustomersClient.tsx` — CustomersClient (~1809 tok)
-- `CustomerTrackingTab.tsx` — fmtDMY (~26394 tok)
+- `CustomerTrackingTab.tsx` — fmtDMY (~27308 tok)
 - `shared.ts` — Shared types/helpers for the merged /customers page (CustomerDetailsTab + CustomerTrackingTab). (~683 tok)
 
 ## components/dashboard/

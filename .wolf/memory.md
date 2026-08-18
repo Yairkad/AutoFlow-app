@@ -1407,3 +1407,18 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:20 | Opened PR #20 (salary print, check-delete reconciliation, customer payment grouping) | — | https://github.com/Yairkad/AutoFlow-app/pull/20 | ~300 |
+
+## Session: 2026-08-18 09:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-08-18 09:33
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:38 | Edited components/customers/CustomerTrackingTab.tsx | CSS: id, payment_group_id | ~304 |
+| 09:38 | Edited components/customers/CustomerTrackingTab.tsx | CSS: null | ~350 |
+| 09:38 | Edited components/customers/CustomerTrackingTab.tsx | expanded (+8 lines) | ~252 |
+| 09:38 | Edited components/customers/CustomerTrackingTab.tsx | CSS: cursor, marginLeft | ~474 |
+| 09:41 | Added manual "merge payments" UI for historical customer_ledger_payments rows lacking payment_group_id (user chose manual selection over an automatic heuristic backfill) | components/customers/CustomerTrackingTab.tsx | tsc clean | ~1800 |

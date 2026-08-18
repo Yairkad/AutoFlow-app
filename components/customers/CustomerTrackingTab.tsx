@@ -82,6 +82,26 @@ export default function CustomerTrackingTab({
   // Row selection
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  // Manual merge of old customer_ledger_payments rows into one payment_group_id (for
+  // payments recorded before migration 078 existed, so they also print as a single line)
+  const [mergeCid, setMergeCid] = useState<string | null>(null)
+  const [mergeSelected, setMergeSelected] = useState<Set<string>>(new Set())
+  const toggleMergeSelected = (id: string) => setMergeSelected(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
+  const mergePayments = async () => {
+    if (mergeSelected.size < 2) return
+    const newGroupId = crypto.randomUUID()
+    const { error } = await supabase.from('customer_ledger_payments')
+      .update({ payment_group_id: newGroupId }).in('id', Array.from(mergeSelected))
+    if (error) { showToast('שגיאה במיזוג: ' + error.message, 'error'); return }
+    showToast('התשלומים מוזגו לשורה אחת ✓', 'success')
+    setMergeCid(null); setMergeSelected(new Set())
+    reload()
+  }
+
   // Which customer cards are expanded (collapsed by default — click to open detail)
   const [openCustomerKeys, setOpenCustomerKeys] = useState<Set<string>>(new Set())
   const customerKeyOf = (cid: string | null) => cid ?? '__none__'
@@ -797,11 +817,32 @@ export default function CustomerTrackingTab({
                           + הוסף
                         </button>
                       )}
+                      {group.cid && (
+                        <button
+                          onClick={() => { setMergeCid(mergeCid === group.cid ? null : group.cid); setMergeSelected(new Set()) }}
+                          title="מזג כמה שורות תשלום ישנות (מלפני שהמערכת שמרה קיבוץ) לשורה אחת בהדפסה"
+                          style={{
+                            padding: '4px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
+                            background: mergeCid === group.cid ? '#7c3aed' : 'transparent',
+                            color: mergeCid === group.cid ? '#fff' : '#7c3aed',
+                            border: '1px solid #7c3aed',
+                          }}>
+                          🔗 מזג תשלומים
+                        </button>
+                      )}
                     </div>
                   </div>
 
                   {isOpen && (
                   <>
+
+                  {mergeCid === group.cid && (
+                    <div style={{ background: '#f5f3ff', borderBottom: '1px solid #ddd6fe', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '12px', color: '#5b21b6' }}>סמן 2+ שורות תשלום למיזוג לשורה אחת בהדפסה (נבחרו: {mergeSelected.size})</span>
+                      <Button size="sm" onClick={mergePayments} disabled={mergeSelected.size < 2}>🔗 מזג</Button>
+                      <Button size="sm" variant="secondary" onClick={() => { setMergeCid(null); setMergeSelected(new Set()) }}>ביטול</Button>
+                    </div>
+                  )}
 
                   {group.cid && (() => {
                     const items = recurringItems.filter(it => it.customer_id === group.cid)
@@ -922,15 +963,25 @@ export default function CustomerTrackingTab({
                               })
                               const paymentRows = customerPayments
                                 .filter(p => monthDebtIds.has(p.customer_ledger_debt_id) && monthKeyOf(paymentDateOf(p)) === mk)
-                                .map(p => ({ kind: 'payment' as const, date: paymentDateOf(p), node: (
-                                  <tr key={`pay-${p.id}`} style={{ background: '#f0fdf6' }}>
-                                    <td style={tdSt}>{p.receipt_issued ? `🧾 קבלה #${p.receipt_number || '—'}` : '💰 תשלום'}</td>
+                                .map(p => {
+                                  const merging = mergeCid === group.cid
+                                  const selected = mergeSelected.has(p.id)
+                                  return { kind: 'payment' as const, date: paymentDateOf(p), node: (
+                                  <tr
+                                    key={`pay-${p.id}`}
+                                    onClick={merging ? () => toggleMergeSelected(p.id) : undefined}
+                                    style={{ background: selected ? '#ddd6fe' : '#f0fdf6', cursor: merging ? 'pointer' : undefined }}
+                                  >
+                                    <td style={tdSt}>
+                                      {merging && <input type="checkbox" checked={selected} onChange={() => toggleMergeSelected(p.id)} style={{ marginLeft: '6px' }} />}
+                                      {p.receipt_issued ? `🧾 קבלה #${p.receipt_number || '—'}` : '💰 תשלום'}
+                                    </td>
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{paymentDateOf(p)}</td>
                                     <td style={tdSt}><span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#dcfce7', color: '#16a34a', fontWeight: 600 }}>{p.payment_method}</span></td>
                                     <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: '#16a34a' }}>−{fmt(p.amount)}</td>
                                     <td style={tdSt}></td>
                                   </tr>
-                                ) }))
+                                ) } })
                               return [...debtRows, ...paymentRows].sort((a, b) => a.date.localeCompare(b.date)).map(r => r.node)
                             })()}
                           </tbody>
