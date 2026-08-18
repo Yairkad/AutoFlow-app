@@ -11,6 +11,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const pathname = usePathname()
 
+  console.log('[DEBUG-SHELL] AppShell rendering, pathname=', pathname, 'online=', typeof navigator !== 'undefined' ? navigator.onLine : 'n/a')
+
   return (
     <ProfileProvider>
       <Header onMenuToggle={() => setMobileNavOpen(v => !v)} />
