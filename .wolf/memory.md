@@ -1660,3 +1660,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 03:14 | Fixed QuotesClient.tsx missing loading gate (list flashed "no items" instead of "טוען..." during fetch, same bug class as bug-014's DebtsClient/CustomersClient fix) — added loading state + profileLoading fallback | components/quotes/QuotesClient.tsx | tsc clean | ~600 |
 | 03:15 | Row-actions cleanup complete: new components/ui/RowActionsMenu.tsx (kebab menu) replacing top-pinned selection-action-bars across all 12 planned files (debts, employees, products, tires, inspections, expenses, alignment, cars, suppliers, customers, settings, documents) per approved plan moonlit-bubbling-moler.md; moved customer "🔗 מזג תשלומים" button into the isOpen+2-payments-gated block | components/ui/RowActionsMenu.tsx + 12 files | tsc clean throughout; browser-verified via Playwright | ~45000 |
 | 03:22 | Session end: 112 writes across 21 files (route.ts, ProfileContext.tsx, client.ts, AppShell.tsx, RowActionsMenu.tsx) | 38 reads | ~242054 tok |
+
+## Session: 2026-08-19 09:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
