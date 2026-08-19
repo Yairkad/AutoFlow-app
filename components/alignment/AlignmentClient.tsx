@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import Input from '@/components/ui/Input'
 import ExcelMenu from '@/components/ui/ExcelMenu'
@@ -213,20 +214,23 @@ function printWorkOrder(job: AlignmentJob, biz: BizInfo) {
 // ── Job Row ────────────────────────────────────────────────────────────────────
 
 function JobRow({
-  job, onStatusChange, selected, onSelect,
+  job, onStatusChange, onWhatsApp, onCopyLink, onPrint, onEdit, onDelete,
 }: {
   job: AlignmentJob
   onStatusChange: (id: string, status: JobStatus) => void
-  selected: boolean
-  onSelect: () => void
+  onWhatsApp: (job: AlignmentJob) => void
+  onCopyLink: (job: AlignmentJob) => void
+  onPrint: (job: AlignmentJob) => void
+  onEdit: (job: AlignmentJob) => void
+  onDelete: (id: string) => void
 }) {
   const carInfo   = [job.make, job.model, job.year].filter(Boolean).join(' ')
   const curStatus = STATUSES.find(s => s.key === job.status)!
 
   return (
-    <tr onClick={onSelect} style={{ borderBottom: '1px solid var(--border)', background: selected ? '#eff6ff' : 'var(--bg-card)', cursor: 'pointer', transition: 'background .1s' }}
-      onMouseEnter={e => { if (!selected) e.currentTarget.style.background = 'var(--bg)' }}
-      onMouseLeave={e => { if (!selected) e.currentTarget.style.background = 'var(--bg-card)' }}
+    <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-card)', transition: 'background .1s' }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg)' }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)' }}
     >
       {/* Plate */}
       <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
@@ -280,6 +284,18 @@ function JobRow({
             <option key={s.key} value={s.key}>{s.label}</option>
           ))}
         </select>
+      </td>
+
+      {/* Actions */}
+      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+        <RowActionsMenu actions={[
+          job.customer_phone
+            ? { key: 'wa', label: 'ווצאפ', icon: '📲', onClick: () => onWhatsApp(job) }
+            : { key: 'copy', label: 'העתק', icon: '📋', onClick: () => onCopyLink(job) },
+          { key: 'print', label: 'הדפס', icon: '🖨️', onClick: () => onPrint(job) },
+          { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => onEdit(job) },
+          { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => onDelete(job.id) },
+        ]} />
       </td>
     </tr>
   )
@@ -424,13 +440,7 @@ export default function AlignmentClient() {
   const [saving,       setSaving]       = useState(false)
   const [plateLoading, setPlateLoading] = useState(false)
   const [statusFilter, setStatusFilter] = useState<JobStatus | 'all'>('all')
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedJobId(null) }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [])
 
   // ── Load ──────────────────────────────────────────────────────────────────────
 
@@ -613,7 +623,6 @@ export default function AlignmentClient() {
     : jobs.filter(j => j.status === statusFilter)
 
   const activeCount = jobs.filter(j => j.status !== 'delivered').length
-  const selJob = selectedJobId ? visibleJobs.find(j => j.id === selectedJobId) ?? null : null
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '60px', color: 'var(--text-muted)' }}>טוען...</div>
@@ -662,19 +671,6 @@ export default function AlignmentClient() {
         </div>
       ) : (
         <>
-          {selJob && (
-            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {selJob.plate} — {selJob.customer_name}</span>
-              {selJob.customer_phone
-                ? <button onClick={() => handleWhatsApp(selJob)} style={{ padding: '5px 10px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>📲 ווצאפ</button>
-                : <button onClick={() => handleCopyLink(selJob)} style={{ padding: '5px 10px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>📋 העתק</button>
-              }
-              <Button size="sm" variant="secondary" onClick={() => { printWorkOrder(selJob, bizInfo.current) }}>🖨️ הדפס</Button>
-              <Button size="sm" variant="secondary" onClick={() => openEdit(selJob)}>✏️ ערוך</Button>
-              <Button size="sm" variant="danger" onClick={() => handleDelete(selJob.id)}>🗑 מחק</Button>
-              <button onClick={() => setSelectedJobId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
-            </div>
-          )}
           <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid var(--border)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', direction: 'rtl' }}>
               <thead>
@@ -685,6 +681,7 @@ export default function AlignmentClient() {
                   <th style={thSt}>עבודה / הערות</th>
                   <th style={thSt}>מחיר</th>
                   <th style={thSt}>סטטוס</th>
+                  <th style={thSt}></th>
                 </tr>
               </thead>
               <tbody>
@@ -693,8 +690,11 @@ export default function AlignmentClient() {
                     key={job.id}
                     job={job}
                     onStatusChange={updateStatus}
-                    selected={selectedJobId === job.id}
-                    onSelect={() => setSelectedJobId(selectedJobId === job.id ? null : job.id)}
+                    onWhatsApp={handleWhatsApp}
+                    onCopyLink={handleCopyLink}
+                    onPrint={j => printWorkOrder(j, bizInfo.current)}
+                    onEdit={openEdit}
+                    onDelete={handleDelete}
                   />
                 ))}
               </tbody>

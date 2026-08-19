@@ -6,6 +6,7 @@ import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Button from '@/components/ui/Button'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
@@ -318,7 +319,6 @@ export default function InspectionsClient() {
   const [saving, setSaving]           = useState(false)
   const [plateLoading, setPlateLoading] = useState(false)
   const [search, setSearch]           = useState('')
-  const [selectedInsId, setSelectedInsId] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set())
   const [driveConnected, setDriveConnected] = useState(false)
   const [isAdmin, setIsAdmin]         = useState(false)
@@ -343,11 +343,6 @@ export default function InspectionsClient() {
     setInspections(data ?? [])
   }, [supabase])
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedInsId(null) }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [])
 
   useEffect(() => {
     if (!profile) return
@@ -887,21 +882,6 @@ export default function InspectionsClient() {
             />
           </div>
 
-          {/* SelectionBar */}
-          {selectedInsId && (() => {
-            const ins = filtered.find(i => i.id === selectedInsId)
-            if (!ins) return null
-            return (
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {ins.plate} — {ins.owner_name}</span>
-                <Button size="sm" variant="secondary" onClick={() => openEdit(ins)}>✏️ ערוך</Button>
-                <Button size="sm" variant="secondary" onClick={() => handlePrint(ins)}>🖨️ הדפס</Button>
-                <Button size="sm" variant="danger" onClick={() => handleDelete(ins.id)}>🗑 מחק</Button>
-                <button onClick={() => setSelectedInsId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
-              </div>
-            )
-          })()}
-
           {/* Cards */}
           {filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
@@ -913,8 +893,8 @@ export default function InspectionsClient() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {filtered.map(ins => (
                 <div key={ins.id} onDoubleClick={() => openEdit(ins)} style={{
-                  background: selectedInsId === ins.id ? '#eff6ff' : 'var(--bg-card)',
-                  border: `1px solid ${selectedInsId === ins.id ? '#bfdbfe' : 'var(--border)'}`,
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
                   borderRadius: 'var(--radius)', padding: '12px 16px',
                   display: 'flex', flexDirection: 'column', gap: 8,
                   cursor: 'pointer', transition: 'background .15s',
@@ -928,9 +908,16 @@ export default function InspectionsClient() {
                     }}>
                       🚗 <CopyCell value={ins.plate} />
                     </span>
-                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                      {ins.date || ins.created_at?.slice(0, 10) || ''}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                        {ins.date || ins.created_at?.slice(0, 10) || ''}
+                      </span>
+                      <RowActionsMenu actions={[
+                        { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openEdit(ins) },
+                        { key: 'print', label: 'הדפס', icon: '🖨️', onClick: () => handlePrint(ins) },
+                        { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => handleDelete(ins.id) },
+                      ]} />
+                    </div>
                   </div>
 
                   {/* Owner name + phone */}

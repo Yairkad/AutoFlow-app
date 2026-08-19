@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import RowActionsMenu, { RowMenuAction } from '@/components/ui/RowActionsMenu'
 import PlateInput from '@/components/ui/PlateInput'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
@@ -244,7 +245,6 @@ export default function CarsClient() {
   const [buyerForm,     setBuyerForm]     = useState({ name: '', phone: '', offered_price: '', notes: '' })
 
   // Selected car
-  const [selectedCarId, setSelectedCarId] = useState<string | null>(null)
 
   // Decline modal (checking tab – לא קונה)
   const [declineModal,  setDeclineModal]  = useState(false)
@@ -297,12 +297,6 @@ export default function CarsClient() {
     }
     load(profile.tenantId)
   }, [profile, load])
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedCarId(null) }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [])
 
   // ── Print buy request ─────────────────────────────────────────────
 
@@ -860,8 +854,6 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
 
   // ── Stats ─────────────────────────────────────────────────────────
 
-  const selCar = selectedCarId ? cars.find(c => c.id === selectedCarId) ?? null : null
-
   const invCars     = cars.filter(c => c.status !== 'sold' && c.status !== 'checking' && c.status !== 'declined')
   const checkCars   = cars.filter(c => c.status === 'checking')
   const declinedCars = cars.filter(c => c.status === 'declined')
@@ -876,6 +868,25 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
 
   // ── Render helpers ────────────────────────────────────────────────
 
+  function getCarActions(car: Car): RowMenuAction[] {
+    if (car.status === 'checking') return [
+      { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openCarForm(car) },
+      { key: 'buy', label: 'קונה!', icon: '✅', onClick: () => changeCarStatus(car.id, 'available') },
+      { key: 'decline', label: 'לא קונה', icon: '❌', onClick: () => openDeclineModal(car.id) },
+      { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteCar(car.id) },
+    ]
+    if (car.status === 'sold') return [
+      { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openCarForm(car) },
+      { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteCar(car.id) },
+    ]
+    return [
+      { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openCarForm(car) },
+      { key: 'buyer', label: 'מתעניין', icon: '🟡', onClick: () => openBuyerModal(car.id) },
+      { key: 'sell', label: 'מכור', icon: '✅', onClick: () => openSellModal(car.id) },
+      { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteCar(car.id) },
+    ]
+  }
+
   function CarCard({ car }: { car: Car }) {
     const st    = STATUS_MAP[car.status]
     const cond  = CONDITIONS.find(c => c.value === car.condition)
@@ -883,15 +894,13 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     const test  = dateChipStyle(car.test_date)
     const insur = dateChipStyle(car.insur_date)
 
-    const isSelected = selectedCarId === car.id
     return (
       <div
-        onClick={() => setSelectedCarId(isSelected ? null : car.id)}
         style={{
           background: '#fff', borderRadius: 12, height: '100%',
-          boxShadow: isSelected ? '0 0 0 2px var(--primary)' : '0 1px 3px rgba(0,0,0,.08)',
-          border: `2px solid ${isSelected ? 'var(--primary)' : st?.color || 'var(--border)'}`,
-          display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'box-shadow .15s',
+          boxShadow: '0 1px 3px rgba(0,0,0,.08)',
+          border: `2px solid ${st?.color || 'var(--border)'}`,
+          display: 'flex', flexDirection: 'column', transition: 'box-shadow .15s',
         }}>
         {/* Photo */}
         <div
@@ -918,8 +927,11 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
 
         {/* Body */}
         <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ fontWeight: 800, fontSize: 15 }}>
-            {[car.make, car.model].filter(Boolean).join(' ') || 'רכב ללא שם'}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>
+              {[car.make, car.model].filter(Boolean).join(' ') || 'רכב ללא שם'}
+            </div>
+            <RowActionsMenu actions={getCarActions(car)} variant="plain" />
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             {[car.year, car.plate, car.color].filter(Boolean).join(' • ')}
@@ -1042,22 +1054,6 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       {/* ── TAB: ALL ── */}
       {tab === 'all' && (
         <>
-          {selCar && (
-            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {[selCar.make, selCar.model, selCar.plate].filter(Boolean).join(' ')}</span>
-              <Button size="sm" variant="secondary" onClick={() => openCarForm(selCar)}>✏️ ערוך</Button>
-              {selCar.status !== 'sold' && selCar.status !== 'checking' && <>
-                <Button size="sm" variant="secondary" onClick={() => openBuyerModal(selCar.id)}>🟡 מתעניין</Button>
-                <Button size="sm" onClick={() => openSellModal(selCar.id)}>✅ מכור</Button>
-              </>}
-              {selCar.status === 'checking' && <>
-                <Button size="sm" onClick={() => changeCarStatus(selCar.id, 'available')}>✅ קונה!</Button>
-                <Button size="sm" variant="danger" onClick={() => openDeclineModal(selCar.id)}>❌ לא קונה</Button>
-              </>}
-              <Button size="sm" variant="danger" onClick={() => deleteCar(selCar.id)}>🗑 מחק</Button>
-              <button onClick={() => setSelectedCarId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
-            </div>
-          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(290px,1fr))', gap: 18 }}>
             {[...invCars, ...checkCars, ...soldCars].length === 0
               ? <Empty icon="🚗" text="אין רכבים" />
@@ -1070,16 +1066,6 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       {/* ── TAB: INVENTORY ── */}
       {tab === 'inventory' && (
         <>
-          {selCar && invCars.some(c => c.id === selCar.id) && (
-            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {[selCar.make, selCar.model, selCar.plate].filter(Boolean).join(' ')}</span>
-              <Button size="sm" variant="secondary" onClick={() => openCarForm(selCar)}>✏️ ערוך</Button>
-              <Button size="sm" variant="secondary" onClick={() => openBuyerModal(selCar.id)}>🟡 מתעניין</Button>
-              <Button size="sm" onClick={() => openSellModal(selCar.id)}>✅ מכור</Button>
-              <Button size="sm" variant="danger" onClick={() => deleteCar(selCar.id)}>🗑 מחק</Button>
-              <button onClick={() => setSelectedCarId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
-            </div>
-          )}
           <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
             {[{ v: 'all', l: 'הכל' }, { v: 'available', l: '🟢 למכירה' }, { v: 'reserved', l: '🟡 שמור' }, { v: 'business', l: '🟣 בשימוש העסק' }].map(f => (
               <button key={f.v} onClick={() => setInvFilter(f.v)} style={{
@@ -1106,16 +1092,6 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>רכבים שנבדקים לפני קנייה — לחץ "✅ אשר" להעביר למלאי</span>
             <Button onClick={() => { openCarForm(); setCarForm(f => ({ ...f, status: 'checking' })) }}>+ הוסף לבדיקה</Button>
           </div>
-          {selCar && checkCars.some(c => c.id === selCar.id) && (
-            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {[selCar.make, selCar.model, selCar.plate].filter(Boolean).join(' ')}</span>
-              <Button size="sm" variant="secondary" onClick={() => openCarForm(selCar)}>✏️ ערוך</Button>
-              <Button size="sm" onClick={() => changeCarStatus(selCar.id, 'available')}>✅ קונה!</Button>
-              <Button size="sm" variant="danger" onClick={() => openDeclineModal(selCar.id)}>❌ לא קונה</Button>
-              <Button size="sm" variant="danger" onClick={() => deleteCar(selCar.id)}>🗑 מחק</Button>
-              <button onClick={() => setSelectedCarId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
-            </div>
-          )}
           {checkCars.length === 0
             ? <Empty icon="🔍" text="אין רכבים בבדיקה" />
             : <div style={{ overflowX: 'auto' }}>
@@ -1125,11 +1101,12 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
                       {['תאריך','יצרן / דגם','שנה','לוחית','ק"מ','מחיר מבוקש','איש קשר','הערות'].map(h => (
                         <th key={h} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
+                      <th style={{ padding: '10px 12px', width: 36 }}></th>
                     </tr>
                   </thead>
                   <tbody>
                     {checkCars.map(car => (
-                      <tr key={car.id} onClick={() => setSelectedCarId(selectedCarId === car.id ? null : car.id)} style={{ borderBottom: '1px solid var(--border)', background: selectedCarId === car.id ? '#eff6ff' : '#fffbeb', cursor: 'pointer' }}>
+                      <tr key={car.id} style={{ borderBottom: '1px solid var(--border)', background: '#fffbeb' }}>
                         <td style={td()}>{car.created_at?.slice(0,10) || '—'}</td>
                         <td style={td()}><strong>{car.make}</strong> {car.model}</td>
                         <td style={td()}>{car.year || '—'}</td>
@@ -1138,6 +1115,9 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
                         <td style={{ ...td(), fontWeight: 700, color: 'var(--warning)' }}>{fmt(car.buy_price)}</td>
                         <td style={td()}>{car.contact || '—'}</td>
                         <td style={td()}>{car.notes || '—'}</td>
+                        <td style={{ ...td(), textAlign: 'center' }}>
+                          <RowActionsMenu actions={getCarActions(car)} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>

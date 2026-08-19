@@ -11,6 +11,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import StatCard from '@/components/ui/StatCard'
 import * as XLSX from 'xlsx'
 import ExcelMenu from '@/components/ui/ExcelMenu'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -122,7 +123,6 @@ export default function TiresClient() {
   const [formErrs, setFormErrs] = useState({ width: false, profile: false, rim: false })
 
   // Selection + per-row inline edit
-  const [selectedTireId, setSelectedTireId] = useState<string | null>(null)
   const [editingTireId,  setEditingTireId]  = useState<string | null>(null)
   const [editMap,        setEditMap]        = useState<Record<string, Partial<Tire>>>({})
 
@@ -372,7 +372,6 @@ export default function TiresClient() {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (editingTireId) { setEditingTireId(null); setEditMap({}) }
-      else setSelectedTireId(null)
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
@@ -521,7 +520,6 @@ export default function TiresClient() {
 
   // ── Styles ────────────────────────────────────────────────────────────────────
 
-  const selTire = selectedTireId ? tires.find(t => t.id === selectedTireId) ?? null : null
 
   const cellInp: React.CSSProperties = {
     width: '100%', padding: '4px 6px', border: '1px solid var(--accent)',
@@ -626,26 +624,6 @@ export default function TiresClient() {
             </div>
           )}
 
-          {/* SelectionBar */}
-          {selTire && (
-            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              {editingTireId === selTire.id ? (
-                <>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✏️ עריכה מהירה: {selTire.brand ?? ''} {tireSize(selTire)}</span>
-                  <Button size="sm" onClick={() => saveRowEdit(selTire.id)}>💾 שמור</Button>
-                  <Button size="sm" variant="secondary" onClick={() => { setEditingTireId(null); setEditMap({}) }}>ביטול</Button>
-                </>
-              ) : (
-                <>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {selTire.brand ?? ''} {tireSize(selTire)}</span>
-                  <Button size="sm" variant="secondary" onClick={() => openEdit(selTire)}>✏️ ערוך</Button>
-                  <Button size="sm" variant="secondary" onClick={() => openDuplicate(selTire)}>📋 שכפל</Button>
-                </>
-              )}
-              <button onClick={() => { setSelectedTireId(null); setEditingTireId(null); setEditMap({}) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
-            </div>
-          )}
-
           {/* Table */}
           <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
             <div style={{ overflowX: 'auto', borderRadius: '12px', scrollbarWidth: 'thin' }}>
@@ -655,16 +633,17 @@ export default function TiresClient() {
                     {['מותג', 'מידה', 'מדדים', ...(isAdmin ? ['מחיר קנייה'] : []), 'מחיר מכירה', 'מקט', 'כמות', 'מיקום', 'הערות'].map((h, i) => (
                       <th key={i} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>{h}</th>
                     ))}
+                    <th style={{ padding: '10px 12px', width: '36px' }}></th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={10} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                    <tr><td colSpan={11} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
                       <div style={{ fontSize: '36px', marginBottom: '8px' }}>🔘</div>
                       <div>טוען...</div>
                     </td></tr>
                   ) : filtered.length === 0 ? (
-                    <tr><td colSpan={10} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                    <tr><td colSpan={11} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
                       <div style={{ fontSize: '36px', marginBottom: '8px' }}>🔘</div>
                       <div>אין צמיגים</div>
                     </td></tr>
@@ -683,8 +662,7 @@ export default function TiresClient() {
                     const tireTypeVal = (e as any).tire_type ?? t.tire_type ?? 'regular'
                     return (
                       <tr key={t.id} className="tr-hover"
-                        onClick={() => { if (!isEditing && !viewOnly) setSelectedTireId(selectedTireId === t.id ? null : t.id) }}
-                        style={{ borderBottom: '1px solid var(--border)', background: selectedTireId === t.id ? '#eff6ff' : isEditing ? '#fafeff' : undefined, cursor: isEditing || viewOnly ? 'default' : 'pointer' }}>
+                        style={{ borderBottom: '1px solid var(--border)', background: isEditing ? '#fafeff' : undefined }}>
 
                         {/* מותג */}
                         <td style={{ padding: '10px 12px', fontWeight: 700, minWidth: isEditing ? '130px' : undefined }}>
@@ -832,6 +810,20 @@ export default function TiresClient() {
                             : t.notes || '—'}
                         </td>
 
+                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                          {isEditing ? (
+                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                              <button onClick={() => saveRowEdit(t.id)} title="שמור" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '14px' }}>💾</button>
+                              <button onClick={() => { setEditingTireId(null); setEditMap({}) }} title="ביטול" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '14px', color: 'var(--text-muted)' }}>✕</button>
+                            </div>
+                          ) : !viewOnly && (
+                            <RowActionsMenu actions={[
+                              { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openEdit(t) },
+                              { key: 'dup', label: 'שכפל', icon: '📋', onClick: () => openDuplicate(t) },
+                              { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteTire(t) },
+                            ]} />
+                          )}
+                        </td>
                       </tr>
                     )
                   })}

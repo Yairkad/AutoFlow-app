@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { recordCustomerPayment } from '@/lib/debts/reconcileCustomerLedgerPayment'
 import { balanceOf, buildLedger, RawLedgerEvent } from '@/lib/debts/ledger'
 import QuickAddCustomerModal, { QuickCustomer } from '@/components/customers/QuickAddCustomerModal'
@@ -80,7 +81,6 @@ export default function CustomerTrackingTab({
   const [search, setSearch] = useState('')
 
   // Row selection
-  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   // Manual merge of old customer_ledger_payments rows into one payment_group_id (for
   // payments recorded before migration 078 existed, so they also print as a single line)
@@ -206,12 +206,6 @@ export default function CustomerTrackingTab({
     return () => { clearTimeout(t); window.removeEventListener('afterprint', onAfterPrint) }
   }, [printMode])
 
-  useEffect(() => {
-    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedId(null) }
-    window.addEventListener('keydown', fn)
-    return () => window.removeEventListener('keydown', fn)
-  }, [])
-
   // Deep-link: ?open=<customerId> (parsed once by the shell, passed down as `openId`)
   useEffect(() => {
     if (!openId) return
@@ -290,13 +284,13 @@ export default function CustomerTrackingTab({
       if (error) { showToast('שגיאה בשמירה', 'error'); setDSaving(false); return }
       showToast(`נשמרו ${rows.length} רשומות ✓`, 'success')
     }
-    setDSaving(false); setShowDebtModal(false); setSelectedId(null); reload()
+    setDSaving(false); setShowDebtModal(false); reload()
   }
 
   const deleteDebt = async (id: string) => {
     if (!confirm('למחוק רשומה זו?')) return
     await supabase.from('customer_ledger_debts').delete().eq('id', id)
-    showToast('נמחק', 'success'); setSelectedId(null); reload()
+    showToast('נמחק', 'success'); reload()
   }
 
   const addDebtForCustomer = (custId: string) => {
@@ -554,7 +548,6 @@ export default function CustomerTrackingTab({
 
   // ── Selected item info ────────────────────────────────────────────────────
 
-  const selectedDebt = selectedId ? customerDebts.find(d => d.id === selectedId) : null
 
   // ── Sub-components ────────────────────────────────────────────────────────
 
@@ -657,7 +650,7 @@ export default function CustomerTrackingTab({
   return (
     <div>
       <div>
-        <div style={{ display: 'flex', gap: '10px', marginBottom: selectedId ? '8px' : '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
           <Button onClick={() => openDebtModal()}>+ הוסף חשבונית/זיכוי</Button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)} className="form-input" style={{ margin: 0, padding: '7px 8px', fontSize: '12px' }} />
@@ -680,32 +673,6 @@ export default function CustomerTrackingTab({
           <Button variant="secondary" onClick={() => setShowPrintChoice(true)}>🖨️ הדפסה</Button>
           <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
         </div>
-
-        {/* Selection action bar */}
-        {selectedId && selectedDebt && (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '10px 14px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '13px', color: '#1d4ed8', fontWeight: 600 }}>✓ שורה נבחרה</span>
-            <span style={{ fontSize: '13px', color: 'var(--text-muted)', flex: 1, minWidth: 0 }}>
-              {customers.find(c => c.id === selectedDebt.customer_id)?.name ?? 'ללא לקוח'} · <strong>{fmt(bal(selectedDebt))}</strong>
-            </span>
-            {customers.find(c => c.id === selectedDebt.customer_id)?.phone && (
-              <button
-                onClick={() => {
-                  const cust = customers.find(c => c.id === selectedDebt.customer_id)!
-                  setWaModal({ phone: cust.phone!, text: `שלום ${cust.name}, ברצוני לבדוק חוב בסך ${fmt(balanceOf(customerDebts.filter(d => d.customer_id === cust.id), customerPayments.filter(p => p.customer_id === cust.id)))}.\nתודה!\n${tenantName}` })
-                }}
-                style={{ padding: '5px 12px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-              >💬 ווצאפ</button>
-            )}
-            {!selectedDebt.is_closed && selectedDebt.direction === 'charge' && (
-              <button onClick={() => openPayCustomer(selectedDebt.customer_id, selectedId)} style={{ padding: '5px 12px', background: '#f0fdf6', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>₪ שלם</button>
-            )}
-            <button onClick={() => toggleClose(selectedId, selectedDebt.is_closed)} title="סימון קוסמטי בלבד, לצורך מעקב — לא משפיע על היתרה" style={{ padding: '5px 10px', background: selectedDebt.is_closed ? '#fef2f2' : '#f5f3ff', color: selectedDebt.is_closed ? 'var(--danger)' : '#7c3aed', border: '1px solid', borderColor: selectedDebt.is_closed ? '#fecaca' : '#ddd6fe', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>{selectedDebt.is_closed ? '↩ בטל תיוג' : '🏷 תייג כמכוסה'}</button>
-            <button onClick={() => openDebtModal(selectedDebt)} style={{ padding: '5px 10px', background: '#f0f9ff', color: 'var(--accent)', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>✏️ ערוך</button>
-            <button onClick={() => deleteDebt(selectedId)} style={{ padding: '5px 10px', background: '#fef2f2', color: 'var(--danger)', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>🗑 מחק</button>
-            <button onClick={() => setSelectedId(null)} style={{ padding: '5px 8px', background: 'transparent', color: 'var(--text-muted)', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>✕</button>
-          </div>
-        )}
 
         {(() => {
           const allCustIds = [...new Set(customerDebts.map(d => d.customer_id))]
@@ -779,19 +746,6 @@ export default function CustomerTrackingTab({
                           + הוסף
                         </button>
                       )}
-                      {group.cid && (
-                        <button
-                          onClick={() => { setMergeCid(mergeCid === group.cid ? null : group.cid); setMergeSelected(new Set()) }}
-                          title="מזג כמה שורות תשלום ישנות (מלפני שהמערכת שמרה קיבוץ) לשורה אחת בהדפסה"
-                          style={{
-                            padding: '4px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
-                            background: mergeCid === group.cid ? '#7c3aed' : 'transparent',
-                            color: mergeCid === group.cid ? '#fff' : '#7c3aed',
-                            border: '1px solid #7c3aed',
-                          }}>
-                          🔗 מזג תשלומים
-                        </button>
-                      )}
                       {group.cid && group.payments.length > 0 && (
                         <button
                           onClick={() => deleteAllPaymentsForCustomer(group.cid!, group.cust?.name ?? '', group.payments.length)}
@@ -806,11 +760,22 @@ export default function CustomerTrackingTab({
                   {isOpen && (
                   <>
 
-                  {mergeCid === group.cid && (
-                    <div style={{ background: '#f5f3ff', borderBottom: '1px solid #ddd6fe', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '12px', color: '#5b21b6' }}>סמן 2+ שורות תשלום למיזוג לשורה אחת בהדפסה (נבחרו: {mergeSelected.size})</span>
-                      <Button size="sm" onClick={mergePayments} disabled={mergeSelected.size < 2}>🔗 מזג</Button>
-                      <Button size="sm" variant="secondary" onClick={() => { setMergeCid(null); setMergeSelected(new Set()) }}>ביטול</Button>
+                  {group.cid && group.payments.length > 1 && (
+                    <div style={{ background: mergeCid === group.cid ? '#f5f3ff' : undefined, borderBottom: '1px solid var(--border)', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      {mergeCid === group.cid ? (
+                        <>
+                          <span style={{ fontSize: '12px', color: '#5b21b6' }}>סמן 2+ שורות תשלום למיזוג לשורה אחת בהדפסה (נבחרו: {mergeSelected.size})</span>
+                          <Button size="sm" onClick={mergePayments} disabled={mergeSelected.size < 2}>🔗 מזג</Button>
+                          <Button size="sm" variant="secondary" onClick={() => { setMergeCid(null); setMergeSelected(new Set()) }}>ביטול</Button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => { setMergeCid(group.cid); setMergeSelected(new Set()) }}
+                          title="מזג כמה שורות תשלום ישנות (מלפני שהמערכת שמרה קיבוץ) לשורה אחת בהדפסה"
+                          style={{ padding: '4px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600, background: 'transparent', color: '#7c3aed', border: '1px solid #7c3aed' }}>
+                          🔗 מזג תשלומים
+                        </button>
+                      )}
                     </div>
                   )}
 
@@ -893,9 +858,8 @@ export default function CustomerTrackingTab({
                                 return items.map((item, idx) => ({ kind: 'debt' as const, date: d.date, node: (
                                   <tr
                                     key={`${d.id}-${idx}`}
-                                    onClick={() => setSelectedId(selectedId === d.id ? null : d.id)}
                                     className="tr-hover"
-                                    style={{ cursor: 'pointer', background: selectedId === d.id ? '#eff6ff' : d.is_closed && d.direction === 'charge' ? '#fafafa' : undefined }}
+                                    style={{ background: d.is_closed && d.direction === 'charge' ? '#fafafa' : undefined }}
                                   >
                                     <td style={tdSt}>
                                       {item.number ? `#${item.number}` : '—'}
@@ -907,16 +871,20 @@ export default function CustomerTrackingTab({
                                       {d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}
                                     </td>
                                     <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                      <button
-                                        onClick={e => { e.stopPropagation(); openDebtModal(d) }}
-                                        title="ערוך"
-                                        style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
-                                      >✏️</button>
-                                      <button
-                                        onClick={e => { e.stopPropagation(); deleteDebt(d.id) }}
-                                        title="מחק"
-                                        style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
-                                      >🗑</button>
+                                      <RowActionsMenu actions={[
+                                        ...(customers.find(c => c.id === d.customer_id)?.phone ? [{
+                                          key: 'wa', label: 'ווצאפ', icon: '💬', onClick: () => {
+                                            const cust = customers.find(c => c.id === d.customer_id)!
+                                            setWaModal({ phone: cust.phone!, text: `שלום ${cust.name}, ברצוני לבדוק חוב בסך ${fmt(balanceOf(customerDebts.filter(x => x.customer_id === cust.id), customerPayments.filter(p => p.customer_id === cust.id)))}.\nתודה!\n${tenantName}` })
+                                          },
+                                        }] : []),
+                                        ...(!d.is_closed && d.direction === 'charge' ? [
+                                          { key: 'pay', label: 'שלם', icon: '₪', onClick: () => openPayCustomer(d.customer_id, d.id) },
+                                        ] : []),
+                                        { key: 'tag', label: d.is_closed ? 'בטל תיוג' : 'תייג כמכוסה', icon: d.is_closed ? '↩' : '🏷', onClick: () => toggleClose(d.id, d.is_closed) },
+                                        { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openDebtModal(d) },
+                                        { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteDebt(d.id) },
+                                      ]} />
                                     </td>
                                   </tr>
                                 ) }))

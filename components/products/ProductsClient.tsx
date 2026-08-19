@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import { progressStart, progressDone } from '@/components/ui/RouteProgress'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -98,7 +99,6 @@ export default function ProductsClient() {
   const [form, setForm] = useState(emptyForm)
 
   // Selection + per-row inline edit
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
   const [editingProductId,  setEditingProductId]  = useState<string | null>(null)
   const [editMap, setEditMap] = useState<Record<string, Partial<Product>>>({})
 
@@ -252,7 +252,6 @@ export default function ProductsClient() {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (editingProductId) { setEditingProductId(null); setEditMap({}) }
-      else setSelectedProductId(null)
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
@@ -419,7 +418,6 @@ export default function ProductsClient() {
 
   // ── Styles ──────────────────────────────────────────────────────────────────
 
-  const selProduct = selectedProductId ? products.find(p => p.id === selectedProductId) ?? null : null
 
   const cellInp: React.CSSProperties = {
     width: '100%', padding: '4px 6px', border: '1px solid var(--accent)',
@@ -489,28 +487,6 @@ export default function ProductsClient() {
             </div>
           </div>
 
-          {/* SelectionBar */}
-          {selProduct && (
-            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              {editingProductId === selProduct.id ? (
-                <>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✏️ עריכה מהירה: {selProduct.name}</span>
-                  <Button size="sm" onClick={() => saveRowEdit(selProduct.id)}>💾 שמור</Button>
-                  <Button size="sm" variant="secondary" onClick={() => { setEditingProductId(null); setEditMap({}) }}>ביטול</Button>
-                </>
-              ) : (
-                <>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>✓ {selProduct.name}</span>
-                  {!viewOnly && <Button size="sm" variant="secondary" onClick={() => enterEditForRow(selProduct.id)}>⚡ עריכה מהירה</Button>}
-                  <Button size="sm" variant="secondary" onClick={() => openEdit(selProduct)}>✏️ ערוך</Button>
-                  <Button size="sm" variant="secondary" onClick={() => openDuplicate(selProduct)}>📋 שכפל</Button>
-                  <Button size="sm" variant="danger" onClick={() => deleteProduct(selProduct)}>🗑 מחק</Button>
-                </>
-              )}
-              <button onClick={() => { setSelectedProductId(null); setEditingProductId(null); setEditMap({}) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
-            </div>
-          )}
-
           {/* Products table */}
           <div className="products-table-wrap" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
@@ -527,6 +503,7 @@ export default function ProductsClient() {
                     <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>כמות</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>ספק</th>
                     <th className="hide-mobile" style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600, whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '12px' }}>הערות</th>
+                    <th style={{ padding: '10px 8px', width: '36px' }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -534,7 +511,7 @@ export default function ProductsClient() {
                     <>
                       {[...Array(6)].map((_, i) => (
                         <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
-                          {[58, 150, 100, 52, 76, 76, 48, 72, 96, 110].map((w, j) => (
+                          {[58, 150, 100, 52, 76, 76, 48, 72, 96, 110, 30].map((w, j) => (
                             <td key={j} style={{ padding: '11px 8px' }}>
                               <div className="shimmer" style={{ height: 13, width: w }} />
                             </td>
@@ -543,7 +520,7 @@ export default function ProductsClient() {
                       ))}
                     </>
                   ) : filtered.length === 0 ? (
-                    <tr><td colSpan={11} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+                    <tr><td colSpan={12} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
                       <div style={{ fontSize: '36px', marginBottom: '8px' }}>📦</div>
                       <div>אין מוצרים</div>
                     </td></tr>
@@ -561,8 +538,7 @@ export default function ProductsClient() {
                     const isEditing = editingProductId === p.id
                     return (
                       <tr key={p.id}
-                        onClick={() => { if (!isEditing && !viewOnly) setSelectedProductId(selectedProductId === p.id ? null : p.id) }}
-                        style={{ borderBottom: '1px solid var(--border)', cursor: isEditing || viewOnly ? 'default' : 'pointer', background: selectedProductId === p.id ? '#eff6ff' : isEditing ? '#fafeff' : undefined }}>
+                        style={{ borderBottom: '1px solid var(--border)', background: isEditing ? '#fafeff' : undefined }}>
                         <td style={{ padding: '8px 8px', color: 'var(--text-muted)', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {isEditing
                             ? <input style={cellInp} value={String(e.sku ?? '')} onChange={ev => setCell(p.id, 'sku', ev.target.value)} />
@@ -618,6 +594,21 @@ export default function ProductsClient() {
                           {isEditing
                             ? <input style={cellInp} value={String(e.notes ?? '')} onChange={ev => setCell(p.id, 'notes', ev.target.value)} />
                             : p.notes || '—'}
+                        </td>
+                        <td style={{ padding: '8px 8px', textAlign: 'center' }}>
+                          {isEditing ? (
+                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                              <button onClick={() => saveRowEdit(p.id)} title="שמור" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '14px' }}>💾</button>
+                              <button onClick={() => { setEditingProductId(null); setEditMap({}) }} title="ביטול" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '14px', color: 'var(--text-muted)' }}>✕</button>
+                            </div>
+                          ) : (
+                            <RowActionsMenu actions={[
+                              ...(!viewOnly ? [{ key: 'quick', label: 'עריכה מהירה', icon: '⚡', onClick: () => enterEditForRow(p.id) }] : []),
+                              { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openEdit(p) },
+                              { key: 'dup', label: 'שכפל', icon: '📋', onClick: () => openDuplicate(p) },
+                              { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteProduct(p) },
+                            ]} />
+                          )}
                         </td>
                       </tr>
                     )

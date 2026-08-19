@@ -10,6 +10,7 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -210,21 +211,12 @@ export default function EmployeesClient() {
   // Inline net salary editing
   const [netMap, setNetMap] = useState<Record<string, string>>({})
 
-  // Selected employee (replaces 3-dots menu)
-  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null)
-
   // Quick bank/personal info view
   const [bankViewEmp, setBankViewEmp] = useState<Employee | null>(null)
 
   // Bank name dropdown
   const [showBankDrop, setShowBankDrop] = useState(false)
   const bankDropRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedEmpId(null) }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [])
 
   useEffect(() => {
     if (!showBankDrop) return
@@ -585,26 +577,34 @@ export default function EmployeesClient() {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: '16px' }}>
         {sorted.map(e => (
-          <div key={e.id} onClick={() => setSelectedEmpId(selectedEmpId === e.id ? null : e.id)} style={{
+          <div key={e.id} style={{
             background: '#fff', borderRadius: 'var(--radius)',
-            boxShadow: selectedEmpId === e.id ? '0 0 0 2px var(--primary)' : 'var(--shadow)', padding: '18px',
+            boxShadow: 'var(--shadow)', padding: '18px',
             borderRight: `4px solid ${e.is_active ? 'var(--primary)' : 'var(--border)'}`,
             opacity: e.is_active ? 1 : 0.7,
-            cursor: 'pointer', transition: 'box-shadow .15s',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
               <div>
                 <div style={{ fontWeight: 900, fontSize: '15px' }}>👷 {e.full_name}</div>
                 {e.role && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{e.role}</div>}
               </div>
-              <span style={{
-                fontSize: '11px', fontWeight: 700, padding: '2px 8px',
-                borderRadius: '10px', whiteSpace: 'nowrap', alignSelf: 'flex-start',
-                background: e.is_active ? '#dcfce7' : '#f1f5f9',
-                color: e.is_active ? '#16a34a' : 'var(--text-muted)',
-              }}>
-                {e.is_active ? 'פעיל' : 'לא פעיל'}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                <span style={{
+                  fontSize: '11px', fontWeight: 700, padding: '2px 8px',
+                  borderRadius: '10px', whiteSpace: 'nowrap',
+                  background: e.is_active ? '#dcfce7' : '#f1f5f9',
+                  color: e.is_active ? '#16a34a' : 'var(--text-muted)',
+                }}>
+                  {e.is_active ? 'פעיל' : 'לא פעיל'}
+                </span>
+                <RowActionsMenu actions={[
+                  { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openEdit(e) },
+                  { key: 'bank', label: 'פרטי בנק', icon: '🏦', onClick: () => setBankViewEmp(e) },
+                  ...(e.email ? [{ key: 'invite', label: 'הזמנה', icon: '🔗', onClick: () => sendInviteLink(e.email!) }] : []),
+                  { key: 'history', label: 'היסטוריה', icon: '📋', onClick: () => openHistory(e) },
+                  { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteEmp(e) },
+                ]} />
+              </div>
             </div>
 
             {e.phone && (
@@ -960,21 +960,6 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
             <ExcelMenu onExportExcel={exportExcel} />
             <Button onClick={openAdd}>+ הוסף עובד</Button>
           </div>
-          {selectedEmpId && (() => {
-            const emp = employees.find(e => e.id === selectedEmpId)
-            if (!emp) return null
-            return (
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 16px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <span style={{ fontWeight: 700, fontSize: '13px', color: '#1d4ed8', flex: 1 }}>✓ {emp.full_name}</span>
-                <Button variant="secondary" size="sm" onClick={() => openEdit(emp)}>✏️ ערוך</Button>
-                <Button variant="secondary" size="sm" onClick={() => setBankViewEmp(emp)}>🏦 פרטי בנק</Button>
-                {emp.email && <Button variant="secondary" size="sm" onClick={() => sendInviteLink(emp.email!)}>🔗 הזמנה</Button>}
-                <Button variant="secondary" size="sm" onClick={() => openHistory(emp)}>📋 היסטוריה</Button>
-                <Button variant="danger" size="sm" onClick={() => deleteEmp(emp)}>🗑 מחק</Button>
-                <button onClick={() => setSelectedEmpId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '16px', padding: '2px 6px' }}>✕</button>
-              </div>
-            )
-          })()}
           {renderEmpCards()}
         </div>
       )}

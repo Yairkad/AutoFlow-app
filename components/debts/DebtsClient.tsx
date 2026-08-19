@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import CallLogModal, { CustomerDebtCall } from './CallLogModal'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -69,9 +70,6 @@ export default function DebtsClient() {
   const [customerDebts, setCustomerDebts] = useState<CustomerDebt[]>([])
   const [calls, setCalls]       = useState<CustomerDebtCall[]>([])
   const [payments, setPayments] = useState<CustomerDebtPayment[]>([])
-
-  // Row selection
-  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   // Customer debt form
   const [showCustModal, setShowCustModal] = useState(false)
@@ -150,15 +148,8 @@ export default function DebtsClient() {
 
   useEffect(() => { loadAll() }, [loadAll])
 
-  // Clear selection + reset filter on tab change
-  useEffect(() => { setSelectedId(null); setFilter('open'); setSearch('') }, [tab])
-
-  // ESC to deselect
-  useEffect(() => {
-    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedId(null) }
-    window.addEventListener('keydown', fn)
-    return () => window.removeEventListener('keydown', fn)
-  }, [])
+  // Reset filter on tab change
+  useEffect(() => { setFilter('open'); setSearch('') }, [tab])
 
   // ── Realtime ──────────────────────────────────────────────────────────────
 
@@ -201,13 +192,13 @@ export default function DebtsClient() {
       if (error) { showToast('שגיאה בשמירה', 'error'); setCsaving(false); return }
       showToast('נשמר ✓', 'success')
     }
-    setCsaving(false); setShowCustModal(false); setSelectedId(null); loadAll()
+    setCsaving(false); setShowCustModal(false); loadAll()
   }
 
   const deleteCustDebt = async (id: string) => {
     if (!confirm('למחוק חוב זה?')) return
     await supabase.from('customer_debts').delete().eq('id', id)
-    showToast('נמחק', 'success'); setSelectedId(null); loadAll()
+    showToast('נמחק', 'success'); loadAll()
   }
 
   // ── Payment (customers) ──────────────────────────────────────────────────
@@ -321,7 +312,6 @@ export default function DebtsClient() {
 
   // ── Selected item info (customers) ───────────────────────────────────────
 
-  const selectedCust = selectedId ? customerDebts.find(d => d.id === selectedId) : null
 
   // ── Sub-components ────────────────────────────────────────────────────────
 
@@ -372,7 +362,7 @@ export default function DebtsClient() {
   )
 
   const Toolbar = ({ onAdd }: { onAdd?: () => void }) => (
-    <div style={{ display: 'flex', gap: '10px', marginBottom: selectedId ? '8px' : '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
       {onAdd && <Button onClick={onAdd}>+ הוסף חוב</Button>}
       <div style={{ display: 'flex', gap: '6px' }}>
         <FilterBtn f="open" label="פתוחים" />
@@ -391,64 +381,6 @@ export default function DebtsClient() {
       <ExcelMenu onExportExcel={exportExcel} />
     </div>
   )
-
-  // Selection action bar (customers only)
-  const SelectionBar = () => {
-    if (!selectedId || !selectedCust) return null
-    const debt = selectedCust
-    const waText = `שלום ${debt.name}, תזכורת לגבי יתרת חוב בסך ${fmt(bal(debt))} 🙏\n${tenantName}`
-
-    return (
-      <div style={{
-        display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px',
-        background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px',
-        padding: '10px 14px', flexWrap: 'wrap',
-      }}>
-        <span style={{ fontSize: '13px', color: '#1d4ed8', fontWeight: 600 }}>
-          ✓ שורה נבחרה
-        </span>
-        <span style={{ fontSize: '13px', color: 'var(--text-muted)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {debt.name}{' · '}<strong>{fmt(bal(debt))}</strong>
-        </span>
-        {debt.phone && (
-          <button
-            onClick={() => setWaModal({ phone: debt.phone!, text: waText })}
-            style={{ padding: '5px 12px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-          >
-            💬 ווצאפ תזכורת
-          </button>
-        )}
-        <button
-          onClick={() => setCallLogDebtId(selectedId)}
-          style={{ padding: '5px 12px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-        >
-          📞 שיחה{calls.filter(c => c.customer_debt_id === selectedId).length > 0 ? ` (${calls.filter(c => c.customer_debt_id === selectedId).length})` : ''}
-        </button>
-        {!debt.is_closed && bal(debt) > 0 && (
-          <button
-            onClick={() => openPay(selectedId, bal(debt))}
-            style={{ padding: '5px 12px', background: '#f0fdf6', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}
-          >₪ שלם</button>
-        )}
-        <button
-          onClick={() => toggleCustClose(selectedId, debt.is_closed)}
-          style={{ padding: '5px 10px', background: debt.is_closed ? '#fef2f2' : '#f0fdf6', color: debt.is_closed ? 'var(--danger)' : '#16a34a', border: '1px solid', borderColor: debt.is_closed ? '#fecaca' : '#bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
-        >{debt.is_closed ? '↩ פתח' : '✓ סגור'}</button>
-        <button
-          onClick={() => openCustModal(selectedCust)}
-          style={{ padding: '5px 10px', background: '#f0f9ff', color: 'var(--accent)', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
-        >✏️ ערוך</button>
-        <button
-          onClick={() => deleteCustDebt(selectedId)}
-          style={{ padding: '5px 10px', background: '#fef2f2', color: 'var(--danger)', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}
-        >🗑 מחק</button>
-        <button
-          onClick={() => setSelectedId(null)}
-          style={{ padding: '5px 8px', background: 'transparent', color: 'var(--text-muted)', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}
-        >✕</button>
-      </div>
-    )
-  }
 
   const EmptyState = ({ icon, text }: { icon: string; text: string }) => (
     <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
@@ -490,7 +422,6 @@ export default function DebtsClient() {
       {tab === 'customers' && (
         <div>
           <Toolbar onAdd={() => openCustModal()} />
-          <SelectionBar />
           {filteredCust.length === 0 ? (
             <EmptyState icon="💳" text={`אין חובות לקוחות ${filter === 'open' ? 'פתוחים' : filter === 'closed' ? 'סגורים' : ''}`} />
           ) : (
@@ -498,26 +429,23 @@ export default function DebtsClient() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                    {['שם לקוח', 'טלפון', 'לוחית', 'סכום', 'שולם', 'יתרה', 'תאריך', 'יעד לתשלום', 'סטטוס'].map(h => (
+                    {['שם לקוח', 'טלפון', 'לוחית', 'סכום', 'שולם', 'יתרה', 'תאריך', 'יעד לתשלום', 'סטטוס', ''].map(h => (
                       <th key={h} style={thSt}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filteredCust.map((d, i) => {
-                    const isSelected = selectedId === d.id
                     const isOverdue = !!d.due_date && !d.is_closed && d.due_date < todayISO()
+                    const waText = `שלום ${d.name}, תזכורת לגבי יתרת חוב בסך ${fmt(bal(d))} 🙏\n${tenantName}`
+                    const callCount = calls.filter(c => c.customer_debt_id === d.id).length
                     return (
                       <tr
                         key={d.id}
-                        onClick={() => setSelectedId(isSelected ? null : d.id)}
                         style={{
                           borderBottom: '1px solid var(--border)',
-                          background: isSelected ? '#eff6ff' : d.is_closed ? '#fafafa' : i % 2 === 0 ? '#fff' : '#fdfefe',
+                          background: d.is_closed ? '#fafafa' : i % 2 === 0 ? '#fff' : '#fdfefe',
                           opacity: d.is_closed ? 0.65 : 1,
-                          cursor: 'pointer',
-                          outline: isSelected ? '2px solid #93c5fd' : undefined,
-                          outlineOffset: '-1px',
                         }}
                       >
                         <td style={{ ...tdSt, fontWeight: 600 }}>
@@ -538,6 +466,16 @@ export default function DebtsClient() {
                           {d.due_date ? (isOverdue ? `⚠ ${d.due_date}` : d.due_date) : '—'}
                         </td>
                         <td style={tdSt}><StatusChip debt={d} /></td>
+                        <td style={{ ...tdSt, textAlign: 'center' }}>
+                          <RowActionsMenu actions={[
+                            ...(d.phone ? [{ key: 'wa', label: 'ווצאפ תזכורת', icon: '💬', onClick: () => setWaModal({ phone: d.phone!, text: waText }) }] : []),
+                            { key: 'call', label: `שיחה${callCount > 0 ? ` (${callCount})` : ''}`, icon: '📞', onClick: () => setCallLogDebtId(d.id) },
+                            ...(!d.is_closed && bal(d) > 0 ? [{ key: 'pay', label: 'שלם', icon: '₪', onClick: () => openPay(d.id, bal(d)) }] : []),
+                            { key: 'close', label: d.is_closed ? 'פתח' : 'סגור', icon: d.is_closed ? '↩' : '✓', onClick: () => toggleCustClose(d.id, d.is_closed) },
+                            { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openCustModal(d) },
+                            { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteCustDebt(d.id) },
+                          ]} />
+                        </td>
                       </tr>
                     )
                   })}

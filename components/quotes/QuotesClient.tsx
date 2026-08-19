@@ -402,13 +402,14 @@ function MultiPartTotal({ partItems }: { partItems: PartItem[] }) {
 
 export default function QuotesClient() {
   const sb       = useRef(createClient()).current
-  const { profile } = useProfile()
+  const { profile, loading: profileLoading } = useProfile()
   const tenantId = useRef<string>('')
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
   const pendingOpenRef = useRef<string | null>(null)
 
   const [quotes, setQuotes] = useState<Quote[]>([])
+  const [loading, setLoading] = useState(true)
   const [tab, setTab]       = useState<'tires' | 'parts'>('tires')
 
   // Filters
@@ -449,6 +450,7 @@ export default function QuotesClient() {
         part_items:      Array.isArray(q.part_items)      ? q.part_items      : [],
       }))
     )
+    setLoading(false)
   }, [sb])
 
   useEffect(() => {
@@ -456,10 +458,10 @@ export default function QuotesClient() {
   }, [])
 
   useEffect(() => {
-    if (!profile) return
+    if (!profile) { if (!profileLoading) setLoading(false); return }
     tenantId.current = profile.tenantId
     load()
-  }, [profile, load])
+  }, [profile, profileLoading, load])
 
   // Auto-open quote from ?open=<id> URL param
   useEffect(() => {
@@ -825,6 +827,12 @@ export default function QuotesClient() {
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-muted)', fontSize: '14px' }}>
+      טוען...
+    </div>
+  )
 
   return (
     <div style={{ maxWidth: 1200 }}>

@@ -1551,3 +1551,112 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 02:03 | Edited components/debts/DebtsClient.tsx | added 1 import(s) | ~59 |
 | 02:03 | Edited components/debts/DebtsClient.tsx | removed 4 lines | ~7 |
 | 02:03 | Edited components/debts/DebtsClient.tsx | — | ~0 |
+| 02:03 | Edited components/debts/DebtsClient.tsx | reduced (-58 lines) | ~253 |
+| 02:03 | Session end: 9 writes across 6 files (route.ts, ProfileContext.tsx, client.ts, AppShell.tsx, RowActionsMenu.tsx) | 8 reads | ~2056 tok |
+| 02:03 | Edited components/debts/DebtsClient.tsx | 3→2 lines | ~27 |
+| 02:04 | Edited components/debts/DebtsClient.tsx | expanded (+7 lines) | ~1074 |
+| 02:04 | Edited components/debts/DebtsClient.tsx | reduced (-7 lines) | ~63 |
+| 02:05 | Edited components/debts/DebtsClient.tsx | 8→8 lines | ~76 |
+| 02:05 | Edited components/employees/EmployeesClient.tsx | added 1 import(s) | ~46 |
+| 02:06 | Edited components/employees/EmployeesClient.tsx | 4→1 lines | ~10 |
+| 02:06 | Edited components/employees/EmployeesClient.tsx | expanded (+8 lines) | ~515 |
+| 02:06 | Edited components/employees/EmployeesClient.tsx | removed 16 lines | ~8 |
+| 02:06 | Edited components/employees/EmployeesClient.tsx | removed 8 lines | ~14 |
+| 02:14 | Session end: 18 writes across 7 files (route.ts, ProfileContext.tsx, client.ts, AppShell.tsx, RowActionsMenu.tsx) | 9 reads | ~35691 tok |
+| 02:16 | Created ../../../../0411~1/AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/e595c8a6-b0b1-4a83-8e29-3cc073550cc3/scratchpad/verify.mjs | — | ~923 |
+| 02:16 | Created _tmp_verify_rowactions.mjs | — | ~912 |
+| 02:17 | Edited _tmp_verify_rowactions.mjs | 7→9 lines | ~145 |
+| 02:19 | Edited _tmp_verify_rowactions.mjs | 4→5 lines | ~88 |
+| 02:19 | Edited _tmp_verify_rowactions.mjs | 4→5 lines | ~91 |
+| 02:22 | Edited _tmp_verify_rowactions.mjs | modified if() | ~326 |
+| 02:23 | Edited _tmp_verify_rowactions.mjs | modified if() | ~181 |
+| 02:25 | Edited components/products/ProductsClient.tsx | added 1 import(s) | ~54 |
+| 02:25 | Edited components/products/ProductsClient.tsx | — | ~0 |
+| 02:25 | Edited components/products/ProductsClient.tsx | — | ~0 |
+| 02:25 | Edited components/products/ProductsClient.tsx | removed 23 lines | ~10 |
+| 02:26 | Edited components/products/ProductsClient.tsx | CSS: width | ~182 |
+| 02:26 | Edited components/products/ProductsClient.tsx | 11 → 12 | ~34 |
+| 02:26 | Edited components/products/ProductsClient.tsx | 5→4 lines | ~73 |
+| 02:26 | Edited components/products/ProductsClient.tsx | expanded (+15 lines) | ~477 |
+| 02:27 | Edited components/products/ProductsClient.tsx | modified if() | ~92 |
+| 02:28 | Edited components/tires/TiresClient.tsx | added 1 import(s) | ~32 |
+| 02:28 | Edited components/tires/TiresClient.tsx | modified if() | ~21 |
+| 02:28 | Edited components/tires/TiresClient.tsx | — | ~0 |
+| 02:29 | Edited components/tires/TiresClient.tsx | — | ~0 |
+| 02:29 | Edited components/tires/TiresClient.tsx | removed 21 lines | ~7 |
+| 02:29 | Edited components/tires/TiresClient.tsx | CSS: width | ~279 |
+| 02:29 | Edited components/tires/TiresClient.tsx | 3→2 lines | ~52 |
+| 02:30 | Edited components/tires/TiresClient.tsx | expanded (+14 lines) | ~532 |
+| 02:31 | Edited components/inspections/InspectionsClient.tsx | expanded (+7 lines) | ~230 |
+| 02:32 | Edited components/inspections/InspectionsClient.tsx | removed 16 lines | ~7 |
+| 02:32 | Edited components/inspections/InspectionsClient.tsx | 4→4 lines | ~72 |
+| 02:32 | Edited components/inspections/InspectionsClient.tsx | 3→2 lines | ~36 |
+| 02:32 | Edited components/inspections/InspectionsClient.tsx | — | ~0 |
+| 02:33 | Edited components/inspections/InspectionsClient.tsx | added 1 import(s) | ~30 |
+| 02:34 | Edited components/expenses/ExpensesClient.tsx | added 1 import(s) | ~30 |
+| 02:34 | Edited components/expenses/ExpensesClient.tsx | — | ~0 |
+| 02:34 | Edited components/expenses/ExpensesClient.tsx | 2→2 lines | ~42 |
+| 02:34 | Edited components/expenses/ExpensesClient.tsx | expanded (+6 lines) | ~131 |
+| 02:34 | Edited components/expenses/ExpensesClient.tsx | removed 14 lines | ~50 |
+| 02:35 | Edited components/expenses/ExpensesClient.tsx | CSS: 7, 7 | ~260 |
+| 02:35 | Edited components/expenses/ExpensesClient.tsx | CSS: 6 | ~62 |
+| 02:36 | Edited components/expenses/ExpensesClient.tsx | reduced (-6 lines) | ~25 |
+| 02:40 | Edited components/quotes/QuotesClient.tsx | 2→3 lines | ~48 |
+| 02:40 | Edited components/quotes/QuotesClient.tsx | 15→16 lines | ~148 |
+| 02:40 | Edited components/quotes/QuotesClient.tsx | added 1 condition(s) | ~95 |
+| 02:40 | Edited components/quotes/QuotesClient.tsx | inline fix | ~17 |
+| 02:40 | Edited components/quotes/QuotesClient.tsx | added 1 condition(s) | ~51 |
+| 02:42 | Edited components/alignment/AlignmentClient.tsx | modified JobRow() | ~232 |
+| 02:43 | Edited components/alignment/AlignmentClient.tsx | expanded (+12 lines) | ~223 |
+| 02:43 | Edited components/alignment/AlignmentClient.tsx | reduced (-9 lines) | ~365 |
+| 02:43 | Edited components/alignment/AlignmentClient.tsx | — | ~0 |
+| 02:43 | Edited components/alignment/AlignmentClient.tsx | — | ~0 |
+| 02:43 | Edited components/alignment/AlignmentClient.tsx | added 1 import(s) | ~30 |
+| 02:44 | Edited components/alignment/AlignmentClient.tsx | — | ~0 |
+| 02:45 | Created _tmp_verify_rowactions.mjs | — | ~641 |
+| 02:48 | Edited _tmp_verify_rowactions.mjs | added 1 condition(s) | ~337 |
+| 02:53 | Edited _tmp_verify_rowactions.mjs | added 2 condition(s) | ~286 |
+| 02:56 | Created _tmp_debug_login.mjs | — | ~368 |
+| 02:57 | Edited _tmp_verify_rowactions.mjs | 3→3 lines | ~85 |
+| 02:58 | Edited components/cars/CarsClient.tsx | added 2 condition(s) | ~347 |
+| 02:58 | Edited components/cars/CarsClient.tsx | 10→8 lines | ~90 |
+| 02:58 | Edited components/cars/CarsClient.tsx | CSS: justifyContent, alignItems | ~140 |
+| 02:58 | Edited components/cars/CarsClient.tsx | removed 19 lines | ~43 |
+| 02:59 | Edited components/cars/CarsClient.tsx | removed 13 lines | ~53 |
+| 02:59 | Edited components/cars/CarsClient.tsx | reduced (-6 lines) | ~548 |
+| 02:59 | Edited components/cars/CarsClient.tsx | — | ~0 |
+| 03:00 | Edited components/cars/CarsClient.tsx | — | ~0 |
+| 03:00 | Edited components/cars/CarsClient.tsx | added 1 import(s) | ~35 |
+| 03:01 | Edited components/cars/CarsClient.tsx | reduced (-6 lines) | ~21 |
+| 03:03 | Edited components/suppliers/SupplierTrackingTab.tsx | — | ~0 |
+| 03:03 | Edited components/suppliers/SupplierTrackingTab.tsx | 8→8 lines | ~76 |
+| 03:03 | Edited components/suppliers/SupplierTrackingTab.tsx | — | ~0 |
+| 03:03 | Edited components/suppliers/SupplierTrackingTab.tsx | — | ~0 |
+| 03:04 | Edited components/suppliers/SupplierTrackingTab.tsx | inline fix | ~34 |
+| 03:04 | Edited components/suppliers/SupplierTrackingTab.tsx | removed 27 lines | ~6 |
+| 03:04 | Edited components/suppliers/SupplierTrackingTab.tsx | 6→5 lines | ~90 |
+| 03:04 | Edited components/suppliers/SupplierTrackingTab.tsx | added optional chaining | ~437 |
+| 03:05 | Edited components/suppliers/SupplierTrackingTab.tsx | added 1 import(s) | ~30 |
+| 03:06 | Edited components/customers/CustomerTrackingTab.tsx | removed 14 lines | ~19 |
+| 03:06 | Edited components/customers/CustomerTrackingTab.tsx | expanded (+11 lines) | ~426 |
+| 03:07 | Edited components/customers/CustomerTrackingTab.tsx | 6→5 lines | ~90 |
+| 03:07 | Edited components/customers/CustomerTrackingTab.tsx | added optional chaining | ~490 |
+| 03:08 | Edited components/customers/CustomerTrackingTab.tsx | removed 27 lines | ~5 |
+| 03:08 | Edited components/customers/CustomerTrackingTab.tsx | inline fix | ~34 |
+| 03:08 | Edited components/customers/CustomerTrackingTab.tsx | — | ~0 |
+| 03:08 | Edited components/customers/CustomerTrackingTab.tsx | — | ~0 |
+| 03:08 | Edited components/customers/CustomerTrackingTab.tsx | — | ~0 |
+| 03:09 | Edited components/customers/CustomerTrackingTab.tsx | 8→8 lines | ~77 |
+| 03:09 | Edited components/customers/CustomerTrackingTab.tsx | added 1 import(s) | ~30 |
+| 03:10 | Edited components/settings/SettingsClient.tsx | removed 19 lines | ~78 |
+| 03:10 | Edited components/settings/SettingsClient.tsx | 3→2 lines | ~21 |
+| 03:11 | Edited components/settings/SettingsClient.tsx | added 1 import(s) | ~30 |
+| 03:12 | Edited components/documents/DocumentsClient.tsx | removed 28 lines | ~93 |
+| 03:12 | Edited components/documents/DocumentsClient.tsx | removed 33 lines | ~107 |
+| 03:12 | Edited components/documents/DocumentsClient.tsx | 2→1 lines | ~16 |
+| 03:12 | Edited components/documents/DocumentsClient.tsx | removed 18 lines | ~27 |
+| 03:13 | Edited components/documents/DocumentsClient.tsx | added 1 import(s) | ~30 |
+| 03:13 | Created _tmp_verify_rowactions.mjs | — | ~987 |
+| 03:14 | Fixed QuotesClient.tsx missing loading gate (list flashed "no items" instead of "טוען..." during fetch, same bug class as bug-014's DebtsClient/CustomersClient fix) — added loading state + profileLoading fallback | components/quotes/QuotesClient.tsx | tsc clean | ~600 |
+| 03:15 | Row-actions cleanup complete: new components/ui/RowActionsMenu.tsx (kebab menu) replacing top-pinned selection-action-bars across all 12 planned files (debts, employees, products, tires, inspections, expenses, alignment, cars, suppliers, customers, settings, documents) per approved plan moonlit-bubbling-moler.md; moved customer "🔗 מזג תשלומים" button into the isOpen+2-payments-gated block | components/ui/RowActionsMenu.tsx + 12 files | tsc clean throughout; browser-verified via Playwright | ~45000 |
+| 03:22 | Session end: 112 writes across 21 files (route.ts, ProfileContext.tsx, client.ts, AppShell.tsx, RowActionsMenu.tsx) | 38 reads | ~242054 tok |

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import Button from '@/components/ui/Button'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import Input from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
@@ -277,7 +278,6 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   const [rfSupplier,   setRfSupplier]   = useState('')
 
   // Selected row
-  const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
 
   // Scheduled payments modal
   const [schedModal, setSchedModal] = useState(false)
@@ -298,14 +298,8 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   // ── Clear filters on tab change ────────────────────────────────────────────
 
   useEffect(() => {
-    setSearch(''); setFilterCat(''); setFilterSup(''); setSelectedRowId(null)
+    setSearch(''); setFilterCat(''); setFilterSup('')
   }, [tab])
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedRowId(null) }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [])
 
   // ── Resolve tenant once ────────────────────────────────────────────────────
 
@@ -730,7 +724,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   })
 
   const renderDataRow = (row: Expense | Income) => (
-    <tr key={row.id} onClick={() => setSelectedRowId(selectedRowId === row.id ? null : row.id)} className="tr-hover" style={{ borderBottom: '1px solid var(--border)', background: selectedRowId === row.id ? '#eff6ff' : undefined, cursor: 'pointer' }}>
+    <tr key={row.id} className="tr-hover" style={{ borderBottom: '1px solid var(--border)' }}>
       <td style={{ ...TD, color: 'var(--text-muted)' }}>{new Date(row.date + 'T00:00:00').toLocaleDateString('he-IL')}</td>
       <td style={TD}>
         <span style={{ background: '#f1f5f9', borderRadius: '6px', padding: '2px 8px', fontSize: '12px', fontWeight: 500 }}>{row.category}</span>
@@ -767,6 +761,12 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         )
       })()}
       <td style={{ ...TD, textAlign: 'left', fontWeight: 700, color: tab === 'expenses' ? 'var(--danger)' : 'var(--primary)' }}>{fmt(row.amount)}</td>
+      <td style={{ ...TD, textAlign: 'center' }}>
+        <RowActionsMenu actions={[
+          { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openEdit(row) },
+          { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => del(row.id) },
+        ]} />
+      </td>
     </tr>
   )
 
@@ -1123,18 +1123,6 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           </div>
         ) : (
           <>
-          {selectedRowId && (() => {
-            const selRow = filteredRows.find(r => r.id === selectedRowId)
-            if (!selRow) return null
-            return (
-              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontWeight: 700, fontSize: 13, color: '#1d4ed8', flex: 1 }}>{selRow.category} — {selRow.description || '—'} — {fmt(selRow.amount)}</span>
-                <Button size="sm" variant="secondary" onClick={() => openEdit(selRow)}>✏️ ערוך</Button>
-                <Button size="sm" variant="danger" onClick={() => del(selRow.id)}>🗑 מחק</Button>
-                <button onClick={() => setSelectedRowId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, padding: '2px 6px' }}>✕</button>
-              </div>
-            )
-          })()}
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
             {(search || filterCat || filterSup) && (
               <div style={{ padding: '8px 14px', background: '#f0fdf4', borderBottom: '1px solid var(--border)', fontSize: '13px', color: 'var(--primary)' }}>
@@ -1151,12 +1139,13 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                   {tab === 'expenses' && <th style={TH}>ספק</th>}
                   {tab === 'expenses' && <th style={TH}>תשלום</th>}
                   <th style={{ ...TH, textAlign: 'left' }}>סכום</th>
+                  <th style={TH}></th>
                 </tr>
               </thead>
               {filteredRows.length === 0 ? (
                 <tbody>
                   <tr>
-                    <td colSpan={tab === 'expenses' ? 6 : 4} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)', fontSize: '14px' }}>
+                    <td colSpan={tab === 'expenses' ? 7 : 5} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)', fontSize: '14px' }}>
                       {baseRows.length === 0 ? 'אין רשומות לחודש זה' : 'לא נמצאו תוצאות לחיפוש'}
                     </td>
                   </tr>
@@ -1164,7 +1153,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               ) : groupedView ? (
                 groupedEntries.map(([cat, group]) => {
                   const isOpen = openCats.has(cat)
-                  const totalCols = tab === 'expenses' ? 6 : 4
+                  const totalCols = tab === 'expenses' ? 7 : 5
                   return (
                     <tbody key={cat}>
                       <tr onClick={() => toggleCat(cat)} className="tr-hover" style={{ cursor: 'pointer', background: '#f8fafc', borderBottom: '1px solid var(--border)' }}>
@@ -1185,7 +1174,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               {filteredRows.length > 0 && (
                 <tfoot>
                   <tr style={{ background: '#f8fafc', borderTop: '2px solid var(--border)' }}>
-                    <td colSpan={tab === 'expenses' ? 5 : 3} style={{ ...TD, fontWeight: 700, color: 'var(--text-muted)' }}>
+                    <td colSpan={tab === 'expenses' ? 6 : 4} style={{ ...TD, fontWeight: 700, color: 'var(--text-muted)' }}>
                       סה״כ ({filteredRows.length} רשומות{filteredRows.length !== baseRows.length ? ` מתוך ${baseRows.length}` : ''})
                     </td>
                     <td style={{ ...TD, textAlign: 'left', fontWeight: 800, color: tab === 'expenses' ? 'var(--danger)' : 'var(--primary)' }}>

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-18T23:03:27.998Z
-> Files: 10 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T00:13:45.577Z
+> Files: 15 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -15,9 +15,12 @@
 ## ../../../../0411~1/AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/8c4bc7d5-59ef-4912-97ea-a0c1fe807875/scratchpad/
 
 
+## ../../../../0411~1/AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/e595c8a6-b0b1-4a83-8e29-3cc073550cc3/scratchpad/
+
+- `verify.mjs` — Declares shot (~923 tok)
+
 ## ../../../.claude/plans/
 
-- `moonlit-bubbling-moler.md` — ניקוי כפתורי פעולה בשורות/כרטיסים — מעבר לתפריט "⋮" מוטבע (12 עמודים) (~2069 tok)
 
 ## ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/
 
@@ -30,6 +33,8 @@
 
 ## ./
 
+- `_tmp_debug_login.mjs` — Declares shot (~368 tok)
+- `_tmp_verify_rowactions.mjs` — shot: doLogin (~987 tok)
 
 ## .claude/
 
@@ -123,7 +128,6 @@
 
 ## app/api/admin/generate-invite/
 
-- `route.ts` — Protected by ADMIN_SECRET header (~298 tok)
 
 ## app/api/auth/register-employee/
 
@@ -139,7 +143,6 @@
 
 ## app/api/drive/callback/
 
-- `route.ts` — Next.js API route: GET (~493 tok)
 
 ## app/api/drive/delete/
 
@@ -164,7 +167,6 @@
 
 ## app/api/employees/invite/
 
-- `route.ts` — Next.js API route: POST (~392 tok)
 
 ## app/api/onboarding/complete/
 
@@ -177,7 +179,6 @@
 
 ## app/api/store/
 
-- `route.ts` — Next.js API route: GET, POST, PUT, PATCH, DELETE (~672 tok)
 
 ## app/api/yard/barcode/
 
@@ -331,50 +332,57 @@
 
 ## components/alignment/
 
+- `AlignmentClient.tsx` — STATUSES (~8464 tok)
 
 ## components/billing/
 
 
 ## components/cars/
 
+- `CarsClient.tsx` — CONDITIONS (~28538 tok)
 
 ## components/checks/
 
 
 ## components/customers/
 
+- `CustomerTrackingTab.tsx` — fmtDMY (~26130 tok)
 
 ## components/dashboard/
 
 
 ## components/debts/
 
-- `DebtsClient.tsx` — fmt (~12742 tok)
 
 ## components/documents/
 
+- `DocumentsClient.tsx` — emptyForm — renders table (~22465 tok)
 
 ## components/employees/
 
+- `EmployeesClient.tsx` — Convert "MM/YYYY" → "YYYY-MM" for date comparisons (~19696 tok)
 
 ## components/expenses/
 
+- `ExpensesClient.tsx` — DEFAULT_EXPENSE_CATS (~20878 tok)
 
 ## components/inspections/
 
+- `InspectionsClient.tsx` — emptyForm (~16773 tok)
 
 ## components/landing/
 
 
 ## components/layout/
 
-- `AppShell.tsx` — AppShell (~330 tok)
 
 ## components/products/
 
+- `ProductsClient.tsx` — UNITS (~16532 tok)
 
 ## components/quotes/
 
+- `QuotesClient.tsx` — WIDTHS (~17223 tok)
 
 ## components/reminders/
 
@@ -384,19 +392,22 @@
 
 ## components/settings/
 
+- `SettingsClient.tsx` — ALL_MODULES (~30346 tok)
 
 ## components/suppliers/
 
+- `SupplierTrackingTab.tsx` — fmtDMY (~37074 tok)
 
 ## components/test-transfer/
 
 
 ## components/tires/
 
+- `TiresClient.tsx` — WIDTHS — renders table (~18683 tok)
 
 ## components/ui/
 
-- `RowActionsMenu.tsx` — RowActionsMenu (~806 tok)
+- `RowActionsMenu.tsx` — shared inline "⋮" row/card actions kebab menu (variant button|plain, danger styling) — replaces the old top-pinned "selection action bar" pattern across the app (~500 tok)
 
 ## components/yard/
 
@@ -409,7 +420,6 @@
 
 ## lib/contexts/
 
-- `ProfileContext.tsx` — ProfileContext (~776 tok)
 
 ## lib/debts/
 
@@ -419,7 +429,6 @@
 
 ## lib/supabase/
 
-- `client.ts` — Exports createClient (~302 tok)
 
 ## lib/utils/
 

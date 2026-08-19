@@ -8,6 +8,7 @@ import { TenantRow } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
 import { reconcileSupplierPayment } from '@/lib/debts/reconcileSupplierPayment'
 import { netAllocation } from '@/lib/debts/netAllocation'
@@ -180,7 +181,6 @@ export default function SupplierTrackingTab({
   const [search, setSearch] = useState('')
 
   // Row selection
-  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   // Which supplier cards are expanded (collapsed by default — click to open detail)
   const [openSupplierKeys, setOpenSupplierKeys] = useState<Set<string>>(new Set())
@@ -317,12 +317,6 @@ export default function SupplierTrackingTab({
     window.addEventListener('afterprint', onAfterPrint)
     return () => { clearTimeout(t); window.removeEventListener('afterprint', onAfterPrint) }
   }, [printMode])
-
-  useEffect(() => {
-    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedId(null) }
-    window.addEventListener('keydown', fn)
-    return () => window.removeEventListener('keydown', fn)
-  }, [])
 
   // Deep-link: ?open=<supplierId> (parsed once by the shell, passed down as `openId`)
   useEffect(() => {
@@ -492,13 +486,13 @@ export default function SupplierTrackingTab({
       if (error) { showToast('שגיאה בשמירה', 'error'); setSsaving(false); return }
       showToast(`נשמרו ${rows.length} רשומות ✓`, 'success')
     }
-    setSsaving(false); setShowSuppModal(false); setSelectedId(null); reload()
+    setSsaving(false); setShowSuppModal(false); reload()
   }
 
   const deleteSuppDebt = async (id: string) => {
     if (!confirm('למחוק רשומה זו?')) return
     await supabase.from('supplier_debts').delete().eq('id', id)
-    showToast('נמחק', 'success'); setSelectedId(null); reload()
+    showToast('נמחק', 'success'); reload()
   }
 
   const addDebtForSupplier = (suppId: string) => {
@@ -895,7 +889,6 @@ export default function SupplierTrackingTab({
 
   // ── Selected item info ────────────────────────────────────────────────────
 
-  const selectedSupp = selectedId ? supplierDebts.find(d => d.id === selectedId) : null
 
   // ── Sub-components ────────────────────────────────────────────────────────
 
@@ -990,7 +983,7 @@ export default function SupplierTrackingTab({
   return (
     <div id="supplier-tracking-root">
       <div>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: selectedId ? '8px' : '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Button onClick={() => openSuppModal()}>+ הוסף חשבונית/זיכוי</Button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)} className="form-input" style={{ margin: 0, padding: '7px 8px', fontSize: '12px' }} />
@@ -1015,32 +1008,6 @@ export default function SupplierTrackingTab({
             <Button variant="secondary" onClick={() => setShowPrintChoice(true)}>🖨️ הדפסה</Button>
             <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
           </div>
-
-          {/* Selection action bar */}
-          {selectedId && selectedSupp && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '10px 14px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '13px', color: '#1d4ed8', fontWeight: 600 }}>✓ שורה נבחרה</span>
-              <span style={{ fontSize: '13px', color: 'var(--text-muted)', flex: 1, minWidth: 0 }}>
-                {suppliers.find(s => s.id === selectedSupp.supplier_id)?.name ?? 'ללא ספק'} · <strong>{fmt(bal(selectedSupp))}</strong>
-              </span>
-              {suppliers.find(s => s.id === selectedSupp.supplier_id)?.phone && (
-                <button
-                  onClick={() => {
-                    const supp = suppliers.find(s => s.id === selectedSupp.supplier_id)!
-                    setWaModal({ phone: supp.phone!, text: `שלום ${supp.name}, ברצוני לבדוק חוב בסך ${fmt(bal(selectedSupp))}.\nתודה!\n${tenantName}` })
-                  }}
-                  style={{ padding: '5px 12px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-                >💬 ווצאפ</button>
-              )}
-              {!selectedSupp.is_closed && bal(selectedSupp) > 0 && selectedSupp.direction === 'charge' && (
-                <button onClick={() => openPaySupplier(selectedSupp.supplier_id, selectedId)} style={{ padding: '5px 12px', background: '#f0fdf6', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>₪ שלם</button>
-              )}
-              <button onClick={() => toggleClose(selectedId, selectedSupp.is_closed)} style={{ padding: '5px 10px', background: selectedSupp.is_closed ? '#fef2f2' : '#f0fdf6', color: selectedSupp.is_closed ? 'var(--danger)' : '#16a34a', border: '1px solid', borderColor: selectedSupp.is_closed ? '#fecaca' : '#bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>{selectedSupp.is_closed ? '↩ פתח' : '✓ סגור'}</button>
-              <button onClick={() => openSuppModal(selectedSupp)} style={{ padding: '5px 10px', background: '#f0f9ff', color: 'var(--accent)', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>✏️ ערוך</button>
-              <button onClick={() => deleteSuppDebt(selectedId)} style={{ padding: '5px 10px', background: '#fef2f2', color: 'var(--danger)', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>🗑 מחק</button>
-              <button onClick={() => setSelectedId(null)} style={{ padding: '5px 8px', background: 'transparent', color: 'var(--text-muted)', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}>✕</button>
-            </div>
-          )}
 
           {(() => {
             const allSuppIds = [...new Set(supplierDebts.map(d => d.supplier_id))]
@@ -1241,9 +1208,8 @@ export default function SupplierTrackingTab({
                                 return items.map((item, idx) => (
                                   <tr
                                     key={`${d.id}-${idx}`}
-                                    onClick={() => setSelectedId(selectedId === d.id ? null : d.id)}
                                     className="tr-hover"
-                                    style={{ cursor: 'pointer', background: selectedId === d.id ? '#eff6ff' : d.is_closed && d.direction === 'charge' ? '#fafafa' : undefined }}
+                                    style={{ background: d.is_closed && d.direction === 'charge' ? '#fafafa' : undefined }}
                                   >
                                     <td style={tdSt}>
                                       {item.number ? `#${item.number}` : '—'}
@@ -1260,16 +1226,20 @@ export default function SupplierTrackingTab({
                                       {d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}
                                     </td>
                                     <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                      <button
-                                        onClick={e => { e.stopPropagation(); openSuppModal(d) }}
-                                        title="ערוך"
-                                        style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
-                                      >✏️</button>
-                                      <button
-                                        onClick={e => { e.stopPropagation(); deleteSuppDebt(d.id) }}
-                                        title="מחק"
-                                        style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px' }}
-                                      >🗑</button>
+                                      <RowActionsMenu actions={[
+                                        ...(suppliers.find(s => s.id === d.supplier_id)?.phone ? [{
+                                          key: 'wa', label: 'ווצאפ', icon: '💬', onClick: () => {
+                                            const supp = suppliers.find(s => s.id === d.supplier_id)!
+                                            setWaModal({ phone: supp.phone!, text: `שלום ${supp.name}, ברצוני לבדוק חוב בסך ${fmt(bal(d))}.\nתודה!\n${tenantName}` })
+                                          },
+                                        }] : []),
+                                        ...(!d.is_closed && bal(d) > 0 && d.direction === 'charge' ? [
+                                          { key: 'pay', label: 'שלם', icon: '₪', onClick: () => openPaySupplier(d.supplier_id, d.id) },
+                                        ] : []),
+                                        { key: 'close', label: d.is_closed ? 'פתח' : 'סגור', icon: d.is_closed ? '↩' : '✓', onClick: () => toggleClose(d.id, d.is_closed) },
+                                        { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openSuppModal(d) },
+                                        { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteSuppDebt(d.id) },
+                                      ]} />
                                     </td>
                                   </tr>
                                 ))

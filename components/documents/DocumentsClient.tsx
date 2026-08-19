@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import PageHeader from '@/components/ui/PageHeader'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
@@ -664,7 +665,6 @@ export default function DocumentsClient() {
   const [htmlForms, setHtmlForms] = useState<HtmlDoc[]>([])
   const [loading,   setLoading]   = useState(true)
   const htmlUploadRef = useRef<HTMLInputElement>(null)
-  const [htmlMenuOpen, setHtmlMenuOpen] = useState<string | null>(null)
 
   // ── Template modal ────────────────────────────────────────────────────────────
   const [formOpen, setFormOpen] = useState(false)
@@ -698,23 +698,8 @@ export default function DocumentsClient() {
   const [newFolderName,   setNewFolderName]   = useState('')
   const [creatingFolder,  setCreatingFolder]  = useState(false)
 
-  // Per-form copies + menu state
+  // Per-form copies
   const [copiesMap, setCopiesMap] = useState<Record<string, number>>({})
-  const [menuOpen,  setMenuOpen]  = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!menuOpen) return
-    const close = () => setMenuOpen(null)
-    window.addEventListener('click', close)
-    return () => window.removeEventListener('click', close)
-  }, [menuOpen])
-
-  useEffect(() => {
-    if (!htmlMenuOpen) return
-    const close = () => setHtmlMenuOpen(null)
-    window.addEventListener('click', close)
-    return () => window.removeEventListener('click', close)
-  }, [htmlMenuOpen])
 
   // ── Fetch ─────────────────────────────────────────────────────────────────────
 
@@ -1346,34 +1331,10 @@ export default function DocumentsClient() {
                       <span>{doc.icon || '🎨'}</span>
                       <span style={{ wordBreak: 'break-word' }}>{doc.name}</span>
                     </div>
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                      <button
-                        onClick={e => { e.stopPropagation(); setHtmlMenuOpen(htmlMenuOpen === doc.id ? null : doc.id) }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--text-muted)', padding: '2px 6px', borderRadius: 6, lineHeight: 1 }}
-                      >⋮</button>
-                      {htmlMenuOpen === doc.id && (
-                        <div style={{
-                          position: 'absolute', top: '100%', left: 0,
-                          background: '#fff', borderRadius: 10,
-                          boxShadow: '0 4px 20px rgba(0,0,0,.15)',
-                          border: '1px solid var(--border)',
-                          zIndex: 100, minWidth: 130, overflow: 'hidden',
-                        }}>
-                          {[
-                            { label: '✏️ שינוי שם', action: () => { renameHtmlTemplate(doc); setHtmlMenuOpen(null) } },
-                            { label: '🗑️ מחיקה',    action: () => { deleteHtmlTemplate(doc); setHtmlMenuOpen(null) }, danger: true },
-                          ].map(item => (
-                            <button key={item.label} onClick={item.action} style={{
-                              display: 'block', width: '100%', padding: '10px 14px',
-                              background: 'none', border: 'none', textAlign: 'right',
-                              fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
-                              color: item.danger ? 'var(--danger)' : 'var(--text)',
-                              borderBottom: '1px solid var(--border)',
-                            }}>{item.label}</button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <RowActionsMenu variant="plain" actions={[
+                      { key: 'rename', label: 'שינוי שם', icon: '✏️', onClick: () => renameHtmlTemplate(doc) },
+                      { key: 'delete', label: 'מחיקה', icon: '🗑️', danger: true, onClick: () => deleteHtmlTemplate(doc) },
+                    ]} />
                   </div>
                   <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600, display: 'flex', gap: 4, alignItems: 'center' }}>
                     <span>HTML</span>
@@ -1405,39 +1366,11 @@ export default function DocumentsClient() {
               <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>{f.icon || '📋'}</span> {f.name}
               </div>
-              <div style={{ position: 'relative', flexShrink: 0 }}>
-                <button
-                  onClick={e => { e.stopPropagation(); setMenuOpen(menuOpen === f.id ? null : f.id) }}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: 18, color: 'var(--text-muted)', padding: '2px 6px',
-                    borderRadius: 6, lineHeight: 1,
-                  }}
-                >⋮</button>
-                {menuOpen === f.id && (
-                  <div style={{
-                    position: 'absolute', top: '100%', left: 0,
-                    background: '#fff', borderRadius: 10,
-                    boxShadow: '0 4px 20px rgba(0,0,0,.15)',
-                    border: '1px solid var(--border)',
-                    zIndex: 100, minWidth: 130, overflow: 'hidden',
-                  }}>
-                    {[
-                      { label: '✏️ עריכה',  action: () => { openEdit(f);              setMenuOpen(null) } },
-                      { label: '📋 שכפול',  action: () => { duplicateTemplate(f);     setMenuOpen(null) } },
-                      { label: '🗑️ מחיקה', action: () => { deleteTemplate(f);        setMenuOpen(null) }, danger: true },
-                    ].map(item => (
-                      <button key={item.label} onClick={item.action} style={{
-                        display: 'block', width: '100%', padding: '10px 14px',
-                        background: 'none', border: 'none', textAlign: 'right',
-                        fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
-                        color: item.danger ? 'var(--danger)' : 'var(--text)',
-                        borderBottom: '1px solid var(--border)',
-                      }}>{item.label}</button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <RowActionsMenu variant="plain" actions={[
+                { key: 'edit', label: 'עריכה', icon: '✏️', onClick: () => openEdit(f) },
+                { key: 'dup', label: 'שכפול', icon: '📋', onClick: () => duplicateTemplate(f) },
+                { key: 'delete', label: 'מחיקה', icon: '🗑️', danger: true, onClick: () => deleteTemplate(f) },
+              ]} />
             </div>
 
             <div style={{ fontSize: 13, color: 'var(--text)' }}>

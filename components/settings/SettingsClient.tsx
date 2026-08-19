@@ -6,6 +6,7 @@ import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 
 type ToastFn = (msg: string, type?: 'success' | 'error' | 'info') => void
 
@@ -697,7 +698,6 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
   const [form,       setForm]       = useState(EMPTY_ITEM)
   const [saving,     setSaving]     = useState(false)
   const [revealed,   setRevealed]   = useState<Set<string>>(new Set())
-  const [menuOpen,   setMenuOpen]   = useState<string | null>(null)
 
   // Check if PIN is set
   useEffect(() => {
@@ -960,25 +960,10 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                     )}
                   </div>
                 </div>
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <button
-                    onClick={() => setMenuOpen(menuOpen === item.id ? null : item.id)}
-                    style={{ width: 30, height: 30, border: '1px solid var(--border)', borderRadius: '6px', background: 'transparent', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}
-                  >⋮</button>
-                  {menuOpen === item.id && (
-                    <>
-                      <div onClick={() => setMenuOpen(null)} style={{ position: 'fixed', inset: 0, zIndex: 49 }} />
-                      <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.12)', overflow: 'hidden', zIndex: 50, minWidth: '100px' }}>
-                        <button onClick={() => { openEdit(item); setMenuOpen(null) }} style={{ width: '100%', textAlign: 'right', padding: '9px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          ✏️ ערוך
-                        </button>
-                        <button onClick={() => { deleteItem(item.id); setMenuOpen(null) }} style={{ width: '100%', textAlign: 'right', padding: '9px 14px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '13px', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '8px', borderTop: '1px solid var(--border)' }}>
-                          🗑 מחק
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
+                <RowActionsMenu actions={[
+                  { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openEdit(item) },
+                  { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteItem(item.id) },
+                ]} />
               </div>
             </div>
           )
