@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T00:13:45.577Z
-> Files: 15 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T10:36:32.070Z
+> Files: 16 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -396,7 +396,7 @@
 
 ## components/suppliers/
 
-- `SupplierTrackingTab.tsx` — fmtDMY (~37074 tok)
+- `SupplierTrackingTab.tsx` — fmtDMY (~36636 tok)
 
 ## components/test-transfer/
 

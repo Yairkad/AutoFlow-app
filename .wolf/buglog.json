@@ -286,5 +286,17 @@
     "related_bugs": ["bug-005", "bug-012"],
     "occurrences": 1,
     "last_seen": "2026-08-18"
+  },
+  {
+    "id": "bug-024",
+    "timestamp": "2026-08-19T00:00:00.000Z",
+    "error_message": "בספקים (ויקטור): חשבוניות מסומנות 'חלקי' — לחיצה על 'סגור' יוצרת 'זיכוי' ביתרה הכוללת של הספק; המשתמש לא הצליח לזהות איזו חשבונית ספציפית סגר כי כולן נראות אותו דבר",
+    "file": "components/suppliers/SupplierTrackingTab.tsx",
+    "root_cause": "StatusChip (line 906-914, before fix) rendered the exact same green 'שולם ✓' chip for a fully-paid invoice AND for one manually closed via '✓ סגור' with an unpaid remainder — is_closed alone determined the chip, paid-vs-amount was never checked for the closed branch. bal() (per bug-020) correctly zeroes a closed charge's contribution regardless of paid, so closing a partial invoice makes its positive balance vanish from the supplier's totalBal while any pre-existing open credit rows for that supplier keep their full negative weight — unmasking a credit balance that already existed but was previously offset. Nothing was newly 'created'; the confusion was that closed-with-remainder and closed-fully-paid were visually indistinguishable, so the user couldn't tell which invoice(s) among several identical-looking ones had a remainder written off.",
+    "fix": "StatusChip now checks amount-paid on the is_closed branch: if a remainder was written off, shows a distinct purple 'סגור ידנית (−₪X)' chip (with the written-off amount in a title tooltip) instead of the generic green 'שולם ✓'. Also added a confirm() dialog in toggleClose before closing any invoice with amount>paid, stating the exact amount that will be permanently written off, so the effect is explicit at click-time instead of only discoverable later via a shifted total.",
+    "tags": ["suppliers", "is_closed", "StatusChip", "credit", "balance-calculation", "UX", "toggleClose", "confirm-dialog"],
+    "related_bugs": ["bug-020"],
+    "occurrences": 1,
+    "last_seen": "2026-08-19"
   }
 ]
