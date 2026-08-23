@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T11:31:13.383Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-23T11:26:12.161Z
 > Files: 17 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -411,7 +411,7 @@
 
 ## components/ui/
 
-- `RowActionsMenu.tsx` — shared inline "⋮" row/card actions kebab menu (variant button|plain, danger styling) — replaces the old top-pinned "selection action bar" pattern across the app (~500 tok)
+- `RowActionsMenu.tsx` — RowActionsMenu (~1060 tok)
 
 ## components/yard/
 

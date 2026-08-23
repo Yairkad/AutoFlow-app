@@ -298,5 +298,17 @@
     "related_bugs": ["bug-020"],
     "occurrences": 1,
     "last_seen": "2026-08-19"
+  },
+  {
+    "id": "bug-025",
+    "timestamp": "2026-08-19T00:00:00.000Z",
+    "error_message": "כשיש רק שורה אחת בטבלה (למשל ספק/תשלום יחיד), תפריט הפעולות (⋮) שנפתח מציג רק חלק מהאפשרויות — השאר נחתכות/מוסתרות",
+    "file": "components/ui/RowActionsMenu.tsx",
+    "root_cause": "The dropdown rendered as position:absolute, top:100% inside the button's own wrapper div, nested under ancestor containers that use overflow:hidden for rounded-card styling (e.g. ScheduledPaymentsModal.tsx:808's card div). With multiple rows the dropdown usually had enough room below to stay inside the visible/scrollable area; with a single (short) row the card's content box was barely taller than one row, so the ~150-200px dropdown got clipped by the ancestor's overflow:hidden — it wasn't a data or z-index bug, purely a CSS clipping-context issue that only became visible with few rows.",
+    "fix": "Rewrote RowActionsMenu to render its open dropdown via createPortal(..., document.body) with position:fixed, computing top/left(or right) from the trigger button's getBoundingClientRect() on open/scroll/resize, instead of position:absolute nested in the row's own DOM subtree. This escapes every ancestor's overflow/clipping context regardless of row count. Shared component used across 12+ screens (suppliers, expenses, debts, etc.) — single fix covers all of them.",
+    "tags": ["RowActionsMenu", "ui", "dropdown", "overflow-hidden", "clipping", "portal", "shared-component"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-08-19"
   }
 ]
