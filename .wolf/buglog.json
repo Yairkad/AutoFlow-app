@@ -286,5 +286,29 @@
     "related_bugs": ["bug-005", "bug-012"],
     "occurrences": 1,
     "last_seen": "2026-08-18"
+  },
+  {
+    "id": "bug-024",
+    "timestamp": "2026-08-19T00:00:00.000Z",
+    "error_message": "בספקים (ויקטור): חשבוניות מסומנות 'חלקי' — לחיצה על 'סגור' יוצרת 'זיכוי' ביתרה הכוללת של הספק; המשתמש לא הצליח לזהות איזו חשבונית ספציפית סגר כי כולן נראות אותו דבר",
+    "file": "components/suppliers/SupplierTrackingTab.tsx",
+    "root_cause": "StatusChip (line 906-914, before fix) rendered the exact same green 'שולם ✓' chip for a fully-paid invoice AND for one manually closed via '✓ סגור' with an unpaid remainder — is_closed alone determined the chip, paid-vs-amount was never checked for the closed branch. bal() (per bug-020) correctly zeroes a closed charge's contribution regardless of paid, so closing a partial invoice makes its positive balance vanish from the supplier's totalBal while any pre-existing open credit rows for that supplier keep their full negative weight — unmasking a credit balance that already existed but was previously offset. Nothing was newly 'created'; the confusion was that closed-with-remainder and closed-fully-paid were visually indistinguishable, so the user couldn't tell which invoice(s) among several identical-looking ones had a remainder written off.",
+    "fix": "StatusChip now checks amount-paid on the is_closed branch: if a remainder was written off, shows a distinct purple 'סגור ידנית (−₪X)' chip (with the written-off amount in a title tooltip) instead of the generic green 'שולם ✓'. Also added a confirm() dialog in toggleClose before closing any invoice with amount>paid, stating the exact amount that will be permanently written off, so the effect is explicit at click-time instead of only discoverable later via a shifted total.",
+    "tags": ["suppliers", "is_closed", "StatusChip", "credit", "balance-calculation", "UX", "toggleClose", "confirm-dialog"],
+    "related_bugs": ["bug-020"],
+    "occurrences": 1,
+    "last_seen": "2026-08-19"
+  },
+  {
+    "id": "bug-025",
+    "timestamp": "2026-08-19T00:00:00.000Z",
+    "error_message": "כשיש רק שורה אחת בטבלה (למשל ספק/תשלום יחיד), תפריט הפעולות (⋮) שנפתח מציג רק חלק מהאפשרויות — השאר נחתכות/מוסתרות",
+    "file": "components/ui/RowActionsMenu.tsx",
+    "root_cause": "The dropdown rendered as position:absolute, top:100% inside the button's own wrapper div, nested under ancestor containers that use overflow:hidden for rounded-card styling (e.g. ScheduledPaymentsModal.tsx:808's card div). With multiple rows the dropdown usually had enough room below to stay inside the visible/scrollable area; with a single (short) row the card's content box was barely taller than one row, so the ~150-200px dropdown got clipped by the ancestor's overflow:hidden — it wasn't a data or z-index bug, purely a CSS clipping-context issue that only became visible with few rows.",
+    "fix": "Rewrote RowActionsMenu to render its open dropdown via createPortal(..., document.body) with position:fixed, computing top/left(or right) from the trigger button's getBoundingClientRect() on open/scroll/resize, instead of position:absolute nested in the row's own DOM subtree. This escapes every ancestor's overflow/clipping context regardless of row count. Shared component used across 12+ screens (suppliers, expenses, debts, etc.) — single fix covers all of them.",
+    "tags": ["RowActionsMenu", "ui", "dropdown", "overflow-hidden", "clipping", "portal", "shared-component"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-08-19"
   }
 ]

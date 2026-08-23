@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T00:13:45.577Z
-> Files: 15 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-23T11:26:12.161Z
+> Files: 17 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -30,6 +30,10 @@
 
 ## ../../../root/.claude/plans/
 
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
+
+- `find_manually_closed_invoices.sql` — Finds every supplier invoice that was manually closed ("✓ סגור") while still (~279 tok)
 
 ## ./
 
@@ -396,7 +400,7 @@
 
 ## components/suppliers/
 
-- `SupplierTrackingTab.tsx` — fmtDMY (~37074 tok)
+- `SupplierTrackingTab.tsx` — fmtDMY (~36636 tok)
 
 ## components/test-transfer/
 
@@ -407,7 +411,7 @@
 
 ## components/ui/
 
-- `RowActionsMenu.tsx` — shared inline "⋮" row/card actions kebab menu (variant button|plain, danger styling) — replaces the old top-pinned "selection action bar" pattern across the app (~500 tok)
+- `RowActionsMenu.tsx` — RowActionsMenu (~1060 tok)
 
 ## components/yard/
 

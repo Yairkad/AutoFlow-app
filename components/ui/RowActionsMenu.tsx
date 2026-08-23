@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 export interface RowMenuAction {
   key: string
@@ -19,22 +20,41 @@ interface Props {
 
 export default function RowActionsMenu({ actions, variant = 'button', align = 'start' }: Props) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top: number; left?: number; right?: number } | null>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
     function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      const t = e.target as Node
+      if (btnRef.current?.contains(t)) return
+      if (menuRef.current && !menuRef.current.contains(t)) setOpen(false)
     }
+    function reposition() {
+      if (!btnRef.current) return
+      const r = btnRef.current.getBoundingClientRect()
+      setPos(align === 'start'
+        ? { top: r.bottom + 4, left: r.left }
+        : { top: r.bottom + 4, right: window.innerWidth - r.right })
+    }
+    reposition()
     document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
+    window.addEventListener('scroll', reposition, true)
+    window.addEventListener('resize', reposition)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      window.removeEventListener('scroll', reposition, true)
+      window.removeEventListener('resize', reposition)
+    }
+  }, [open, align])
 
   if (actions.length === 0) return null
 
   return (
-    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+    <div style={{ position: 'relative', flexShrink: 0, display: 'inline-block' }}>
       <button
+        ref={btnRef}
         onClick={e => { e.stopPropagation(); setOpen(v => !v) }}
         title="פעולות"
         style={variant === 'button' ? {
@@ -46,12 +66,12 @@ export default function RowActionsMenu({ actions, variant = 'button', align = 's
           fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)',
         }}
       >⋮</button>
-      {open && (
-        <div style={{
-          position: 'absolute', top: '100%', [align === 'start' ? 'left' : 'right']: 0,
-          marginTop: '4px', background: 'var(--bg-card)', border: '1px solid var(--border)',
+      {open && pos && typeof document !== 'undefined' && createPortal(
+        <div ref={menuRef} style={{
+          position: 'fixed', top: pos.top, left: pos.left, right: pos.right,
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
           borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.12)', overflow: 'hidden',
-          zIndex: 50, minWidth: '150px',
+          zIndex: 1000, minWidth: '150px',
         }}>
           {actions.map((a, i) => (
             <button
@@ -70,7 +90,8 @@ export default function RowActionsMenu({ actions, variant = 'button', align = 's
               {a.icon && <span>{a.icon}</span>}{a.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
