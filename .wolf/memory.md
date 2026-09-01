@@ -1719,3 +1719,32 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 11:26 | Edited components/ui/RowActionsMenu.tsx | added optional chaining | ~1060 |
+
+## Session: 2026-09-01 09:14
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-01 10:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:08 | Created lib/hooks/useOnScreenKeyboardPref.ts | — | ~442 |
+| 10:08 | Created components/yard/KeyboardModeToggle.tsx | — | ~346 |
+| 10:08 | Edited app/yard/layout.tsx | added 1 import(s) | ~72 |
+| 10:08 | Edited app/yard/layout.tsx | 3→4 lines | ~28 |
+| 10:08 | Edited components/yard/NewCarClient.tsx | added 1 import(s) | ~158 |
+| 10:08 | Edited components/yard/NewCarClient.tsx | CSS: raw | ~118 |
+| 10:08 | Edited components/yard/NewCarClient.tsx | added 1 condition(s) | ~253 |
+| 10:09 | Edited components/yard/NewCarClient.tsx | expanded (+12 lines) | ~618 |
+| 10:09 | Edited components/yard/FreeSearchClient.tsx | added 1 import(s) | ~116 |
+| 10:09 | Edited components/yard/FreeSearchClient.tsx | CSS: enabled | ~61 |
+| 10:09 | Edited components/yard/FreeSearchClient.tsx | added 1 condition(s) | ~79 |
+| 10:09 | Edited components/yard/FreeSearchClient.tsx | added 1 condition(s) | ~61 |
+| 10:09 | Edited components/yard/TireSearchClient.tsx | added 1 import(s) | ~59 |
+| 10:09 | Edited components/yard/TireSearchClient.tsx | CSS: enabled | ~60 |
+| 10:09 | Edited components/yard/TireSearchClient.tsx | 3→7 lines | ~84 |
+| 10:09 | Edited components/yard/TireSearchClient.tsx | added 1 condition(s) | ~60 |
+| 10:09 | Edited components/yard/TireLookupClient.tsx | added 1 import(s) | ~54 |
+| 10:09 | Edited components/yard/TireLookupClient.tsx | CSS: enabled | ~162 |
+| 10:09 | Edited components/yard/TireLookupClient.tsx | added 1 condition(s) | ~56 |
