@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-23T11:26:12.161Z
-> Files: 17 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T10:09:48.059Z
+> Files: 24 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -312,6 +312,7 @@
 
 ## app/yard/
 
+- `layout.tsx` — metadata (~331 tok)
 
 ## app/yard/[id]/
 
@@ -415,6 +416,11 @@
 
 ## components/yard/
 
+- `FreeSearchClient.tsx` — TYPE_LABEL (~5269 tok)
+- `KeyboardModeToggle.tsx` — KeyboardModeToggle (~346 tok)
+- `NewCarClient.tsx` — NewCarClient (~2622 tok)
+- `TireLookupClient.tsx` — normalizeTireSize (~1927 tok)
+- `TireSearchClient.tsx` — normalizeTireSize (~3982 tok)
 
 ## lib/
 
@@ -430,6 +436,7 @@
 
 ## lib/hooks/
 
+- `useOnScreenKeyboardPref.ts` — Shared, localStorage-backed preference for whether the yard terminal's (~442 tok)
 
 ## lib/supabase/
 

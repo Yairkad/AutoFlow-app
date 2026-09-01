@@ -310,5 +310,17 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-19"
+  },
+  {
+    "id": "bug-026",
+    "timestamp": "2026-09-01T00:00:00.000Z",
+    "error_message": "צוות שדה עבר מטאבלט למחשב עם מקלדת חיצונית — במסך 'קליטת רכב חדש' לא ניתן להקליד מספר רכב עם המקלדת הרגילה בכלל, ובשאר מסכי הרחבה המקלדות המותאמות-אישית קופצות ומפריעות למי שמקליד עם מקלדת חיצונית",
+    "file": "components/yard/NewCarClient.tsx, components/yard/FreeSearchClient.tsx, components/yard/TireSearchClient.tsx, components/yard/TireLookupClient.tsx, app/yard/layout.tsx",
+    "root_cause": "NewCarClient.tsx (the plate-intake screen) had no <input> element at all — the plate digits were written purely by numpad button taps (press(k) → setDigits), so a physical/Bluetooth keyboard had nothing focusable to type into; this was a hard blocker, not just an annoyance. Separately, every other yard screen with a custom on-screen keyboard (HebrewNumKeyboard in FreeSearchClient, TireKeyboard in TireSearchClient/TireLookupClient) already had a real backing <input> (external-keyboard typing already worked there via onChange), but nothing let a desktop user suppress the custom keyboard from popping open on focus, so it kept covering screen space and stealing attention even though it wasn't functionally blocking anything.",
+    "fix": "Added lib/hooks/useOnScreenKeyboardPref.ts (localStorage-backed boolean, default true = unchanged tablet behavior, synced same-tab via a CustomEvent) and components/yard/KeyboardModeToggle.tsx (small fixed button rendered once in app/yard/layout.tsx) to flip it. NewCarClient's plate display div was replaced with a real controlled <input> (always present, so external-keyboard typing works regardless of the toggle) with its numpad now rendered only when the preference is on (replaced by a plain ✓ אישור button + typing hint when off). FreeSearchClient/TireSearchClient/TireLookupClient's onFocus handlers now only call setShowKeyboard(true) when the preference is enabled, and each has an effect that force-syncs its keyboard's open/closed state to the global preference, so toggling it off instantly closes any keyboard already open app-wide.",
+    "tags": ["yard", "keyboard", "plate", "NewCarClient", "external-keyboard", "on-screen-keyboard", "missing-input", "device-migration"],
+    "related_bugs": ["bug-016"],
+    "occurrences": 1,
+    "last_seen": "2026-09-01"
   }
 ]

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import type { SearchResult } from '@/lib/yard/types'
 import TireKeyboard from '@/components/yard/TireKeyboard'
+import { useOnScreenKeyboardPref } from '@/lib/hooks/useOnScreenKeyboardPref'
 
 type TireResult = SearchResult & { size: string; brand: string }
 
@@ -22,11 +23,16 @@ function normalizeTireSize(q: string): string {
 // a way to add tires to a car.
 export default function TireLookupClient() {
   const router = useRouter()
+  const { enabled: kbEnabled } = useOnScreenKeyboardPref()
   const [query,   setQuery]   = useState('')
   const [results, setResults] = useState<TireResult[]>([])
   const [selected, setSelected] = useState<TireResult | null>(null)
   const [showKeyboard, setShowKeyboard] = useState(true)
   const [searched, setSearched] = useState(false)
+
+  // Global "מקלדת חיצונית" switch (KeyboardModeToggle) closes/reopens this
+  // side-panel keyboard to match, wherever it currently is
+  useEffect(() => { setShowKeyboard(kbEnabled) }, [kbEnabled])
 
   const search = useCallback(async (q: string) => {
     if (!q.trim()) { setResults([]); setSearched(false); return }
@@ -86,7 +92,7 @@ export default function TireLookupClient() {
               inputMode="none"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              onFocus={() => setShowKeyboard(true)}
+              onFocus={() => { if (kbEnabled) setShowKeyboard(true) }}
               onKeyDown={e => { if (e.key === 'Enter') confirmSearch() }}
               placeholder="165/65/15 או 165/65R15"
               className="w-full border-2 border-blue-500 rounded-xl text-base font-bold bg-white outline-none"
