@@ -322,5 +322,29 @@
     "related_bugs": ["bug-016"],
     "occurrences": 1,
     "last_seen": "2026-09-01"
+  },
+  {
+    "id": "bug-027",
+    "timestamp": "2026-09-01T11:57:00.000Z",
+    "error_message": "העלאת קובץ HTML ב/מסמכים לא מוסיפה את הבאנר של העסק לעמוד",
+    "file": "components/documents/DocumentsClient.tsx",
+    "root_cause": "uploadHtmlTemplate() saved the uploaded file text verbatim into content.html with no banner injection. printHtmlDoc() called replaceTemplateVars() at print time, but that only substitutes literal {{logo}}/{{bizName}}/etc. tokens — tokens a real uploaded HTML file never contains — so the banner silently never rendered.",
+    "fix": "Added mergeBannerIntoHtml() (DOMParser-based) which appends a business-info banner block (name/subtitle/address/phone/license/logo, same fields as printBlankHeader) as the first child of <body> and wraps the original body content in a zoom:0.9 wrapper. Called once at save time from a new shared saveHtmlTemplate(name, rawHtml), used by uploadHtmlTemplate.",
+    "tags": ["documents", "html-template", "banner", "upload", "merge"],
+    "related_bugs": ["bug-028"],
+    "occurrences": 1,
+    "last_seen": "2026-09-01"
+  },
+  {
+    "id": "bug-028",
+    "timestamp": "2026-09-01T11:57:00.000Z",
+    "error_message": "בכפתור \"🖨️ פתח והדפס\" (HTML docs) ההדפסה לא מתבצעת — רק פותח את העמוד",
+    "file": "components/documents/DocumentsClient.tsx",
+    "root_cause": "printHtmlDoc() opened the new tab via window.open()+document.write() but, unlike every other print*() function in this file, never appended the window.onload=...window.print() auto-print script — so the tab opened with the content but never invoked the browser print dialog.",
+    "fix": "printHtmlDoc() now injects the same \"<script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}</script>\" tail (matching printFormTemplate/printChecklist/printBlankHeader/printWarranty) before </body>, or appends it if no </body> tag is present, prior to document.write().",
+    "tags": ["documents", "html-template", "print", "window.print"],
+    "related_bugs": ["bug-027"],
+    "occurrences": 1,
+    "last_seen": "2026-09-01"
   }
 ]
