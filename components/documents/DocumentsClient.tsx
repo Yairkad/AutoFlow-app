@@ -80,6 +80,59 @@ function replaceTemplateVars(html: string, vars: {
     .replace(/\{\{bizLicense\}\}/g,  vars.bizLicense)
 }
 
+// ── Merge business banner into an uploaded/pasted HTML doc ─────────────────────
+// Same header info as printBlankHeader, injected at the top of <body>; the
+// original content is wrapped and slightly shrunk so it still fits under it.
+
+function mergeBannerIntoHtml(rawHtml: string, biz: {
+  bizName: string; bizSubTitle: string; bizPhone: string
+  bizAddress: string; bizLicense: string; logoBase64: string
+}): string {
+  const doc = new DOMParser().parseFromString(rawHtml, 'text/html')
+  const body = doc.body
+  if (!body) return rawHtml
+
+  const logoHTML = biz.logoBase64
+    ? `<img src="${biz.logoBase64}" class="af-banner-logo" alt="לוגו"/>`
+    : ''
+
+  const bannerWrap = doc.createElement('div')
+  bannerWrap.innerHTML = `
+    <div class="af-banner">
+      <div class="af-banner-biz">
+        <div class="af-banner-name">${biz.bizName}</div>
+        ${biz.bizSubTitle ? `<div class="af-banner-sub">${biz.bizSubTitle}</div>` : ''}
+        ${biz.bizAddress  ? `<div>${biz.bizAddress}</div>`   : ''}
+        ${biz.bizPhone    ? `<div>טל׳: ${biz.bizPhone}</div>` : ''}
+        ${biz.bizLicense  ? `<div>מס׳ רישיון מוסך: ${biz.bizLicense}</div>` : ''}
+      </div>
+      <div class="af-banner-logo-wrap">${logoHTML}</div>
+    </div>`.trim()
+  const bannerEl = bannerWrap.firstElementChild
+
+  const style = doc.createElement('style')
+  style.textContent = `
+    .af-banner { display:flex; align-items:center; justify-content:space-between; gap:16px;
+      padding:8px 14px; margin-bottom:8px; border-bottom:2px solid #000;
+      font-family:'Heebo',Arial,sans-serif; direction:rtl; background:#fff; }
+    .af-banner-biz { font-weight:bold; font-size:11px; line-height:1.4; color:#000; }
+    .af-banner-name { font-size:14px; font-weight:900; }
+    .af-banner-sub { font-size:10px; }
+    .af-banner-logo { max-height:60px; max-width:140px; object-fit:contain; display:block; }
+    .af-banner-content { transform-origin:top center; zoom:0.9; }
+  `
+  doc.head.appendChild(style)
+
+  const contentWrap = doc.createElement('div')
+  contentWrap.className = 'af-banner-content'
+  while (body.firstChild) contentWrap.appendChild(body.firstChild)
+
+  if (bannerEl) body.appendChild(bannerEl)
+  body.appendChild(contentWrap)
+
+  return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML
+}
+
 // ── Print helpers ──────────────────────────────────────────────────────────────
 
 function printFormTemplate(f: FormDoc, copies: number) {
@@ -666,6 +719,22 @@ export default function DocumentsClient() {
   const [loading,   setLoading]   = useState(true)
   const htmlUploadRef = useRef<HTMLInputElement>(null)
 
+  // ── Paste HTML modal ──────────────────────────────────────────────────────────
+  const [htmlPasteOpen,   setHtmlPasteOpen]   = useState(false)
+  const [htmlPasteName,   setHtmlPasteName]   = useState('')
+  const [htmlPasteCode,   setHtmlPasteCode]   = useState('')
+  const [htmlPasteSaving, setHtmlPasteSaving] = useState(false)
+
+  const savePastedHtml = async () => {
+    if (!htmlPasteCode.trim()) { showToast('הדבק קוד HTML', 'error'); return }
+    setHtmlPasteSaving(true)
+    await saveHtmlTemplate(htmlPasteName.trim() || 'מסמך HTML', htmlPasteCode)
+    setHtmlPasteSaving(false)
+    setHtmlPasteOpen(false)
+    setHtmlPasteName('')
+    setHtmlPasteCode('')
+  }
+
   // ── Template modal ────────────────────────────────────────────────────────────
   const [formOpen, setFormOpen] = useState(false)
   const [editId,   setEditId]   = useState<string | null>(null)
@@ -929,22 +998,34 @@ export default function DocumentsClient() {
 
   // ── HTML template helpers ─────────────────────────────────────────────────────
 
-  const uploadHtmlTemplate = async (file: File) => {
-    const text = await file.text()
-    const name = file.name.replace(/\.html?$/i, '')
+  const saveHtmlTemplate = async (name: string, rawHtml: string) => {
+    const merged = mergeBannerIntoHtml(rawHtml, {
+      bizName:     bizName.current,
+      bizSubTitle: bizSubTitle.current,
+      bizPhone:    bizPhone.current,
+      bizAddress:  bizAddress.current,
+      bizLicense:  bizLicense.current,
+      logoBase64:  logoBase64.current,
+    })
     await sb.from('documents').insert({
       tenant_id: tenantId.current,
       name,
       icon: '🎨',
       type: 'html_template',
-      content: { html: text },
+      content: { html: merged },
     })
     showToast('מסמך HTML נשמר ✓', 'success')
     fetchAll()
   }
 
+  const uploadHtmlTemplate = async (file: File) => {
+    const text = await file.text()
+    const name = file.name.replace(/\.html?$/i, '')
+    await saveHtmlTemplate(name, text)
+  }
+
   const printHtmlDoc = (doc: HtmlDoc) => {
-    const html = replaceTemplateVars(doc.content.html, {
+    let html = replaceTemplateVars(doc.content.html, {
       logo:       logoBase64.current,
       bizName:    bizName.current,
       bizSubTitle: bizSubTitle.current,
@@ -952,6 +1033,8 @@ export default function DocumentsClient() {
       bizAddress: bizAddress.current,
       bizLicense: bizLicense.current,
     })
+    const printScript = '<script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>'
+    html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${printScript}</body>`) : html + printScript
     const w = window.open('', '_blank')
     if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
     w.document.write(html)
@@ -1015,6 +1098,7 @@ export default function DocumentsClient() {
                 }}
               />
               <Button variant="secondary" onClick={() => htmlUploadRef.current?.click()}>📤 העלה HTML</Button>
+              <Button variant="secondary" onClick={() => setHtmlPasteOpen(true)}>📋 הדבק קוד HTML</Button>
               <Button variant="primary" onClick={openAdd}>➕ תבנית חדשה</Button>
             </div>
           : driveConnected
@@ -1557,6 +1641,46 @@ export default function DocumentsClient() {
                 className="form-input"
               />
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Paste HTML Modal ── */}
+      <Modal
+        open={htmlPasteOpen}
+        onClose={() => setHtmlPasteOpen(false)}
+        title="הדבקת קוד HTML"
+        maxWidth={640}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setHtmlPasteOpen(false)}>ביטול</Button>
+            <Button variant="primary" onClick={savePastedHtml} loading={htmlPasteSaving}>💾 שמור</Button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label className="form-label">שם המסמך</label>
+            <input
+              value={htmlPasteName}
+              onChange={e => setHtmlPasteName(e.target.value)}
+              placeholder="מסמך HTML"
+              className="form-input"
+            />
+          </div>
+          <div>
+            <label className="form-label">קוד HTML *</label>
+            <textarea
+              value={htmlPasteCode}
+              onChange={e => setHtmlPasteCode(e.target.value)}
+              placeholder="הדבק כאן את קוד ה-HTML..."
+              dir="ltr"
+              rows={14}
+              style={{
+                width: '100%', padding: '10px 12px', border: '1.5px solid var(--border)',
+                borderRadius: 8, fontSize: 12, fontFamily: 'monospace', resize: 'vertical',
+              }}
+            />
           </div>
         </div>
       </Modal>

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T10:09:48.059Z
-> Files: 24 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T11:56:29.132Z
+> Files: 26 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -35,9 +35,14 @@
 
 - `find_manually_closed_invoices.sql` — Finds every supplier invoice that was manually closed ("✓ סגור") while still (~279 tok)
 
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
+
+- `test_merge_banner.mjs` — browser: mergeBannerIntoHtml (~769 tok)
+
 ## ./
 
 - `_tmp_debug_login.mjs` — Declares shot (~368 tok)
+- `_tmp_test_merge_banner.mjs` — browser: mergeBannerIntoHtml (~764 tok)
 - `_tmp_verify_rowactions.mjs` — shot: doLogin (~987 tok)
 
 ## .claude/
@@ -361,7 +366,7 @@
 
 ## components/documents/
 
-- `DocumentsClient.tsx` — emptyForm — renders table (~22465 tok)
+- `DocumentsClient.tsx` — emptyForm; mergeBannerIntoHtml injects biz banner into uploaded/pasted HTML docs; paste-HTML modal; printHtmlDoc auto-prints (~25400 tok)
 
 ## components/employees/
 

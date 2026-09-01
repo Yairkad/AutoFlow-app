@@ -1748,3 +1748,17 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:09 | Edited components/yard/TireLookupClient.tsx | added 1 import(s) | ~54 |
 | 10:09 | Edited components/yard/TireLookupClient.tsx | CSS: enabled | ~162 |
 | 10:09 | Edited components/yard/TireLookupClient.tsx | added 1 condition(s) | ~56 |
+
+## Session: 2026-09-01 11:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:53 | Edited components/documents/DocumentsClient.tsx | added 2 condition(s) | ~676 |
+| 11:53 | Edited components/documents/DocumentsClient.tsx | CSS: name, rawHtml, logoBase64 | ~430 |
+| 11:53 | Edited components/documents/DocumentsClient.tsx | added 1 condition(s) | ~223 |
+| 11:53 | Edited components/documents/DocumentsClient.tsx | 2→3 lines | ~85 |
+| 11:54 | Edited components/documents/DocumentsClient.tsx | expanded (+40 lines) | ~413 |
+| 11:56 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/test_merge_banner.mjs | — | ~769 |
+| 11:56 | Created _tmp_test_merge_banner.mjs | — | ~764 |
+| 11:57 | Verified mergeBannerIntoHtml via headless-Chromium eval script (full doc + bare fragment), deleted scratch script after | _tmp_test_merge_banner.mjs (deleted) | pass | ~50 |
+| 11:57 | Session: HTML-docs feature request — (1) added banner merge into uploaded/pasted HTML on save (was a no-op: uploadHtmlTemplate stored raw text, printHtmlDoc only filled {{}} vars that never existed in real uploaded HTML), (2) added paste-HTML modal (name+textarea) alongside file upload, both routed through shared saveHtmlTemplate(), (3) fixed "🖨️ פתח והדפס" button — printHtmlDoc never called window.print(), only opened the tab; now injects the same auto-print+auto-close script the other print* functions use | DocumentsClient.tsx | done, tsc+eslint clean | ~1500 |
