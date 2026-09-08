@@ -290,6 +290,7 @@ export default function SupplierTrackingTab({
   const [schedInitialSupplierId, setSchedInitialSupplierId] = useState<string | undefined>(undefined)
   const [schedInitialDebtIds, setSchedInitialDebtIds] = useState<string[] | undefined>(undefined)
   const [schedInitialDebtAllocAmounts, setSchedInitialDebtAllocAmounts] = useState<Record<string, string> | undefined>(undefined)
+  const [schedInitialAmount, setSchedInitialAmount] = useState<number | undefined>(undefined)
 
   // Styled printing — pick what to print, then render a hidden print-only area
   const [showPrintChoice, setShowPrintChoice] = useState(false)
@@ -765,6 +766,7 @@ export default function SupplierTrackingTab({
       setSchedInitialSupplierId(paySupplierId ?? undefined)
       setSchedInitialDebtIds(Array.from(paySelectedIds))
       setSchedInitialDebtAllocAmounts({ ...payAllocAmounts })
+      setSchedInitialAmount(payTotalSelected)
       setSchedModal(true)
       return
     }
@@ -1644,6 +1646,7 @@ export default function SupplierTrackingTab({
             setSchedInitialSupplierId(undefined)
             setSchedInitialDebtIds(undefined)
             setSchedInitialDebtAllocAmounts(undefined)
+            setSchedInitialAmount(undefined)
           }}
           suppliers={suppliers}
           tenantId={tenantId}
@@ -1654,6 +1657,7 @@ export default function SupplierTrackingTab({
           initialSupplierId={schedInitialSupplierId}
           initialSelectedDebtIds={schedInitialDebtIds}
           initialDebtAllocAmounts={schedInitialDebtAllocAmounts}
+          initialAmount={schedInitialAmount}
         />
       )}
 

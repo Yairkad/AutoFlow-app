@@ -346,5 +346,17 @@
     "related_bugs": ["bug-027"],
     "occurrences": 1,
     "last_seen": "2026-09-01"
+  },
+  {
+    "id": "bug-029",
+    "timestamp": "2026-09-08T11:18:00.000Z",
+    "error_message": "בעריכת שיקים לסדרה: (1) סכום שהוזן בטופס תשלום הספק לא נשמר כשעוברים לטופס הצ'קים, (2) בסיכום הסדרה (לפני האישור הסופי) אי אפשר לשנות פרט ספציפי כמו תאריך או מספר צ'ק — רק לחזור לעריכה כללית",
+    "file": "components/expenses/ScheduledPaymentsModal.tsx, components/suppliers/SupplierTrackingTab.tsx",
+    "root_cause": "(1) SupplierTrackingTab.submitPayment()'s check-method branch forwarded paySupplierId/paySelectedIds/payAllocAmounts into ScheduledPaymentsModal but never the total amount the user had already built up (payTotalSelected) — ScheduledPaymentsModal had no prop to receive it, so openAdd() always reset fAmount to '' and the user had to retype the amount. (2) The series preview (seriesPreview, shown after clicking 'שמור' in series mode) rendered each row as plain read-only text (fmtDate(r.due_date) + '#' + r.check_number) with no inputs at all — the only way to fix one field on one check was '✏️ חזרה לעריכה', which re-generates the whole series from scratch (buildSeriesRows), discarding any per-row tweak.",
+    "fix": "(1) Added initialAmount?: number prop to ScheduledPaymentsModal; the auto-open effect now calls setFAmount(String(initialAmount)) right after openAdd() when provided. SupplierTrackingTab now tracks schedInitialAmount (set to payTotalSelected when redirecting to the check form, cleared on modal close) and passes it through. (2) Added updateSeriesRow(index, patch) and replaced the read-only preview row with a native date input (bound to r.due_date) and a text input (bound to r.check_number), each calling updateSeriesRow on change — the amount cell stays a plain read-only span, so per-row edits touch only date/check-number without altering any amounts or re-running the split logic.",
+    "tags": ["scheduled-payments", "checks", "series", "supplier-tracking", "initialAmount", "series-preview", "editable-row"],
+    "related_bugs": ["bug-009", "bug-010"],
+    "occurrences": 1,
+    "last_seen": "2026-09-08"
   }
 ]

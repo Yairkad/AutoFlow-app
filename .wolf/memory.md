@@ -1762,3 +1762,22 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:56 | Created _tmp_test_merge_banner.mjs | — | ~764 |
 | 11:57 | Verified mergeBannerIntoHtml via headless-Chromium eval script (full doc + bare fragment), deleted scratch script after | _tmp_test_merge_banner.mjs (deleted) | pass | ~50 |
 | 11:57 | Session: HTML-docs feature request — (1) added banner merge into uploaded/pasted HTML on save (was a no-op: uploadHtmlTemplate stored raw text, printHtmlDoc only filled {{}} vars that never existed in real uploaded HTML), (2) added paste-HTML modal (name+textarea) alongside file upload, both routed through shared saveHtmlTemplate(), (3) fixed "🖨️ פתח והדפס" button — printHtmlDoc never called window.print(), only opened the tab; now injects the same auto-print+auto-close script the other print* functions use | DocumentsClient.tsx | done, tsc+eslint clean | ~1500 |
+
+## Session: 2026-09-08 10:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-08 11:14
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:16 | Edited components/expenses/ScheduledPaymentsModal.tsx | 5→6 lines | ~53 |
+| 11:16 | Edited components/expenses/ScheduledPaymentsModal.tsx | 3→3 lines | ~61 |
+| 11:16 | Edited components/expenses/ScheduledPaymentsModal.tsx | added 1 condition(s) | ~66 |
+| 11:16 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: index, patch | ~68 |
+| 11:16 | Edited components/expenses/ScheduledPaymentsModal.tsx | added nullish coalescing | ~331 |
+| 11:16 | Edited components/suppliers/SupplierTrackingTab.tsx | 1→2 lines | ~64 |
+| 11:17 | Edited components/suppliers/SupplierTrackingTab.tsx | 4→5 lines | ~72 |
+| 11:17 | Edited components/suppliers/SupplierTrackingTab.tsx | 16→18 lines | ~196 |
+| 11:18 | Series-checks fixes: (1) amount entered in supplier payment form now carries into ScheduledPaymentsModal via new initialAmount prop, (2) series summary/preview rows now have editable date + check-number inputs (amounts stay read-only) | ScheduledPaymentsModal.tsx, SupplierTrackingTab.tsx | done, tsc+eslint clean | ~1200 |
