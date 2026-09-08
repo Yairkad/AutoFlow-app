@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-01T11:56:29.132Z
-> Files: 26 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-08T11:17:15.655Z
+> Files: 27 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -375,6 +375,7 @@
 ## components/expenses/
 
 - `ExpensesClient.tsx` — DEFAULT_EXPENSE_CATS (~20878 tok)
+- `ScheduledPaymentsModal.tsx` — monthKeyOf; series preview rows have editable date+check-number inputs (amount read-only); initialAmount prop seeds fAmount for redirect-in callers (~15943 tok)
 
 ## components/inspections/
 
@@ -406,7 +407,7 @@
 
 ## components/suppliers/
 
-- `SupplierTrackingTab.tsx` — fmtDMY (~36636 tok)
+- `SupplierTrackingTab.tsx` — fmtDMY (~36702 tok)
 
 ## components/test-transfer/
 
