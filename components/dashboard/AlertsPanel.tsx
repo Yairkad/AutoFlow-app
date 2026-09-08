@@ -148,6 +148,23 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
   const visibleCustDebts = custDebts.filter(d => !dismissed.has(d.id))
   const totalCount = visiblePayments.length + visibleSalaries.length + visibleCustDebts.length
 
+  // Checks are summarized per due-month (count + total) instead of listed one by one —
+  // a supplier list of every single check reads as noise; transfers stay itemized.
+  const visibleTransfers = visiblePayments.filter(p => p.payment_method !== 'check')
+  const checkGroups = (() => {
+    const map = new Map<string, { key: string; monthPeriod: string; count: number; total: number; minDays: number }>()
+    for (const p of visiblePayments) {
+      if (p.payment_method !== 'check') continue
+      const key = p.due_date.slice(0, 7) // YYYY-MM
+      const [yyyy, mm] = key.split('-')
+      const days = daysUntil(p.due_date)
+      const g = map.get(key)
+      if (g) { g.count++; g.total += Number(p.amount); g.minDays = Math.min(g.minDays, days) }
+      else map.set(key, { key, monthPeriod: `${mm}/${yyyy}`, count: 1, total: Number(p.amount), minDays: days })
+    }
+    return Array.from(map.values()).sort((a, b) => a.key.localeCompare(b.key))
+  })()
+
   if (compact) {
     return (
       <>
@@ -196,7 +213,19 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
                 <div style={{ color: 'var(--primary)', fontSize: '13px' }}>✓ אין התראות פעילות</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {visiblePayments.map(p => {
+                  {checkGroups.map(g => {
+                    const cs = chipStyle(g.minDays)
+                    return (
+                      <div key={`checks-${g.key}`} style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', ...cs }}>
+                        <div style={{ fontWeight: 700 }}>📝 {g.count} צ׳קים · {monthLabel(g.monthPeriod)}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                          <span style={{ fontWeight: 800 }}>{fmt(g.total)}</span>
+                          <span>{dayLabel(g.minDays)}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {visibleTransfers.map(p => {
                     const days = daysUntil(p.due_date)
                     const cs   = chipStyle(days)
                     const sup  = suppliers.find(s => s.id === p.supplier_id)?.name
@@ -205,7 +234,7 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
                         <div style={{ fontWeight: 700 }}>{p.description}{sup && ` · ${sup}`}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
                           <span style={{ fontWeight: 800 }}>₪{Number(p.amount).toLocaleString('he-IL')}</span>
-                          <span>{dayLabel(days)} · {p.payment_method === 'check' ? "צ'ק" : 'העברה'}</span>
+                          <span>{dayLabel(days)} · העברה</span>
                         </div>
                       </div>
                     )
@@ -282,8 +311,18 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
       ) : (
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', flex: 1 }}>
 
-          {/* Scheduled payments */}
-          {visiblePayments.map(p => {
+          {/* Checks — summarized per due-month, not one chip per check */}
+          {checkGroups.map(g => (
+            <div key={`checks-${g.key}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '16px', fontSize: '12px', fontWeight: 600, ...chipStyle(g.minDays) }}>
+              <span>📝 {g.count} צ׳קים</span>
+              <span style={{ opacity: 0.65, fontWeight: 400 }}>· {monthLabel(g.monthPeriod)}</span>
+              <span style={{ fontWeight: 800 }}>{fmt(g.total)}</span>
+              <span style={{ opacity: 0.75, fontWeight: 500 }}>{dayLabel(g.minDays)}</span>
+            </div>
+          ))}
+
+          {/* Scheduled transfers */}
+          {visibleTransfers.map(p => {
             const days = daysUntil(p.due_date)
             const cs   = chipStyle(days)
             const sup  = suppliers.find(s => s.id === p.supplier_id)?.name
@@ -293,9 +332,7 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
                 {sup && <span style={{ opacity: 0.65, fontWeight: 400 }}>· {sup}</span>}
                 <span style={{ fontWeight: 800 }}>{fmt(Number(p.amount))}</span>
                 <span style={{ opacity: 0.75, fontWeight: 500 }}>{dayLabel(days)}</span>
-                <span style={{ opacity: 0.55, fontSize: '11px', fontWeight: 400 }}>
-                  {p.payment_method === 'check' ? "צ'ק" : 'העברה'}
-                </span>
+                <span style={{ opacity: 0.55, fontSize: '11px', fontWeight: 400 }}>העברה</span>
               </div>
             )
           })}
