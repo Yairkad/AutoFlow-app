@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-08T11:17:15.655Z
-> Files: 27 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-08T11:42:41.947Z
+> Files: 28 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -360,6 +360,7 @@
 
 ## components/dashboard/
 
+- `AlertsPanel.tsx` — fmt (~4826 tok)
 
 ## components/debts/
 

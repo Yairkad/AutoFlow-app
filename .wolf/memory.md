@@ -1781,3 +1781,27 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:17 | Edited components/suppliers/SupplierTrackingTab.tsx | 4→5 lines | ~72 |
 | 11:17 | Edited components/suppliers/SupplierTrackingTab.tsx | 16→18 lines | ~196 |
 | 11:18 | Series-checks fixes: (1) amount entered in supplier payment form now carries into ScheduledPaymentsModal via new initialAmount prop, (2) series summary/preview rows now have editable date + check-number inputs (amounts stay read-only) | ScheduledPaymentsModal.tsx, SupplierTrackingTab.tsx | done, tsc+eslint clean | ~1200 |
+| 11:45 | AlertsPanel: checks (payment_method='check') now summarized per due-month (count+total chip, e.g. "📝 4 צ׳קים · ספטמבר 2026 · ₪5,390") instead of one chip per check; transfers unaffected, still itemized | AlertsPanel.tsx | done, tsc clean, no new eslint errors (verified against pre-change baseline) | ~600 |
+
+## Session: 2026-09-08 11:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-08 11:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:42 | Edited components/dashboard/AlertsPanel.tsx | added 2 condition(s) | ~368 |
+| 11:42 | Edited components/dashboard/AlertsPanel.tsx | expanded (+12 lines) | ~480 |
+| 11:42 | Edited components/dashboard/AlertsPanel.tsx | expanded (+8 lines) | ~442 |
+
+## Session: 2026-09-09 08:48
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-09 09:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
