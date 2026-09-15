@@ -10,6 +10,8 @@ import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import CallLogModal, { CustomerDebtCall } from './CallLogModal'
+import PaymentHistoryModal, { CustomerDebtPayment } from './PaymentHistoryModal'
+import { insertCustomerDebtPayment } from '@/lib/debts/customerDebtPayments'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,14 +19,6 @@ interface CustomerDebt {
   id: string; tenant_id: string; name: string; phone: string | null
   plate: string | null; amount: number; paid: number; description: string | null
   date: string; due_date: string | null; is_closed: boolean; created_at: string
-}
-
-type PaymentMethod = 'מזומן' | 'אשראי' | "צ'ק" | 'העברה'
-
-interface CustomerDebtPayment {
-  id: string; customer_debt_id: string; amount: number
-  payment_date: string; payment_method: string; reference: string | null
-  transfer_verified: boolean | null; verified_date: string | null; created_at: string
 }
 
 type Tab    = 'customers' | 'transfers'
@@ -86,13 +80,8 @@ export default function DebtsClient() {
   // Call log modal
   const [callLogDebtId, setCallLogDebtId] = useState<string | null>(null)
 
-  // Payment modal (customer debts only)
-  const [payItem, setPayItem] = useState<{ id: string; balance: number } | null>(null)
-  const [payAmount, setPayAmount] = useState('')
-  const [payDate, setPayDate]     = useState(todayISO())
-  const [payMethod, setPayMethod] = useState<PaymentMethod>('מזומן')
-  const [payReference, setPayReference] = useState('')
-  const [paySaving, setPaySaving] = useState(false)
+  // Payment history modal (customer debts only)
+  const [historyDebtId, setHistoryDebtId] = useState<string | null>(null)
 
   // Tenant name (for WA messages)
   const [tenantName, setTenantName] = useState('AutoFlow')
@@ -102,6 +91,7 @@ export default function DebtsClient() {
 
   // Transfers-pending-verification tab: show already-verified ones too?
   const [showVerifiedTransfers, setShowVerifiedTransfers] = useState(false)
+  const [printTransfersOpen, setPrintTransfersOpen] = useState(false)
 
   // Add-transfer-to-verify modal (transfers tab)
   const [showTransferModal, setShowTransferModal] = useState(false)
@@ -203,34 +193,6 @@ export default function DebtsClient() {
 
   // ── Payment (customers) ──────────────────────────────────────────────────
 
-  const openPay = (id: string, debtBalance: number) => {
-    setPayItem({ id, balance: debtBalance })
-    setPayAmount(String(debtBalance.toFixed(2))); setPayDate(todayISO())
-    setPayMethod('מזומן'); setPayReference('')
-  }
-
-  const recordPayment = async () => {
-    if (!payItem || !payAmount) return
-    const amount = parseFloat(payAmount)
-    if (isNaN(amount) || amount <= 0) { showToast('סכום לא תקין', 'error'); return }
-    const tid = tenantIdRef.current!
-    setPaySaving(true)
-    const debt = customerDebts.find(d => d.id === payItem.id)
-    if (!debt) { setPaySaving(false); return }
-    const newPaid  = Math.min(Number(debt.amount), Number(debt.paid) + amount)
-    const isClosed = newPaid >= Number(debt.amount)
-    const { error } = await supabase.from('customer_debts').update({ paid: newPaid, is_closed: isClosed }).eq('id', payItem.id)
-    if (error) { showToast('שגיאה בתשלום', 'error'); setPaySaving(false); return }
-    await supabase.from('customer_debt_payments').insert({
-      tenant_id: tid, customer_debt_id: payItem.id, amount,
-      payment_date: payDate, payment_method: payMethod,
-      reference: payReference.trim() || null,
-      transfer_verified: payMethod === 'העברה' ? false : null,
-    })
-    showToast(isClosed ? 'שולם במלואו ✓' : 'תשלום נרשם ✓', 'success')
-    setPaySaving(false); setPayItem(null); loadAll()
-  }
-
   const toggleCustClose = async (id: string, current: boolean) => {
     await supabase.from('customer_debts').update({ is_closed: !current }).eq('id', id)
     loadAll()
@@ -257,13 +219,11 @@ export default function DebtsClient() {
 
     let debtId = trDebtId
     let debtAmount: number
-    let debtPaid: number
 
     if (trMode === 'new') {
       if (!trName.trim()) { showToast('נא למלא שם לקוח', 'error'); setTrSaving(false); return }
       debtId = crypto.randomUUID()
       debtAmount = amount
-      debtPaid = 0
       const { error } = await supabase.from('customer_debts').insert({
         id: debtId, tenant_id: tid, name: trName.trim(), phone: trPhone.trim() || null,
         plate: null, amount, description: trDesc.trim() || null,
@@ -275,25 +235,28 @@ export default function DebtsClient() {
       const existing = customerDebts.find(d => d.id === debtId)
       if (!existing) { setTrSaving(false); return }
       debtAmount = Number(existing.amount)
-      debtPaid = Number(existing.paid)
     }
 
-    const newPaid  = Math.min(debtAmount, debtPaid + amount)
-    const isClosed = newPaid >= debtAmount
-    const { error: updErr } = await supabase.from('customer_debts').update({ paid: newPaid, is_closed: isClosed }).eq('id', debtId)
-    if (updErr) { showToast('שגיאה בשמירה', 'error'); setTrSaving(false); return }
-
-    const { error: payErr } = await supabase.from('customer_debt_payments').insert({
-      tenant_id: tid, customer_debt_id: debtId, amount,
-      payment_date: trDate, payment_method: 'העברה',
+    const { error: payErr } = await insertCustomerDebtPayment(supabase, tid, debtId, debtAmount, {
+      amount, payment_date: trDate, payment_method: 'העברה',
       reference: trReference.trim() || null,
-      transfer_verified: false,
+      receipt_issued: false, receipt_number: null,
     })
     if (payErr) { showToast('שגיאה בשמירת ההעברה', 'error'); setTrSaving(false); return }
 
     showToast('נוסף לרשימת אימות ✓', 'success')
     setTrSaving(false); setShowTransferModal(false); loadAll()
   }
+
+  // ── Print (transfers-to-verify checklist) ────────────────────────────────
+
+  useEffect(() => {
+    if (!printTransfersOpen) return
+    const t = setTimeout(() => window.print(), 150)
+    const onAfterPrint = () => setPrintTransfersOpen(false)
+    window.addEventListener('afterprint', onAfterPrint)
+    return () => { clearTimeout(t); window.removeEventListener('afterprint', onAfterPrint) }
+  }, [printTransfersOpen])
 
   // ── Filters ───────────────────────────────────────────────────────────────
 
@@ -442,10 +405,12 @@ export default function DebtsClient() {
                     return (
                       <tr
                         key={d.id}
+                        onClick={() => setHistoryDebtId(d.id)}
                         style={{
                           borderBottom: '1px solid var(--border)',
                           background: d.is_closed ? '#fafafa' : i % 2 === 0 ? '#fff' : '#fdfefe',
                           opacity: d.is_closed ? 0.65 : 1,
+                          cursor: 'pointer',
                         }}
                       >
                         <td style={{ ...tdSt, fontWeight: 600 }}>
@@ -466,11 +431,11 @@ export default function DebtsClient() {
                           {d.due_date ? (isOverdue ? `⚠ ${d.due_date}` : d.due_date) : '—'}
                         </td>
                         <td style={tdSt}><StatusChip debt={d} /></td>
-                        <td style={{ ...tdSt, textAlign: 'center' }}>
+                        <td style={{ ...tdSt, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                           <RowActionsMenu actions={[
+                            { key: 'history', label: 'היסטוריית תשלומים', icon: '📜', onClick: () => setHistoryDebtId(d.id) },
                             ...(d.phone ? [{ key: 'wa', label: 'ווצאפ תזכורת', icon: '💬', onClick: () => setWaModal({ phone: d.phone!, text: waText }) }] : []),
                             { key: 'call', label: `שיחה${callCount > 0 ? ` (${callCount})` : ''}`, icon: '📞', onClick: () => setCallLogDebtId(d.id) },
-                            ...(!d.is_closed && bal(d) > 0 ? [{ key: 'pay', label: 'שלם', icon: '₪', onClick: () => openPay(d.id, bal(d)) }] : []),
                             { key: 'close', label: d.is_closed ? 'פתח' : 'סגור', icon: d.is_closed ? '↩' : '✓', onClick: () => toggleCustClose(d.id, d.is_closed) },
                             { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openCustModal(d) },
                             { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteCustDebt(d.id) },
@@ -491,6 +456,9 @@ export default function DebtsClient() {
         <div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
             <Button onClick={openTransferModal}>+ הוסף העברה לבדיקה</Button>
+            {visibleTransfers.length > 0 && (
+              <Button variant="secondary" onClick={() => setPrintTransfersOpen(true)}>🖨 הדפס לאימות</Button>
+            )}
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>
               <input type="checkbox" checked={showVerifiedTransfers} onChange={e => setShowVerifiedTransfers(e.target.checked)} />
               הצג גם מאומתות
@@ -573,52 +541,6 @@ export default function DebtsClient() {
         </div>
       )}
 
-      {/* ── PAYMENT MODAL ── */}
-      {payItem && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPayItem(null)}>
-          <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '380px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>₪ רשום תשלום</h3>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '18px' }}>
-              יתרה: <strong style={{ color: 'var(--danger)' }}>{fmt(payItem.balance)}</strong>
-            </div>
-            <div style={{ display: 'grid', gap: '14px' }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                סכום תשלום (₪) *
-                <input type="number" min="0.01" step="0.01" max={payItem.balance} value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="0.00" className="form-input" />
-              </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                תאריך תשלום
-                <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="form-input" />
-              </label>
-              <div>
-                <label style={{ fontSize: '13px', fontWeight: 600 }}>אמצעי תשלום</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
-                  {(['מזומן', 'אשראי', 'העברה', "צ'ק"] as PaymentMethod[]).map(m => (
-                    <button key={m} type="button" onClick={() => setPayMethod(m)} style={{
-                      padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
-                      border: `1px solid ${payMethod === m ? 'var(--primary)' : 'var(--border)'}`,
-                      background: payMethod === m ? '#f0fdf4' : '#f8fafc',
-                      color: payMethod === m ? 'var(--primary)' : 'var(--text-muted)',
-                    }}>
-                      {m === 'מזומן' ? '💵' : m === 'אשראי' ? '💳' : m === "צ'ק" ? '📝' : '🏦'} {m}
-                    </button>
-                  ))}
-                </div>
-                {(payMethod === 'העברה' || payMethod === "צ'ק") && (
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
-                    {payMethod === 'העברה' ? 'מספר אסמכתא' : 'מספר צ׳ק'}
-                    <input value={payReference} onChange={e => setPayReference(e.target.value)} placeholder="אופציונלי" className="form-input" style={{ margin: 0 }} />
-                  </label>
-                )}
-              </div>
-            </div>
-            <div className="sticky-actions">
-              <Button variant="secondary" onClick={() => setPayItem(null)}>ביטול</Button>
-              <Button loading={paySaving} onClick={recordPayment} style={{ background: '#16a34a', borderColor: '#16a34a' }}>✓ אשר תשלום</Button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* ── ADD TRANSFER-TO-VERIFY MODAL ── */}
       {showTransferModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowTransferModal(false)}>
@@ -708,12 +630,70 @@ export default function DebtsClient() {
         </div>
       )}
 
+      {/* ── PRINT AREA — transfers-to-verify checklist ── */}
+      {printTransfersOpen && (
+        <div id="print-area" style={{ display: 'none' }}>
+          <style>{`
+            @media print {
+              body * { visibility: hidden; }
+              main { height: auto !important; overflow: visible !important; }
+              #print-area, #print-area * { visibility: visible; }
+              #print-area { display: block !important; position: absolute; top: 0; right: 0; width: 100%; padding: 24px; direction: rtl; }
+              #print-area table { width: 100%; border-collapse: collapse; font-size: 13px; }
+              #print-area th, #print-area td { border: 1px solid #333; padding: 8px; text-align: right; }
+              #print-area th { background: #eee; }
+              #print-area .print-check { width: 22px; height: 22px; border: 1.5px solid #333; }
+            }
+          `}</style>
+          <h2 style={{ margin: '0 0 4px' }}>{tenantName} — רשימת אימות העברות בחשבון</h2>
+          <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {todayISO()}</div>
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: '32px' }}>✓</th>
+                <th>לקוח</th>
+                <th>טלפון</th>
+                <th>סכום</th>
+                <th>תאריך</th>
+                <th>אסמכתא</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleTransfers.sort((a, b) => b.payment_date.localeCompare(a.payment_date)).map(p => {
+                const debt = customerDebts.find(d => d.id === p.customer_debt_id)
+                return (
+                  <tr key={p.id}>
+                    <td><div className="print-check" /></td>
+                    <td>{debt?.name ?? '—'}</td>
+                    <td>{debt?.phone || '—'}</td>
+                    <td>{fmt(p.amount)}</td>
+                    <td>{p.payment_date}</td>
+                    <td>{p.reference || '—'}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       <CallLogModal
         open={!!callLogDebtId}
         onClose={() => setCallLogDebtId(null)}
         debtId={callLogDebtId}
         debtName={customerDebts.find(d => d.id === callLogDebtId)?.name ?? ''}
         calls={calls.filter(c => c.customer_debt_id === callLogDebtId)}
+        tenantId={tenantIdRef.current ?? ''}
+        supabase={supabase}
+        showToast={showToast}
+        onSaved={loadAll}
+      />
+
+      <PaymentHistoryModal
+        open={!!historyDebtId}
+        onClose={() => setHistoryDebtId(null)}
+        debt={customerDebts.find(d => d.id === historyDebtId) ?? null}
+        payments={payments.filter(p => p.customer_debt_id === historyDebtId)}
         tenantId={tenantIdRef.current ?? ''}
         supabase={supabase}
         showToast={showToast}

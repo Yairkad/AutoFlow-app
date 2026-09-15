@@ -51,8 +51,8 @@ export default function CallLogModal({ open, onClose, debtId, debtName, calls, t
     setSaving(false)
     if (error) { showToast('שגיאה בשמירת השיחה', 'error'); return }
     showToast('השיחה נרשמה ✓', 'success')
-    reset()
     onSaved()
+    close()
   }
 
   return (
