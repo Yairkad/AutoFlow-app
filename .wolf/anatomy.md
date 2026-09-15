@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-08T11:42:41.947Z
-> Files: 28 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-15T11:14:09.748Z
+> Files: 34 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -30,6 +30,7 @@
 
 ## ../../../root/.claude/plans/
 
+- `bubbly-brewing-lagoon.md` — תכנון: שדרוג ממשק "חובות לקוחות" (עמוד /debts) להיסטוריית תשלומים חכמה (~1705 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
 
@@ -364,6 +365,9 @@
 
 ## components/debts/
 
+- `CallLogModal.tsx` — fmtDT (~1464 tok)
+- `DebtsClient.tsx` — fmt (~11080 tok)
+- `PaymentHistoryModal.tsx` — fmt (~3084 tok)
 
 ## components/documents/
 
@@ -440,6 +444,7 @@
 
 ## lib/debts/
 
+- `customerDebtPayments.ts` — Exports CustomerDebtPaymentMeta, insertCustomerDebtPayment, updateCustomerDebtPayment, deleteCustome (~1105 tok)
 
 ## lib/hooks/
 
@@ -462,6 +467,7 @@
 
 ## supabase/migrations/
 
+- `080_customer_debt_payment_receipt.sql` — Lets a customer_debts payment record whether a receipt (קבלה) was issued (~83 tok)
 
 ## tests/
 
