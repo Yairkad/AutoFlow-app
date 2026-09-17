@@ -680,5 +680,26 @@
     "related_bugs": ["bug-014"],
     "occurrences": 1,
     "last_seen": "2026-09-17"
+  },
+  {
+    "id": "bug-037",
+    "timestamp": "2026-09-17T00:00:00.000Z",
+    "error_message": "אחרי תיקון bug-036: הסיידבר עדיין לא טוב (מציג רק אייקונים בלי אפשרות הרחבה), וגם הטאבלט הקטן (8 אינץ') שהיה תקין השתבש",
+    "file": "components/layout/Sidebar.tsx, app/globals.css",
+    "root_cause": "Two problems with bug-036's icon-only-rail fix. (1) UX: the user never wanted an icon-only rail on tablets at all -- explicitly asked for the sidebar to become a hamburger-triggered drawer, exactly like the existing mobile behavior. (2) Real regression: the icon-hiding CSS (`.sidebar-nav-label{display:none!important}` etc.) lived inside `@media (max-width:900px)` with no counter-rule to re-show it below 640px. Since `max-width:900px` is a range that ALSO matches every width <=640px, the rule silently hid nav labels inside the already-correct mobile hamburger drawer (a full 240px-wide overlay with plenty of room for text) too -- so the 8\" tablet (previously fine, CSS width <=640) started showing icon-only nav same as the broken 10\" ones.",
+    "fix": "Deleted the icon-only-rail concept entirely -- no CSS class ever hides nav text now. The sidebar has exactly one non-desktop behavior: the hamburger-triggered 240px drawer (already used correctly at <=640px). Raised that drawer's breakpoint from max-width:640px to max-width:900px in all 3 places it's defined: --sidebar-w (0 instead of 60), the aside slide-in transform rule, and the header's hamburger/search-icon/clock-hiding rule. Also removed the now-dead sidebar-nav-label/sidebar-section-label/sidebar-edit-btn/sidebar-quicklaunch/sidebar-nav-link classNames from Sidebar.tsx since nothing targets them anymore. Same session: extended .inspections-form-grid/.inspections-customer-grid/.inspections-vehicle-grid (components/inspections, used by InspectionsClient.tsx) from max-width:640px to max-width:900px per a separate user report that the \"בדיקות קניה\" page also needed tablet-width responsiveness.",
+    "tags": [
+      "sidebar",
+      "responsive",
+      "tablet",
+      "breakpoint",
+      "media-query-overlap",
+      "regression",
+      "inspections",
+      "hamburger-drawer"
+    ],
+    "related_bugs": ["bug-036"],
+    "occurrences": 1,
+    "last_seen": "2026-09-17"
   }
 ]

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T11:09:11.073Z
-> Files: 19 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T11:22:22.574Z
+> Files: 21 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -48,7 +48,7 @@
 
 ## app/
 
-- `globals.css` — Styles: 49 rules, 24 vars (~6556 tok)
+- `globals.css` — Styles: 50 rules, 23 vars (~6406 tok)
 
 ## app/(app)/
 
@@ -389,8 +389,8 @@
 ## components/layout/
 
 - `AppShell.tsx` — Wraps Header+Sidebar+children in ProfileProvider; <main> margin-right:var(--sidebar-w) (~200 tok)
-- `Header.tsx` — Clock, global search (Ctrl+K), notification bell, user dropdown; hamburger shown only <=640px (~2900 tok)
-- `Sidebar.tsx` — NAV_ITEMS/SECTIONS, module-gated nav (isModuleVisible); icon-only rail <=900px via .sidebar-nav-label/.sidebar-section-label/.sidebar-edit-btn (hidden in globals.css); yard quick-launch gated by isAdmin||modules.includes('yard') (~5680 tok)
+- `Header.tsx` — Clock, global search (Ctrl+K), notification bell, user dropdown; hamburger+search-icon shown at <=900px (`.header-hamburger`/`.header-search-mobile-btn` in globals.css) (~2900 tok)
+- `Sidebar.tsx` — NAV_ITEMS/SECTIONS, module-gated nav (isModuleVisible); at <=900px sidebar is a hamburger-triggered 240px drawer (--sidebar-w:0, aside slides via data-mobile-open, globals.css) — NOT an icon-only rail, that approach was tried+reverted (bug-036/037); yard quick-launch gated by isAdmin||modules.includes('yard') (~5622 tok)
 
 ## components/products/
 

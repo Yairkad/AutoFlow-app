@@ -310,15 +310,18 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 /* ── Responsive ─────────────────────────────────────────────────────────────── */
 
-/* Sidebar brand text – hide at tablet (icon-only mode) */
+/* Sidebar brand text – hidden whenever the sidebar collapses into a drawer (≤900px) */
 @media (max-width: 900px) {
   .sidebar-brand-text { display: none !important; }
 }
 
-/* Tablet (≤ 900px): narrow sidebar + responsive grids */
+/* Tablet & mobile (≤ 900px): sidebar becomes a hamburger-triggered drawer (hidden by
+   default, full-width overlay when opened) instead of a persistent narrow rail — a
+   persistent icon-only rail doesn't leave room for even its own icon once padding/
+   margin are counted, so a fixed-width "collapsed" mode isn't used here at all. */
 @media (max-width: 900px) {
   :root {
-    --sidebar-w: 60px;
+    --sidebar-w: 0px;
   }
 
   /* Main content – reduce padding */
@@ -330,33 +333,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   [style*="grid-template-columns: repeat(3, 1fr)"] {
     grid-template-columns: repeat(2, 1fr) !important;
   }
-
-  /* Shrink search input on tablet so clock + search + avatar fit */
-  .header-search-desktop input[type="search"] {
-    width: 160px !important;
-  }
-
-  /* Sidebar icon-only mode: the 60px rail has no room for text — hide labels
-     instead of letting them get clipped by aside's overflow:hidden */
-  .sidebar-nav-label,
-  .sidebar-section-label,
-  .sidebar-edit-btn {
-    display: none !important;
-  }
-  .sidebar-nav-link {
-    justify-content: center !important;
-    padding: 8px 4px !important;
-    margin: 1px 4px !important;
-  }
-  .sidebar-quicklaunch {
-    padding: 8px 4px 4px !important;
-  }
 }
 
 /* Mobile (≤ 640px): no sidebar, full width */
 @media (max-width: 640px) {
   :root {
-    --sidebar-w: 0px;
     --header-h: 56px;
   }
 
@@ -424,14 +405,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .header-hamburger        { display: none; }
 .header-search-mobile-btn { display: none; }
 
-/* Tablet (≤ 900px): shrink clock, hide date string */
+/* Tablet & mobile (≤ 900px): hide clock + desktop search, show hamburger + search icon */
 @media (max-width: 900px) {
-  .header-clock-date { display: none !important; }
-  .header-clock-time { font-size: 16px !important; letter-spacing: 0 !important; }
-}
-
-/* Mobile (≤ 640px): hide clock + desktop search, show hamburger + search icon */
-@media (max-width: 640px) {
   .header-clock          { display: none !important; }
   .header-search-desktop { display: none !important; }
   /* Hide brand subtitle on very small screens */
@@ -479,7 +454,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   z-index: 89;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   /* Sidebar: always 240px wide but initially hidden off-screen (RTL = slide right) */
   aside {
     width: 240px !important;
@@ -716,7 +691,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
    Inspections form – responsive grids on mobile
    ══════════════════════════════════════════════════════════════════════════ */
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .inspections-form-grid {
     grid-template-columns: 1fr !important;
   }

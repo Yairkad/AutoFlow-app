@@ -121,7 +121,6 @@ function NavItem({
     <Link
       href={item.href}
       title={item.label}
-      className="sidebar-nav-link"
       onMouseDown={() => onDown(item.href)}
       onMouseUp={onUp}
       onMouseLeave={onLeave}
@@ -159,7 +158,7 @@ function NavItem({
         </svg>
       </span>
 
-      <span className="sidebar-nav-label" style={{ flex: 1 }}>{item.label}</span>
+      <span style={{ flex: 1 }}>{item.label}</span>
 
       {isPending && (
         <span style={{
@@ -314,7 +313,7 @@ export default function Sidebar({
               return (
                 <div key={si}>
                   {section.label && (
-                    <div className="sidebar-section-label" style={{
+                    <div style={{
                       fontSize: '9px',
                       letterSpacing: '1.3px',
                       textTransform: 'uppercase',
@@ -345,7 +344,7 @@ export default function Sidebar({
 
         {/* Yard terminal quick-launch */}
         {loaded && (isAdmin || modules.includes('yard')) && (
-          <div className="sidebar-quicklaunch" style={{ display: 'flex', gap: '6px', padding: '8px 10px 4px', borderTop: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', gap: '6px', padding: '8px 10px 4px', borderTop: '1px solid var(--border)' }}>
             {([
               { href: '/yard',        icon: '🔧', label: 'רחבה', title: 'מסוף רחבה' },
               { href: '/yard-office', icon: '🖥',  label: 'משרד', title: 'מסוף משרד' },
@@ -359,7 +358,7 @@ export default function Sidebar({
               }}
               onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover, #f3faf6)'; e.currentTarget.style.color = 'var(--text)' }}
               onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg)'; e.currentTarget.style.color = 'var(--text-muted)' }}
-              >{icon} <span className="sidebar-nav-label">{label}</span></a>
+              >{icon} <span>{label}</span></a>
             ))}
           </div>
         )}
@@ -367,7 +366,6 @@ export default function Sidebar({
         {/* Hidden edit button */}
         {loaded && (
           <button
-            className="sidebar-edit-btn"
             onClick={() => setEditorOpen(true)}
             style={{
               display: 'block', width: '100%',
