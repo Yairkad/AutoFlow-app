@@ -622,5 +622,24 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-09-17"
+  },
+  {
+    "id": "bug-034",
+    "timestamp": "2026-09-17T00:00:00.000Z",
+    "error_message": "בעריכת כמה רשומות (עריכה מרובה) שדה מספר הרכב נשאר עם הערך של הרשומה הקודמת",
+    "file": "components/customers/CustomerTrackingTab.tsx",
+    "root_cause": "PlateInput (components/ui/PlateInput.tsx) is fully uncontrolled — it owns its own `plate` input text plus the usePlateSearch hook's loading/error/data, with no `value`/reset prop the parent can drive. It only ever worked correctly because a normal close-then-reopen of the debt modal unmounts and remounts the whole `{showDebtModal && (...)}` block, giving PlateInput a clean slate each time. The new bulk-edit walk's closeDebtModal() calls setShowDebtModal(false) and then immediately openDebtModal(next) — setShowDebtModal(true) — in the same synchronous call, so React batches both into one commit and showDebtModal is observed as true the whole time; the conditional block, and therefore PlateInput, is never actually unmounted between records. dPlate itself updates correctly (openDebtModal calls setDPlate(next.plate ?? '')), but PlateInput's own visible input text (and any previously fetched vehicle data) is untouched and keeps showing the previous record's plate.",
+    "fix": "Added key={editDebt?.id ?? 'new'} to the <PlateInput> element in CustomerTrackingTab.tsx, forcing React to unmount/remount it (resetting all its internal state) every time openDebtModal switches to a different record — including the no-visible-unmount case created by the bulk-edit walk.",
+    "tags": [
+      "bulk-edit",
+      "uncontrolled-component",
+      "stale-state",
+      "plate-input",
+      "key-prop",
+      "regression"
+    ],
+    "related_bugs": ["bug-032"],
+    "occurrences": 1,
+    "last_seen": "2026-09-17"
   }
 ]

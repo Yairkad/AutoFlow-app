@@ -2056,3 +2056,7 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:46 | Edited components/customers/CustomerTrackingTab.tsx | added optional chaining | ~712 |
 | 12:46 | Edited components/customers/CustomerTrackingTab.tsx | added 2 condition(s) | ~206 |
 | 12:47 | Fixed duplicate-action-text bug: reopening an existing debt to edit and re-toggling quick-fill action pills (e.g. פרונט + צמיגים) appended a second copy of an already-saved action block instead of replacing it, because lastActionsTextRef reset to empty on every modal open regardless of what was already in the saved notes | CustomerTrackingTab.tsx | tsc --noEmit clean | ~1500 |
+| 12:48 | Session end: 38 writes across 6 files (buildUnifiedReport.ts, UnifiedReportTab.tsx, SuppliersClient.tsx, CustomersClient.tsx, CustomerTrackingTab.tsx) | 6 reads | ~72965 tok |
+| 12:53 | Edited components/customers/CustomerTrackingTab.tsx | added optional chaining | ~227 |
+| 12:55 | Fixed bulk-edit-walk regression: PlateInput (uncontrolled, no value prop) kept showing the previous record's vehicle plate when the walk swapped to the next selected debt, because closeDebtModal->openDebtModal batches showDebtModal false->true in one commit so React never actually unmounts the modal between records | CustomerTrackingTab.tsx | added key={editDebt?.id ?? "new"} to PlateInput, tsc --noEmit clean | ~600 |
+| 12:54 | Session end: 39 writes across 6 files (buildUnifiedReport.ts, UnifiedReportTab.tsx, SuppliersClient.tsx, CustomersClient.tsx, CustomerTrackingTab.tsx) | 7 reads | ~73318 tok |

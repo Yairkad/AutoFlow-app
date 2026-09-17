@@ -1112,7 +1112,14 @@ export default function CustomerTrackingTab({
 
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                 🚗 מספר רכב (אופציונלי — פרטי הרכב יתווספו אוטומטית להערה)
-                <PlateInput module="tracking" onFill={handlePlateFill} />
+                {/* Keyed by the record being edited (or 'new') so switching records — e.g. the
+                    bulk-edit walk closing one modal and immediately opening the next — always
+                    remounts this uncontrolled input fresh. showDebtModal itself never visibly
+                    flips to false during that walk (closeSuppModal/closeDebtModal set it false
+                    then true again in the same batch), so without this key React would keep the
+                    same PlateInput instance alive and it'd still show the previous record's
+                    typed plate number. */}
+                <PlateInput key={editDebt?.id ?? 'new'} module="tracking" onFill={handlePlateFill} />
               </label>
 
               <div>
