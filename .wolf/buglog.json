@@ -660,5 +660,25 @@
     "related_bugs": ["bug-033"],
     "occurrences": 1,
     "last_seen": "2026-09-17"
+  },
+  {
+    "id": "bug-036",
+    "timestamp": "2026-09-17T00:00:00.000Z",
+    "error_message": "בעיה ברספונסיביות על טאבלטים של 10 אינץ' ומעלה — הסייד בר לא מוצג טוב (\"הסייד בר שנעלם\")",
+    "file": "components/layout/Sidebar.tsx, app/globals.css",
+    "root_cause": "app/globals.css shrinks --sidebar-w to 60px at max-width:900px, intending an icon-only collapsed rail — this range covers the portrait CSS width of most real 10\" tablets (768-834px: iPad Mini/Air, most Android 10\" devices). But Sidebar.tsx never actually implemented icon-only rendering: NavItem still rendered its full text label (flex:1 span with no hiding), section headers still rendered full text, and the '✦ ערוך סידור תפריט' edit button and yard quick-launch buttons ('רחבה 🔧'/'משרד 🖥') kept full text too. Worse, NavItem's own Link had padding:'5px 10px' + margin:'1px 6px' around a fixed 30px icon — icon+padding+margin alone already summed to ~62px, exceeding the 60px rail before any text was added — so the icon itself overflowed its flex container and got clipped by <aside>'s overflowX:hidden. At the exact tablet breakpoint the whole sidebar visually read as empty/gone rather than just cramped.",
+    "fix": "Added CSS classes (.sidebar-nav-label, .sidebar-section-label, .sidebar-edit-btn) hidden via `display:none !important` inside the existing `@media (max-width:900px)` block in app/globals.css, applied to the corresponding elements in Sidebar.tsx (NavItem's label span, section header div, edit button, quick-launch link labels — quick-launch entries split into separate icon+label so the icon can stay visible alone). Added `.sidebar-nav-link` override (reduced padding/margin, centered) so the 30px icon comfortably fits the 60px rail. Net effect: at <=900px the sidebar now shows a real icon-only rail instead of clipped/invisible content.",
+    "tags": [
+      "sidebar",
+      "responsive",
+      "tablet",
+      "breakpoint",
+      "overflow-hidden",
+      "icon-only",
+      "AppShell"
+    ],
+    "related_bugs": ["bug-014"],
+    "occurrences": 1,
+    "last_seen": "2026-09-17"
   }
 ]

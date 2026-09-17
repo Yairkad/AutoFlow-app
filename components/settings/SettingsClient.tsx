@@ -83,6 +83,7 @@ const ALL_MODULES = [
   { key: 'inspections',label: '📝 בדיקות קניה' },
   { key: 'reminders',  label: '🔔 תזכורות' },
   { key: 'documents',  label: '📄 מסמכים' },
+  { key: 'yard',       label: '🔧 מסוף רחבה/משרד' },
   { key: 'settings',   label: '⚙️ הגדרות (כללי)' },
   { key: 'vault',          label: '🔒 כספת סיסמאות' },
   { key: 'products_view', label: '📦 מוצרים (צפיה בלבד)' },

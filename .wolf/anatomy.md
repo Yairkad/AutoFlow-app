@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T10:05:36.827Z
-> Files: 16 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T11:09:11.073Z
+> Files: 19 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -48,6 +48,7 @@
 
 ## app/
 
+- `globals.css` — Styles: 49 rules, 24 vars (~6556 tok)
 
 ## app/(app)/
 
@@ -387,6 +388,9 @@
 
 ## components/layout/
 
+- `AppShell.tsx` — Wraps Header+Sidebar+children in ProfileProvider; <main> margin-right:var(--sidebar-w) (~200 tok)
+- `Header.tsx` — Clock, global search (Ctrl+K), notification bell, user dropdown; hamburger shown only <=640px (~2900 tok)
+- `Sidebar.tsx` — NAV_ITEMS/SECTIONS, module-gated nav (isModuleVisible); icon-only rail <=900px via .sidebar-nav-label/.sidebar-section-label/.sidebar-edit-btn (hidden in globals.css); yard quick-launch gated by isAdmin||modules.includes('yard') (~5680 tok)
 
 ## components/products/
 
@@ -407,6 +411,7 @@
 
 ## components/settings/
 
+- `SettingsClient.tsx` — ALL_MODULES (~30392 tok)
 
 ## components/suppliers/
 

@@ -335,6 +335,22 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   .header-search-desktop input[type="search"] {
     width: 160px !important;
   }
+
+  /* Sidebar icon-only mode: the 60px rail has no room for text — hide labels
+     instead of letting them get clipped by aside's overflow:hidden */
+  .sidebar-nav-label,
+  .sidebar-section-label,
+  .sidebar-edit-btn {
+    display: none !important;
+  }
+  .sidebar-nav-link {
+    justify-content: center !important;
+    padding: 8px 4px !important;
+    margin: 1px 4px !important;
+  }
+  .sidebar-quicklaunch {
+    padding: 8px 4px 4px !important;
+  }
 }
 
 /* Mobile (≤ 640px): no sidebar, full width */
