@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { saveUiSettings } from '@/lib/uiSettings'
+import { balanceOf } from '@/lib/debts/ledger'
 
 type Section = 'finance' | 'tires' | 'cars'
 type CardId = 'income' | 'expenses' | 'profit' | 'debts' | 'products' | 'employees' | 'tires' | 'alignment' | 'cars' | 'inspections'
@@ -272,11 +273,13 @@ export default function DashboardStats() {
     const to   = `${y}-${m}-31`
 
     // Only fetch data the user is allowed to see
-    const [expenses, incomeRes, custDebts, suppDebts, emps, products, tires, quotes, cars, carReqs, alignJobs, alignDone, inspections] = await Promise.all([
+    const [expenses, incomeRes, custDebts, suppDebts, custLedgerDebts, custLedgerPayments, emps, products, tires, quotes, cars, carReqs, alignJobs, alignDone, inspections] = await Promise.all([
       canMod('expenses')                   ? supabase.from('expenses').select('amount').gte('date', from).lte('date', to)                                        : Promise.resolve({ data: [] }),
       canMod('income', 'expenses')         ? supabase.from('income').select('amount').gte('date', from).lte('date', to)                                          : Promise.resolve({ data: [] }),
       canMod('debts')                      ? supabase.from('customer_debts').select('amount,paid').eq('is_closed', false)                                         : Promise.resolve({ data: [] }),
-      canMod('debts')                      ? supabase.from('supplier_debts').select('amount,paid').eq('is_closed', false)                                         : Promise.resolve({ data: [] }),
+      canMod('debts')                      ? supabase.from('supplier_debts').select('amount,paid,direction').eq('is_closed', false)                               : Promise.resolve({ data: [] }),
+      canMod('debts')                      ? supabase.from('customer_ledger_debts').select('customer_id,amount,direction')                                       : Promise.resolve({ data: [] }),
+      canMod('debts')                      ? supabase.from('customer_ledger_payments').select('customer_id,amount')                                              : Promise.resolve({ data: [] }),
       canMod('employees')                  ? supabase.from('employees').select('id').eq('is_active', true)                                                        : Promise.resolve({ data: [] }),
       canMod('products', 'products_view')  ? supabase.from('products').select('qty')                                                                             : Promise.resolve({ data: [] }),
       canMod('tires', 'tires_view')        ? supabase.from('tires').select('qty')                                                                                : Promise.resolve({ data: [] }),
@@ -289,17 +292,38 @@ export default function DashboardStats() {
     ])
 
     const sum     = (arr: { amount: number }[]) => (arr ?? []).reduce((s, r) => s + Number(r.amount), 0)
-    const debtBal = (arr: { amount: number; paid: number }[]) =>
-      (arr ?? []).reduce((s, r) => s + Math.max(0, Number(r.amount) - Number(r.paid)), 0)
+    const debtBal = (arr: { amount: number; paid: number; direction?: 'charge' | 'credit' }[]) =>
+      (arr ?? []).reduce((s, r) => s + (r.direction === 'credit' ? -Number(r.amount) : Math.max(0, Number(r.amount) - Number(r.paid))), 0)
     const invCount = (products.data ?? []).reduce((s, r) => s + r.qty, 0)
                    + (tires.data ?? []).reduce((s, r) => s + r.qty, 0)
+
+    // Customer debts card = occasional/one-off customers (old customer_debts table, used by
+    // /debts) + the main tracked-customer invoice ledger (customer_ledger_debts, used by
+    // /customers) — these are two distinct, still-active data sources (see cerebrum 2026-09-17).
+    // The ledger side has no per-row is_closed/paid semantics; its balance is Σcharges−Σcredits−
+    // Σpayments per customer (lib/debts/ledger.ts), so it's grouped by customer_id here rather
+    // than summed/filtered like the old table.
+    const occasionalBal = debtBal(custDebts.data ?? [])
+    const ledgerCustIds = new Set([
+      ...(custLedgerDebts.data ?? []).map(d => d.customer_id),
+      ...(custLedgerPayments.data ?? []).map(p => p.customer_id),
+    ])
+    let ledgerBalTotal = 0
+    let ledgerOpenCustomers = 0
+    ledgerCustIds.forEach(cid => {
+      const debts = (custLedgerDebts.data ?? []).filter(d => d.customer_id === cid)
+      const pays  = (custLedgerPayments.data ?? []).filter(p => p.customer_id === cid)
+      const b = balanceOf(debts, pays)
+      ledgerBalTotal += b
+      if (b > 0) ledgerOpenCustomers++
+    })
 
     const next: Stats = {
       expensesMonth:    sum(expenses.data ?? []),
       incomeMonth:      sum(incomeRes.data ?? []),
-      customerDebts:    debtBal(custDebts.data ?? []),
+      customerDebts:    occasionalBal + Math.max(0, ledgerBalTotal),
       supplierDebts:    debtBal(suppDebts.data ?? []),
-      custDebtCount:    (custDebts.data ?? []).length,
+      custDebtCount:    (custDebts.data ?? []).length + ledgerOpenCustomers,
       suppDebtCount:    (suppDebts.data ?? []).length,
       activeEmployees:  (emps.data ?? []).length,
       inventoryItems:   invCount,
@@ -335,6 +359,7 @@ export default function DashboardStats() {
     fetchStats(admin, mods)
 
     const tables = ['expenses', 'income', 'customer_debts', 'supplier_debts',
+      'customer_ledger_debts', 'customer_ledger_payments',
       'employees', 'products', 'tires', 'quotes', 'cars', 'car_requests',
       'alignment_jobs', 'car_inspections']
     let ch = supabase.channel('dashboard-stats')

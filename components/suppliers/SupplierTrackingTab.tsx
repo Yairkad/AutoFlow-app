@@ -1051,7 +1051,7 @@ export default function SupplierTrackingTab({
               <FilterBtn f="all" label="הכל" />
             </div>
             <input
-              placeholder="חיפוש ספק / תיאור..."
+              placeholder="חיפוש ספק / מספר חשבונית / תיאור..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="form-input" style={{ flex: 1, minWidth: '180px', maxWidth: '300px' }}
@@ -1075,7 +1075,10 @@ export default function SupplierTrackingTab({
                 const q = search.toLowerCase()
                 const nameMatch = (supp?.name ?? '').toLowerCase().includes(q)
                 const descMatch = debts.some(d => d.description?.toLowerCase().includes(q))
-                if (!nameMatch && !descMatch) return null
+                const invMatch = debts.some(d =>
+                  d.doc_number?.toLowerCase().includes(q) ||
+                  (d.invoices ?? []).some(inv => inv.number?.toLowerCase().includes(q)))
+                if (!nameMatch && !descMatch && !invMatch) return null
               }
               if (filter === 'open'   && totalBal === 0) return null
               if (filter === 'closed' && totalBal > 0)  return null

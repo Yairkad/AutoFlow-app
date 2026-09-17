@@ -2093,3 +2093,25 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 14:22 | Edited components/layout/Sidebar.tsx | "sidebar-quicklaunch" → "flex" | ~34 |
 | 14:22 | Edited components/layout/Sidebar.tsx | inline fix | ~14 |
 | 14:22 | Edited components/layout/Sidebar.tsx | 3→2 lines | ~19 |
+| 14:23 | Session end: 17 writes across 3 files (Sidebar.tsx, globals.css, SettingsClient.tsx) | 10 reads | ~13536 tok |
+| 14:29 | Session end: 17 writes across 3 files (Sidebar.tsx, globals.css, SettingsClient.tsx) | 10 reads | ~13536 tok |
+
+## Session: 2026-09-17 14:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:45 | Edited components/customers/CustomerTrackingTab.tsx | 6→9 lines | ~149 |
+| 14:45 | Edited components/customers/CustomerTrackingTab.tsx | "חיפוש לקוח / תיאור..." → "חיפוש לקוח / מספר חשבונית" | ~18 |
+| 14:45 | Edited components/suppliers/SupplierTrackingTab.tsx | 6→9 lines | ~154 |
+| 14:45 | Edited components/suppliers/SupplierTrackingTab.tsx | "חיפוש ספק / תיאור..." → "חיפוש ספק / מספר חשבונית " | ~18 |
+| 14:47 | Edited components/layout/Header.tsx | CSS: r, r | ~1038 |
+| 14:47 | Edited components/layout/Header.tsx | 2→3 lines | ~53 |
+| 14:47 | Edited components/layout/Header.tsx | modified if() | ~188 |
+| 14:47 | Edited components/layout/Header.tsx | modified onKey() | ~140 |
+| 14:47 | Edited components/layout/Header.tsx | added 1 condition(s) | ~367 |
+| 14:48 | Edited components/layout/Header.tsx | 34→35 lines | ~622 |
+| 14:48 | Edited components/layout/Header.tsx | CSS: width | ~384 |
+| 14:49 | Edited components/dashboard/DashboardStats.tsx | added 1 import(s) | ~60 |
+| 14:49 | Edited components/dashboard/DashboardStats.tsx | added 1 condition(s) | ~1493 |
+| 14:49 | Edited components/dashboard/DashboardStats.tsx | 3→4 lines | ~73 |
+| 14:52 | Session end: 14 writes across 4 files (CustomerTrackingTab.tsx, SupplierTrackingTab.tsx, Header.tsx, DashboardStats.tsx) | 10 reads | ~88110 tok |

@@ -166,6 +166,30 @@ function UserDropdown({ name, email, onClose }: { name: string; email: string; o
   )
 }
 
+// ── Search category filter chips ────────────────────────────────────────────
+
+function CategoryChips({ categories, active, onSelect }: { categories: string[]; active: string | null; onSelect: (c: string | null) => void }) {
+  if (categories.length < 2) return null
+  const chipSt = (isActive: boolean): React.CSSProperties => ({
+    padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: isActive ? 700 : 500,
+    border: `1px solid ${isActive ? 'var(--primary)' : 'var(--border)'}`,
+    background: isActive ? 'var(--primary)' : 'transparent',
+    color: isActive ? '#fff' : 'var(--text-muted)',
+    cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+  })
+  return (
+    <div style={{
+      display: 'flex', gap: '6px', padding: '8px 10px', overflowX: 'auto',
+      borderBottom: '1px solid var(--border)', direction: 'rtl',
+    }}>
+      <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => onSelect(null)} style={chipSt(active === null)}>הכל</button>
+      {categories.map(c => (
+        <button key={c} type="button" onMouseDown={e => e.preventDefault()} onClick={() => onSelect(c)} style={chipSt(active === c)}>{c}</button>
+      ))}
+    </div>
+  )
+}
+
 // ── Header ─────────────────────────────────────────────────────────────────
 
 export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
@@ -196,6 +220,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const [loading,  setLoading]  = useState(false)
   const [focused,  setFocused]  = useState(false)
   const [selected, setSelected] = useState(0)
+  const [catFilter, setCatFilter] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchRef   = useRef<HTMLDivElement>(null)
 
@@ -230,17 +255,21 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     const trimmed = q.trim()
+    setCatFilter(null)
     if (trimmed.length < 2) { setResults([]); setLoading(false); return }
     setLoading(true)
     debounceRef.current = setTimeout(() => runSearch(trimmed), 300)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [q]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { setSelected(0) }, [results])
+  useEffect(() => { setSelected(0) }, [results, catFilter])
+
+  const categories = [...new Set(results.map(r => r.category))]
+  const filteredResults = catFilter ? results.filter(r => r.category === catFilter) : results
 
   async function runSearch(term: string) {
     const like = `%${term}%`
-    const [debts, suppliers, employees, quotes, alignments, inspections, cars, expenses, products, tires] = await Promise.all([
+    const [debts, suppliers, employees, quotes, alignments, inspections, cars, expenses, products, tires, customers, custInvoices, suppInvoices] = await Promise.all([
       supabase.from('customer_debts').select('id, name, phone, plate, amount').or(`name.ilike.${like},phone.ilike.${like},plate.ilike.${like}`).limit(4),
       supabase.from('suppliers').select('id, name, phone, contact_name').or(`name.ilike.${like},phone.ilike.${like},contact_name.ilike.${like}`).limit(4),
       supabase.from('employees').select('id, full_name, phone').or(`full_name.ilike.${like},phone.ilike.${like}`).limit(4),
@@ -251,12 +280,24 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
       supabase.from('expenses').select('id, description, amount').ilike('description', like).limit(4),
       supabase.from('products').select('id, name, sku').or(`name.ilike.${like},sku.ilike.${like}`).limit(3),
       supabase.from('tires').select('id, brand, width, profile, rim, sku').or(`brand.ilike.${like},sku.ilike.${like}`).limit(3),
+      supabase.from('customers').select('id, name, phone').or(`name.ilike.${like},phone.ilike.${like}`).limit(4),
+      supabase.from('customer_ledger_debts').select('customer_id, doc_number, amount, customers(name)').ilike('doc_number', like).limit(4),
+      supabase.from('supplier_debts').select('supplier_id, doc_number, amount, suppliers(name)').ilike('doc_number', like).limit(4),
     ])
 
     const all: SearchResult[] = []
-    debts.data?.forEach(r => all.push({ id: r.id, icon: '💳', category: 'חובות', primary: r.name, secondary: [r.phone, r.plate, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/debts' }))
+    debts.data?.forEach(r => all.push({ id: r.id, icon: '💳', category: 'חובות (מזדמנים)', primary: r.name, secondary: [r.phone, r.plate, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/debts' }))
     suppliers.data?.forEach(r => all.push({ id: r.id, icon: '🏭', category: 'ספקים', primary: r.name, secondary: r.phone ?? undefined, href: '/suppliers' }))
     employees.data?.forEach(r => all.push({ id: r.id, icon: '👷', category: 'עובדים', primary: r.full_name, secondary: r.phone ?? undefined, href: '/employees' }))
+    customers.data?.forEach(r => all.push({ id: r.id, icon: '👤', category: 'לקוחות', primary: r.name, secondary: r.phone ?? undefined, href: '/customers' }))
+    custInvoices.data?.forEach((r: any) => {
+      if (!r.customer_id) return
+      all.push({ id: r.customer_id, icon: '🧾', category: 'חשבוניות לקוחות', primary: r.customers?.name ?? '—', secondary: [r.doc_number ? `מס' ${r.doc_number}` : null, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/customers' })
+    })
+    suppInvoices.data?.forEach((r: any) => {
+      if (!r.supplier_id) return
+      all.push({ id: r.supplier_id, icon: '🧾', category: 'חשבוניות ספקים', primary: r.suppliers?.name ?? '—', secondary: [r.doc_number ? `מס' ${r.doc_number}` : null, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/suppliers' })
+    })
     quotes.data?.forEach(r => all.push({ id: r.id, icon: '💬', category: 'הצעות', primary: r.client_name ?? '—', secondary: [r.phone, r.plate].filter(Boolean).join(' · '), href: '/quotes' }))
     alignments.data?.forEach(r => all.push({ id: r.id, icon: '🔩', category: 'פרונט', primary: r.plate, secondary: [r.customer_name, r.customer_phone].filter(Boolean).join(' · '), href: '/alignment' }))
     inspections.data?.forEach(r => all.push({ id: r.id, icon: '📝', category: 'בדיקות', primary: r.plate, secondary: [r.owner_name, r.owner_phone].filter(Boolean).join(' · '), href: '/inspections' }))
@@ -293,9 +334,9 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
   function onKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Escape')    { setQ(''); setResults([]); setFocused(false); setMobileSearchOpen(false); e.currentTarget.blur() }
-    if (e.key === 'ArrowDown') { e.preventDefault(); setSelected(s => Math.min(s + 1, results.length - 1)) }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setSelected(s => Math.min(s + 1, filteredResults.length - 1)) }
     if (e.key === 'ArrowUp')   { e.preventDefault(); setSelected(s => Math.max(s - 1, 0)) }
-    if (e.key === 'Enter' && results[selected]) go(results[selected])
+    if (e.key === 'Enter' && filteredResults[selected]) go(filteredResults[selected])
   }
 
   const showDropdownResults = focused && q.trim().length >= 2
@@ -375,10 +416,11 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                 background: 'var(--bg-card)', border: '1px solid var(--primary)',
                 borderTop: 'none', maxHeight: '60vh', overflowY: 'auto', zIndex: 500,
               }}>
-                {results.length === 0 && !loading && (
+                <CategoryChips categories={categories} active={catFilter} onSelect={setCatFilter} />
+                {filteredResults.length === 0 && !loading && (
                   <div style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>לא נמצאו תוצאות</div>
                 )}
-                {results.map((r, i) => (
+                {filteredResults.map((r, i) => (
                   <div
                     key={`mob-${r.category}-${r.id}`}
                     onMouseDown={() => go(r)}
@@ -386,7 +428,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                       display: 'flex', alignItems: 'center', gap: '10px',
                       padding: '11px 16px', cursor: 'pointer', direction: 'rtl',
                       background: i === selected ? 'var(--bg)' : 'transparent',
-                      borderBottom: i < results.length - 1 ? '1px solid var(--border)' : 'none',
+                      borderBottom: i < filteredResults.length - 1 ? '1px solid var(--border)' : 'none',
                     }}
                     onMouseEnter={() => setSelected(i)}
                   >
@@ -481,18 +523,19 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
           {/* Dropdown results */}
           {showDropdownResults && (
             <div style={{
-              position: 'absolute', top: '100%', right: 0, left: 0,
+              position: 'absolute', top: '100%', right: 0, width: '320px',
               background: 'var(--bg-card)', border: '1px solid var(--primary)',
               borderTop: 'none', borderRadius: '0 0 10px 10px',
               boxShadow: '0 8px 24px rgba(0,0,0,.15)',
-              maxHeight: '380px', overflowY: 'auto', zIndex: 500,
+              maxHeight: '420px', overflowY: 'auto', zIndex: 500,
             }}>
-              {results.length === 0 && !loading && (
+              <CategoryChips categories={categories} active={catFilter} onSelect={setCatFilter} />
+              {filteredResults.length === 0 && !loading && (
                 <div style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
                   לא נמצאו תוצאות
                 </div>
               )}
-              {results.map((r, i) => (
+              {filteredResults.map((r, i) => (
                 <div
                   key={`${r.category}-${r.id}`}
                   onMouseDown={() => go(r)}
@@ -500,7 +543,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                     display: 'flex', alignItems: 'center', gap: '10px',
                     padding: '9px 12px', cursor: 'pointer', direction: 'rtl',
                     background: i === selected ? 'var(--bg)' : 'transparent',
-                    borderBottom: i < results.length - 1 ? '1px solid var(--border)' : 'none',
+                    borderBottom: i < filteredResults.length - 1 ? '1px solid var(--border)' : 'none',
                   }}
                   onMouseEnter={() => setSelected(i)}
                 >

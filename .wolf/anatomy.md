@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T11:22:22.574Z
-> Files: 21 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T11:49:54.168Z
+> Files: 22 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -363,10 +363,11 @@
 
 - `CustomerDetailsTab.tsx` — "פרטים" tab: flat customer record CRUD (name/contact/etc), no expand state (~10100 tok)
 - `CustomersClient.tsx` — Shell: loads customers/debts/payments, tab switch (מעקב/פרטים), first-load-only loading spinner via hasLoadedRef (~2300 tok)
-- `CustomerTrackingTab.tsx` — fmtDMY (~26397 tok)
+- `CustomerTrackingTab.tsx` — "מעקב" tab: per-customer accordion, month blocks, debt/invoice CRUD modal, bulk-edit, pay/print/Excel; search box also matches doc_number/invoices[].number, not just name/description (2026-09-17) (~26461 tok)
 
 ## components/dashboard/
 
+- `DashboardStats.tsx` — Draggable KPI card grid (income/expenses/debts/etc), tenant-saved layout; "debts" card now sums customer_ledger_debts+payments (main ledger) grouped per customer, plus old customer_debts (occasional/transfer-verification) — was reading only the stale customer_debts table (2026-09-17) (~8466 tok)
 
 ## components/debts/
 
@@ -389,7 +390,7 @@
 ## components/layout/
 
 - `AppShell.tsx` — Wraps Header+Sidebar+children in ProfileProvider; <main> margin-right:var(--sidebar-w) (~200 tok)
-- `Header.tsx` — Clock, global search (Ctrl+K), notification bell, user dropdown; hamburger+search-icon shown at <=900px (`.header-hamburger`/`.header-search-mobile-btn` in globals.css) (~2900 tok)
+- `Header.tsx` — Clock, global search (Ctrl+K) w/ category-filter chips (CategoryChips), notification bell, user dropdown; search now also covers `customers`, invoice number (`doc_number`) on `customer_ledger_debts`/`supplier_debts` (2026-09-17); hamburger+search-icon shown at <=900px (~10343 tok)
 - `Sidebar.tsx` — NAV_ITEMS/SECTIONS, module-gated nav (isModuleVisible); at <=900px sidebar is a hamburger-triggered 240px drawer (--sidebar-w:0, aside slides via data-mobile-open, globals.css) — NOT an icon-only rail, that approach was tried+reverted (bug-036/037); yard quick-launch gated by isAdmin||modules.includes('yard') (~5622 tok)
 
 ## components/products/
@@ -417,7 +418,7 @@
 
 - `SupplierDetailsTab.tsx` — "פרטים" tab: flat supplier record CRUD (name/contact/etc), no expand state (~9300 tok)
 - `SuppliersClient.tsx` — Shell: loads suppliers/debts/payments, tab switch (מעקב/פרטים), first-load-only loading spinner via hasLoadedRef (~2600 tok)
-- `SupplierTrackingTab.tsx` — "מעקב" tab: per-supplier accordion, month blocks, debt/invoice CRUD modal, bulk-edit (checkbox select → sequential modal walk), pay/print/Excel (~38100 tok)
+- `SupplierTrackingTab.tsx` — "מעקב" tab: per-supplier accordion, month blocks, debt/invoice CRUD modal, bulk-edit, pay/print/Excel; search box also matches doc_number/invoices[].number, not just name/description (2026-09-17) (~38222 tok)
 
 ## components/test-transfer/
 
