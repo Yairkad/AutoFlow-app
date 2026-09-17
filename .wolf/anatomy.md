@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T09:53:29.960Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T10:05:36.827Z
 > Files: 16 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -362,7 +362,7 @@
 
 - `CustomerDetailsTab.tsx` — "פרטים" tab: flat customer record CRUD (name/contact/etc), no expand state (~10100 tok)
 - `CustomersClient.tsx` — Shell: loads customers/debts/payments, tab switch (מעקב/פרטים), first-load-only loading spinner via hasLoadedRef (~2300 tok)
-- `CustomerTrackingTab.tsx` — fmtDMY (~26442 tok)
+- `CustomerTrackingTab.tsx` — fmtDMY (~26397 tok)
 
 ## components/dashboard/
 

@@ -153,7 +153,6 @@ export default function CustomerTrackingTab({
   // always routes the saved description into the line's own notes, making dNotes a no-op there).
   const [dPlate, setDPlate] = useState('')
   const [selectedActionIds, setSelectedActionIds] = useState<string[]>([])
-  const lastActionsTextRef = useRef('')
   const lastPlateMetaRef   = useRef('')
 
   // Payment modal — records one flat amount for a customer (2026-08-18 redesign: no more
@@ -230,22 +229,14 @@ export default function CustomerTrackingTab({
 
   // ── Customer debt CRUD ────────────────────────────────────────────────────
 
-  // Tries to recognize an "actions" block already baked into a line's saved notes (e.g. when
-  // reopening an existing record for editing) so lastActionsTextRef starts primed instead of
-  // empty. Without this, re-toggling a pill on an already-saved line couldn't find its own
-  // previous block to remove and just appended a second copy — "כיוון פרונט כיוון פרונט + צמיגים".
-  // Only the trailing " — "-separated segment (or the whole text, if there's no separator) is
-  // considered, and only if every "+"-joined part matches a real catalog action name for this
-  // customer — free text the user typed never accidentally matches.
-  const detectActionsBlock = (notes: string, customerId: string): { ids: string[]; block: string } | null => {
-    const sepIdx = notes.lastIndexOf(' — ')
-    const candidate = sepIdx >= 0 ? notes.slice(sepIdx + 3) : notes
-    const parts = candidate.split(' + ').map(s => s.trim()).filter(Boolean)
-    if (parts.length === 0) return null
+  // Pre-selects pills when reopening an existing record: any " + "-joined segment of the saved
+  // notes that exactly matches one of this customer's catalog action names is considered
+  // active. Free text (or the plate-meta block) never accidentally matches since it won't equal
+  // a real catalog name.
+  const detectSelectedActionIds = (notes: string, customerId: string): string[] => {
     const catalog = customerActions.filter(a => a.customer_id === customerId)
-    const matched = parts.map(p => catalog.find(a => a.name === p))
-    if (matched.some(a => !a)) return null
-    return { ids: (matched as CustomerAction[]).map(a => a.id), block: candidate }
+    const segments = notes.split(' + ').map(s => s.trim())
+    return catalog.filter(a => segments.includes(a.name)).map(a => a.id)
   }
 
   const openDebtModal = (d?: CustomerLedgerDebt) => {
@@ -258,13 +249,11 @@ export default function CustomerTrackingTab({
           : [{ ...EMPTY_INV(), date: d.date, direction: d.direction, notes: d.description ?? '' }]
       setDInvoices(existing)
       setDPlate(d.plate ?? '')
-      const detected = d.customer_id ? detectActionsBlock(existing[0]?.notes ?? '', d.customer_id) : null
-      setSelectedActionIds(detected?.ids ?? [])
-      lastActionsTextRef.current = detected?.block ?? ''
+      setSelectedActionIds(d.customer_id ? detectSelectedActionIds(existing[0]?.notes ?? '', d.customer_id) : [])
     } else {
       setEditDebt(null); setDCustomer(''); setDNotes(''); setDInvoices([EMPTY_INV()])
       setDPlate('')
-      setSelectedActionIds([]); lastActionsTextRef.current = ''
+      setSelectedActionIds([])
     }
     lastPlateMetaRef.current = ''
     setShowDebtModal(true)
@@ -298,9 +287,10 @@ export default function CustomerTrackingTab({
     openDebtModal(first)
   }
 
-  // Replaces the previously-inserted block (tracked via ref) inside a line's notes with a new
-  // one, so re-searching a plate or re-toggling actions never duplicates text — and any free
-  // text the mechanic typed themselves, before/after/between the tracked blocks, is untouched.
+  // Replaces the previously-inserted plate-meta block (tracked via ref) inside a line's notes
+  // with a new one, so re-searching a plate never duplicates text — any free text the mechanic
+  // typed themselves, before/after the tracked block, is untouched. Action pills use their own
+  // simpler add/removeActionName below, since each pill only ever owns its own name.
   const replaceTrackedBlock = (text: string, prevBlock: string, nextBlock: string) => {
     let base = text
     if (prevBlock) {
@@ -326,24 +316,37 @@ export default function CustomerTrackingTab({
     lastPlateMetaRef.current = meta
   }
 
+  // Each pill only ever adds or removes its OWN name, joined by " + " — it never recomputes or
+  // replaces the whole combined text, so toggling one action can't duplicate or disturb another
+  // action's text (or any free text the user typed) already sitting in the notes.
+  const addActionName = (text: string, name: string) => {
+    const base = text.trim()
+    return base ? `${base} + ${name}` : name
+  }
+  const removeActionName = (text: string, name: string) => {
+    const segments = text.split(' + ')
+    const idx = segments.findIndex(s => s.trim() === name)
+    if (idx === -1) return text
+    segments.splice(idx, 1)
+    return segments.join(' + ').trim()
+  }
+
   const toggleAction = (action: CustomerAction) => {
-    const nextIds = selectedActionIds.includes(action.id)
+    const isActive = selectedActionIds.includes(action.id)
+    const nextIds = isActive
       ? selectedActionIds.filter(id => id !== action.id)
       : [...selectedActionIds, action.id]
     setSelectedActionIds(nextIds)
-    const selected = customerActions.filter(a => nextIds.includes(a.id))
-    const text = selected.map(a => a.name).join(' + ')
-    const priced = selected.filter(a => a.default_price != null)
+    const priced = customerActions.filter(a => nextIds.includes(a.id) && a.default_price != null)
     const sum = priced.reduce((s, a) => s + Number(a.default_price), 0)
     const singleLine = dInvoices.length === 1
     setDInvoices(prev => prev.map((inv, idx) => idx === 0
       ? {
           ...inv,
-          notes: replaceTrackedBlock(inv.notes, lastActionsTextRef.current, text),
+          notes: isActive ? removeActionName(inv.notes, action.name) : addActionName(inv.notes, action.name),
           amount: singleLine && priced.length > 0 ? String(sum) : inv.amount,
         }
       : inv))
-    lastActionsTextRef.current = text
   }
 
   const addInvoiceLine = () => setDInvoices(prev => [...prev, EMPTY_INV()])
@@ -409,7 +412,7 @@ export default function CustomerTrackingTab({
 
   const addDebtForCustomer = (custId: string) => {
     setEditDebt(null); setDCustomer(custId); setDNotes(''); setDInvoices([EMPTY_INV()])
-    setDPlate(''); setSelectedActionIds([]); lastActionsTextRef.current = ''; lastPlateMetaRef.current = ''
+    setDPlate(''); setSelectedActionIds([]); lastPlateMetaRef.current = ''
     setShowDebtModal(true)
   }
 

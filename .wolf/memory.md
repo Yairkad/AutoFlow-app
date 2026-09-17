@@ -2060,3 +2060,10 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:53 | Edited components/customers/CustomerTrackingTab.tsx | added optional chaining | ~227 |
 | 12:55 | Fixed bulk-edit-walk regression: PlateInput (uncontrolled, no value prop) kept showing the previous record's vehicle plate when the walk swapped to the next selected debt, because closeDebtModal->openDebtModal batches showDebtModal false->true in one commit so React never actually unmounts the modal between records | CustomerTrackingTab.tsx | added key={editDebt?.id ?? "new"} to PlateInput, tsc --noEmit clean | ~600 |
 | 12:54 | Session end: 39 writes across 6 files (buildUnifiedReport.ts, UnifiedReportTab.tsx, SuppliersClient.tsx, CustomersClient.tsx, CustomerTrackingTab.tsx) | 7 reads | ~73318 tok |
+| 12:58 | Session end: 39 writes across 6 files (buildUnifiedReport.ts, UnifiedReportTab.tsx, SuppliersClient.tsx, CustomersClient.tsx, CustomerTrackingTab.tsx) | 7 reads | ~73318 tok |
+| 13:04 | Edited components/customers/CustomerTrackingTab.tsx | 4→3 lines | ~45 |
+| 13:05 | Edited components/customers/CustomerTrackingTab.tsx | CSS: record | ~490 |
+| 13:05 | Edited components/customers/CustomerTrackingTab.tsx | 4→5 lines | ~132 |
+| 13:05 | Edited components/customers/CustomerTrackingTab.tsx | added 1 condition(s) | ~419 |
+| 13:05 | Edited components/customers/CustomerTrackingTab.tsx | "); setSelectedActionIds([" → "); setSelectedActionIds([" | ~22 |
+| 13:05 | Redesigned quick-fill action pills: replaced whole-block detect/replace (lastActionsTextRef + detectActionsBlock) with per-action independent addActionName/removeActionName — each pill only touches its own name, no shared block to get out of sync; per user-specified fix. Also bumped app version 4.1.1 -> 4.1.2 (scripts/bump-version.js) so footer reflects the deploy | CustomerTrackingTab.tsx, lib/version.json | tsc --noEmit clean | ~1200 |

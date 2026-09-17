@@ -641,5 +641,24 @@
     "related_bugs": ["bug-032"],
     "occurrences": 1,
     "last_seen": "2026-09-17"
+  },
+  {
+    "id": "bug-035",
+    "timestamp": "2026-09-17T00:00:00.000Z",
+    "error_message": "עדיין יוצר כפילויות של הכפתורי פעולה בהערה (אחרי תיקון bug-033) — המשתמש ביקש שכל כפתור יוסיף/יסיר רק את השם שלו, לא ינסה לזהות/להחליף בלוק שלם",
+    "file": "components/customers/CustomerTrackingTab.tsx",
+    "root_cause": "bug-033's fix (detectActionsBlock + lastActionsTextRef) still relied on recomputing the ENTIRE combined actions text on every toggle (`selected.map(a=>a.name).join(' + ')`) and replacing a single tracked 'block' via replaceTrackedBlock's substring-removal — a design still fragile to any case where the live notes text didn't exactly match what the ref/detector expected (e.g. the block wasn't a clean trailing segment, or detection picked up a different candidate than what was actually last written). The user explicitly asked for a simpler, more robust model instead of chasing more edge cases in the block-matching approach.",
+    "fix": "Replaced the whole 'recompute and replace the combined block' design with two tiny, fully independent operations: addActionName(text, name) appends `name` (joined by ' + ', or as the whole string if empty) and removeActionName(text, name) finds and splices out exactly that one ' + '-separated segment. toggleAction() now calls one or the other for ONLY the action just clicked — it never touches any other action's text, free text, or recomputes anything from the full selected-ids list. detectActionsBlock (whole-trailing-block detection) was replaced by detectSelectedActionIds, which just checks whether each catalog action's name appears as an exact ' + '-separated segment anywhere in the saved notes, for pre-selecting pills on reopen. lastActionsTextRef was removed entirely (no longer needed — there's no block to track since each toggle is independent). replaceTrackedBlock is now used only for the separate plate-meta auto-fill (single-block replace-on-relookup, a genuinely different behavior from the multi-select action pills).",
+    "tags": [
+      "duplicate-text",
+      "quick-fill",
+      "customer-actions",
+      "redesign",
+      "regression",
+      "user-requested-simplification"
+    ],
+    "related_bugs": ["bug-033"],
+    "occurrences": 1,
+    "last_seen": "2026-09-17"
   }
 ]
