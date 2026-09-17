@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T07:31:45.269Z
-> Files: 23 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T08:32:58.684Z
+> Files: 1 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -23,9 +23,6 @@
 
 ## ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/
 
-- `MEMORY.md` — Memory Index (~142 tok)
-- `project_bank_sync_feature.md` (~671 tok)
-- `project_concurrent_sessions_conflict.md` (~1151 tok)
 
 ## ../../../AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/b832685e-2011-43a5-a71e-5b15984bedbf/scratchpad/
 
@@ -33,11 +30,15 @@
 ## ../../../root/.claude/plans/
 
 
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
+
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
+
+
 ## ./
 
-- `_tmp_list_tenants.mjs` — Declares env (~166 tok)
-- `_tmp_verify_banksync.mjs` — BASE: shot, run (~1754 tok)
-- `_tmp_verify_reports.mjs` — BASE: shot, run (~964 tok)
+- `_tmp_resolve_memory.mjs` — Declares path (~151 tok)
 
 ## .claude/
 
@@ -104,7 +105,6 @@
 
 ## app/(app)/reports/
 
-- `page.tsx` — ReportsPage (~45 tok)
 
 ## app/(app)/scan/
 
@@ -186,7 +186,6 @@
 
 ## app/api/public/plate/
 
-- `route.ts` — Next.js API route: GET (~514 tok)
 
 ## app/api/store/
 
@@ -358,9 +357,6 @@
 
 ## components/customers/
 
-- `CustomerDetailsTab.tsx` — CustomerDetailsTab (~11072 tok)
-- `CustomersClient.tsx` — CustomersClient (~2007 tok)
-- `CustomerTrackingTab.tsx` — fmtDMY (~24654 tok)
 
 ## components/dashboard/
 
@@ -376,7 +372,6 @@
 
 ## components/expenses/
 
-- `QuickExpenseModal.tsx` — LAST_CATEGORY_KEY — renders modal (~1388 tok)
 
 ## components/inspections/
 
@@ -386,7 +381,6 @@
 
 ## components/layout/
 
-- `Sidebar.tsx` — NAV_ITEMS (~5597 tok)
 
 ## components/products/
 
@@ -399,16 +393,12 @@
 
 ## components/reports/
 
-- `CashFlowForecastTab.tsx` — fmt — renders table (~2002 tok)
-- `FinancialReportClient.tsx` — FinancialReportClient (~558 tok)
-- `UnifiedReportTab.tsx` — fmt — renders table (~1632 tok)
 
 ## components/scan/
 
 
 ## components/settings/
 
-- `SettingsClient.tsx` — ALL_MODULES (~30376 tok)
 
 ## components/suppliers/
 
@@ -421,7 +411,6 @@
 
 ## components/ui/
 
-- `RowActionsMenu.tsx` — RowActionsMenu (~1186 tok)
 
 ## components/yard/
 
@@ -434,11 +423,9 @@
 
 ## lib/bank-sync/
 
-- `parseStatementFile.ts` — Exports AmountMode, AmountSign, ColumnMapping, ParsedLine + 4 more (~1581 tok)
 
 ## lib/contexts/
 
-- `ProfileContext.tsx` — ProfileContext (~1066 tok)
 
 ## lib/debts/
 
@@ -451,15 +438,12 @@
 
 ## lib/reports/
 
-- `buildForecast.ts` — Exports ForecastEvent, ForecastResult, buildForecast (~1520 tok)
-- `buildUnifiedReport.ts` — Exports MonthlyReportRow, UnifiedReportResult, buildUnifiedReport (~1516 tok)
 
 ## lib/supabase/
 
 
 ## lib/utils/
 
-- `plateApi.ts` — Israel data.gov.il vehicle API (~1161 tok)
 
 ## lib/yard/
 

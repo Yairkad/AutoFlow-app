@@ -1665,20 +1665,25 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 ## Session: 2026-09-16 21:31
 
-| Time | Action | File(s) | Outcome | ~Tokens |
-|------|--------|---------|---------|--------|
-
-## Session: 2026-09-16 21:31
+## Session: 2026-08-19 09:31
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 
 ## Session: 2026-09-16 21:31
+## Session: 2026-08-19 09:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-16 21:31
+## Session: 2026-08-19 09:55
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 
 ## Session: 2026-09-16 21:48
+## Session: 2026-08-19 10:14
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
@@ -1825,3 +1830,154 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:39 | Session end: 100 writes across 37 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 75 reads | ~187137 tok |
 | 10:54 | Session end: 100 writes across 37 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 75 reads | ~187137 tok |
 | 11:01 | Session end: 100 writes across 37 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 75 reads | ~187137 tok |
+## Session: 2026-08-19 10:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-08-19 10:35
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:36 | Edited components/suppliers/SupplierTrackingTab.tsx | added 1 condition(s) | ~148 |
+| 10:36 | Edited components/suppliers/SupplierTrackingTab.tsx | added 2 condition(s) | ~140 |
+
+## Session: 2026-08-19 11:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-08-19 11:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:31 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/find_manually_closed_invoices.sql | — | ~279 |
+
+## Session: 2026-08-19 11:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-08-19 12:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-08-23 11:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:26 | Edited components/ui/RowActionsMenu.tsx | added optional chaining | ~1060 |
+
+## Session: 2026-09-01 09:14
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-01 10:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:08 | Created lib/hooks/useOnScreenKeyboardPref.ts | — | ~442 |
+| 10:08 | Created components/yard/KeyboardModeToggle.tsx | — | ~346 |
+| 10:08 | Edited app/yard/layout.tsx | added 1 import(s) | ~72 |
+| 10:08 | Edited app/yard/layout.tsx | 3→4 lines | ~28 |
+| 10:08 | Edited components/yard/NewCarClient.tsx | added 1 import(s) | ~158 |
+| 10:08 | Edited components/yard/NewCarClient.tsx | CSS: raw | ~118 |
+| 10:08 | Edited components/yard/NewCarClient.tsx | added 1 condition(s) | ~253 |
+| 10:09 | Edited components/yard/NewCarClient.tsx | expanded (+12 lines) | ~618 |
+| 10:09 | Edited components/yard/FreeSearchClient.tsx | added 1 import(s) | ~116 |
+| 10:09 | Edited components/yard/FreeSearchClient.tsx | CSS: enabled | ~61 |
+| 10:09 | Edited components/yard/FreeSearchClient.tsx | added 1 condition(s) | ~79 |
+| 10:09 | Edited components/yard/FreeSearchClient.tsx | added 1 condition(s) | ~61 |
+| 10:09 | Edited components/yard/TireSearchClient.tsx | added 1 import(s) | ~59 |
+| 10:09 | Edited components/yard/TireSearchClient.tsx | CSS: enabled | ~60 |
+| 10:09 | Edited components/yard/TireSearchClient.tsx | 3→7 lines | ~84 |
+| 10:09 | Edited components/yard/TireSearchClient.tsx | added 1 condition(s) | ~60 |
+| 10:09 | Edited components/yard/TireLookupClient.tsx | added 1 import(s) | ~54 |
+| 10:09 | Edited components/yard/TireLookupClient.tsx | CSS: enabled | ~162 |
+| 10:09 | Edited components/yard/TireLookupClient.tsx | added 1 condition(s) | ~56 |
+
+## Session: 2026-09-01 11:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:53 | Edited components/documents/DocumentsClient.tsx | added 2 condition(s) | ~676 |
+| 11:53 | Edited components/documents/DocumentsClient.tsx | CSS: name, rawHtml, logoBase64 | ~430 |
+| 11:53 | Edited components/documents/DocumentsClient.tsx | added 1 condition(s) | ~223 |
+| 11:53 | Edited components/documents/DocumentsClient.tsx | 2→3 lines | ~85 |
+| 11:54 | Edited components/documents/DocumentsClient.tsx | expanded (+40 lines) | ~413 |
+| 11:56 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/test_merge_banner.mjs | — | ~769 |
+| 11:56 | Created _tmp_test_merge_banner.mjs | — | ~764 |
+| 11:57 | Verified mergeBannerIntoHtml via headless-Chromium eval script (full doc + bare fragment), deleted scratch script after | _tmp_test_merge_banner.mjs (deleted) | pass | ~50 |
+| 11:57 | Session: HTML-docs feature request — (1) added banner merge into uploaded/pasted HTML on save (was a no-op: uploadHtmlTemplate stored raw text, printHtmlDoc only filled {{}} vars that never existed in real uploaded HTML), (2) added paste-HTML modal (name+textarea) alongside file upload, both routed through shared saveHtmlTemplate(), (3) fixed "🖨️ פתח והדפס" button — printHtmlDoc never called window.print(), only opened the tab; now injects the same auto-print+auto-close script the other print* functions use | DocumentsClient.tsx | done, tsc+eslint clean | ~1500 |
+
+## Session: 2026-09-08 10:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-08 11:14
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:16 | Edited components/expenses/ScheduledPaymentsModal.tsx | 5→6 lines | ~53 |
+| 11:16 | Edited components/expenses/ScheduledPaymentsModal.tsx | 3→3 lines | ~61 |
+| 11:16 | Edited components/expenses/ScheduledPaymentsModal.tsx | added 1 condition(s) | ~66 |
+| 11:16 | Edited components/expenses/ScheduledPaymentsModal.tsx | CSS: index, patch | ~68 |
+| 11:16 | Edited components/expenses/ScheduledPaymentsModal.tsx | added nullish coalescing | ~331 |
+| 11:16 | Edited components/suppliers/SupplierTrackingTab.tsx | 1→2 lines | ~64 |
+| 11:17 | Edited components/suppliers/SupplierTrackingTab.tsx | 4→5 lines | ~72 |
+| 11:17 | Edited components/suppliers/SupplierTrackingTab.tsx | 16→18 lines | ~196 |
+| 11:18 | Series-checks fixes: (1) amount entered in supplier payment form now carries into ScheduledPaymentsModal via new initialAmount prop, (2) series summary/preview rows now have editable date + check-number inputs (amounts stay read-only) | ScheduledPaymentsModal.tsx, SupplierTrackingTab.tsx | done, tsc+eslint clean | ~1200 |
+| 11:45 | AlertsPanel: checks (payment_method='check') now summarized per due-month (count+total chip, e.g. "📝 4 צ׳קים · ספטמבר 2026 · ₪5,390") instead of one chip per check; transfers unaffected, still itemized | AlertsPanel.tsx | done, tsc clean, no new eslint errors (verified against pre-change baseline) | ~600 |
+
+## Session: 2026-09-08 11:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-08 11:40
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:42 | Edited components/dashboard/AlertsPanel.tsx | added 2 condition(s) | ~368 |
+| 11:42 | Edited components/dashboard/AlertsPanel.tsx | expanded (+12 lines) | ~480 |
+| 11:42 | Edited components/dashboard/AlertsPanel.tsx | expanded (+8 lines) | ~442 |
+
+## Session: 2026-09-09 08:48
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-09 09:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-15 11:01
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:07 | Created ../../../root/.claude/plans/bubbly-brewing-lagoon.md | — | ~1635 |
+| 11:09 | Edited ../../../root/.claude/plans/bubbly-brewing-lagoon.md | 1→5 lines | ~160 |
+| 11:09 | Edited ../../../root/.claude/plans/bubbly-brewing-lagoon.md | 1→2 lines | ~53 |
+| 11:10 | Edited components/debts/CallLogModal.tsx | reset() → close() | ~46 |
+| 11:10 | Created supabase/migrations/080_customer_debt_payment_receipt.sql | — | ~83 |
+| 11:10 | Created lib/debts/customerDebtPayments.ts | — | ~1105 |
+| 11:12 | Created components/debts/PaymentHistoryModal.tsx | — | ~3084 |
+| 11:12 | Edited components/debts/DebtsClient.tsx | added 2 import(s) | ~81 |
+| 11:12 | Edited components/debts/DebtsClient.tsx | reduced (-6 lines) | ~28 |
+| 11:12 | Edited components/debts/DebtsClient.tsx | 10→5 lines | ~62 |
+| 11:12 | Edited components/debts/DebtsClient.tsx | 2→3 lines | ~63 |
+| 11:12 | Edited components/debts/DebtsClient.tsx | removed 31 lines | ~42 |
+| 11:13 | Edited components/debts/DebtsClient.tsx | CSS: receipt_issued, receipt_number | ~374 |
+| 11:13 | Edited components/debts/DebtsClient.tsx | modified if() | ~24 |
+| 11:13 | Edited components/debts/DebtsClient.tsx | CSS: cursor | ~136 |
+| 11:13 | Edited components/debts/DebtsClient.tsx | 11→11 lines | ~322 |
+| 11:13 | Edited components/debts/DebtsClient.tsx | 10→13 lines | ~266 |
+| 11:13 | Edited components/debts/DebtsClient.tsx | removed 47 lines | ~14 |
+| 11:13 | Edited components/debts/DebtsClient.tsx | 3→1 lines | ~12 |
+| 11:13 | Edited components/debts/DebtsClient.tsx | added 1 condition(s) | ~144 |
+| 11:14 | Edited components/debts/DebtsClient.tsx | expanded (+58 lines) | ~836 |
+| 11:32 | Created _tmp_resolve_memory.mjs | — | ~151 |

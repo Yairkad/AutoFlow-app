@@ -6,6 +6,7 @@ import type { YardSession } from '@/lib/yard/types'
 import { formatPlate } from '@/lib/yard/types'
 import type { SearchResult } from '@/lib/yard/types'
 import HebrewNumKeyboard from '@/components/yard/HebrewNumKeyboard'
+import { useOnScreenKeyboardPref } from '@/lib/hooks/useOnScreenKeyboardPref'
 import CameraScanner from '@/components/yard/CameraScanner'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
 import type { TirePosition } from '@/lib/yard/types'
@@ -21,6 +22,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 export default function FreeSearchClient({ session, filterType }: Props) {
   const router   = useRouter()
+  const { enabled: kbEnabled } = useOnScreenKeyboardPref()
   const [query,    setQuery]    = useState('')
   const [results,  setResults]  = useState<SearchResult[]>([])
   const [selected, setSelected] = useState<SearchResult | null>(null)
@@ -41,6 +43,10 @@ export default function FreeSearchClient({ session, filterType }: Props) {
   // user is actively typing a search, otherwise it used to permanently cover the
   // results (unlike TireSearchClient, which already toggles its keyboard the same way).
   const [showKeyboard, setShowKeyboard] = useState(false)
+
+  // Global "מקלדת חיצונית" switch (KeyboardModeToggle) force-closes this
+  // keyboard the moment it's toggled off, wherever it currently is
+  useEffect(() => { if (!kbEnabled) setShowKeyboard(false) }, [kbEnabled])
 
   const existingNames = new Set((session.yard_session_items ?? []).map(i => i.name))
   const title = filterType === 'all' ? 'כל המלאי' : 'אביזרים לרכב'
@@ -270,7 +276,7 @@ export default function FreeSearchClient({ session, filterType }: Props) {
           inputMode="none"
           value={query}
           onChange={e => setQuery(e.target.value)}
-          onFocus={() => setShowKeyboard(true)}
+          onFocus={() => { if (kbEnabled) setShowKeyboard(true) }}
           onKeyDown={e => { if (e.key === 'Enter') { search(query); setShowKeyboard(false) } }}
           placeholder="חפש מוצר, צמיג, שירות..."
           className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium bg-white outline-none"

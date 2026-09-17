@@ -6,6 +6,7 @@ import type { YardSession, YardSessionItem, SearchResult, TirePosition } from '@
 import { formatPlate } from '@/lib/yard/types'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
 import TireKeyboard from '@/components/yard/TireKeyboard'
+import { useOnScreenKeyboardPref } from '@/lib/hooks/useOnScreenKeyboardPref'
 
 type TireResult = SearchResult & { size: string; brand: string }
 
@@ -22,6 +23,7 @@ function normalizeTireSize(q: string): string {
 
 export default function TireSearchClient({ session }: Props) {
   const router       = useRouter()
+  const { enabled: kbEnabled } = useOnScreenKeyboardPref()
   const scanRef      = useRef<HTMLInputElement>(null)
   const [scanMode,   setScanMode]    = useState(false)
   const [barcodeInput, setBarcodeInput] = useState('')
@@ -34,6 +36,10 @@ export default function TireSearchClient({ session }: Props) {
   const [detectedSize,  setDetectedSize]  = useState<string | null>(null)
   const [showPicker,    setShowPicker]    = useState(false)
   const [showKeyboard,  setShowKeyboard]  = useState(true)
+
+  // Global "מקלדת חיצונית" switch (KeyboardModeToggle) closes/reopens this
+  // side-panel keyboard to match, wherever it currently is
+  useEffect(() => { setShowKeyboard(kbEnabled) }, [kbEnabled])
 
   const CACHE_TTL = 5 * 60 * 1000
 
@@ -232,7 +238,7 @@ export default function TireSearchClient({ session }: Props) {
                   inputMode="none"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
-                  onFocus={() => setShowKeyboard(true)}
+                  onFocus={() => { if (kbEnabled) setShowKeyboard(true) }}
                   onKeyDown={e => { if (e.key === 'Enter') confirmSearch() }}
                   placeholder="165/65/15 או 165/65R15"
                   className="w-full border-2 border-blue-500 rounded-xl text-base font-bold bg-white outline-none"

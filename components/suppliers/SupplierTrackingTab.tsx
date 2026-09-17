@@ -290,6 +290,7 @@ export default function SupplierTrackingTab({
   const [schedInitialSupplierId, setSchedInitialSupplierId] = useState<string | undefined>(undefined)
   const [schedInitialDebtIds, setSchedInitialDebtIds] = useState<string[] | undefined>(undefined)
   const [schedInitialDebtAllocAmounts, setSchedInitialDebtAllocAmounts] = useState<Record<string, string> | undefined>(undefined)
+  const [schedInitialAmount, setSchedInitialAmount] = useState<number | undefined>(undefined)
 
   // Styled printing — pick what to print, then render a hidden print-only area
   const [showPrintChoice, setShowPrintChoice] = useState(false)
@@ -765,6 +766,7 @@ export default function SupplierTrackingTab({
       setSchedInitialSupplierId(paySupplierId ?? undefined)
       setSchedInitialDebtIds(Array.from(paySelectedIds))
       setSchedInitialDebtAllocAmounts({ ...payAllocAmounts })
+      setSchedInitialAmount(payTotalSelected)
       setSchedModal(true)
       return
     }
@@ -792,6 +794,11 @@ export default function SupplierTrackingTab({
   }
 
   const toggleClose = async (id: string, current: boolean) => {
+    if (!current) {
+      const d = supplierDebts.find(x => x.id === id)
+      const remaining = d ? Number(d.amount) - Number(d.paid) : 0
+      if (remaining > 0 && !confirm(`יתרה של ${fmt(remaining)} עדיין לא שולמה בחשבונית הזו. סגירה ידנית תמחק את היתרה הזו לצמיתות (לא תופיע יותר כחוב פתוח). להמשיך?`)) return
+    }
     await supabase.from('supplier_debts').update({ is_closed: !current }).eq('id', id)
     reload()
   }
@@ -906,8 +913,12 @@ export default function SupplierTrackingTab({
   const StatusChip = ({ debt }: { debt: SupplierDebt }) => {
     if (debt.direction === 'credit')
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>זיכוי</span>
-    if (debt.is_closed)
+    if (debt.is_closed) {
+      const written = Number(debt.amount) - Number(debt.paid)
+      if (written > 0)
+        return <span title={`נסגר ידנית — ${fmt(written)} נמחקו מהיתרה`} style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fdf4ff', color: '#a21caf', fontWeight: 600 }}>סגור ידנית (−{fmt(written)})</span>
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>שולם ✓</span>
+    }
     if (Number(debt.paid) > 0)
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef3c7', color: 'var(--warning)', fontWeight: 600 }}>חלקי</span>
     return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>חיוב</span>
@@ -1635,6 +1646,7 @@ export default function SupplierTrackingTab({
             setSchedInitialSupplierId(undefined)
             setSchedInitialDebtIds(undefined)
             setSchedInitialDebtAllocAmounts(undefined)
+            setSchedInitialAmount(undefined)
           }}
           suppliers={suppliers}
           tenantId={tenantId}
@@ -1645,6 +1657,7 @@ export default function SupplierTrackingTab({
           initialSupplierId={schedInitialSupplierId}
           initialSelectedDebtIds={schedInitialDebtIds}
           initialDebtAllocAmounts={schedInitialDebtAllocAmounts}
+          initialAmount={schedInitialAmount}
         />
       )}
 

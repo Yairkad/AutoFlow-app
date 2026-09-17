@@ -70,6 +70,7 @@ interface Props {
   initialSupplierId?: string
   initialSelectedDebtIds?: string[]
   initialDebtAllocAmounts?: Record<string, string>
+  initialAmount?: number
   initialOpenAdd?: boolean
   initialEditItem?: ScheduledPayment | null
 }
@@ -138,7 +139,7 @@ function toLocalISODate(d: Date): string {
 
 export default function ScheduledPaymentsModal({
   open, onClose, suppliers, tenantId, supabase, onRefresh, showToast, expenseCats, initialSupplierId,
-  initialSelectedDebtIds, initialDebtAllocAmounts, initialOpenAdd, initialEditItem,
+  initialSelectedDebtIds, initialDebtAllocAmounts, initialAmount, initialOpenAdd, initialEditItem,
 }: Props) {
   const [rows,      setRows]      = useState<ScheduledPayment[]>([])
   const [loading,   setLoading]   = useState(false)
@@ -301,6 +302,7 @@ export default function ScheduledPaymentsModal({
         ? { supplierId: initialSupplierId, ids: initialSelectedDebtIds, amounts: initialDebtAllocAmounts ?? {} }
         : null
       openAdd()
+      if (initialAmount && initialAmount > 0) setFAmount(String(initialAmount))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -345,6 +347,10 @@ export default function ScheduledPaymentsModal({
   }
 
   const backToEditSeries = () => setSeriesPreview(null)
+
+  const updateSeriesRow = (index: number, patch: Partial<SeriesRow>) => {
+    setSeriesPreview(prev => prev ? prev.map((r, i) => i === index ? { ...r, ...patch } : r) : prev)
+  }
 
   const confirmSeriesCreate = async () => {
     if (!seriesPreview) return
@@ -929,9 +935,21 @@ export default function ScheduledPaymentsModal({
             </div>
             <div style={{ maxHeight: 260, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
               {seriesPreview.map((r, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderBottom: i < seriesPreview.length - 1 ? '1px solid #f1f5f9' : 'none', fontSize: 13 }}>
-                  <span>{fmtDate(r.due_date)}{r.check_number ? ` — #${r.check_number}` : ''}</span>
-                  <span style={{ fontWeight: 600 }}>{fmt(r.amount)}</span>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: i < seriesPreview.length - 1 ? '1px solid #f1f5f9' : 'none', fontSize: 13 }}>
+                  <input
+                    type="date"
+                    value={r.due_date}
+                    onChange={e => updateSeriesRow(i, { due_date: e.target.value })}
+                    style={{ ...SEL, flex: '1 1 auto', padding: '4px 6px', fontSize: 13 }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="מס׳ צ׳ק"
+                    value={r.check_number ?? ''}
+                    onChange={e => updateSeriesRow(i, { check_number: e.target.value || null })}
+                    style={{ ...SEL, width: 90, padding: '4px 6px', fontSize: 13 }}
+                  />
+                  <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{fmt(r.amount)}</span>
                 </div>
               ))}
             </div>

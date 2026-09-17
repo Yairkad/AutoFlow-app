@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 export interface RowMenuAction {
@@ -21,69 +21,58 @@ interface Props {
 export default function RowActionsMenu({ actions, variant = 'button', align = 'start' }: Props) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState<{ top: number; left?: number; right?: number } | null>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-
-  // Positioned via a portal to document.body (fixed coords from the trigger's own rect) so the
-  // dropdown can never be clipped by an ancestor's overflow:hidden — e.g. a collapsed/short
-  // card whose rounded corners rely on overflow:hidden, which used to cut the menu off the
-  // moment it needed more vertical room than the collapsed card itself had.
-  useLayoutEffect(() => {
-    if (!open || !triggerRef.current) return
-    const rect = triggerRef.current.getBoundingClientRect()
-    setPos(align === 'start'
-      ? { top: rect.bottom + 4, left: rect.left }
-      : { top: rect.bottom + 4, right: window.innerWidth - rect.right })
-  }, [open, align])
 
   useEffect(() => {
     if (!open) return
     function onDown(e: MouseEvent) {
       const t = e.target as Node
-      if (triggerRef.current?.contains(t)) return
-      if (menuRef.current?.contains(t)) return
-      setOpen(false)
+      if (btnRef.current?.contains(t)) return
+      if (menuRef.current && !menuRef.current.contains(t)) setOpen(false)
     }
-    function onScrollOrResize() { setOpen(false) }
+    function reposition() {
+      if (!btnRef.current) return
+      const r = btnRef.current.getBoundingClientRect()
+      setPos(align === 'start'
+        ? { top: r.bottom + 4, left: r.left }
+        : { top: r.bottom + 4, right: window.innerWidth - r.right })
+    }
+    reposition()
     document.addEventListener('mousedown', onDown)
-    window.addEventListener('scroll', onScrollOrResize, true)
-    window.addEventListener('resize', onScrollOrResize)
+    window.addEventListener('scroll', reposition, true)
+    window.addEventListener('resize', reposition)
     return () => {
       document.removeEventListener('mousedown', onDown)
-      window.removeEventListener('scroll', onScrollOrResize, true)
-      window.removeEventListener('resize', onScrollOrResize)
+      window.removeEventListener('scroll', reposition, true)
+      window.removeEventListener('resize', reposition)
     }
-  }, [open])
+  }, [open, align])
 
   if (actions.length === 0) return null
 
   return (
-    <>
+    <div style={{ position: 'relative', flexShrink: 0, display: 'inline-block' }}>
       <button
-        ref={triggerRef}
+        ref={btnRef}
         onClick={e => { e.stopPropagation(); setOpen(v => !v) }}
         title="פעולות"
         style={variant === 'button' ? {
           width: 30, height: 30, border: '1px solid var(--border)', borderRadius: '6px',
           background: 'transparent', cursor: 'pointer', fontSize: '16px',
           display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)',
-          flexShrink: 0,
         } : {
           width: 22, height: 22, border: 'none', background: 'transparent', cursor: 'pointer',
           fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)',
-          flexShrink: 0,
         }}
       >⋮</button>
-      {open && pos && createPortal(
-        <div
-          ref={menuRef}
-          style={{
-            position: 'fixed', top: pos.top, left: pos.left, right: pos.right,
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.12)', overflow: 'hidden',
-            zIndex: 300, minWidth: '150px',
-          }}
-        >
+      {open && pos && typeof document !== 'undefined' && createPortal(
+        <div ref={menuRef} style={{
+          position: 'fixed', top: pos.top, left: pos.left, right: pos.right,
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.12)', overflow: 'hidden',
+          zIndex: 1000, minWidth: '150px',
+        }}>
           {actions.map((a, i) => (
             <button
               key={a.key}
@@ -104,6 +93,6 @@ export default function RowActionsMenu({ actions, variant = 'button', align = 's
         </div>,
         document.body
       )}
-    </>
+    </div>
   )
 }

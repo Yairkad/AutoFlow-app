@@ -476,7 +476,79 @@
     "last_seen": "2026-08-18"
   },
   {
+    "id": "bug-024",
+    "timestamp": "2026-08-19T00:00:00.000Z",
+    "error_message": "בספקים (ויקטור): חשבוניות מסומנות 'חלקי' — לחיצה על 'סגור' יוצרת 'זיכוי' ביתרה הכוללת של הספק; המשתמש לא הצליח לזהות איזו חשבונית ספציפית סגר כי כולן נראות אותו דבר",
+    "file": "components/suppliers/SupplierTrackingTab.tsx",
+    "root_cause": "StatusChip (line 906-914, before fix) rendered the exact same green 'שולם ✓' chip for a fully-paid invoice AND for one manually closed via '✓ סגור' with an unpaid remainder — is_closed alone determined the chip, paid-vs-amount was never checked for the closed branch. bal() (per bug-020) correctly zeroes a closed charge's contribution regardless of paid, so closing a partial invoice makes its positive balance vanish from the supplier's totalBal while any pre-existing open credit rows for that supplier keep their full negative weight — unmasking a credit balance that already existed but was previously offset. Nothing was newly 'created'; the confusion was that closed-with-remainder and closed-fully-paid were visually indistinguishable, so the user couldn't tell which invoice(s) among several identical-looking ones had a remainder written off.",
+    "fix": "StatusChip now checks amount-paid on the is_closed branch: if a remainder was written off, shows a distinct purple 'סגור ידנית (−₪X)' chip (with the written-off amount in a title tooltip) instead of the generic green 'שולם ✓'. Also added a confirm() dialog in toggleClose before closing any invoice with amount>paid, stating the exact amount that will be permanently written off, so the effect is explicit at click-time instead of only discoverable later via a shifted total.",
+    "tags": ["suppliers", "is_closed", "StatusChip", "credit", "balance-calculation", "UX", "toggleClose", "confirm-dialog"],
+    "related_bugs": ["bug-020"],
+    "occurrences": 1,
+    "last_seen": "2026-08-19"
+  },
+  {
     "id": "bug-025",
+    "timestamp": "2026-08-19T00:00:00.000Z",
+    "error_message": "כשיש רק שורה אחת בטבלה (למשל ספק/תשלום יחיד), תפריט הפעולות (⋮) שנפתח מציג רק חלק מהאפשרויות — השאר נחתכות/מוסתרות",
+    "file": "components/ui/RowActionsMenu.tsx",
+    "root_cause": "The dropdown rendered as position:absolute, top:100% inside the button's own wrapper div, nested under ancestor containers that use overflow:hidden for rounded-card styling (e.g. ScheduledPaymentsModal.tsx:808's card div). With multiple rows the dropdown usually had enough room below to stay inside the visible/scrollable area; with a single (short) row the card's content box was barely taller than one row, so the ~150-200px dropdown got clipped by the ancestor's overflow:hidden — it wasn't a data or z-index bug, purely a CSS clipping-context issue that only became visible with few rows.",
+    "fix": "Rewrote RowActionsMenu to render its open dropdown via createPortal(..., document.body) with position:fixed, computing top/left(or right) from the trigger button's getBoundingClientRect() on open/scroll/resize, instead of position:absolute nested in the row's own DOM subtree. This escapes every ancestor's overflow/clipping context regardless of row count. Shared component used across 12+ screens (suppliers, expenses, debts, etc.) — single fix covers all of them.",
+    "tags": ["RowActionsMenu", "ui", "dropdown", "overflow-hidden", "clipping", "portal", "shared-component"],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-08-19"
+  },
+  {
+    "id": "bug-026",
+    "timestamp": "2026-09-01T00:00:00.000Z",
+    "error_message": "צוות שדה עבר מטאבלט למחשב עם מקלדת חיצונית — במסך 'קליטת רכב חדש' לא ניתן להקליד מספר רכב עם המקלדת הרגילה בכלל, ובשאר מסכי הרחבה המקלדות המותאמות-אישית קופצות ומפריעות למי שמקליד עם מקלדת חיצונית",
+    "file": "components/yard/NewCarClient.tsx, components/yard/FreeSearchClient.tsx, components/yard/TireSearchClient.tsx, components/yard/TireLookupClient.tsx, app/yard/layout.tsx",
+    "root_cause": "NewCarClient.tsx (the plate-intake screen) had no <input> element at all — the plate digits were written purely by numpad button taps (press(k) → setDigits), so a physical/Bluetooth keyboard had nothing focusable to type into; this was a hard blocker, not just an annoyance. Separately, every other yard screen with a custom on-screen keyboard (HebrewNumKeyboard in FreeSearchClient, TireKeyboard in TireSearchClient/TireLookupClient) already had a real backing <input> (external-keyboard typing already worked there via onChange), but nothing let a desktop user suppress the custom keyboard from popping open on focus, so it kept covering screen space and stealing attention even though it wasn't functionally blocking anything.",
+    "fix": "Added lib/hooks/useOnScreenKeyboardPref.ts (localStorage-backed boolean, default true = unchanged tablet behavior, synced same-tab via a CustomEvent) and components/yard/KeyboardModeToggle.tsx (small fixed button rendered once in app/yard/layout.tsx) to flip it. NewCarClient's plate display div was replaced with a real controlled <input> (always present, so external-keyboard typing works regardless of the toggle) with its numpad now rendered only when the preference is on (replaced by a plain ✓ אישור button + typing hint when off). FreeSearchClient/TireSearchClient/TireLookupClient's onFocus handlers now only call setShowKeyboard(true) when the preference is enabled, and each has an effect that force-syncs its keyboard's open/closed state to the global preference, so toggling it off instantly closes any keyboard already open app-wide.",
+    "tags": ["yard", "keyboard", "plate", "NewCarClient", "external-keyboard", "on-screen-keyboard", "missing-input", "device-migration"],
+    "related_bugs": ["bug-016"],
+    "occurrences": 1,
+    "last_seen": "2026-09-01"
+  },
+  {
+    "id": "bug-027",
+    "timestamp": "2026-09-01T11:57:00.000Z",
+    "error_message": "העלאת קובץ HTML ב/מסמכים לא מוסיפה את הבאנר של העסק לעמוד",
+    "file": "components/documents/DocumentsClient.tsx",
+    "root_cause": "uploadHtmlTemplate() saved the uploaded file text verbatim into content.html with no banner injection. printHtmlDoc() called replaceTemplateVars() at print time, but that only substitutes literal {{logo}}/{{bizName}}/etc. tokens — tokens a real uploaded HTML file never contains — so the banner silently never rendered.",
+    "fix": "Added mergeBannerIntoHtml() (DOMParser-based) which appends a business-info banner block (name/subtitle/address/phone/license/logo, same fields as printBlankHeader) as the first child of <body> and wraps the original body content in a zoom:0.9 wrapper. Called once at save time from a new shared saveHtmlTemplate(name, rawHtml), used by uploadHtmlTemplate.",
+    "tags": ["documents", "html-template", "banner", "upload", "merge"],
+    "related_bugs": ["bug-028"],
+    "occurrences": 1,
+    "last_seen": "2026-09-01"
+  },
+  {
+    "id": "bug-028",
+    "timestamp": "2026-09-01T11:57:00.000Z",
+    "error_message": "בכפתור \"🖨️ פתח והדפס\" (HTML docs) ההדפסה לא מתבצעת — רק פותח את העמוד",
+    "file": "components/documents/DocumentsClient.tsx",
+    "root_cause": "printHtmlDoc() opened the new tab via window.open()+document.write() but, unlike every other print*() function in this file, never appended the window.onload=...window.print() auto-print script — so the tab opened with the content but never invoked the browser print dialog.",
+    "fix": "printHtmlDoc() now injects the same \"<script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}</script>\" tail (matching printFormTemplate/printChecklist/printBlankHeader/printWarranty) before </body>, or appends it if no </body> tag is present, prior to document.write().",
+    "tags": ["documents", "html-template", "print", "window.print"],
+    "related_bugs": ["bug-027"],
+    "occurrences": 1,
+    "last_seen": "2026-09-01"
+  },
+  {
+    "id": "bug-029",
+    "timestamp": "2026-09-08T11:18:00.000Z",
+    "error_message": "בעריכת שיקים לסדרה: (1) סכום שהוזן בטופס תשלום הספק לא נשמר כשעוברים לטופס הצ'קים, (2) בסיכום הסדרה (לפני האישור הסופי) אי אפשר לשנות פרט ספציפי כמו תאריך או מספר צ'ק — רק לחזור לעריכה כללית",
+    "file": "components/expenses/ScheduledPaymentsModal.tsx, components/suppliers/SupplierTrackingTab.tsx",
+    "root_cause": "(1) SupplierTrackingTab.submitPayment()'s check-method branch forwarded paySupplierId/paySelectedIds/payAllocAmounts into ScheduledPaymentsModal but never the total amount the user had already built up (payTotalSelected) — ScheduledPaymentsModal had no prop to receive it, so openAdd() always reset fAmount to '' and the user had to retype the amount. (2) The series preview (seriesPreview, shown after clicking 'שמור' in series mode) rendered each row as plain read-only text (fmtDate(r.due_date) + '#' + r.check_number) with no inputs at all — the only way to fix one field on one check was '✏️ חזרה לעריכה', which re-generates the whole series from scratch (buildSeriesRows), discarding any per-row tweak.",
+    "fix": "(1) Added initialAmount?: number prop to ScheduledPaymentsModal; the auto-open effect now calls setFAmount(String(initialAmount)) right after openAdd() when provided. SupplierTrackingTab now tracks schedInitialAmount (set to payTotalSelected when redirecting to the check form, cleared on modal close) and passes it through. (2) Added updateSeriesRow(index, patch) and replaced the read-only preview row with a native date input (bound to r.due_date) and a text input (bound to r.check_number), each calling updateSeriesRow on change — the amount cell stays a plain read-only span, so per-row edits touch only date/check-number without altering any amounts or re-running the split logic.",
+    "tags": ["scheduled-payments", "checks", "series", "supplier-tracking", "initialAmount", "series-preview", "editable-row"],
+    "related_bugs": ["bug-009", "bug-010"],
+    "occurrences": 1,
+    "last_seen": "2026-09-08"
+  },
+  {
+    "id": "bug-030",
     "timestamp": "2026-09-16T20:06:58.501Z",
     "error_message": "Hebrew text in an uploaded bank-statement CSV rendered as mojibake in the bank-sync column-mapping preview table (e.g. \"§xx—xx@x\" instead of \"דלק פז\")",
     "file": "lib/bank-sync/parseStatementFile.ts",
@@ -495,7 +567,7 @@
     "last_seen": "2026-09-16"
   },
   {
-    "id": "bug-026",
+    "id": "bug-031",
     "timestamp": "2026-09-16T20:06:58.501Z",
     "error_message": "שגיאה: invalid input syntax for type uuid: \"\" toast shown when saving from QuickExpenseModal (\"⚡ הוספה מהירה\")",
     "file": "components/expenses/QuickExpenseModal.tsx",
