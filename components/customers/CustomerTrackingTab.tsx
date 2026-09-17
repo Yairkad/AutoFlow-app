@@ -10,10 +10,9 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { recordCustomerPayment } from '@/lib/debts/reconcileCustomerLedgerPayment'
 import { balanceOf, buildLedger, RawLedgerEvent } from '@/lib/debts/ledger'
 import QuickAddCustomerModal, { QuickCustomer } from '@/components/customers/QuickAddCustomerModal'
-import VatToggle from '@/components/ui/VatToggle'
-import UnitToggle from '@/components/ui/UnitToggle'
-import { withVat, withoutVat } from '@/lib/utils/vat'
-import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, RecurringItem, Direction, fmt, bal, waUrl } from './shared'
+import PlateInput from '@/components/ui/PlateInput'
+import { VehicleData } from '@/lib/utils/plateApi'
+import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, RecurringItem, CustomerAction, Direction, fmt, bal, waUrl } from './shared'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -37,6 +36,7 @@ interface CustomerTrackingTabProps {
   customerDebts: CustomerLedgerDebt[]
   customerPayments: CustomerLedgerPayment[]
   recurringItems: RecurringItem[]
+  customerActions: CustomerAction[]
   openId: string | null
   reload: () => void
 }
@@ -72,7 +72,7 @@ const tdSt: React.CSSProperties = { padding: '8px 10px', verticalAlign: 'middle'
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CustomerTrackingTab({
-  tenantId, tenantName, customers, customerDebts, customerPayments, recurringItems, openId, reload,
+  tenantId, tenantName, customers, customerDebts, customerPayments, recurringItems, customerActions, openId, reload,
 }: CustomerTrackingTabProps) {
   const supabase    = useRef(createClient()).current
   const { showToast } = useToast()
@@ -130,6 +130,14 @@ export default function CustomerTrackingTab({
   const [dInvoices, setDInvoices] = useState<InvoiceEntry[]>([EMPTY_INV()])
   const [dSaving, setDSaving]     = useState(false)
 
+  // Quick-fill: per-visit vehicle plate lookup + per-customer "actions" catalog selection.
+  // Both compose into dInvoices[0].notes (not dNotes — see openDebtModal, which on edit
+  // always routes the saved description into the line's own notes, making dNotes a no-op there).
+  const [dPlate, setDPlate] = useState('')
+  const [selectedActionIds, setSelectedActionIds] = useState<string[]>([])
+  const lastActionsTextRef = useRef('')
+  const lastPlateMetaRef   = useRef('')
+
   // Payment modal — records one flat amount for a customer (2026-08-18 redesign: no more
   // per-invoice allocation). No check-series/calendar system for customers — a single "צ'ק"
   // payment just carries an optional check number/date inline.
@@ -150,21 +158,6 @@ export default function CustomerTrackingTab({
 
   // Quick-add-customer modal
   const [showQuickAddCustomer, setShowQuickAddCustomer] = useState(false)
-
-  // Recurring-item (rate template) add/edit
-  const [showRecItemModal, setShowRecItemModal] = useState(false)
-  const [editRecItem, setEditRecItem] = useState<RecurringItem | null>(null)
-  const [riCustomerId, setRiCustomerId] = useState<string | null>(null)
-  const [riName, setRiName] = useState('')
-  const [riType, setRiType] = useState<'fixed' | 'meter'>('fixed')
-  const [riAmt, setRiAmt] = useState('')
-  const [riPpu, setRiPpu] = useState('')
-  const [riPpuUnit, setRiPpuUnit] = useState<'ils' | 'agorot'>('ils')
-  const [riFixedAddon, setRiFixedAddon] = useState('')
-  const [riFrom, setRiFrom] = useState(monthISO())
-  const [riActive, setRiActive] = useState(true)
-  const [riVat, setRiVat] = useState<'before' | 'after'>('after')
-  const [riSaving, setRiSaving] = useState(false)
 
   // "Generate this month's charges" — fixed-type recurring items only
   const [genMonth, setGenMonth] = useState(monthISO())
@@ -228,10 +221,55 @@ export default function CustomerTrackingTab({
           ? [{ type: (d.doc_type ?? 'invoice') as 'invoice' | 'karteset', number: d.doc_number, amount: String(d.amount), date: d.date, direction: d.direction, notes: d.description ?? '' }]
           : [{ ...EMPTY_INV(), date: d.date, direction: d.direction, notes: d.description ?? '' }]
       setDInvoices(existing)
+      setDPlate(d.plate ?? '')
     } else {
       setEditDebt(null); setDCustomer(''); setDNotes(''); setDInvoices([EMPTY_INV()])
+      setDPlate('')
     }
+    // Can't reconstruct which actions were originally selected from saved text alone —
+    // pills start unchecked even when editing a row that used them.
+    setSelectedActionIds([]); lastActionsTextRef.current = ''; lastPlateMetaRef.current = ''
     setShowDebtModal(true)
+  }
+
+  // Replaces the previously-inserted block (tracked via ref) inside a line's notes with a new
+  // one, so re-searching a plate or re-toggling actions never duplicates text — and any free
+  // text the mechanic typed themselves, before/after/between the tracked blocks, is untouched.
+  const replaceTrackedBlock = (text: string, prevBlock: string, nextBlock: string) => {
+    let base = text
+    if (prevBlock && base.includes(prevBlock)) base = base.replace(prevBlock, '').trim()
+    if (!nextBlock) return base
+    return base ? `${base} — ${nextBlock}` : nextBlock
+  }
+
+  const handlePlateFill = (data: Partial<VehicleData>) => {
+    if (data.plate) setDPlate(String(data.plate))
+    const meta = [data.make, data.model, data.year].filter(Boolean).join(' ')
+    if (!meta) return
+    setDInvoices(prev => prev.map((inv, idx) => idx === 0
+      ? { ...inv, notes: replaceTrackedBlock(inv.notes, lastPlateMetaRef.current, meta) }
+      : inv))
+    lastPlateMetaRef.current = meta
+  }
+
+  const toggleAction = (action: CustomerAction) => {
+    const nextIds = selectedActionIds.includes(action.id)
+      ? selectedActionIds.filter(id => id !== action.id)
+      : [...selectedActionIds, action.id]
+    setSelectedActionIds(nextIds)
+    const selected = customerActions.filter(a => nextIds.includes(a.id))
+    const text = selected.map(a => a.name).join(' + ')
+    const priced = selected.filter(a => a.default_price != null)
+    const sum = priced.reduce((s, a) => s + Number(a.default_price), 0)
+    const singleLine = dInvoices.length === 1
+    setDInvoices(prev => prev.map((inv, idx) => idx === 0
+      ? {
+          ...inv,
+          notes: replaceTrackedBlock(inv.notes, lastActionsTextRef.current, text),
+          amount: singleLine && priced.length > 0 ? String(sum) : inv.amount,
+        }
+      : inv))
+    lastActionsTextRef.current = text
   }
 
   const addInvoiceLine = () => setDInvoices(prev => [...prev, EMPTY_INV()])
@@ -256,6 +294,7 @@ export default function CustomerTrackingTab({
         customer_id: dCustomer || null,
         amount: total || parseFloat(validLines[0]?.amount) || 0,
         description: validLines[0]?.notes.trim() || dNotes.trim() || null,
+        plate: dPlate.trim() || null,
         date: validLines[0]?.date || todayISO(),
         doc_type: validLines[0]?.type ?? 'invoice',
         doc_number: validLines[0]?.number.trim() || null,
@@ -272,6 +311,7 @@ export default function CustomerTrackingTab({
         customer_id: dCustomer || null,
         amount: parseFloat(l.amount) || 0,
         description: l.notes.trim() || dNotes.trim() || null,
+        plate: dPlate.trim() || null,
         date: l.date,
         doc_type: l.type,
         doc_number: l.number.trim() || null,
@@ -295,61 +335,14 @@ export default function CustomerTrackingTab({
 
   const addDebtForCustomer = (custId: string) => {
     setEditDebt(null); setDCustomer(custId); setDNotes(''); setDInvoices([EMPTY_INV()])
+    setDPlate(''); setSelectedActionIds([]); lastActionsTextRef.current = ''; lastPlateMetaRef.current = ''
     setShowDebtModal(true)
   }
 
-  // ── Recurring items (rate templates: rent/arnona/electricity meter, etc.) ──
-
-  const openRecItemModal = (customerId: string, item?: RecurringItem) => {
-    setRiCustomerId(customerId)
-    if (item) {
-      setEditRecItem(item)
-      setRiName(item.name); setRiType(item.type)
-      setRiAmt(item.amount != null ? String(item.amount) : '')
-      setRiPpu(item.price_per_unit != null ? String(item.price_per_unit) : '')
-      setRiPpuUnit('ils')
-      setRiFixedAddon(item.fixed_addon != null ? String(item.fixed_addon) : '')
-      setRiFrom(item.valid_from); setRiActive(item.active); setRiVat('after')
-    } else {
-      setEditRecItem(null)
-      setRiName(''); setRiType('fixed'); setRiAmt(''); setRiPpu(''); setRiPpuUnit('ils')
-      setRiFixedAddon(''); setRiFrom(monthISO()); setRiActive(true); setRiVat('after')
-    }
-    setShowRecItemModal(true)
-  }
-
-  const saveRecItem = async () => {
-    if (!riCustomerId) return
-    if (!riName.trim()) { showToast('נא להזין שם', 'error'); return }
-    const tid = tenantId
-    if (!tid) return
-    setRiSaving(true)
-    const rawAmt = riType === 'fixed' ? (parseFloat(riAmt) || 0) : null
-    const amount = rawAmt != null ? (riVat === 'before' ? withVat(rawAmt) : rawAmt) : null
-    const rawPpu = riType === 'meter' ? (parseFloat(riPpu) || 0) : null
-    const ppuIls = rawPpu != null ? (riPpuUnit === 'agorot' ? rawPpu / 100 : rawPpu) : null
-    const price_per_unit = ppuIls != null ? (riVat === 'before' ? withVat(ppuIls) : ppuIls) : null
-    const row = {
-      tenant_id: tid, name: riName.trim(), customer_id: riCustomerId, supplier_id: null,
-      type: riType, amount, price_per_unit,
-      fixed_addon: riType === 'meter' && riFixedAddon ? (parseFloat(riFixedAddon) || 0) : null,
-      valid_from: riFrom, active: riActive,
-    }
-    const { error } = editRecItem
-      ? await supabase.from('recurring_items').update(row).eq('id', editRecItem.id)
-      : await supabase.from('recurring_items').insert(row)
-    if (error) { showToast('שגיאה בשמירה: ' + error.message, 'error'); setRiSaving(false); return }
-    showToast('נשמר ✓', 'success')
-    setRiSaving(false); setShowRecItemModal(false); reload()
-  }
-
-  const deleteRecItem = async (id: string) => {
-    if (!confirm('למחוק חיוב חוזר זה?')) return
-    await supabase.from('recurring_items').delete().eq('id', id)
-    showToast('נמחק', 'success'); reload()
-  }
-
   // ── Generate this month's charges — fixed-type recurring items only ───────
+  // (Recurring-item / action-catalog CRUD itself now lives in CustomerDetailsTab.tsx —
+  // this tab only consumes recurringItems/customerActions data: generating monthly charges,
+  // logging a meter reading, and the quick-fill pills in the add-debt modal below.)
   // Meter-type items are deliberately excluded here (see "log a meter reading" below):
   // meter readings aren't taken every calendar month, so auto-generating a monthly
   // placeholder for them would nag the user in months they haven't actually read the meter.
@@ -706,10 +699,26 @@ export default function CustomerTrackingTab({
             })
             const months = Object.keys(monthMap).sort().reverse()
 
-            return { cid, cust, totalBal, payments, monthMap, months }
+            // "Settled through this month" = applying the customer's WHOLE payment pool (every
+            // payment ever recorded, regardless of its own date — payments aren't tied to a
+            // specific month in this flat ledger model) against charges oldest-month-first.
+            // cumCharge accumulates net charges through each month; subtracting the one total
+            // totalPaid tells us whether that running total is already covered. This is a
+            // display-only FIFO heuristic (never persisted, never decides which debt a payment
+            // "belongs to") — at the most recent month it always equals totalBal exactly, same
+            // as balanceOf(debts, payments), which doubles as a consistency check.
+            const totalPaid = payments.reduce((s, p) => s + Number(p.amount), 0)
+            let cumCharge = 0
+            const cumBalanceByMonth: Record<string, number> = {}
+            for (const mk of [...months].reverse()) {
+              cumCharge += (monthMap[mk] ?? []).reduce((s, d) => s + bal(d), 0)
+              cumBalanceByMonth[mk] = cumCharge - totalPaid
+            }
+
+            return { cid, cust, totalBal, payments, monthMap, months, cumBalanceByMonth }
           }).filter(Boolean) as {
             cid: string | null; cust: Customer | undefined; totalBal: number; payments: CustomerLedgerPayment[]
-            monthMap: Record<string, CustomerLedgerDebt[]>; months: string[]
+            monthMap: Record<string, CustomerLedgerDebt[]>; months: string[]; cumBalanceByMonth: Record<string, number>
           }[]
 
           if (groups.length === 0) return (
@@ -746,71 +755,31 @@ export default function CustomerTrackingTab({
                           + הוסף
                         </button>
                       )}
-                      {group.cid && group.payments.length > 0 && (
-                        <button
-                          onClick={() => deleteAllPaymentsForCustomer(group.cid!, group.cust?.name ?? '', group.payments.length)}
-                          title="מחיקת כל התשלומים של הלקוח, כדי להתחיל תיעוד תשלומים מחדש (לא נוגע בחשבוניות)"
-                          style={{ padding: '4px 12px', background: 'transparent', color: 'var(--danger)', border: '1px solid #fecaca', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
-                          🗑 מחק כל התשלומים
-                        </button>
-                      )}
+                      {group.cid && (() => {
+                        const kebabActions = [
+                          ...(group.payments.length > 1 ? [{ key: 'merge', label: 'מזג תשלומים', icon: '🔗', onClick: () => { setMergeCid(group.cid); setMergeSelected(new Set()) } }] : []),
+                          ...(group.payments.length > 0 ? [{ key: 'delpay', label: 'מחק כל התשלומים', icon: '🗑', danger: true, onClick: () => deleteAllPaymentsForCustomer(group.cid!, group.cust?.name ?? '', group.payments.length) }] : []),
+                        ]
+                        // Reserve the same footprint even with zero actions, so "+ הוסף"/"💰 תשלום"
+                        // line up in the same column across every customer card regardless of
+                        // whether that customer happens to have any payments to merge/delete.
+                        return kebabActions.length > 0
+                          ? <RowActionsMenu actions={kebabActions} />
+                          : <div style={{ width: 30, height: 30, flexShrink: 0 }} />
+                      })()}
                     </div>
                   </div>
 
                   {isOpen && (
                   <>
 
-                  {group.cid && group.payments.length > 1 && (
-                    <div style={{ background: mergeCid === group.cid ? '#f5f3ff' : undefined, borderBottom: '1px solid var(--border)', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                      {mergeCid === group.cid ? (
-                        <>
-                          <span style={{ fontSize: '12px', color: '#5b21b6' }}>סמן 2+ שורות תשלום למיזוג לשורה אחת בהדפסה (נבחרו: {mergeSelected.size})</span>
-                          <Button size="sm" onClick={mergePayments} disabled={mergeSelected.size < 2}>🔗 מזג</Button>
-                          <Button size="sm" variant="secondary" onClick={() => { setMergeCid(null); setMergeSelected(new Set()) }}>ביטול</Button>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => { setMergeCid(group.cid); setMergeSelected(new Set()) }}
-                          title="מזג כמה שורות תשלום ישנות (מלפני שהמערכת שמרה קיבוץ) לשורה אחת בהדפסה"
-                          style={{ padding: '4px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600, background: 'transparent', color: '#7c3aed', border: '1px solid #7c3aed' }}>
-                          🔗 מזג תשלומים
-                        </button>
-                      )}
+                  {group.cid && mergeCid === group.cid && (
+                    <div style={{ background: '#f5f3ff', borderBottom: '1px solid var(--border)', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '12px', color: '#5b21b6' }}>סמן 2+ שורות תשלום למיזוג לשורה אחת בהדפסה (נבחרו: {mergeSelected.size})</span>
+                      <Button size="sm" onClick={mergePayments} disabled={mergeSelected.size < 2}>🔗 מזג</Button>
+                      <Button size="sm" variant="secondary" onClick={() => { setMergeCid(null); setMergeSelected(new Set()) }}>ביטול</Button>
                     </div>
                   )}
-
-                  {group.cid && (() => {
-                    const items = recurringItems.filter(it => it.customer_id === group.cid)
-                    return (
-                      <div style={{ background: '#fafaf9', borderBottom: '1px solid var(--border)', padding: '10px 16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: items.length ? '8px' : 0 }}>
-                          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>🔁 חיובים חוזרים</span>
-                          <button onClick={() => openRecItemModal(group.cid!)} style={{ padding: '3px 10px', background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>+ הוסף חיוב חוזר</button>
-                        </div>
-                        {items.length > 0 && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                            {items.map(it => (
-                              <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', flexWrap: 'wrap' }}>
-                                <span style={{ padding: '1px 7px', borderRadius: '4px', fontWeight: 600, background: it.type === 'meter' ? '#eff6ff' : '#f0fdf6', color: it.type === 'meter' ? '#1d4ed8' : '#16a34a' }}>
-                                  {it.type === 'meter' ? 'מונה' : 'קבוע'}
-                                </span>
-                                <span style={{ fontWeight: 600, flex: 1, minWidth: '80px' }}>{it.name}</span>
-                                <span style={{ color: 'var(--text-muted)' }}>
-                                  {it.type === 'meter' ? `${fmt(it.price_per_unit ?? 0)} ליחידה` : fmt(it.amount ?? 0)}
-                                </span>
-                                {!it.active && <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>(לא פעיל)</span>}
-                                {it.type === 'meter' && it.active && (
-                                  <button onClick={() => openMeterReadModal(it)} style={{ padding: '3px 9px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>📊 הזן קריאת מונה</button>
-                                )}
-                                <button onClick={() => openRecItemModal(group.cid!, it)} style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>✏️</button>
-                                <button onClick={() => deleteRecItem(it.id)} style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>🗑</button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })()}
 
                   {group.months.map((mk, mIdx) => {
                     const monthDebts = group.monthMap[mk]
@@ -822,6 +791,10 @@ export default function CustomerTrackingTab({
                     const monthPayments    = group.payments.filter(p => monthKeyOf(paymentDateOf(p)) === mk)
                     const monthPaidTotal   = monthPayments.reduce((s, p) => s + Number(p.amount), 0)
                     const monthCollapsed   = !expandedMonthKeys.has(monthKeyFor(group.cid, mk))
+                    // Settled = the customer's WHOLE payment pool (all payments, any date)
+                    // already covers all charges through this month, applied oldest-first —
+                    // not just "did this same month's own payments cover this same month".
+                    const monthSettled     = group.cumBalanceByMonth[mk] <= 0
 
                     return (
                       <div key={mk} style={{ borderBottom: mIdx < group.months.length - 1 ? '1px solid var(--border)' : 'none', padding: '14px 16px' }}>
@@ -832,7 +805,7 @@ export default function CustomerTrackingTab({
                         >
                           <span style={{ display: 'inline-block', transition: 'transform .15s', transform: monthCollapsed ? 'rotate(0deg)' : 'rotate(90deg)', color: 'var(--text-muted)', fontSize: '12px' }}>›</span>
                           <span style={{ fontWeight: 700, fontSize: '14px', color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
-                          <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthNetTotal > 0 ? 'var(--danger)' : '#16a34a' }}>
+                          <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthSettled ? '#16a34a' : 'var(--danger)' }}>
                             נטו לחודש: {fmt(monthNetTotal)}
                           </span>
                         </div>
@@ -863,7 +836,13 @@ export default function CustomerTrackingTab({
                                   >
                                     <td style={tdSt}>
                                       {item.number ? `#${item.number}` : '—'}
-                                      {d.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>{d.description}</div>}
+                                      {(d.plate || d.description) && (
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>
+                                          {d.plate && <span style={{ fontWeight: 600 }}>🚗 {d.plate}</span>}
+                                          {d.plate && d.description && ' — '}
+                                          {d.description}
+                                        </div>
+                                      )}
                                     </td>
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
                                     <td style={tdSt}><StatusChip debt={d} /></td>
@@ -963,87 +942,6 @@ export default function CustomerTrackingTab({
         })()}
       </div>
 
-      {/* ── RECURRING ITEM (RATE TEMPLATE) MODAL ── */}
-      {showRecItemModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowRecItemModal(false)}>
-          <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editRecItem ? '✏️ עריכת חיוב חוזר' : '+ חיוב חוזר חדש'}</h3>
-            <div style={{ display: 'grid', gap: '14px' }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                שם (למשל: שכירות, ארנונה, חשמל)
-                <input value={riName} onChange={e => setRiName(e.target.value)} className="form-input" />
-              </label>
-
-              <div style={{ display: 'flex', gap: '6px' }}>
-                {(['fixed', 'meter'] as const).map(t => (
-                  <button key={t} type="button" onClick={() => setRiType(t)} style={{
-                    flex: 1, padding: '7px', border: '1px solid', borderRadius: '7px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
-                    borderColor: riType === t ? 'var(--primary)' : 'var(--border)',
-                    background: riType === t ? 'var(--primary)' : 'transparent',
-                    color: riType === t ? '#fff' : 'var(--text-muted)',
-                  }}>{t === 'fixed' ? 'סכום קבוע' : 'לפי מונה'}</button>
-                ))}
-              </div>
-
-              {riType === 'fixed' ? (
-                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>סכום חודשי</span>
-                    <VatToggle mode={riVat} onChange={setRiVat} />
-                  </div>
-                  <input type="number" min="0" step="0.01" value={riAmt} onChange={e => setRiAmt(e.target.value)} className="form-input" style={{ margin: 0 }} />
-                  {riAmt && parseFloat(riAmt) > 0 && (
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      {riVat === 'after'
-                        ? `לפני מע"מ: ${fmt(withoutVat(parseFloat(riAmt)))}`
-                        : `כולל מע"מ (18%): ${fmt(withVat(parseFloat(riAmt)))}`}
-                    </div>
-                  )}
-                </label>
-              ) : (
-                <>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>מחיר ליחידה</span>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <UnitToggle unit={riPpuUnit} onChange={setRiPpuUnit} />
-                        <VatToggle mode={riVat} onChange={setRiVat} />
-                      </div>
-                    </div>
-                    <input type="number" min="0" step="0.0001" value={riPpu} onChange={e => setRiPpu(e.target.value)} className="form-input" style={{ margin: 0 }} />
-                    {riPpu && parseFloat(riPpu) > 0 && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        {riVat === 'after'
-                          ? `לפני מע"מ: ₪${withoutVat(parseFloat(riPpu) / (riPpuUnit === 'agorot' ? 100 : 1)).toFixed(4)}`
-                          : `כולל מע"מ: ₪${withVat(parseFloat(riPpu) / (riPpuUnit === 'agorot' ? 100 : 1)).toFixed(4)}`}
-                      </div>
-                    )}
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                    תוספת קבועה (אופציונלי — למשל דמי תשתית)
-                    <input type="number" min="0" step="0.01" value={riFixedAddon} onChange={e => setRiFixedAddon(e.target.value)} className="form-input" style={{ margin: 0 }} />
-                  </label>
-                </>
-              )}
-
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                בתוקף מחודש
-                <input type="month" value={riFrom} onChange={e => setRiFrom(e.target.value)} className="form-input" />
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
-                <input type="checkbox" checked={riActive} onChange={e => setRiActive(e.target.checked)} />
-                פעיל
-              </label>
-            </div>
-            <div className="sticky-actions">
-              <Button variant="secondary" onClick={() => setShowRecItemModal(false)}>ביטול</Button>
-              <Button loading={riSaving} onClick={saveRecItem}>💾 שמור</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── LOG A METER READING MODAL (month-independent) ── */}
       {meterReadItem && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setMeterReadItem(null)}>
@@ -1092,6 +990,32 @@ export default function CustomerTrackingTab({
                   <option value="">— ללא לקוח ספציפי —</option>
                   {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
+              </label>
+
+              {dCustomer && customerActions.some(a => a.customer_id === dCustomer) && (
+                <div>
+                  <span style={{ fontSize: '13px', fontWeight: 600 }}>⚡ פעולות מהירות</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                    {customerActions.filter(a => a.customer_id === dCustomer).map(a => {
+                      const active = selectedActionIds.includes(a.id)
+                      return (
+                        <button key={a.id} type="button" onClick={() => toggleAction(a)} style={{
+                          padding: '5px 12px', border: '1px solid', borderRadius: '999px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
+                          borderColor: active ? 'var(--primary)' : 'var(--border)',
+                          background: active ? 'var(--primary)' : 'transparent',
+                          color: active ? '#fff' : 'var(--text-muted)',
+                        }}>
+                          {a.name}{a.default_price != null ? ` (${fmt(a.default_price)})` : ''}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                🚗 מספר רכב (אופציונלי — פרטי הרכב יתווספו אוטומטית להערה)
+                <PlateInput module="tracking" onFill={handlePlateFill} />
               </label>
 
               <div>
@@ -1451,13 +1375,14 @@ export default function CustomerTrackingTab({
                 <div style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>תקופה: {rangeLabel}</div>
                 <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {fmtDMY(new Date())}</div>
                 <table>
-                  <thead><tr><th>תאריך</th><th>מספר</th><th style={{ width: 46 }}>סוג</th><th style={{ width: 30 }}>🏷</th><th>הערה</th><th>סכום</th><th>יתרה</th></tr></thead>
+                  <thead><tr><th>תאריך</th><th>מספר</th><th style={{ width: 46 }}>סוג</th><th style={{ width: 30 }}>🏷</th><th style={{ width: 70 }}>רכב</th><th>הערה</th><th>סכום</th><th>יתרה</th></tr></thead>
                   <tbody>
                     {showOpeningRow && (
                       <tr style={{ fontWeight: 700, background: '#f5f5f5' }}>
                         <td>—</td>
                         <td>—</td>
                         <td>יתרת פתיחה</td>
+                        <td>—</td>
                         <td>—</td>
                         <td>—</td>
                         <td>—</td>
@@ -1473,6 +1398,7 @@ export default function CustomerTrackingTab({
                             <td>{number || '—'}</td>
                             <td style={{ width: 46, textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
                             <td style={{ width: 30, textAlign: 'center' }}>{d.is_closed ? '🏷' : ''}</td>
+                            <td style={{ width: 70 }}>{d.plate || ''}</td>
                             <td>{d.description || ''}</td>
                             <td style={{ textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? '−' : ''}{fmt(amount)}</td>
                             <td>{fmt(ev.runningBalance)}</td>
@@ -1486,6 +1412,7 @@ export default function CustomerTrackingTab({
                           <td>—</td>
                           <td style={{ width: 46 }}>תשלום</td>
                           <td style={{ width: 30, textAlign: 'center' }}>{first.receipt_issued ? '🧾' : '💰'}</td>
+                          <td style={{ width: 70 }}></td>
                           <td>{first.receipt_issued ? `קבלה #${first.receipt_number || '—'}` : first.payment_method}</td>
                           <td style={{ textAlign: 'left' }}>−{fmt(amount)}</td>
                           <td>{fmt(ev.runningBalance)}</td>

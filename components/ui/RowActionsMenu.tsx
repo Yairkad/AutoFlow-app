@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 export interface RowMenuAction {
   key: string
@@ -19,40 +20,70 @@ interface Props {
 
 export default function RowActionsMenu({ actions, variant = 'button', align = 'start' }: Props) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top: number; left?: number; right?: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Positioned via a portal to document.body (fixed coords from the trigger's own rect) so the
+  // dropdown can never be clipped by an ancestor's overflow:hidden — e.g. a collapsed/short
+  // card whose rounded corners rely on overflow:hidden, which used to cut the menu off the
+  // moment it needed more vertical room than the collapsed card itself had.
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return
+    const rect = triggerRef.current.getBoundingClientRect()
+    setPos(align === 'start'
+      ? { top: rect.bottom + 4, left: rect.left }
+      : { top: rect.bottom + 4, right: window.innerWidth - rect.right })
+  }, [open, align])
 
   useEffect(() => {
     if (!open) return
     function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      const t = e.target as Node
+      if (triggerRef.current?.contains(t)) return
+      if (menuRef.current?.contains(t)) return
+      setOpen(false)
     }
+    function onScrollOrResize() { setOpen(false) }
     document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
+    window.addEventListener('scroll', onScrollOrResize, true)
+    window.addEventListener('resize', onScrollOrResize)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      window.removeEventListener('scroll', onScrollOrResize, true)
+      window.removeEventListener('resize', onScrollOrResize)
+    }
   }, [open])
 
   if (actions.length === 0) return null
 
   return (
-    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+    <>
       <button
+        ref={triggerRef}
         onClick={e => { e.stopPropagation(); setOpen(v => !v) }}
         title="פעולות"
         style={variant === 'button' ? {
           width: 30, height: 30, border: '1px solid var(--border)', borderRadius: '6px',
           background: 'transparent', cursor: 'pointer', fontSize: '16px',
           display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)',
+          flexShrink: 0,
         } : {
           width: 22, height: 22, border: 'none', background: 'transparent', cursor: 'pointer',
           fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)',
+          flexShrink: 0,
         }}
       >⋮</button>
-      {open && (
-        <div style={{
-          position: 'absolute', top: '100%', [align === 'start' ? 'left' : 'right']: 0,
-          marginTop: '4px', background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.12)', overflow: 'hidden',
-          zIndex: 50, minWidth: '150px',
-        }}>
+      {open && pos && createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            position: 'fixed', top: pos.top, left: pos.left, right: pos.right,
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.12)', overflow: 'hidden',
+            zIndex: 300, minWidth: '150px',
+          }}
+        >
           {actions.map((a, i) => (
             <button
               key={a.key}
@@ -70,8 +101,9 @@ export default function RowActionsMenu({ actions, variant = 'button', align = 's
               {a.icon && <span>{a.icon}</span>}{a.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }

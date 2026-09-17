@@ -6,23 +6,20 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
-import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, fmt, bal, waUrl } from './shared'
+import VatToggle from '@/components/ui/VatToggle'
+import UnitToggle from '@/components/ui/UnitToggle'
+import { withVat, withoutVat } from '@/lib/utils/vat'
+import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, RecurringItem, CustomerAction, fmt, waUrl } from './shared'
 import { balanceOf } from '@/lib/debts/ledger'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface InvoiceEntry {
-  type: string
-  number: string
-  amount: number
-  description?: string
-}
 
 interface CustomerDetailsTabProps {
   tenantId: string
   customers: Customer[]
   debts: CustomerLedgerDebt[]
   payments: CustomerLedgerPayment[]
+  recurringItems: RecurringItem[]
+  customerActions: CustomerAction[]
   categories: string[]
   openId: string | null
   onOpenTracking: (customerId: string) => void
@@ -32,7 +29,7 @@ interface CustomerDetailsTabProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CustomerDetailsTab({
-  tenantId, customers, debts, payments, categories, openId, onOpenTracking, reload,
+  tenantId, customers, debts, payments, recurringItems, customerActions, categories, openId, onOpenTracking, reload,
 }: CustomerDetailsTabProps) {
   const supabase = useRef(createClient()).current
   const { showToast } = useToast()
@@ -41,6 +38,27 @@ export default function CustomerDetailsTab({
 
   // Detail panel
   const [selected, setSelected] = useState<Customer | null>(null)
+
+  // Recurring-item (rate template) add/edit — management for the selected customer only
+  const [showRecItemModal, setShowRecItemModal] = useState(false)
+  const [editRecItem, setEditRecItem] = useState<RecurringItem | null>(null)
+  const [riName, setRiName] = useState('')
+  const [riType, setRiType] = useState<'fixed' | 'meter'>('fixed')
+  const [riAmt, setRiAmt] = useState('')
+  const [riPpu, setRiPpu] = useState('')
+  const [riPpuUnit, setRiPpuUnit] = useState<'ils' | 'agorot'>('ils')
+  const [riFixedAddon, setRiFixedAddon] = useState('')
+  const [riFrom, setRiFrom] = useState(() => new Date().toISOString().slice(0, 7))
+  const [riActive, setRiActive] = useState(true)
+  const [riVat, setRiVat] = useState<'before' | 'after'>('after')
+  const [riSaving, setRiSaving] = useState(false)
+
+  // Quick-fill actions catalog (e.g. "פרונט", "צמיגים") add/edit — same, selected-customer only
+  const [showActionModal, setShowActionModal] = useState(false)
+  const [editAction, setEditAction] = useState<CustomerAction | null>(null)
+  const [aName, setAName] = useState('')
+  const [aPrice, setAPrice] = useState('')
+  const [aSaving, setASaving] = useState(false)
 
   // Customer form
   const [showModal, setShowModal] = useState(false)
@@ -120,6 +138,95 @@ export default function CustomerDetailsTab({
     reload()
   }
 
+  // ── Recurring items (rate templates: rent/arnona/electricity meter, etc.) ──
+  // Management only — actually generating monthly charges / logging a meter reading
+  // from these templates happens in CustomerTrackingTab.tsx's "מעקב" tab.
+
+  const openRecItemModal = (item?: RecurringItem) => {
+    if (item) {
+      setEditRecItem(item)
+      setRiName(item.name); setRiType(item.type)
+      setRiAmt(item.amount != null ? String(item.amount) : '')
+      setRiPpu(item.price_per_unit != null ? String(item.price_per_unit) : '')
+      setRiPpuUnit('ils')
+      setRiFixedAddon(item.fixed_addon != null ? String(item.fixed_addon) : '')
+      setRiFrom(item.valid_from); setRiActive(item.active); setRiVat('after')
+    } else {
+      setEditRecItem(null)
+      setRiName(''); setRiType('fixed'); setRiAmt(''); setRiPpu(''); setRiPpuUnit('ils')
+      setRiFixedAddon(''); setRiFrom(new Date().toISOString().slice(0, 7)); setRiActive(true); setRiVat('after')
+    }
+    setShowRecItemModal(true)
+  }
+
+  const saveRecItem = async () => {
+    if (!selected) return
+    if (!riName.trim()) { showToast('נא להזין שם', 'error'); return }
+    const tid = tenantId
+    if (!tid) return
+    setRiSaving(true)
+    const rawAmt = riType === 'fixed' ? (parseFloat(riAmt) || 0) : null
+    const amount = rawAmt != null ? (riVat === 'before' ? withVat(rawAmt) : rawAmt) : null
+    const rawPpu = riType === 'meter' ? (parseFloat(riPpu) || 0) : null
+    const ppuIls = rawPpu != null ? (riPpuUnit === 'agorot' ? rawPpu / 100 : rawPpu) : null
+    const price_per_unit = ppuIls != null ? (riVat === 'before' ? withVat(ppuIls) : ppuIls) : null
+    const row = {
+      tenant_id: tid, name: riName.trim(), customer_id: selected.id, supplier_id: null,
+      type: riType, amount, price_per_unit,
+      fixed_addon: riType === 'meter' && riFixedAddon ? (parseFloat(riFixedAddon) || 0) : null,
+      valid_from: riFrom, active: riActive,
+    }
+    const { error } = editRecItem
+      ? await supabase.from('recurring_items').update(row).eq('id', editRecItem.id)
+      : await supabase.from('recurring_items').insert(row)
+    if (error) { showToast('שגיאה בשמירה: ' + error.message, 'error'); setRiSaving(false); return }
+    showToast('נשמר ✓', 'success')
+    setRiSaving(false); setShowRecItemModal(false); reload()
+  }
+
+  const deleteRecItem = async (id: string) => {
+    if (!confirm('למחוק חיוב חוזר זה?')) return
+    await supabase.from('recurring_items').delete().eq('id', id)
+    showToast('נמחק', 'success'); reload()
+  }
+
+  // ── Per-customer actions catalog (quick-fill service types, e.g. "פרונט"/"צמיגים") ──
+
+  const openActionModal = (action?: CustomerAction) => {
+    if (action) {
+      setEditAction(action)
+      setAName(action.name)
+      setAPrice(action.default_price != null ? String(action.default_price) : '')
+    } else {
+      setEditAction(null); setAName(''); setAPrice('')
+    }
+    setShowActionModal(true)
+  }
+
+  const saveAction = async () => {
+    if (!selected) return
+    if (!aName.trim()) { showToast('נא להזין שם פעולה', 'error'); return }
+    const tid = tenantId
+    if (!tid) return
+    setASaving(true)
+    const row = {
+      tenant_id: tid, customer_id: selected.id, name: aName.trim(),
+      default_price: aPrice.trim() ? (parseFloat(aPrice) || 0) : null,
+    }
+    const { error } = editAction
+      ? await supabase.from('customer_actions').update(row).eq('id', editAction.id)
+      : await supabase.from('customer_actions').insert(row)
+    if (error) { showToast('שגיאה בשמירה: ' + error.message, 'error'); setASaving(false); return }
+    showToast('נשמר ✓', 'success')
+    setASaving(false); setShowActionModal(false); reload()
+  }
+
+  const deleteAction = async (id: string) => {
+    if (!confirm('למחוק פעולה זו?')) return
+    await supabase.from('customer_actions').delete().eq('id', id)
+    showToast('נמחק', 'success'); reload()
+  }
+
   // ── Derived ────────────────────────────────────────────────────────────────
 
   const filtered = customers.filter(c =>
@@ -132,7 +239,6 @@ export default function CustomerDetailsTab({
   const custPayments    = (custId: string) => payments.filter(p => p.customer_id === custId)
   const totalDebt       = (custId: string) => balanceOf(custDebts(custId), custPayments(custId))
 
-  const selectedDebts     = selected ? custDebts(selected.id) : []
   const selectedOpenTotal = selected ? totalDebt(selected.id) : 0
 
   // ── Excel / JSON ───────────────────────────────────────────────────────────
@@ -350,82 +456,69 @@ export default function CustomerDetailsTab({
               </div>
             )}
 
-            {/* Debts section */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>חובות הלקוח</h3>
-                {selectedOpenTotal > 0 && (
-                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--danger)' }}>
-                    סה&quot;כ: {fmt(selectedOpenTotal)}
-                  </span>
-                )}
-              </div>
-
-              {selectedDebts.length === 0 ? (
-                <div style={{ color: 'var(--text-muted)', fontSize: '13px', padding: '20px 0', textAlign: 'center' }}>
-                  ✓ אין חובות ללקוח זה
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {selectedDebts
-                    .sort((a, b) => a.date < b.date ? 1 : -1)
-                    .map(d => {
-                      const invList: InvoiceEntry[] = Array.isArray(d.invoices) && d.invoices.length > 0
-                        ? d.invoices
-                        : d.doc_number ? [{ type: (d.doc_type ?? 'invoice') as 'invoice' | 'karteset', number: d.doc_number, amount: Number(d.amount) }]
-                        : []
-                      return (
-                        <div
-                          key={d.id}
-                          style={{
-                            background: d.is_closed ? '#f9fafb' : '#fff',
-                            border: `1px solid ${d.is_closed ? 'var(--border)' : '#fecaca'}`,
-                            borderRadius: '8px',
-                            padding: '10px 14px',
-                            opacity: d.is_closed ? 0.65 : 1,
-                            fontSize: '13px',
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div>
-                              {invList.length > 0 ? (
-                                invList.map((inv, i) => (
-                                  <div key={i} style={{ marginBottom: '2px' }}>
-                                    <span style={{ background: inv.type === 'karteset' ? '#ede9fe' : '#e0f2fe', color: inv.type === 'karteset' ? '#7c3aed' : '#0369a1', fontSize: '10px', padding: '1px 6px', borderRadius: '4px', fontWeight: 600, marginLeft: '6px' }}>
-                                      {inv.type === 'karteset' ? 'כרטסת' : 'חשבונית'}
-                                    </span>
-                                    <span style={{ fontWeight: 600 }}>#{inv.number}</span>
-                                    {invList.length > 1 && (
-                                      <span style={{ color: 'var(--text-muted)', marginRight: '6px' }}> — {fmt(inv.amount)}</span>
-                                    )}
-                                  </div>
-                                ))
-                              ) : (
-                                <div style={{ fontWeight: 600 }}>{d.description || 'ללא תיאור'}</div>
-                              )}
-                              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{d.date}</div>
-                            </div>
-                            <div style={{ textAlign: 'left', flexShrink: 0 }}>
-                              <div style={{ fontWeight: 700, color: d.is_closed ? '#7c3aed' : 'var(--text)' }}>
-                                {d.is_closed ? '🏷 מכוסה' : fmt(bal(d))}
-                              </div>
-                            </div>
-                          </div>
+            {/* Recurring charges + quick-fill actions — management only; actually generating
+                monthly charges / logging a meter reading / using an action while logging a
+                visit happens in the "מעקב" tab (see → link below). */}
+            {(() => {
+              const recItems = recurringItems.filter(it => it.customer_id === selected.id)
+              const actionItems = customerActions.filter(a => a.customer_id === selected.id)
+              return (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>🔁 חיובים חוזרים</h3>
+                    <button onClick={() => openRecItemModal()} style={{ padding: '4px 10px', background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>+ הוסף</button>
+                  </div>
+                  {recItems.length === 0 ? (
+                    <div style={{ color: 'var(--text-muted)', fontSize: '12px', padding: '4px 0 14px' }}>אין חיובים חוזרים ללקוח זה</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '18px' }}>
+                      {recItems.map(it => (
+                        <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', flexWrap: 'wrap', background: 'var(--bg)', borderRadius: '6px', padding: '6px 10px' }}>
+                          <span style={{ padding: '1px 7px', borderRadius: '4px', fontWeight: 600, background: it.type === 'meter' ? '#eff6ff' : '#f0fdf6', color: it.type === 'meter' ? '#1d4ed8' : '#16a34a' }}>
+                            {it.type === 'meter' ? 'מונה' : 'קבוע'}
+                          </span>
+                          <span style={{ fontWeight: 600, flex: 1, minWidth: '80px' }}>{it.name}</span>
+                          <span style={{ color: 'var(--text-muted)' }}>
+                            {it.type === 'meter' ? `${fmt(it.price_per_unit ?? 0)} ליחידה` : fmt(it.amount ?? 0)}
+                          </span>
+                          {!it.active && <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>(לא פעיל)</span>}
+                          <button onClick={() => openRecItemModal(it)} style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>✏️</button>
+                          <button onClick={() => deleteRecItem(it.id)} style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>🗑</button>
                         </div>
-                      )
-                    })}
-                </div>
-              )}
+                      ))}
+                    </div>
+                  )}
 
-              <div style={{ marginTop: '14px', textAlign: 'center' }}>
-                <button
-                  onClick={() => selected && onOpenTracking(selected.id)}
-                  style={{ fontSize: '12px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}
-                >
-                  → מעקב לקוחות מפורט
-                </button>
-              </div>
-            </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>⚡ פעולות מהירות</h3>
+                    <button onClick={() => openActionModal()} style={{ padding: '4px 10px', background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>+ הוסף</button>
+                  </div>
+                  {actionItems.length === 0 ? (
+                    <div style={{ color: 'var(--text-muted)', fontSize: '12px', padding: '4px 0 14px' }}>אין פעולות מהירות ללקוח זה</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {actionItems.map(a => (
+                        <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', background: 'var(--bg)', borderRadius: '6px', padding: '6px 10px' }}>
+                          <span style={{ fontWeight: 600, flex: 1, minWidth: '80px' }}>{a.name}</span>
+                          <span style={{ color: 'var(--text-muted)' }}>{a.default_price != null ? fmt(a.default_price) : 'ללא מחיר קבוע'}</span>
+                          <button onClick={() => openActionModal(a)} style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>✏️</button>
+                          <button onClick={() => deleteAction(a.id)} style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>🗑</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: '14px', textAlign: 'center' }}>
+                    <button
+                      onClick={() => selected && onOpenTracking(selected.id)}
+                      style={{ fontSize: '12px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                    >
+                      → מעקב לקוחות מפורט (חשבוניות ותשלומים)
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
           </>
         )}
@@ -491,6 +584,110 @@ export default function CustomerDetailsTab({
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowModal(false)}>ביטול</Button>
               <Button loading={saving} onClick={saveCustomer}>💾 שמור</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── RECURRING ITEM (RATE TEMPLATE) MODAL ── */}
+      {showRecItemModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowRecItemModal(false)}>
+          <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editRecItem ? '✏️ עריכת חיוב חוזר' : '+ חיוב חוזר חדש'}</h3>
+            <div style={{ display: 'grid', gap: '14px' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                שם (למשל: שכירות, ארנונה, חשמל)
+                <input value={riName} onChange={e => setRiName(e.target.value)} className="form-input" />
+              </label>
+
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {(['fixed', 'meter'] as const).map(t => (
+                  <button key={t} type="button" onClick={() => setRiType(t)} style={{
+                    flex: 1, padding: '7px', border: '1px solid', borderRadius: '7px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
+                    borderColor: riType === t ? 'var(--primary)' : 'var(--border)',
+                    background: riType === t ? 'var(--primary)' : 'transparent',
+                    color: riType === t ? '#fff' : 'var(--text-muted)',
+                  }}>{t === 'fixed' ? 'סכום קבוע' : 'לפי מונה'}</button>
+                ))}
+              </div>
+
+              {riType === 'fixed' ? (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>סכום חודשי</span>
+                    <VatToggle mode={riVat} onChange={setRiVat} />
+                  </div>
+                  <input type="number" min="0" step="0.01" value={riAmt} onChange={e => setRiAmt(e.target.value)} className="form-input" style={{ margin: 0 }} />
+                  {riAmt && parseFloat(riAmt) > 0 && (
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      {riVat === 'after'
+                        ? `לפני מע"מ: ${fmt(withoutVat(parseFloat(riAmt)))}`
+                        : `כולל מע"מ (18%): ${fmt(withVat(parseFloat(riAmt)))}`}
+                    </div>
+                  )}
+                </label>
+              ) : (
+                <>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>מחיר ליחידה</span>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <UnitToggle unit={riPpuUnit} onChange={setRiPpuUnit} />
+                        <VatToggle mode={riVat} onChange={setRiVat} />
+                      </div>
+                    </div>
+                    <input type="number" min="0" step="0.0001" value={riPpu} onChange={e => setRiPpu(e.target.value)} className="form-input" style={{ margin: 0 }} />
+                    {riPpu && parseFloat(riPpu) > 0 && (
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        {riVat === 'after'
+                          ? `לפני מע"מ: ₪${withoutVat(parseFloat(riPpu) / (riPpuUnit === 'agorot' ? 100 : 1)).toFixed(4)}`
+                          : `כולל מע"מ: ₪${withVat(parseFloat(riPpu) / (riPpuUnit === 'agorot' ? 100 : 1)).toFixed(4)}`}
+                      </div>
+                    )}
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                    תוספת קבועה (אופציונלי — למשל דמי תשתית)
+                    <input type="number" min="0" step="0.01" value={riFixedAddon} onChange={e => setRiFixedAddon(e.target.value)} className="form-input" style={{ margin: 0 }} />
+                  </label>
+                </>
+              )}
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                בתוקף מחודש
+                <input type="month" value={riFrom} onChange={e => setRiFrom(e.target.value)} className="form-input" />
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                <input type="checkbox" checked={riActive} onChange={e => setRiActive(e.target.checked)} />
+                פעיל
+              </label>
+            </div>
+            <div className="sticky-actions">
+              <Button variant="secondary" onClick={() => setShowRecItemModal(false)}>ביטול</Button>
+              <Button loading={riSaving} onClick={saveRecItem}>💾 שמור</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ADD/EDIT CUSTOMER ACTION (quick-fill service type) MODAL ── */}
+      {showActionModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowActionModal(false)}>
+          <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '400px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editAction ? '✏️ עריכת פעולה' : '+ פעולה חדשה'}</h3>
+            <div style={{ display: 'grid', gap: '14px' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                שם הפעולה (למשל: פרונט, צמיגים)
+                <input value={aName} onChange={e => setAName(e.target.value)} className="form-input" style={{ margin: 0 }} autoFocus />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                מחיר קבוע (אופציונלי)
+                <input type="number" min="0" step="0.01" value={aPrice} onChange={e => setAPrice(e.target.value)} placeholder="ללא מחיר קבוע" className="form-input" style={{ margin: 0 }} />
+              </label>
+            </div>
+            <div className="sticky-actions">
+              <Button variant="secondary" onClick={() => setShowActionModal(false)}>ביטול</Button>
+              <Button loading={aSaving} onClick={saveAction}>💾 שמור</Button>
             </div>
           </div>
         </div>

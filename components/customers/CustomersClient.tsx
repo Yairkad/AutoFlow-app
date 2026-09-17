@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/Toast'
 import PageHeader from '@/components/ui/PageHeader'
 import CustomerDetailsTab from './CustomerDetailsTab'
 import CustomerTrackingTab from './CustomerTrackingTab'
-import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, RecurringItem } from './shared'
+import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, RecurringItem, CustomerAction } from './shared'
 
 type Tab = 'details' | 'tracking'
 
@@ -27,6 +27,7 @@ export default function CustomersClient() {
   const [categories, setCategories] = useState<string[]>([])
   const [customerPayments, setCustomerPayments] = useState<CustomerLedgerPayment[]>([])
   const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([])
+  const [customerActions, setCustomerActions] = useState<CustomerAction[]>([])
   const [tenantName, setTenantName] = useState('AutoFlow')
 
   const resolveTenant = useCallback(async () => {
@@ -45,12 +46,13 @@ export default function CustomersClient() {
     }
     setLoading(true)
 
-    const [custRes, debtRes, catRes, payRes, recItemsRes] = await Promise.all([
+    const [custRes, debtRes, catRes, payRes, recItemsRes, actionsRes] = await Promise.all([
       supabase.from('customers').select('*').eq('tenant_id', tid).order('name'),
       supabase.from('customer_ledger_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
       supabase.from('customer_categories').select('name').eq('tenant_id', tid).order('name'),
       supabase.from('customer_ledger_payments').select('*').eq('tenant_id', tid),
       supabase.from('recurring_items').select('*').eq('tenant_id', tid).not('customer_id', 'is', null).order('created_at'),
+      supabase.from('customer_actions').select('*').eq('tenant_id', tid).order('created_at'),
     ])
 
     if (custRes.data) setCustomers(custRes.data)
@@ -59,6 +61,7 @@ export default function CustomersClient() {
     if (catRes.data) setCategories(catRes.data.map(r => r.name))
     if (payRes.data) setCustomerPayments(payRes.data)
     if (recItemsRes.data) setRecurringItems(recItemsRes.data)
+    if (actionsRes.data) setCustomerActions(actionsRes.data)
     if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
     setLoading(false)
   }, [supabase, resolveTenant, showToast, profile, profileLoading])
@@ -84,6 +87,7 @@ export default function CustomersClient() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_ledger_debts' }, loadAll)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_ledger_payments' }, loadAll)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_items' }, loadAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_actions' }, loadAll)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [supabase, loadAll])
@@ -135,6 +139,7 @@ export default function CustomersClient() {
           customerDebts={customerDebts}
           customerPayments={customerPayments}
           recurringItems={recurringItems}
+          customerActions={customerActions}
           openId={openId}
           reload={loadAll}
         />
@@ -144,6 +149,8 @@ export default function CustomersClient() {
           customers={customers}
           debts={customerDebts}
           payments={customerPayments}
+          recurringItems={recurringItems}
+          customerActions={customerActions}
           categories={categories}
           openId={openId}
           onOpenTracking={openTracking}

@@ -22,6 +22,7 @@ export interface CustomerLedgerDebt {
   amount: number
   paid: number
   description: string | null
+  plate: string | null
   date: string
   is_closed: boolean
   created_at: string
@@ -36,6 +37,18 @@ export interface CustomerLedgerDebt {
   fixed_addon: number | null
   period_start: string | null
   period_end: string | null
+}
+
+// Per-customer catalog of quick-fill service actions (e.g. "פרונט", "צמיגים"), used in the
+// "מעקב" tab's add-visit modal to build the note + optionally sum a fixed price into the
+// amount, instead of retyping the same recurring combination every visit.
+export interface CustomerAction {
+  id: string
+  tenant_id: string
+  customer_id: string
+  name: string
+  default_price: number | null
+  created_at: string
 }
 
 export interface RecurringItem {
