@@ -56,6 +56,13 @@ const monthISO = () => new Date().toISOString().slice(0, 7)
 const EMPTY_INV = (): InvoiceEntry => ({ type: 'invoice', number: '', amount: '', date: todayISO(), direction: 'charge', notes: '' })
 const paymentDateOf = (p: CustomerLedgerPayment) => p.payment_date ?? p.check_date ?? p.created_at.slice(0, 10)
 
+// Numeric value of an invoice number for sorting (e.g. "475810" → 475810). Non-numeric/missing
+// numbers sort last so they don't scramble an otherwise well-defined numeric order.
+const invNumOf = (s: string | null | undefined) => {
+  const digits = (s ?? '').replace(/\D/g, '')
+  return digits ? parseInt(digits, 10) : Number.POSITIVE_INFINITY
+}
+
 const monthKeyOf = (iso: string) => iso.slice(0, 7)
 const HEB_MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']
 const fmtMonth = (key: string) => { const [y, m] = key.split('-'); return `${HEB_MONTHS[parseInt(m) - 1]} ${y}` }
@@ -101,6 +108,17 @@ export default function CustomerTrackingTab({
     setMergeCid(null); setMergeSelected(new Set())
     reload()
   }
+
+  // Row selection — bulk-edit mode: check several debt rows, then walk through the edit modal
+  // one at a time (closing one, by save or cancel, opens the next) instead of one row at a time.
+  const [bulkSelectMode, setBulkSelectMode] = useState(false)
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkQueue, setBulkQueue] = useState<string[] | null>(null)
+  const toggleBulkSelected = (id: string) => setBulkSelectedIds(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
 
   // Which customer cards are expanded (collapsed by default — click to open detail)
   const [openCustomerKeys, setOpenCustomerKeys] = useState<Set<string>>(new Set())
@@ -232,6 +250,34 @@ export default function CustomerTrackingTab({
     setShowDebtModal(true)
   }
 
+  // Closes the debt modal — same button/backdrop used whether the user just saved or cancelled.
+  // If a bulk-edit walk is in progress, immediately opens the next selected record instead of
+  // just closing, so "close one → next one opens" holds regardless of why it closed.
+  const closeDebtModal = () => {
+    setShowDebtModal(false)
+    if (!bulkQueue) return
+    const rest = bulkQueue.slice(1)
+    setBulkQueue(rest.length > 0 ? rest : null)
+    if (rest.length > 0) {
+      const next = customerDebts.find(d => d.id === rest[0])
+      if (next) openDebtModal(next)
+      else showToast('חלק מהרשומות הנבחרות לעריכה מרובה לא נמצאו', 'error')
+    } else {
+      showToast('עריכה מרובה הושלמה ✓', 'success')
+    }
+  }
+
+  const startBulkEdit = () => {
+    const ids = [...bulkSelectedIds]
+    if (ids.length === 0) return
+    setBulkSelectMode(false)
+    setBulkSelectedIds(new Set())
+    const first = customerDebts.find(d => d.id === ids[0])
+    if (!first) return
+    setBulkQueue(ids)
+    openDebtModal(first)
+  }
+
   // Replaces the previously-inserted block (tracked via ref) inside a line's notes with a new
   // one, so re-searching a plate or re-toggling actions never duplicates text — and any free
   // text the mechanic typed themselves, before/after/between the tracked blocks, is untouched.
@@ -324,7 +370,7 @@ export default function CustomerTrackingTab({
       if (error) { showToast('שגיאה בשמירה', 'error'); setDSaving(false); return }
       showToast(`נשמרו ${rows.length} רשומות ✓`, 'success')
     }
-    setDSaving(false); setShowDebtModal(false); reload()
+    setDSaving(false); reload(); closeDebtModal()
   }
 
   const deleteDebt = async (id: string) => {
@@ -645,6 +691,12 @@ export default function CustomerTrackingTab({
       <div>
         <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
           <Button onClick={() => openDebtModal()}>+ הוסף חשבונית/זיכוי</Button>
+          <Button variant="secondary" onClick={() => { setBulkSelectMode(m => !m); setBulkSelectedIds(new Set()) }}>
+            {bulkSelectMode ? '✖ בטל בחירה' : '☑ עריכה מרובה'}
+          </Button>
+          {bulkSelectMode && bulkSelectedIds.size > 0 && (
+            <Button onClick={startBulkEdit}>✏️ ערוך נבחרים ({bulkSelectedIds.size})</Button>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)} className="form-input" style={{ margin: 0, padding: '7px 8px', fontSize: '12px' }} />
             <Button variant="secondary" loading={generating} onClick={generateRecurringCharges}>🔄 צור חיובים לחודש</Button>
@@ -671,6 +723,7 @@ export default function CustomerTrackingTab({
           const allCustIds = [...new Set(customerDebts.map(d => d.customer_id))]
           const groups = allCustIds.map(cid => {
             const debts = customerDebts.filter(d => d.customer_id === cid)
+            .sort((a, b) => a.date.localeCompare(b.date) || (invNumOf(a.doc_number) - invNumOf(b.doc_number)))
             const payments = customerPayments.filter(p => p.customer_id === cid)
             const cust = customers.find(c => c.id === cid)
             const totalBal = balanceOf(debts, payments)
@@ -815,6 +868,7 @@ export default function CustomerTrackingTab({
                         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
                           <thead>
                             <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              {bulkSelectMode && <th style={{ ...thSt, width: '30px' }}></th>}
                               <th style={thSt}>מספר חשבונית</th>
                               <th style={thSt}>תאריך</th>
                               <th style={thSt}>סוג</th>
@@ -826,14 +880,19 @@ export default function CustomerTrackingTab({
                             {(() => {
                               const debtRows = monthDebts.flatMap(d => {
                                 const items = Array.isArray(d.invoices) && d.invoices.length > 0
-                                  ? d.invoices
+                                  ? [...d.invoices].sort((a, b) => invNumOf(a.number) - invNumOf(b.number))
                                   : [{ type: d.doc_type ?? 'invoice', number: d.doc_number ?? '', amount: Number(d.amount) }]
-                                return items.map((item, idx) => ({ kind: 'debt' as const, date: d.date, node: (
+                                return items.map((item, idx) => ({ kind: 'debt' as const, date: d.date, invNum: invNumOf(item.number), node: (
                                   <tr
                                     key={`${d.id}-${idx}`}
                                     className="tr-hover"
                                     style={{ background: d.is_closed && d.direction === 'charge' ? '#fafafa' : undefined }}
                                   >
+                                    {bulkSelectMode && (
+                                      <td style={{ ...tdSt, textAlign: 'center' }}>
+                                        <input type="checkbox" checked={bulkSelectedIds.has(d.id)} onChange={() => toggleBulkSelected(d.id)} />
+                                      </td>
+                                    )}
                                     <td style={tdSt}>
                                       {item.number ? `#${item.number}` : '—'}
                                       {(d.plate || d.description) && (
@@ -888,12 +947,13 @@ export default function CustomerTrackingTab({
                                   const total = rowGroup.reduce((s, g) => s + Number(g.amount), 0)
                                   const selected = rowGroup.every(g => mergeSelected.has(g.id))
                                   const toggleGroup = () => rowGroup.forEach(g => toggleMergeSelected(g.id))
-                                  return { kind: 'payment' as const, date: paymentDateOf(p), node: (
+                                  return { kind: 'payment' as const, date: paymentDateOf(p), invNum: Number.POSITIVE_INFINITY, node: (
                                   <tr
                                     key={`pay-${p.id}`}
                                     onClick={merging ? toggleGroup : undefined}
                                     style={{ background: selected ? '#ddd6fe' : '#f0fdf6', cursor: merging ? 'pointer' : undefined }}
                                   >
+                                    {bulkSelectMode && <td style={tdSt}></td>}
                                     <td style={tdSt}>
                                       {merging && <input type="checkbox" checked={selected} onChange={toggleGroup} style={{ marginLeft: '6px' }} />}
                                       {p.receipt_issued ? `🧾 קבלה #${p.receipt_number || '—'}` : '💰 תשלום'}
@@ -912,12 +972,14 @@ export default function CustomerTrackingTab({
                                     </td>
                                   </tr>
                                 ) } })
-                              return [...debtRows, ...paymentRows].sort((a, b) => a.date.localeCompare(b.date)).map(r => r.node)
+                              return [...debtRows, ...paymentRows]
+                                .sort((a, b) => a.date.localeCompare(b.date) || (a.invNum - b.invNum))
+                                .map(r => r.node)
                             })()}
                           </tbody>
                           <tfoot>
                             <tr style={{ borderTop: '2px solid var(--border)', background: '#f8fafc' }}>
-                              <td colSpan={5} style={{ padding: '8px 10px' }}>
+                              <td colSpan={bulkSelectMode ? 6 : 5} style={{ padding: '8px 10px' }}>
                                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-muted)' }}>
                                   <span>סה&quot;כ חיוב: <strong style={{ color: 'var(--text)' }}>{fmt(monthChargeTotal)}</strong></span>
                                   {monthCreditTotal > 0 && <span>סה&quot;כ זיכוי: <strong style={{ color: 'var(--danger)' }}>{fmt(monthCreditTotal)}</strong></span>}
@@ -977,9 +1039,16 @@ export default function CustomerTrackingTab({
 
       {/* ── CUSTOMER DEBT MODAL ── */}
       {showDebtModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowDebtModal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={closeDebtModal}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '620px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editDebt ? '✏️ עריכת רשומה' : '+ חשבונית/זיכוי חדש'}</h3>
+            <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {editDebt ? '✏️ עריכת רשומה' : '+ חשבונית/זיכוי חדש'}
+              {bulkQueue && (
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', background: '#f1f5f9', padding: '2px 10px', borderRadius: '10px' }}>
+                  עריכה מרובה — נותרו {bulkQueue.length}
+                </span>
+              )}
+            </h3>
             <div style={{ display: 'grid', gap: '14px' }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1080,7 +1149,7 @@ export default function CustomerTrackingTab({
               </label>
             </div>
             <div className="sticky-actions">
-              <Button variant="secondary" onClick={() => setShowDebtModal(false)}>ביטול</Button>
+              <Button variant="secondary" onClick={closeDebtModal}>{bulkQueue && bulkQueue.length > 1 ? 'דלג ⏭' : 'ביטול'}</Button>
               <Button loading={dSaving} onClick={saveDebt}>💾 שמור</Button>
             </div>
           </div>
@@ -1305,7 +1374,8 @@ export default function CustomerTrackingTab({
 
           {printMode === 'ledger' && (() => {
             const cust = customers.find(c => c.id === printCustomerId)
-            const allDebts = customerDebts.filter(d => d.customer_id === printCustomerId).sort((a, b) => a.date.localeCompare(b.date))
+            const allDebts = customerDebts.filter(d => d.customer_id === printCustomerId)
+              .sort((a, b) => a.date.localeCompare(b.date) || (invNumOf(a.doc_number) - invNumOf(b.doc_number)))
             const allPayments = customerPayments.filter(p => p.customer_id === printCustomerId)
 
             const sortedPrintMonths = [...printMonths].sort()
@@ -1354,7 +1424,9 @@ export default function CustomerTrackingTab({
               | { kind: 'payment'; first: CustomerLedgerPayment; amount: number }
             const rawEvents: RawLedgerEvent<Ev>[] = []
             debts.forEach(d => {
-              const items = Array.isArray(d.invoices) && d.invoices.length > 0 ? d.invoices : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]
+              const items = Array.isArray(d.invoices) && d.invoices.length > 0
+                ? [...d.invoices].sort((a, b) => invNumOf(a.number) - invNumOf(b.number))
+                : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]
               items.forEach(item => {
                 rawEvents.push({
                   date: d.date,

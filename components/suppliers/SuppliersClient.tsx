@@ -18,6 +18,7 @@ export default function SuppliersClient() {
   const { showToast } = useToast()
   const autoExpenseDoneRef = useRef(false)
   const didParseParams = useRef(false)
+  const hasLoadedRef = useRef(false)
 
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('tracking')
@@ -46,7 +47,11 @@ export default function SuppliersClient() {
       if (!profileLoading) setLoading(false)
       return
     }
-    setLoading(true)
+    // Only block the whole page behind the "טוען..." spinner on the very first load — a
+    // reload() after a save (or a realtime change from another tab) must NOT unmount
+    // SupplierTrackingTab/SupplierDetailsTab, or every expanded row/accordion state they
+    // hold locally (openSupplierKeys, expandedMonthKeys, filters, search...) is lost.
+    if (!hasLoadedRef.current) setLoading(true)
 
     const [suppRes, debtRes, catRes, paymentsRes, debtPaymentsRes, expCatRes, recItemsRes] = await Promise.all([
       supabase.from('suppliers').select('*').eq('tenant_id', tid).order('name'),
@@ -69,6 +74,7 @@ export default function SuppliersClient() {
     if (recItemsRes.data) setRecurringItems(recItemsRes.data)
     if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
     setLoading(false)
+    hasLoadedRef.current = true
 
     // Auto-expense overdue scheduled payments — runs once per session, regardless of active tab
     if (!autoExpenseDoneRef.current) {

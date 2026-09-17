@@ -17,6 +17,7 @@ export default function CustomersClient() {
   const tenantIdRef = useRef<string | null>(null)
   const { showToast } = useToast()
   const didParseParams = useRef(false)
+  const hasLoadedRef = useRef(false)
 
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('tracking')
@@ -44,7 +45,11 @@ export default function CustomersClient() {
       if (!profileLoading) setLoading(false)
       return
     }
-    setLoading(true)
+    // Only block the whole page behind the "טוען..." spinner on the very first load — a
+    // reload() after a save (or a realtime change from another tab) must NOT unmount
+    // CustomerTrackingTab/CustomerDetailsTab, or every expanded row/accordion state they
+    // hold locally (openCustomerKeys, expandedMonthKeys, filters, search...) is lost.
+    if (!hasLoadedRef.current) setLoading(true)
 
     const [custRes, debtRes, catRes, payRes, recItemsRes, actionsRes] = await Promise.all([
       supabase.from('customers').select('*').eq('tenant_id', tid).order('name'),
@@ -64,6 +69,7 @@ export default function CustomersClient() {
     if (actionsRes.data) setCustomerActions(actionsRes.data)
     if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
     setLoading(false)
+    hasLoadedRef.current = true
   }, [supabase, resolveTenant, showToast, profile, profileLoading])
 
   useEffect(() => { loadAll() }, [loadAll])

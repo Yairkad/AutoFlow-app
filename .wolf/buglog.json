@@ -583,5 +583,25 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-09-16"
+  },
+  {
+    "id": "bug-032",
+    "timestamp": "2026-09-17T00:00:00.000Z",
+    "error_message": "לאחר לחיצה על עריכה ושמירה בטאב המעקב (ספקים/לקוחות), כל השורות הפתוחות נסגרות וחוזרות לתצוגה ראשונית במקום להישאר פתוחות",
+    "file": "components/suppliers/SuppliersClient.tsx, components/customers/CustomersClient.tsx",
+    "root_cause": "loadAll() (passed down as the `reload` prop, called after every save AND by the realtime postgres_changes subscription on any DB change) unconditionally called setLoading(true) at its start. The parent component has `if (loading) return <div>טוען...</div>`, so every reload — not just the very first page load — fully unmounted SupplierTrackingTab/CustomerTrackingTab. That wiped every piece of local UI state those components hold (openSupplierKeys/openCustomerKeys — which cards are expanded, expandedMonthKeys, filter, search), since it was all reset to its initial value on remount. Looked exactly like 'save closes everything and resets the view'.",
+    "fix": "Added a hasLoadedRef (useRef(false)) in both SuppliersClient.tsx and CustomersClient.tsx. loadAll() now only calls setLoading(true) when hasLoadedRef.current is still false (i.e. the true first load); hasLoadedRef.current is set true right after the first successful load. Subsequent reload() calls update the suppliers/debts/etc. state directly without ever showing the full-page spinner again, so SupplierTrackingTab/CustomerTrackingTab stay mounted and keep their expand/collapse/filter/search state across saves and realtime updates.",
+    "tags": [
+      "state-loss",
+      "remount",
+      "loading-spinner",
+      "suppliers",
+      "customers",
+      "tracking-tab",
+      "reload"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-09-17"
   }
 ]

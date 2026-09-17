@@ -180,7 +180,16 @@ export default function SupplierTrackingTab({
   const [filter, setFilter] = useState<Filter>('open')
   const [search, setSearch] = useState('')
 
-  // Row selection
+  // Row selection — bulk-edit mode: check several debt rows, then walk through the edit modal
+  // one at a time (closing one, by save or cancel, opens the next) instead of one row at a time.
+  const [bulkSelectMode, setBulkSelectMode] = useState(false)
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkQueue, setBulkQueue] = useState<string[] | null>(null)
+  const toggleBulkSelected = (id: string) => setBulkSelectedIds(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
 
   // Which supplier cards are expanded (collapsed by default — click to open detail)
   const [openSupplierKeys, setOpenSupplierKeys] = useState<Set<string>>(new Set())
@@ -347,6 +356,34 @@ export default function SupplierTrackingTab({
     setShowSuppModal(true)
   }
 
+  // Closes the debt modal — same button/backdrop used whether the user just saved or cancelled.
+  // If a bulk-edit walk is in progress, immediately opens the next selected record instead of
+  // just closing, so "close one → next one opens" holds regardless of why it closed.
+  const closeSuppModal = () => {
+    setShowSuppModal(false)
+    if (!bulkQueue) return
+    const rest = bulkQueue.slice(1)
+    setBulkQueue(rest.length > 0 ? rest : null)
+    if (rest.length > 0) {
+      const next = supplierDebts.find(d => d.id === rest[0])
+      if (next) openSuppModal(next)
+      else showToast('חלק מהרשומות הנבחרות לעריכה מרובה לא נמצאו', 'error')
+    } else {
+      showToast('עריכה מרובה הושלמה ✓', 'success')
+    }
+  }
+
+  const startBulkEdit = () => {
+    const ids = [...bulkSelectedIds]
+    if (ids.length === 0) return
+    setBulkSelectMode(false)
+    setBulkSelectedIds(new Set())
+    const first = supplierDebts.find(d => d.id === ids[0])
+    if (!first) return
+    setBulkQueue(ids)
+    openSuppModal(first)
+  }
+
   const addInvoiceLine = () => setSInvoices(prev => [...prev, EMPTY_INV()])
   const removeInvoiceLine = (i: number) => setSInvoices(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev)
   const updateInvoiceLine = (i: number, field: keyof InvoiceEntry, val: string) =>
@@ -487,7 +524,7 @@ export default function SupplierTrackingTab({
       if (error) { showToast('שגיאה בשמירה', 'error'); setSsaving(false); return }
       showToast(`נשמרו ${rows.length} רשומות ✓`, 'success')
     }
-    setSsaving(false); setShowSuppModal(false); reload()
+    setSsaving(false); reload(); closeSuppModal()
   }
 
   const deleteSuppDebt = async (id: string) => {
@@ -996,6 +1033,12 @@ export default function SupplierTrackingTab({
       <div>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Button onClick={() => openSuppModal()}>+ הוסף חשבונית/זיכוי</Button>
+            <Button variant="secondary" onClick={() => { setBulkSelectMode(m => !m); setBulkSelectedIds(new Set()) }}>
+              {bulkSelectMode ? '✖ בטל בחירה' : '☑ עריכה מרובה'}
+            </Button>
+            {bulkSelectMode && bulkSelectedIds.size > 0 && (
+              <Button onClick={startBulkEdit}>✏️ ערוך נבחרים ({bulkSelectedIds.size})</Button>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)} className="form-input" style={{ margin: 0, padding: '7px 8px', fontSize: '12px' }} />
               <Button variant="secondary" loading={generating} onClick={generateRecurringCharges}>🔄 צור חיובים לחודש</Button>
@@ -1204,6 +1247,7 @@ export default function SupplierTrackingTab({
                           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
                             <thead>
                               <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                                {bulkSelectMode && <th style={{ ...thSt, width: '30px' }}></th>}
                                 <th style={thSt}>מספר חשבונית</th>
                                 <th style={thSt}>תאריך</th>
                                 <th style={thSt}>סוג</th>
@@ -1222,6 +1266,11 @@ export default function SupplierTrackingTab({
                                     className="tr-hover"
                                     style={{ background: d.is_closed && d.direction === 'charge' ? '#fafafa' : undefined }}
                                   >
+                                    {bulkSelectMode && (
+                                      <td style={{ ...tdSt, textAlign: 'center' }}>
+                                        <input type="checkbox" checked={bulkSelectedIds.has(d.id)} onChange={() => toggleBulkSelected(d.id)} />
+                                      </td>
+                                    )}
                                     <td style={tdSt}>
                                       {item.number ? `#${item.number}` : '—'}
                                       {item.drive_file_url ? (
@@ -1258,7 +1307,7 @@ export default function SupplierTrackingTab({
                             </tbody>
                             <tfoot>
                               <tr style={{ borderTop: '2px solid var(--border)', background: '#f8fafc' }}>
-                                <td colSpan={5} style={{ padding: '8px 10px' }}>
+                                <td colSpan={bulkSelectMode ? 6 : 5} style={{ padding: '8px 10px' }}>
                                   <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-muted)' }}>
                                     <span>סה&quot;כ חיוב: <strong style={{ color: 'var(--text)' }}>{fmt(monthChargeTotal)}</strong></span>
                                     {monthCreditTotal > 0 && <span>סה&quot;כ זיכוי: <strong style={{ color: 'var(--danger)' }}>{fmt(monthCreditTotal)}</strong></span>}
@@ -1311,9 +1360,16 @@ export default function SupplierTrackingTab({
 
       {/* ── SUPPLIER DEBT MODAL ── */}
       {showSuppModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowSuppModal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={closeSuppModal}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '620px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editSupp ? '✏️ עריכת רשומה' : '+ חשבונית/זיכוי חדש'}</h3>
+            <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {editSupp ? '✏️ עריכת רשומה' : '+ חשבונית/זיכוי חדש'}
+              {bulkQueue && (
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', background: '#f1f5f9', padding: '2px 10px', borderRadius: '10px' }}>
+                  עריכה מרובה — נותרו {bulkQueue.length}
+                </span>
+              )}
+            </h3>
             <div style={{ display: 'grid', gap: '14px' }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1419,7 +1475,7 @@ export default function SupplierTrackingTab({
               </label>
             </div>
             <div className="sticky-actions">
-              <Button variant="secondary" onClick={() => setShowSuppModal(false)}>ביטול</Button>
+              <Button variant="secondary" onClick={closeSuppModal}>{bulkQueue && bulkQueue.length > 1 ? 'דלג ⏭' : 'ביטול'}</Button>
               <Button loading={sSaving} onClick={saveSuppDebt}>💾 שמור</Button>
             </div>
           </div>

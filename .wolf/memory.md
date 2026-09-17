@@ -2017,3 +2017,38 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:06 | Edited components/reports/UnifiedReportTab.tsx | 3→3 lines | ~190 |
 | 12:07 | Session end: 4 writes across 2 files (buildUnifiedReport.ts, UnifiedReportTab.tsx) | 1 reads | ~3207 tok |
 | 12:07 | Session end: 4 writes across 2 files (buildUnifiedReport.ts, UnifiedReportTab.tsx) | 1 reads | ~3207 tok |
+| 12:11 | Session end: 4 writes across 2 files (buildUnifiedReport.ts, UnifiedReportTab.tsx) | 4 reads | ~3207 tok |
+| 12:13 | Edited components/suppliers/SuppliersClient.tsx | 4→5 lines | ~58 |
+| 12:13 | Edited components/suppliers/SuppliersClient.tsx | added 1 condition(s) | ~165 |
+| 12:13 | Edited components/suppliers/SuppliersClient.tsx | 3→4 lines | ~55 |
+| 12:13 | Edited components/customers/CustomersClient.tsx | 3→4 lines | ~46 |
+| 12:13 | Edited components/customers/CustomersClient.tsx | added 1 condition(s) | ~159 |
+| 12:13 | Edited components/customers/CustomersClient.tsx | 3→4 lines | ~55 |
+| 12:13 | Edited components/customers/CustomerTrackingTab.tsx | CSS: s | ~132 |
+| 12:14 | Edited components/customers/CustomerTrackingTab.tsx | 1→2 lines | ~53 |
+| 12:14 | Edited components/customers/CustomerTrackingTab.tsx | CSS: invNum | ~156 |
+| 12:14 | Edited components/customers/CustomerTrackingTab.tsx | CSS: invNum | ~70 |
+| 12:14 | Edited components/customers/CustomerTrackingTab.tsx | 1→3 lines | ~63 |
+| 12:14 | Edited components/customers/CustomerTrackingTab.tsx | 1→2 lines | ~58 |
+| 12:14 | Edited components/customers/CustomerTrackingTab.tsx | 3→5 lines | ~91 |
+| 12:15 | Edited components/suppliers/SupplierTrackingTab.tsx | CSS: mode, id | ~192 |
+| 12:15 | Edited components/suppliers/SupplierTrackingTab.tsx | CSS: rest | ~324 |
+| 12:15 | Edited components/suppliers/SupplierTrackingTab.tsx | setShowSuppModal() → closeSuppModal() | ~30 |
+| 12:15 | Edited components/suppliers/SupplierTrackingTab.tsx | 2→2 lines | ~128 |
+| 12:16 | Edited components/suppliers/SupplierTrackingTab.tsx | expanded (+7 lines) | ~146 |
+| 12:16 | Edited components/suppliers/SupplierTrackingTab.tsx | 2→2 lines | ~61 |
+| 12:16 | Edited components/suppliers/SupplierTrackingTab.tsx | expanded (+6 lines) | ~206 |
+| 12:16 | Edited components/suppliers/SupplierTrackingTab.tsx | expanded (+6 lines) | ~556 |
+| 12:16 | Edited components/suppliers/SupplierTrackingTab.tsx | CSS: 6 | ~60 |
+| 12:17 | Edited components/customers/CustomerTrackingTab.tsx | CSS: mode, id | ~192 |
+| 12:17 | Edited components/customers/CustomerTrackingTab.tsx | CSS: rest | ~328 |
+| 12:17 | Edited components/customers/CustomerTrackingTab.tsx | inline fix | ~14 |
+| 12:17 | Edited components/customers/CustomerTrackingTab.tsx | CSS: gap, color | ~274 |
+| 12:17 | Edited components/customers/CustomerTrackingTab.tsx | 2→2 lines | ~60 |
+| 12:17 | Edited components/customers/CustomerTrackingTab.tsx | expanded (+6 lines) | ~201 |
+| 12:18 | Edited components/customers/CustomerTrackingTab.tsx | 7→8 lines | ~164 |
+| 12:18 | Edited components/customers/CustomerTrackingTab.tsx | CSS: textAlign | ~189 |
+| 12:18 | Edited components/customers/CustomerTrackingTab.tsx | 4→5 lines | ~129 |
+| 12:18 | Edited components/customers/CustomerTrackingTab.tsx | CSS: 6 | ~139 |
+| 12:20 | Fixed row-collapse-on-save bug (loading spinner unmounted SupplierTrackingTab/CustomerTrackingTab on every reload(), wiping openSupplierKeys/expandedMonthKeys/filter/search — now only blocks on first load via hasLoadedRef) + added invoice-number tiebreak sort for same-date invoices to CustomerTrackingTab (already existed in SupplierTrackingTab) + added bulk-edit mode (checkbox-select multiple debt rows, then walk the edit modal one at a time via closeSuppModal/closeDebtModal + bulkQueue) | SuppliersClient.tsx, CustomersClient.tsx, SupplierTrackingTab.tsx, CustomerTrackingTab.tsx | tsc --noEmit clean (pre-existing unrelated pdfjs-dist error only) | ~9000 |
+| 12:22 | Session end: 36 writes across 6 files (buildUnifiedReport.ts, UnifiedReportTab.tsx, SuppliersClient.tsx, CustomersClient.tsx, CustomerTrackingTab.tsx) | 5 reads | ~71660 tok |
