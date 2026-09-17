@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T09:18:26.735Z
-> Files: 14 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T09:46:29.852Z
+> Files: 16 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -360,9 +360,9 @@
 
 ## components/customers/
 
-- `CustomersClient.tsx` — Shell: loads customers/debts/payments, tab switch (מעקב/פרטים), first-load-only loading spinner via hasLoadedRef (~2300 tok)
-- `CustomerTrackingTab.tsx` — "מעקב" tab: per-customer accordion, month blocks, debt/invoice CRUD modal, bulk-edit (checkbox select → sequential modal walk), pay/print/Excel (~25700 tok)
 - `CustomerDetailsTab.tsx` — "פרטים" tab: flat customer record CRUD (name/contact/etc), no expand state (~10100 tok)
+- `CustomersClient.tsx` — Shell: loads customers/debts/payments, tab switch (מעקב/פרטים), first-load-only loading spinner via hasLoadedRef (~2300 tok)
+- `CustomerTrackingTab.tsx` — fmtDMY (~26256 tok)
 
 ## components/dashboard/
 
@@ -410,9 +410,9 @@
 
 ## components/suppliers/
 
+- `SupplierDetailsTab.tsx` — "פרטים" tab: flat supplier record CRUD (name/contact/etc), no expand state (~9300 tok)
 - `SuppliersClient.tsx` — Shell: loads suppliers/debts/payments, tab switch (מעקב/פרטים), first-load-only loading spinner via hasLoadedRef (~2600 tok)
 - `SupplierTrackingTab.tsx` — "מעקב" tab: per-supplier accordion, month blocks, debt/invoice CRUD modal, bulk-edit (checkbox select → sequential modal walk), pay/print/Excel (~38100 tok)
-- `SupplierDetailsTab.tsx` — "פרטים" tab: flat supplier record CRUD (name/contact/etc), no expand state (~9300 tok)
 
 ## components/test-transfer/
 

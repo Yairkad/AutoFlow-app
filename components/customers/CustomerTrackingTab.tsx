@@ -230,6 +230,24 @@ export default function CustomerTrackingTab({
 
   // ── Customer debt CRUD ────────────────────────────────────────────────────
 
+  // Tries to recognize an "actions" block already baked into a line's saved notes (e.g. when
+  // reopening an existing record for editing) so lastActionsTextRef starts primed instead of
+  // empty. Without this, re-toggling a pill on an already-saved line couldn't find its own
+  // previous block to remove and just appended a second copy — "כיוון פרונט כיוון פרונט + צמיגים".
+  // Only the trailing " — "-separated segment (or the whole text, if there's no separator) is
+  // considered, and only if every "+"-joined part matches a real catalog action name for this
+  // customer — free text the user typed never accidentally matches.
+  const detectActionsBlock = (notes: string, customerId: string): { ids: string[]; block: string } | null => {
+    const sepIdx = notes.lastIndexOf(' — ')
+    const candidate = sepIdx >= 0 ? notes.slice(sepIdx + 3) : notes
+    const parts = candidate.split(' + ').map(s => s.trim()).filter(Boolean)
+    if (parts.length === 0) return null
+    const catalog = customerActions.filter(a => a.customer_id === customerId)
+    const matched = parts.map(p => catalog.find(a => a.name === p))
+    if (matched.some(a => !a)) return null
+    return { ids: (matched as CustomerAction[]).map(a => a.id), block: candidate }
+  }
+
   const openDebtModal = (d?: CustomerLedgerDebt) => {
     if (d) {
       setEditDebt(d); setDCustomer(d.customer_id ?? ''); setDNotes('')
@@ -240,13 +258,15 @@ export default function CustomerTrackingTab({
           : [{ ...EMPTY_INV(), date: d.date, direction: d.direction, notes: d.description ?? '' }]
       setDInvoices(existing)
       setDPlate(d.plate ?? '')
+      const detected = d.customer_id ? detectActionsBlock(existing[0]?.notes ?? '', d.customer_id) : null
+      setSelectedActionIds(detected?.ids ?? [])
+      lastActionsTextRef.current = detected?.block ?? ''
     } else {
       setEditDebt(null); setDCustomer(''); setDNotes(''); setDInvoices([EMPTY_INV()])
       setDPlate('')
+      setSelectedActionIds([]); lastActionsTextRef.current = ''
     }
-    // Can't reconstruct which actions were originally selected from saved text alone —
-    // pills start unchecked even when editing a row that used them.
-    setSelectedActionIds([]); lastActionsTextRef.current = ''; lastPlateMetaRef.current = ''
+    lastPlateMetaRef.current = ''
     setShowDebtModal(true)
   }
 
@@ -283,7 +303,15 @@ export default function CustomerTrackingTab({
   // text the mechanic typed themselves, before/after/between the tracked blocks, is untouched.
   const replaceTrackedBlock = (text: string, prevBlock: string, nextBlock: string) => {
     let base = text
-    if (prevBlock && base.includes(prevBlock)) base = base.replace(prevBlock, '').trim()
+    if (prevBlock) {
+      // Strip the block together with its leading " — " separator when present, so re-toggling
+      // twice in the same session never leaves a dangling dash that the next block would just
+      // get appended after (which read as duplicated text once a stale block slipped through).
+      const withSep = ` — ${prevBlock}`
+      if (base.includes(withSep)) base = base.replace(withSep, '')
+      else if (base.includes(prevBlock)) base = base.replace(prevBlock, '')
+      base = base.trim()
+    }
     if (!nextBlock) return base
     return base ? `${base} — ${nextBlock}` : nextBlock
   }

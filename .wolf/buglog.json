@@ -603,5 +603,24 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-09-17"
+  },
+  {
+    "id": "bug-033",
+    "timestamp": "2026-09-17T00:00:00.000Z",
+    "error_message": "אם בוחרים גם פרונט וגם צמיגים (פעולות מהירות) הוא יוצר בשורת ההערות כפילות של מילים, למשל 'כיוון פרונט כיוון פרונט + צמיגים'",
+    "file": "components/customers/CustomerTrackingTab.tsx",
+    "root_cause": "The quick-fill 'actions' pills (toggleAction) write a computed ' — '-joined block into dInvoices[0].notes and track the last-written block in lastActionsTextRef so the NEXT toggle can find-and-replace it instead of appending. openDebtModal() always reset lastActionsTextRef to '' on open (with a comment acknowledging 'can't reconstruct which actions were selected from saved text alone'), including when reopening an EXISTING record whose notes already contained a previously-saved action block. So: create a debt, pick 'כיוון פרונט', save (description='כיוון פרונט') -> reopen to edit -> pills show unchecked -> click 'צמיגים' -> replaceTrackedBlock has no prevBlock to remove (ref is ''), so it just appends after the untouched existing text -> notes becomes 'כיוון פרונט — כיוון פרונט + צמיגים', i.e. the phrase duplicated.",
+    "fix": "Added detectActionsBlock(notes, customerId) in CustomerTrackingTab.tsx: on openDebtModal for an existing record, looks at the trailing ' — '-separated segment of the saved notes (or the whole string if there's no separator) and, only if every '+'-joined part matches a real customer_actions catalog name for that customer, treats it as the actions block — pre-selecting those pills AND priming lastActionsTextRef with it, so the next toggle can find and cleanly remove it. Also hardened replaceTrackedBlock to strip the block together with its leading ' — ' separator (not just the block text) so no dangling dash survives a removal. Free text the user typed themselves never matches (it wouldn't equal a catalog name), so it's never misidentified or destroyed.",
+    "tags": [
+      "duplicate-text",
+      "quick-fill",
+      "customer-actions",
+      "notes",
+      "tracked-ref",
+      "reopen-edit"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-09-17"
   }
 ]
