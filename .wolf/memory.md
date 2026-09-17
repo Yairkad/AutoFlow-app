@@ -1660,3 +1660,167 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 03:14 | Fixed QuotesClient.tsx missing loading gate (list flashed "no items" instead of "טוען..." during fetch, same bug class as bug-014's DebtsClient/CustomersClient fix) — added loading state + profileLoading fallback | components/quotes/QuotesClient.tsx | tsc clean | ~600 |
 | 03:15 | Row-actions cleanup complete: new components/ui/RowActionsMenu.tsx (kebab menu) replacing top-pinned selection-action-bars across all 12 planned files (debts, employees, products, tires, inspections, expenses, alignment, cars, suppliers, customers, settings, documents) per approved plan moonlit-bubbling-moler.md; moved customer "🔗 מזג תשלומים" button into the isOpen+2-payments-gated block | components/ui/RowActionsMenu.tsx + 12 files | tsc clean throughout; browser-verified via Playwright | ~45000 |
 | 03:22 | Session end: 112 writes across 21 files (route.ts, ProfileContext.tsx, client.ts, AppShell.tsx, RowActionsMenu.tsx) | 38 reads | ~242054 tok |
+| 08:22 | Session end: 112 writes across 21 files (route.ts, ProfileContext.tsx, client.ts, AppShell.tsx, RowActionsMenu.tsx) | 38 reads | ~242054 tok |
+| 08:23 | Session end: 112 writes across 21 files (route.ts, ProfileContext.tsx, client.ts, AppShell.tsx, RowActionsMenu.tsx) | 38 reads | ~242054 tok |
+
+## Session: 2026-09-16 21:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-16 21:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-16 21:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-16 21:48
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-16 21:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:07 | Created ../../../.claude/plans/wiggly-hugging-mist.md | — | ~2707 |
+| 22:09 | Session end: 1 writes across 1 files (wiggly-hugging-mist.md) | 29 reads | ~96169 tok |
+| 22:12 | Created supabase/migrations/080_bank_reconciliation.sql | — | ~1452 |
+| 22:12 | Created lib/bank-sync/parseStatementFile.ts | — | ~1479 |
+| 22:13 | Created lib/bank-sync/matchSuggestions.ts | — | ~985 |
+| 22:13 | Created lib/bank-sync/reconcileLine.ts | — | ~573 |
+| 22:13 | Created lib/expenses/quickCreateExpense.ts | — | ~566 |
+| 22:13 | Session end: 6 writes across 6 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 42 reads | ~127458 tok |
+| 22:13 | Created components/expenses/QuickExpenseModal.tsx | — | ~1362 |
+| 22:14 | Edited components/expenses/ExpensesClient.tsx | added 1 import(s) | ~47 |
+| 22:14 | Created ../../../.claude/plans/magical-dreaming-stonebraker.md | — | ~3391 |
+| 22:14 | Edited components/expenses/ExpensesClient.tsx | 1→2 lines | ~31 |
+| 22:14 | Edited components/expenses/ExpensesClient.tsx | added optional chaining | ~152 |
+| 22:14 | Created components/bank-sync/types.ts | — | ~303 |
+| 22:14 | Edited ../../../.claude/plans/magical-dreaming-stonebraker.md | 3→7 lines | ~295 |
+| 22:14 | Edited ../../../.claude/plans/magical-dreaming-stonebraker.md | inline fix | ~66 |
+| 22:15 | Session end: 14 writes across 10 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 42 reads | ~133372 tok |
+| 22:16 | Created supabase/migrations/080_customer_actions_and_debt_plate.sql | — | ~302 |
+| 22:17 | Edited components/customers/shared.ts | 8→9 lines | ~57 |
+| 22:17 | Edited components/customers/shared.ts | expanded (+12 lines) | ~128 |
+| 22:17 | Edited components/customers/CustomersClient.tsx | inline fix | ~32 |
+| 22:17 | Edited components/customers/CustomersClient.tsx | 2→3 lines | ~61 |
+| 22:17 | Edited components/customers/CustomersClient.tsx | added 1 condition(s) | ~351 |
+| 22:17 | Edited components/customers/CustomersClient.tsx | 2→3 lines | ~62 |
+| 22:17 | Edited components/customers/CustomersClient.tsx | 6→7 lines | ~60 |
+| 22:17 | Edited components/customers/CustomerTrackingTab.tsx | added 2 import(s) | ~142 |
+| 22:17 | Session end: 23 writes across 14 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 45 reads | ~134589 tok |
+| 22:17 | Edited components/customers/CustomerTrackingTab.tsx | CSS: customerActions | ~46 |
+| 22:18 | Edited components/customers/CustomerTrackingTab.tsx | modified CustomerTrackingTab() | ~56 |
+| 22:18 | Edited components/customers/CustomerTrackingTab.tsx | CSS: Quick-fill | ~342 |
+| 22:18 | Edited components/customers/CustomerTrackingTab.tsx | added 6 condition(s) | ~877 |
+| 22:18 | Edited components/customers/CustomerTrackingTab.tsx | modified filter() | ~248 |
+| 22:18 | Edited components/customers/CustomerTrackingTab.tsx | 4→5 lines | ~80 |
+| 22:19 | Edited components/customers/CustomerTrackingTab.tsx | CSS: plate | ~141 |
+| 22:19 | Edited components/customers/CustomerTrackingTab.tsx | CSS: plate | ~141 |
+| 22:19 | Edited components/customers/CustomerTrackingTab.tsx | added 6 condition(s) | ~463 |
+| 22:19 | Edited components/customers/CustomerTrackingTab.tsx | modified fmt() | ~640 |
+| 22:20 | Edited components/customers/CustomerTrackingTab.tsx | expanded (+23 lines) | ~513 |
+| 22:20 | Edited components/customers/CustomerTrackingTab.tsx | expanded (+26 lines) | ~599 |
+| 22:20 | Edited components/customers/CustomerTrackingTab.tsx | expanded (+6 lines) | ~200 |
+| 22:21 | Edited components/customers/CustomerTrackingTab.tsx | modified if() | ~754 |
+| 22:23 | Created components/bank-sync/ImportWizard.tsx | — | ~4674 |
+| 22:23 | Edited lib/bank-sync/reconcileLine.ts | added 1 import(s) | ~42 |
+| 22:23 | Edited lib/bank-sync/reconcileLine.ts | added optional chaining | ~408 |
+| 22:24 | Created components/bank-sync/ReconciliationReview.tsx | — | ~4172 |
+| 22:24 | Created components/bank-sync/SourcesTab.tsx | — | ~1082 |
+| 22:25 | Created components/bank-sync/BankSyncClient.tsx | — | ~1171 |
+| 22:25 | Created app/(app)/bank-sync/page.tsx | — | ~40 |
+| 22:25 | Edited components/layout/Sidebar.tsx | 1→2 lines | ~67 |
+| 22:25 | Edited components/layout/Sidebar.tsx | inline fix | ~31 |
+| 22:25 | Edited components/layout/Sidebar.tsx | 1→2 lines | ~73 |
+| 22:25 | Edited ../../../.claude/plans/magical-dreaming-stonebraker.md | 1→3 lines | ~82 |
+| 22:25 | Edited components/settings/SettingsClient.tsx | 3→4 lines | ~46 |
+| 22:29 | Session end: 49 writes across 21 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 48 reads | ~154668 tok |
+| 22:31 | Session end: 49 writes across 21 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 49 reads | ~154668 tok |
+| 22:36 | Session end: 49 writes across 21 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 50 reads | ~154668 tok |
+| 22:36 | Session end: 49 writes across 21 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 50 reads | ~154668 tok |
+| 22:40 | Session end: 49 writes across 21 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 50 reads | ~154668 tok |
+| 22:43 | Created _tmp_list_tenants.mjs | — | ~166 |
+| 22:46 | Created _tmp_verify_banksync.mjs | — | ~1512 |
+| 22:48 | Session end: 51 writes across 23 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 53 reads | ~156465 tok |
+| 22:50 | Edited _tmp_verify_banksync.mjs | "http://localhost:3000" → "http://localhost:3001" | ~10 |
+| 22:56 | Session end: 52 writes across 23 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 54 reads | ~156476 tok |
+| 22:57 | Session end: 52 writes across 23 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 54 reads | ~156476 tok |
+| 22:59 | Created _tmp_verify_banksync.mjs | — | ~1754 |
+| 22:59 | Session end: 53 writes across 23 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 55 reads | ~159867 tok |
+| 22:59 | Edited lib/contexts/ProfileContext.tsx | added 3 condition(s) | ~591 |
+| 23:01 | Session end: 54 writes across 24 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 55 reads | ~160458 tok |
+| 23:04 | Edited lib/bank-sync/parseStatementFile.ts | modified readRawRows() | ~252 |
+| 23:04 | Edited components/expenses/QuickExpenseModal.tsx | added 1 condition(s) | ~77 |
+| 23:09 | Session end: 56 writes across 24 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 64 reads | ~160787 tok |
+| 23:11 | Session end: 56 writes across 24 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 65 reads | ~160787 tok |
+| 23:14 | Session end: 56 writes across 24 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 65 reads | ~160787 tok |
+| 06:20 | Edited components/customers/CustomerTrackingTab.tsx | expanded (+7 lines) | ~373 |
+| 06:21 | Edited components/customers/CustomerTrackingTab.tsx | added 1 condition(s) | ~1333 |
+| 06:21 | Edited components/customers/CustomerTrackingTab.tsx | added nullish coalescing | ~408 |
+| 06:21 | Edited components/customers/CustomerTrackingTab.tsx | 2→6 lines | ~160 |
+| 06:22 | Edited components/customers/CustomerTrackingTab.tsx | 2→2 lines | ~60 |
+| 06:23 | Session end: 61 writes across 24 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 66 reads | ~163103 tok |
+| 08:26 | Edited ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/project_concurrent_sessions_conflict.md | 8→8 lines | ~88 |
+| 08:27 | Edited ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/project_concurrent_sessions_conflict.md | 1→3 lines | ~697 |
+| 08:27 | Created ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/project_bank_sync_feature.md | — | ~685 |
+| 08:28 | Edited ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/MEMORY.md | 1→2 lines | ~84 |
+| 08:28 | Edited components/customers/CustomerTrackingTab.tsx | 14→15 lines | ~322 |
+| 08:28 | Session end: 66 writes across 27 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 69 reads | ~165090 tok |
+| 08:28 | Edited components/customers/CustomerTrackingTab.tsx | CSS: danger | ~236 |
+| 08:29 | Edited components/customers/CustomerTrackingTab.tsx | removed 42 lines | ~15 |
+| 08:30 | Edited components/customers/CustomerTrackingTab.tsx | — | ~0 |
+| 08:31 | Edited components/customers/CustomerTrackingTab.tsx | removed 4 lines | ~6 |
+| 08:31 | Edited components/customers/CustomerTrackingTab.tsx | removed 16 lines | ~20 |
+| 08:31 | Edited components/customers/CustomerTrackingTab.tsx | removed 90 lines | ~99 |
+| 08:32 | Edited components/customers/CustomerTrackingTab.tsx | 8→6 lines | ~164 |
+| 08:36 | Edited components/customers/CustomerTrackingTab.tsx | 7→4 lines | ~98 |
+| 08:41 | Edited components/customers/CustomerDetailsTab.tsx | added 3 import(s) | ~121 |
+| 08:42 | Edited components/customers/CustomerDetailsTab.tsx | CSS: recurringItems, customerActions | ~569 |
+| 08:43 | Edited components/customers/CustomerDetailsTab.tsx | added 12 condition(s) | ~1237 |
+| 08:44 | Edited components/customers/CustomerDetailsTab.tsx | modified fmt() | ~1487 |
+| 08:44 | Edited components/customers/CustomerDetailsTab.tsx | inline fix | ~35 |
+| 08:45 | Edited components/customers/CustomerDetailsTab.tsx | — | ~0 |
+| 08:45 | Edited components/customers/CustomerDetailsTab.tsx | modified totalDebt() | ~19 |
+| 08:46 | Created lib/reports/buildUnifiedReport.ts | — | ~1516 |
+| 08:46 | Edited components/customers/CustomerDetailsTab.tsx | expanded (+104 lines) | ~2084 |
+| 08:47 | Created lib/reports/buildForecast.ts | — | ~1520 |
+| 08:47 | Edited components/customers/CustomersClient.tsx | 6→8 lines | ~84 |
+| 08:48 | Created components/reports/UnifiedReportTab.tsx | — | ~1632 |
+| 08:49 | Created components/reports/CashFlowForecastTab.tsx | — | ~2002 |
+| 08:49 | Created components/reports/FinancialReportClient.tsx | — | ~558 |
+| 08:49 | Edited components/customers/CustomerTrackingTab.tsx | 4→4 lines | ~102 |
+| 08:49 | Created app/(app)/reports/page.tsx | — | ~45 |
+| 08:50 | Edited components/layout/Sidebar.tsx | 1→2 lines | ~65 |
+| 08:51 | Edited components/layout/Sidebar.tsx | inline fix | ~35 |
+| 08:52 | Edited components/layout/Sidebar.tsx | 1→2 lines | ~52 |
+| 08:53 | Edited components/settings/SettingsClient.tsx | 1→2 lines | ~30 |
+| 08:55 | Session end: 94 writes across 33 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 74 reads | ~183263 tok |
+| 08:56 | Session end: 94 writes across 33 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 74 reads | ~183263 tok |
+| 08:57 | Session end: 94 writes across 33 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 74 reads | ~183263 tok |
+| 08:58 | Session end: 94 writes across 33 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 74 reads | ~183263 tok |
+| 08:59 | Session end: 94 writes across 33 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 74 reads | ~183263 tok |
+| 09:03 | Created components/ui/RowActionsMenu.tsx | — | ~1186 |
+| 09:03 | Session end: 95 writes across 34 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 74 reads | ~184449 tok |
+| 09:03 | Edited components/customers/CustomerTrackingTab.tsx | CSS: width, height, flexShrink | ~308 |
+| 10:02 | Session end: 96 writes across 34 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 74 reads | ~184757 tok |
+| 10:03 | Session end: 96 writes across 34 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 74 reads | ~184757 tok |
+| 10:05 | Session end: 96 writes across 34 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 74 reads | ~184757 tok |
+| 10:08 | Session end: 96 writes across 34 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 74 reads | ~184757 tok |
+| 10:09 | Created _tmp_verify_reports.mjs | — | ~912 |
+| 10:10 | Session end: 97 writes across 35 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 74 reads | ~185735 tok |
+| 10:16 | Session end: 97 writes across 35 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 74 reads | ~185735 tok |
+| 10:19 | Edited lib/utils/plateApi.ts | modified mapResponse() | ~772 |
+| 10:20 | Edited app/api/public/plate/route.ts | modified query() | ~498 |
+| 10:25 | Session end: 99 writes across 37 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 75 reads | ~187005 tok |
+| 10:26 | Session end: 99 writes across 37 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 75 reads | ~187005 tok |
+| 10:28 | Session end: 99 writes across 37 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 75 reads | ~187005 tok |
+| 10:31 | Edited _tmp_verify_reports.mjs | modified catch() | ~123 |
+| 10:33 | Session end: 100 writes across 37 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 75 reads | ~187137 tok |
+| 10:39 | Session end: 100 writes across 37 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 75 reads | ~187137 tok |
+| 10:54 | Session end: 100 writes across 37 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 75 reads | ~187137 tok |

@@ -6,7 +6,13 @@
     "file": "app/scan/page.tsx",
     "root_cause": "ScanPage rendered <ScanClient /> without AppShell wrapper. useProfile() returns null because ProfileProvider lives inside AppShell. The useEffect guard `if (!profile) return` prevented load() from ever running, leaving items=[] and loading=true indefinitely.",
     "fix": "Added AppShell to app/scan/page.tsx: return <AppShell><ScanClient /></AppShell>",
-    "tags": ["AppShell", "ProfileContext", "scan", "useProfile", "missing-wrapper"],
+    "tags": [
+      "AppShell",
+      "ProfileContext",
+      "scan",
+      "useProfile",
+      "missing-wrapper"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-06-23"
@@ -18,7 +24,12 @@
     "file": "components/quotes/QuotesClient.tsx",
     "root_cause": "WIDTHS array started at 145, missing 125 and 135",
     "fix": "Added 125 and 135 to the beginning of the WIDTHS array",
-    "tags": ["quotes", "tire", "width", "select"],
+    "tags": [
+      "quotes",
+      "tire",
+      "width",
+      "select"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-06-24"
@@ -30,7 +41,13 @@
     "file": "components/products/ProductsClient.tsx",
     "root_cause": "exportExcel() headers and rows did not include barcode. importExcel() did not map barcode column and had no column slot for it.",
     "fix": "Added 'ברקוד' as second column in export headers+rows. Updated import to read r[1] as barcode and shifted all subsequent column indices by 1 (name r[1]→r[2], category r[2]→r[3], etc.)",
-    "tags": ["products", "barcode", "excel", "export", "import"],
+    "tags": [
+      "products",
+      "barcode",
+      "excel",
+      "export",
+      "import"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-06-24"
@@ -42,8 +59,16 @@
     "file": "components/products/ProductsClient.tsx, app/api/yard/search/route.ts",
     "root_cause": "1) ProductsClient: hay variable in filter didn't include p.barcode. 2) yard/search route: products OR filter searched name+sku but not barcode column.",
     "fix": "1) Added p.barcode to the hay join in ProductsClient.tsx line 172. 2) Added barcode to select and barcode.ilike to the OR filter in yard/search/route.ts.",
-    "tags": ["products", "barcode", "search", "filter", "yard-search"],
-    "related_bugs": ["bug-003"],
+    "tags": [
+      "products",
+      "barcode",
+      "search",
+      "filter",
+      "yard-search"
+    ],
+    "related_bugs": [
+      "bug-003"
+    ],
     "occurrences": 1,
     "last_seen": "2026-06-29"
   },
@@ -54,7 +79,13 @@
     "file": "components/supplier-tracking/SupplierTrackingClient.tsx",
     "root_cause": "loadAll() queries suppliers with an explicit column list that includes the new `opening_balance` column added in supabase/migrations/066_supplier_opening_balance.sql. If that migration hasn't actually been applied to the live DB yet, the query errors (column does not exist) and `suppRes.data` is null, so `if (suppRes.data) setSuppliers(...)` silently skips — leaving `suppliers` state as an empty array for the whole session. Every group's `suppliers.find(s => s.id === sid)` then fails, so every supplier renders as 'ללא ספק' even though supplier_debts.supplier_id is populated correctly. SuppliersClient.tsx and DebtsClient.tsx don't hit this: SuppliersClient uses `select('*')` (no error on a missing column, just omits it) and DebtsClient's suppliers query never asks for opening_balance at all.",
     "fix": "Code-side: added an else-if in loadAll() to showToast the suppRes.error message instead of failing silently, so a missing-column/RLS error surfaces immediately next time instead of masquerading as 'ללא ספק' on every row. Real fix requires applying migration 066_supplier_opening_balance.sql to the live Supabase DB (ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS opening_balance numeric(10,2) NOT NULL DEFAULT 0) — could not run this myself, no DB credentials in this environment. RESOLVED 2026-07-13: user ran migrations 066-070 directly in the Supabase SQL Editor (wrapped in BEGIN/COMMIT), confirmed 'Success. No rows returned' — opening_balance column now exists on the live DB, closing the actual root cause.",
-    "tags": ["supplier-tracking", "migration", "silent-failure", "opening_balance", "select-error-swallowed"],
+    "tags": [
+      "supplier-tracking",
+      "migration",
+      "silent-failure",
+      "opening_balance",
+      "select-error-swallowed"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-07-13"
@@ -66,7 +97,15 @@
     "file": "components/expenses/ScheduledPaymentsModal.tsx, components/dashboard/AlertsPanel.tsx",
     "root_cause": "scheduled_payments.is_paid was a fully manual field — nothing in the codebase (no trigger, cron, or client-side logic) ever flipped it to true when due_date arrived. statusInfo() in ScheduledPaymentsModal and the AlertsPanel query both derive the overdue/paid state purely from is_paid + due_date, so an unpaid-but-overdue check correctly (given the missing logic) rendered as late with a manual pay button.",
     "fix": "Added lib/utils/autoMarkOverdueChecks.ts (autoMarkOverdueChecksPaid) which, for payment_method='check' rows with is_paid=false and due_date<=today, race-guards an update to is_paid=true+paid_date then inserts the matching expenses row and backfills expense_id — mirroring the manual markPaid() side effects. Called from ProfileContext.load() (session-level, admin-gated) plus defensively re-run in ScheduledPaymentsModal.fetch() and AlertsPanel.load() for sessions left open across midnight. Transfers remain manual (not in scope).",
-    "tags": ["scheduled_payments", "checks", "is_paid", "AlertsPanel", "ScheduledPaymentsModal", "auto-mark-paid", "due_date"],
+    "tags": [
+      "scheduled_payments",
+      "checks",
+      "is_paid",
+      "AlertsPanel",
+      "ScheduledPaymentsModal",
+      "auto-mark-paid",
+      "due_date"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-07-12"
@@ -78,7 +117,14 @@
     "file": "components/inspections/InspectionChecklistModal.tsx",
     "root_cause": "ok/fail status for a system was only ever resolved inside goNext() (the '›' next-arrow / 'לסיכום' button). Every other way of leaving a step — goPrev ('‹'), jumpTo (clicking a numbered pill), and the direct setStep(TOTAL)/setStep(0) calls on the '≡' summary pill and '← חזור' button — moved `step` without committing the item's status, so any system reviewed via those paths stayed at its initial '' status forever and printed as a fully blank row (no ✓, no ✗, no fault text) in printChecklist's makeRow().",
     "fix": "Extracted a shared commitCurrentStep() (resolves items[step].status from faults, skips 'na' items) and call it at the top of goNext, goPrev, and jumpTo. Rewired the two remaining direct setStep(TOTAL)/setStep(0) call sites to go through jumpTo(TOTAL)/jumpTo(0) instead so no navigation path skips the commit.",
-    "tags": ["inspections", "checklist", "print", "status", "navigation", "state-not-committed"],
+    "tags": [
+      "inspections",
+      "checklist",
+      "print",
+      "status",
+      "navigation",
+      "state-not-committed"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-07-13"
@@ -90,8 +136,16 @@
     "file": "components/supplier-tracking/SupplierTrackingClient.tsx",
     "root_cause": "QuickAddSupplierModal.tsx's onCreated callback hands back a QuickSupplier (id/name/phone/contact_name only). SupplierTrackingClient's setSuppliers(prev => [...prev, s]...) pushed that raw QuickSupplier straight into Supplier[] state, but Supplier (components/supplier-tracking/SupplierTrackingClient.tsx:50-53, added alongside migration 066_supplier_opening_balance.sql) requires a non-optional opening_balance: number. This was a pure type-level gap (tsc wasn't runnable in earlier sessions — no node_modules — so it slipped past review) that only surfaced when Vercel ran `npm run build`'s TypeScript check.",
     "fix": "In the onCreated handler, spread the QuickSupplier and default opening_balance: 0 (matches the DB column's default for a brand-new supplier row with no invoices yet): setSuppliers(prev => [...prev, { ...s, opening_balance: 0 }]...)",
-    "tags": ["supplier-tracking", "build-failure", "typescript", "opening_balance", "vercel"],
-    "related_bugs": ["bug-005"],
+    "tags": [
+      "supplier-tracking",
+      "build-failure",
+      "typescript",
+      "opening_balance",
+      "vercel"
+    ],
+    "related_bugs": [
+      "bug-005"
+    ],
     "occurrences": 1,
     "last_seen": "2026-07-13"
   },
@@ -102,7 +156,13 @@
     "file": "components/expenses/ScheduledPaymentsModal.tsx",
     "root_cause": "In the series-creation loop, `new Date(fDue + 'T00:00:00')` is parsed as LOCAL time, but the row was serialized with `dueDate.toISOString().slice(0,10)`, which converts to UTC before slicing. In Israel (UTC+2/+3), local midnight falls on the previous UTC calendar day, so every generated row (including the first, i=0) landed one day earlier than selected.",
     "fix": "Added a local-only date formatter `toLocalISODate(d)` (built from getFullYear/getMonth/getDate, no UTC conversion) and used it instead of `.toISOString().slice(0,10)` for the series due_date. Single-payment save path already wrote `fDue` directly (no Date round-trip) and was unaffected.",
-    "tags": ["scheduled-payments", "checks", "date", "timezone", "off-by-one"],
+    "tags": [
+      "scheduled-payments",
+      "checks",
+      "date",
+      "timezone",
+      "off-by-one"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-07-13"
@@ -114,7 +174,13 @@
     "file": "components/expenses/ScheduledPaymentsModal.tsx, components/supplier-tracking/SupplierTrackingClient.tsx",
     "root_cause": "SupplierTrackingClient.submitPayment()'s check-method branch only forwarded paySupplierId into ScheduledPaymentsModal via schedInitialSupplierId — paySelectedIds/payAllocAmounts (the debts the user had just checked off) were discarded. ScheduledPaymentsModal's auto-opened add form always reset selectedDebtIds/debtAllocAmounts to empty whenever the supplier changed, so buildAllocations() returned empty and reconcileSupplierPayment was skipped unless the user manually re-selected debts inside the checks modal.",
     "fix": "Added initialSelectedDebtIds/initialDebtAllocAmounts props to ScheduledPaymentsModal, carried via a pendingInitialAllocRef consumed once inside the open-debts fetch (fetchOpenDebtsAndSeed), seeding the selection (filtered to debts still open) instead of resetting to empty. SupplierTrackingClient now passes paySelectedIds/payAllocAmounts through on the check-method redirect and clears the new state in the modal's onClose.",
-    "tags": ["scheduled-payments", "checks", "supplier-debts", "reconciliation", "state-lost-across-redirect"],
+    "tags": [
+      "scheduled-payments",
+      "checks",
+      "supplier-debts",
+      "reconciliation",
+      "state-lost-across-redirect"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-07-13"
@@ -126,8 +192,16 @@
     "file": "components/expenses/ScheduledPaymentsModal.tsx",
     "root_cause": "ScheduledPaymentsModal renders two sibling <Modal> instances (list + add/edit form) gated by the same parent `open` prop combined with a local formOpen flag. All three save-success branches (edit/series/new) only called setFormOpen(false), never the parent's onClose() — so with `open` still true, the LIST modal immediately reappeared right after a successful save, reading as 'the checks modal reopened.' Confirmed openEdit() (editing an existing payment) is only reachable from within that list modal, so the edit flow hit the identical mechanism.",
     "fix": "Added an onClose() call after setFormOpen(false) in all three save-success branches, so the whole modal closes on successful save instead of falling back to the list. Deliberate UX choice per user report — no 'stay on list for rapid multi-add' behavior preserved.",
-    "tags": ["scheduled-payments", "checks", "modal", "onClose", "state-not-propagated"],
-    "related_bugs": ["bug-009"],
+    "tags": [
+      "scheduled-payments",
+      "checks",
+      "modal",
+      "onClose",
+      "state-not-propagated"
+    ],
+    "related_bugs": [
+      "bug-009"
+    ],
     "occurrences": 1,
     "last_seen": "2026-07-13"
   },
@@ -138,7 +212,14 @@
     "file": "components/customer-tracking/CustomerTrackingClient.tsx",
     "root_cause": "In the printMode==='ledger' printed table, the running 'יתרה בפועל' column only accumulated raw charge/credit amounts (`running += item.amount` or `-item.amount`) and never subtracted `d.paid` — unlike `openingForReport` right above it, which already nets payments via `bal(d)`. So a payment recorded on a debt correctly reduced the on-screen totals (which use bal()) but the printed ledger's final running balance stayed at the full charge amount, only showing the payment separately in the 'שולם' footer figure.",
     "fix": "Subtract `Number(d.paid)` from `running` once per debt (on its last invoice-line item, for direction!=='credit') right after the existing charge/credit accumulation, so the in-range running balance stays consistent with openingForReport's bal()-based carry-in.",
-    "tags": ["customer-tracking", "print", "ledger", "balance", "payment", "running-total"],
+    "tags": [
+      "customer-tracking",
+      "print",
+      "ledger",
+      "balance",
+      "payment",
+      "running-total"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-07-14"
@@ -150,8 +231,20 @@
     "file": "components/yard/WorkCardClient.tsx, components/yard/FreeSearchClient.tsx, app/api/yard/sessions/[id]/route.ts, supabase/migrations/053_yard_rpcs.sql",
     "root_cause": "Two separate defects found in the same yard scan flow: (1) neither WorkCardClient.handleBarcodeScan nor FreeSearchClient.handleBarcode checked the matched item's `stock` field — a matched-but-out-of-stock product/tire was either added silently with no warning, or (in FreeSearchClient) `item` was accessed without a null-check, crashing instead of showing a clear message. (2) Stock deduction only happens once, when a yard session is archived (app/api/yard/sessions/[id]/route.ts PATCH status='archived'), via `decrement_tire_qty`/`decrement_product_qty` RPCs (migration 053_yard_rpcs.sql). Those RPCs run `UPDATE tires/products SET quantity = ...` but the real column on both tables is `qty` (confirmed in supabase/migrations/003_all_tables.sql) — `quantity` doesn't exist, so the UPDATE errors every time. The rpc() call's `error` was never checked in route.ts, so the failure was completely silent and stock never actually decremented, on any session, ever.",
     "fix": "1) Added an explicit `item.stock !== null && item.stock <= 0` check in both scan handlers, showing 'פריט אזל מהמלאי: <name>' and returning before adding. Also fixed FreeSearchClient.handleBarcode to null-check `item` (the API returns HTTP 200 with a null body on no-match, so `!res.ok` never actually catches a real 'not found'). 2) Added migration 071_fix_yard_decrement_qty_column.sql with CREATE OR REPLACE for both RPCs pointing at `qty` instead of `quantity`. 3) Added error logging (console.error) around both rpc() calls in route.ts so a future failure surfaces instead of vanishing silently, per the bug-005 Do-Not-Repeat convention.",
-    "tags": ["yard", "barcode", "scan", "inventory", "stock", "qty", "rpc", "silent-failure", "column-mismatch"],
-    "related_bugs": ["bug-005"],
+    "tags": [
+      "yard",
+      "barcode",
+      "scan",
+      "inventory",
+      "stock",
+      "qty",
+      "rpc",
+      "silent-failure",
+      "column-mismatch"
+    ],
+    "related_bugs": [
+      "bug-005"
+    ],
     "occurrences": 1,
     "last_seen": "2026-07-14"
   },
@@ -162,7 +255,15 @@
     "file": "components/customer-tracking/CustomerTrackingClient.tsx, components/supplier-tracking/SupplierTrackingClient.tsx",
     "root_cause": "Both ledger print flows use the 'hide everything via visibility:hidden, show #print-area via position:absolute' technique. `visibility:hidden` does not remove elements from layout flow, so AppShell's `<main>` (components/layout/AppShell.tsx) — which has an explicit `height: calc(100vh - var(--header-h))` + `overflowY:auto` — still occupies roughly one viewport-height's worth of empty box in the printed document, right alongside the absolutely-positioned print-area. The browser paginates for that leftover height, producing one extra blank page after the real content. (Header/Sidebar are `position:fixed` so they don't contribute — `main` was the only in-flow block with an explicit height.)",
     "fix": "Added `main { height: auto !important; overflow: visible !important; }` inside both components' existing `@media print` blocks, so the shell's fixed-height scroll container collapses to zero contribution during print instead of leaving a blank trailing page.",
-    "tags": ["print", "ledger", "customer-tracking", "supplier-tracking", "AppShell", "blank-page", "visibility-hidden"],
+    "tags": [
+      "print",
+      "ledger",
+      "customer-tracking",
+      "supplier-tracking",
+      "AppShell",
+      "blank-page",
+      "visibility-hidden"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-07-14"
@@ -174,8 +275,17 @@
     "file": "components/layout/Sidebar.tsx, components/layout/SidebarLayoutEditor.tsx",
     "root_cause": "SidebarLayoutEditor's open-effect always seeded its local editing state (`sections`) from the `defaultSections` prop. Sidebar.tsx passed the hardcoded module-level `SECTIONS` constant as `defaultSections` — never the current `activeSections` state (which reflects the last save, loaded from localStorage/tenant ui_settings on mount). So `onSave` correctly persisted the edit and updated `activeSections` (the sidebar itself rendered correctly), but reopening the editor modal re-read from the static default every time, discarding the save from the picker's own point of view.",
     "fix": "Added a new `currentSections` prop to SidebarLayoutEditor, passed as `activeSections` from Sidebar.tsx. The open-effect now seeds `sections` from `currentSections` instead of `defaultSections`; `defaultSections` (the true SECTIONS constant) is kept only for the 'איפוס לברירת מחדל' reset button, which must still restore the real defaults, not the last save.",
-    "tags": ["sidebar", "layout-editor", "state-not-persisted", "default-vs-current", "localStorage"],
-    "related_bugs": ["bug-010", "bug-009"],
+    "tags": [
+      "sidebar",
+      "layout-editor",
+      "state-not-persisted",
+      "default-vs-current",
+      "localStorage"
+    ],
+    "related_bugs": [
+      "bug-010",
+      "bug-009"
+    ],
     "occurrences": 1,
     "last_seen": "2026-07-22"
   },
@@ -186,7 +296,16 @@
     "file": "components/yard/TireSearchClient.tsx, components/yard/FreeSearchClient.tsx, components/yard/WorkCardClient.tsx",
     "root_cause": "Two compounding defects in the same flow: (1) TireSearchClient.submitWithPosition/FreeSearchClient.submitTireWithPosition sent one unbatched, unawaited POST per selected tire position instead of a single batched request (the endpoint already supports a batch array body) — multiplying round-trips felt slow, and only the FIRST position's item was ever written to the `yard-pending-<sessionId>` sessionStorage key WorkCardClient reads on mount, so the other positions were invisible until a slower realtime-triggered `router.refresh()` landed. (2) WorkCardClient's reconciliation effect (kept 'still-unconfirmed' local temp/pending items across a server refresh) matched by client-generated id: `!serverIds.has(i.id)`. A pending item's fake id (`pending-...`) never equals its real DB id once the server confirms it, so that condition was always true — the fake item was kept FOREVER (never replaced by the real one), duplicating the row and leaving it permanently addressed by an id that does not exist server-side. Any subsequent price-edit/qty-change PATCH against that id 404/500'd server-side (`.eq('id', itemId).single()` finds no row), which is exactly the 'שגיאה בעדכון מחיר' the user saw — not intermittent, but guaranteed for every item added via these two search pages.",
     "fix": "TireSearchClient.submitWithPosition and FreeSearchClient.submitTireWithPosition now build one pending item per position and POST them all in a single batched request (array body), and stash the FULL array in sessionStorage instead of just the first item. WorkCardClient's pending-pickup effect now accepts either a single object or an array (backward compatible) and adds all of them, with tire_position included in the existing-item dedup key (previously ref_id+name only, which would have incorrectly collapsed multiple positions of the same tire into one). WorkCardClient's reconciliation effect now matches pending/temp items to fresh server items by CONTENT (item_type+ref_id+tire_position+name, consuming one server match per pending item) instead of by id, so a confirmed item actually replaces its temporary stand-in. As defense in depth, cart rows whose id still starts with `temp-`/`pending-` now show a '⏳ מסתנכרן...' label and have their price-edit/qty/delete controls disabled until the real id lands, so a PATCH can never be sent against a nonexistent id.",
-    "tags": ["yard", "tire", "session-items", "sessionStorage", "pending-id", "race-condition", "reconciliation", "price-edit"],
+    "tags": [
+      "yard",
+      "tire",
+      "session-items",
+      "sessionStorage",
+      "pending-id",
+      "race-condition",
+      "reconciliation",
+      "price-edit"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-09"
@@ -198,7 +317,14 @@
     "file": "components/yard/FreeSearchClient.tsx",
     "root_cause": "FreeSearchClient (used for both /yard/[id]/search?type=product and ?type=all — same component, different filterType) rendered its bottom-pinned HebrewNumKeyboard unconditionally, with no state ever hiding it — unlike the sibling TireSearchClient, which already toggles its own on-screen keyboard via a `showKeyboard` state (hidden after search confirms, reopened on input focus). The always-on keyboard (~250px, on top of the plate header/nav/scan rows/search row/add button that already fill most of a mobile screen) left the results list almost no height, permanently — not just while typing.",
     "fix": "Added the same `showKeyboard` toggle pattern already proven in TireSearchClient: default false (FreeSearchClient already preloads/caches the full inventory list for scroll-browsing, so there is no reason to show a keyboard before the user asks to type), opens on the search input's onFocus, closes after a confirmed search or after selecting a result, plus a small manual close (⌄) button next to the input for dismissing without picking a result.",
-    "tags": ["yard", "keyboard", "ui", "FreeSearchClient", "TireSearchClient-pattern", "layout"],
+    "tags": [
+      "yard",
+      "keyboard",
+      "ui",
+      "FreeSearchClient",
+      "TireSearchClient-pattern",
+      "layout"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-09"
@@ -210,7 +336,15 @@
     "file": "components/suppliers/SupplierTrackingTab.tsx, components/customers/CustomerTrackingTab.tsx",
     "root_cause": "In both files, `payOpenDebts` (the list of open invoices offered in the payment modal) is filtered to `direction === 'charge'` only — credit rows (`direction === 'credit'`) never appear there (they're also always saved already-closed, per the existing 2026-07-07 Decision Log entry, so `!d.is_closed` would exclude them anyway). `selectAllPayDebts()` (the '☑ שלם הכל' button) filled every open invoice's full gross `bal(d)` (amount-paid) with NO subtraction of the supplier/customer's open credit total — unlike the correctly-computed 'יתרה כוללת' shown on the regular card (`totalBal = debts.reduce((s,d) => s + bal(d), 0)` over ALL debts including credits, where `bal()` already returns credits as negative). So the on-screen balance was right, but the payment modal's auto-fill overstated the amount to collect/pay by exactly the open credit amount. `applyQuickAmount` (manually-typed total) was not affected — the user supplies the amount there, the function only spreads it.",
     "fix": "Added `payOpenCreditTotal` (sum of that supplier's/customer's open `direction==='credit'` debts) in both files. Rewrote `selectAllPayDebts()` to walk the open invoices oldest-first (same order as `applyQuickAmount`'s auto spread) and net the running credit pool against each invoice's balance before filling it — an invoice fully absorbed by credit is left unchecked/unfilled — so the sum of filled amounts now matches the real net balance. Added a small explanatory note next to the '☑ שלם הכל' button (only when `payOpenCreditTotal > 0`) stating the open credit amount and that it's netted automatically, so the reduced total isn't a mystery.",
-    "tags": ["suppliers", "customers", "payment", "credit", "bal", "pay-all", "net-balance"],
+    "tags": [
+      "suppliers",
+      "customers",
+      "payment",
+      "credit",
+      "bal",
+      "pay-all",
+      "net-balance"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-09"
@@ -222,7 +356,16 @@
     "file": "components/checks/ChecksJournalClient.tsx, components/expenses/ScheduledPaymentsModal.tsx",
     "root_cause": "Two separate issues, one by design and one a real bug. (1) By design (see 2026-07-05 Decision Log 'Debt is settled at check hand-over'): reconcileSupplierPayment() runs at CHECK-CREATION time, not when the check later clears — so supplier_debts.paid rises the moment a check is written, and any invoice not fully covered by that one check's allocation shows StatusChip's 'חלקי' (paid>0, not yet is_closed) — expected, but confusing without an explanation anywhere in the UI. (2) Real bug: `deleteRow`/`del` (the 🗑️ delete button for a scheduled_payments row in both files) did a bare `supabase.from('scheduled_payments').delete()` with no reversal step. supplier_debt_payments.scheduled_payment_id is `ON DELETE SET NULL` (migration 062), not CASCADE, so deleting a check left its supplier_debt_payments row(s) orphaned (unlinked, but still counted) and supplier_debts.paid/is_closed permanently stuck at whatever the check had allocated — there was no way, in the UI or the data model, to actually undo a check's effect on an invoice by deleting it. This is exactly the 'reset' the user was expecting and not finding.",
     "fix": "Added lib/debts/reverseSupplierPayment.ts (mirrors reconcileSupplierPayment.ts): given a scheduled_payment_id, looks up its supplier_debt_payments rows, subtracts each amount back off the linked supplier_debts.paid (recomputing is_closed), then deletes the junction rows. Wired into both delete sites — called BEFORE the scheduled_payments row itself is deleted, since the link needed to find affected debts is destroyed once that id is gone. Also reworded both delete confirmation dialogs to say the debt allocation will be reversed and the balance reopened, so the behavior is explicit up front.",
-    "tags": ["suppliers", "checks", "scheduled_payments", "supplier_debt_payments", "reconciliation", "delete", "orphaned-state", "partial-payment"],
+    "tags": [
+      "suppliers",
+      "checks",
+      "scheduled_payments",
+      "supplier_debt_payments",
+      "reconciliation",
+      "delete",
+      "orphaned-state",
+      "partial-payment"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-18"
@@ -234,7 +377,14 @@
     "file": "components/customers/CustomerTrackingTab.tsx, lib/debts/reconcileCustomerLedgerPayment.ts",
     "root_cause": "This was the deliberate 2026-07-14 design (see Decision Log): one 'אשר תשלום' click that splits across several open invoices inserts one customer_ledger_payments row PER invoice it covers, and the printed/on-screen ledger renders each of those rows as its own 'תשלום' line — so a single bank transfer that happened to close 4 invoices printed as 4 separate payment lines with the sub-amounts, not the one number the customer actually sent. Flagged as a possible future concern in that same decision log entry ('avoids a cross-date-range double-counting bug') but not revisited until the actual user found it confusing in the printed output.",
     "fix": "Added customer_ledger_payments.payment_group_id (migration 078) — reconcileCustomerLedgerPayment() now generates one crypto.randomUUID() per call and stamps every row it inserts with it, so all the per-invoice rows from a single payment submission share one id. The print block in CustomerTrackingTab.tsx groups customerPayments by payment_group_id (falling back to the row's own id for pre-migration legacy rows with no group) before rendering, summing only the portion allocated to in-range debts (same debtIds filter as before) into one printed line, with the running-balance decrement applied once per group instead of once per row — preserves the exact double-counting-avoidance the original per-row design relied on. On-screen by-month view was deliberately left as-is (per-row) since the user only reported the print output as confusing — same copy-not-share scoping this codebase already uses between print and on-screen ledgers.",
-    "tags": ["customers", "print", "customer_ledger_payments", "payment_group_id", "ledger", "duplicate-rows"],
+    "tags": [
+      "customers",
+      "print",
+      "customer_ledger_payments",
+      "payment_group_id",
+      "ledger",
+      "duplicate-rows"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-18"
@@ -246,7 +396,15 @@
     "file": "components/customers/shared.ts, components/suppliers/shared.ts",
     "root_cause": "bal() in both shared.ts files computed the balance purely from amount/paid (`direction==='credit' ? -amount : max(0, amount-paid)`) and completely ignored `is_closed`. `is_closed` is also settable independently via the manual '✓ סגור'/'↩ פתח' toggle (toggleClose in both CustomerTrackingTab.tsx and SupplierTrackingTab.tsx), which only flips the boolean and never touches `paid`. User's actual flow: a payment got allocated across several invoices, one invoice ended up partially paid (showing '◐ חלקי'), and to make it stop showing partial the user manually clicked '✓ סגור' on it instead of recording the rest of the payment. The invoice then displayed 'שולם ✓' (StatusChip reads is_closed first) while bal() kept silently counting its full unpaid remainder (amount-paid) into every total that sums bal() over all debts without a separate `!is_closed` filter — specifically the customer/supplier card's main 'יתרה כוללת' (totalBal, no is_closed filter) and the per-month 'יתרה' (monthBalance) shown right below it. So the invoice looked settled but its leftover balance kept inflating the headline number the whole account is judged by.",
     "fix": "bal() in both components/customers/shared.ts and components/suppliers/shared.ts now checks is_closed before falling back to the amount-paid math: credit rows keep returning -amount (unchanged), but a charge row with is_closed=true now returns 0 regardless of paid vs amount, matching what the '✓ סגור' button is supposed to mean (nothing more owed) instead of only affecting the status badge. Confirmed no summation site relies on the old ignore-is_closed behavior — every place that already filtered `!d.is_closed` before summing (openCustTotal/openSuppTotal, totalDebt in CustomerDetailsTab) is unaffected since those debts were already excluded; only the previously-unfiltered totals (totalBal, monthBalance, print running balances) actually change, correctly. Did NOT touch components/debts/DebtsClient.tsx's own separate local `bal()` (same formula, same latent gap) — every summation there already pre-filters `!is_closed`, so it has no live symptom; flagged in cerebrum for later if that ever changes.",
-    "tags": ["customers", "suppliers", "bal", "is_closed", "balance-calculation", "toggleClose", "financial-total"],
+    "tags": [
+      "customers",
+      "suppliers",
+      "bal",
+      "is_closed",
+      "balance-calculation",
+      "toggleClose",
+      "financial-total"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-18"
@@ -258,8 +416,16 @@
     "file": "components/customers/CustomerTrackingTab.tsx",
     "root_cause": "The '🔗 מזג תשלומים' tool (bug-019/PR21) correctly sets a shared payment_group_id on the selected customer_ledger_payments rows, and the PRINTED ledger (bug-019's fix, later rebuilt on buildLedger() in the ledger redesign) does group rows by payment_group_id before rendering — but the ON-SCREEN by-month payment list (a separate render block, copy-not-share per this codebase's convention) was never updated to do the same grouping. It always mapped one raw row to one displayed <tr>, so a successful merge changed the underlying data but produced zero visible change on the screen the user was actually looking at.",
     "fix": "Grouped the on-screen paymentRows by payment_group_id (falling back to the row's own id) the same way the print block does. When not actively in merge-select mode, rows sharing a group id collapse into a single displayed line with the summed amount. While actively selecting rows to merge (mergeCid === group.cid), raw rows are still shown individually so specific ones can be picked — checking/clicking one now toggles every row in whatever group it already belongs to, not just itself.",
-    "tags": ["customers", "payment_group_id", "merge-tool", "on-screen-vs-print", "copy-not-share"],
-    "related_bugs": ["bug-019"],
+    "tags": [
+      "customers",
+      "payment_group_id",
+      "merge-tool",
+      "on-screen-vs-print",
+      "copy-not-share"
+    ],
+    "related_bugs": [
+      "bug-019"
+    ],
     "occurrences": 1,
     "last_seen": "2026-08-18"
   },
@@ -270,7 +436,13 @@
     "file": "components/customers/CustomerTrackingTab.tsx",
     "root_cause": "In the customer-groups render, the accordion's per-month blocks (`group.months`) were built ONLY from `customerDebts` dates — `monthMap` never looked at `payments` at all. `totalBal` (balanceOf(debts, payments)) correctly includes every payment regardless of date, so the headline balance was accurate. But a payment recorded in a calendar month where that customer has no invoice of its own (a very normal case — e.g. paying this month against an older unpaid invoice) has no month key in `monthMap`, so `months.map(...)` never iterates a block it could render under. The payment amount was fully counted in the total the whole time; it just had nowhere on screen to display as a row. This is exactly what it looks like when a user says a payment 'disappeared' while the balance still reflects it.",
     "fix": "After building `monthMap` from debts, also walk `payments` and ensure `monthKeyOf(paymentDateOf(p))` exists as a key (empty debt array if it's a new key) before deriving `months` from `Object.keys(monthMap)`. A payment-only month now gets its own block (header shows ₪0 net charge for that month, the payment row itself, and the existing 'שולם בחודש זה' tfoot line).",
-    "tags": ["customers", "balanceOf", "month-grouping", "payment-visibility", "regression"],
+    "tags": [
+      "customers",
+      "balanceOf",
+      "month-grouping",
+      "payment-visibility",
+      "regression"
+    ],
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-08-18"
@@ -282,9 +454,62 @@
     "file": "app/api/store/route.ts (the real fix), lib/supabase/client.ts, app/api/employees/invite/route.ts, app/api/drive/callback/route.ts, app/api/admin/generate-invite/route.ts",
     "root_cause": "**Bug A (real, but not THE cause):** lib/supabase/client.ts's proxyFetch builds `PROXY_URL = NEXT_PUBLIC_APP_URL + '/api/store'` with no trailing-slash guard; the live Vercel NEXT_PUBLIC_APP_URL had a trailing slash, producing a double-slash URL that Vercel 308-redirected instead of serving directly. Fixed (`.replace(/\\/$/, '')` at all 4 call sites building a URL from this env var) and deployed — but the outage persisted after this fix, proving it wasn't the real cause (confirmed live: after the fix, the proxied request returned a clean 200, yet ProfileContext's own getUser() still failed). **Bug B (the actual cause):** `app/api/store/route.ts`'s `forward()` strips `accept-encoding` from the outgoing request to Supabase but still passes the upstream `response.body` straight through as the outgoing body while dropping `content-encoding` from the headers it sends back. When Supabase (or its CDN) returned a response anyway compressed, the browser received bytes that were still gzip/br-compressed but labeled (by the missing content-encoding header) as plain JSON — the browser fetch() call itself resolved 200 (confirmed via added `[DEBUG-PROXY]` logging), but supabase-js's own body-parsing failed, which gotrue-js reports generically as `AuthRetryableFetchError status:0` (a raw-fetch-failure error code being reused for what was actually a parse failure) — completely indistinguishable from a real network error, and since `ProfileContext.tsx`'s `load()` only destructures `{ data }` from every Supabase call and never checks `error` (same class as bug-005/bug-012), this surfaced as total silence: zero console errors, profile/user just silently null. This is also why every earlier manual inspection of the Network tab's Response/Preview looked fine — DevTools always decodes the body for display regardless of what the raw bytes actually are, so the mismatch was invisible to normal inspection and only surfaced by literally adding console.log calls around the raw fetch() promise and comparing its resolved status against what supabase-js reported back.",
     "fix": "Bug A: added `.replace(/\\/$/, '')` before appending a path at all 4 NEXT_PUBLIC_APP_URL call sites (still correct hygiene, keep it). Bug B (the actual fix): in `app/api/store/route.ts`, explicitly set `headers.set('accept-encoding', 'identity')` on the outgoing request to Supabase instead of just deleting the client's own accept-encoding header — this guarantees Supabase never compresses the response in the first place, so there's no possible mismatch between the (stripped) content-encoding header and the actual body bytes being passed through.",
-    "tags": ["production-outage", "compression", "content-encoding", "accept-encoding", "proxy", "AuthRetryableFetchError", "silent-failure", "ProfileContext", "NEXT_PUBLIC_APP_URL", "trailing-slash", "308-redirect", "misdiagnosis"],
-    "related_bugs": ["bug-005", "bug-012"],
+    "tags": [
+      "production-outage",
+      "compression",
+      "content-encoding",
+      "accept-encoding",
+      "proxy",
+      "AuthRetryableFetchError",
+      "silent-failure",
+      "ProfileContext",
+      "NEXT_PUBLIC_APP_URL",
+      "trailing-slash",
+      "308-redirect",
+      "misdiagnosis"
+    ],
+    "related_bugs": [
+      "bug-005",
+      "bug-012"
+    ],
     "occurrences": 1,
     "last_seen": "2026-08-18"
+  },
+  {
+    "id": "bug-025",
+    "timestamp": "2026-09-16T20:06:58.501Z",
+    "error_message": "Hebrew text in an uploaded bank-statement CSV rendered as mojibake in the bank-sync column-mapping preview table (e.g. \"§xx—xx@x\" instead of \"דלק פז\")",
+    "file": "lib/bank-sync/parseStatementFile.ts",
+    "root_cause": "readRawRows() read every uploaded file (including .csv) as raw bytes via file.arrayBuffer() + XLSX.read(..., {type:\"array\"}), letting SheetJS sniff the text encoding from the byte content. A .csv with Hebrew text and no UTF-8 BOM (the common case for real bank/credit-card CSV exports) gets mis-detected as a different codepage, mangling every non-ASCII cell. Found via an end-to-end Playwright run against the real dev server: uploaded a UTF-8 CSV with Hebrew descriptions and the mapping-screen preview table showed garbled text.",
+    "fix": "For files ending in .csv (or type text/csv), read via file.text() (browser File API decodes as UTF-8) and pass the resulting string to XLSX.read(text, {type:\"string\", cellDates:true}) instead of the byte-sniffing array path. .xlsx/.xls files are unaffected, still read via arrayBuffer()+type:\"array\".",
+    "tags": [
+      "encoding",
+      "hebrew",
+      "csv",
+      "xlsx",
+      "bank-sync",
+      "mojibake"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-09-16"
+  },
+  {
+    "id": "bug-026",
+    "timestamp": "2026-09-16T20:06:58.501Z",
+    "error_message": "שגיאה: invalid input syntax for type uuid: \"\" toast shown when saving from QuickExpenseModal (\"⚡ הוספה מהירה\")",
+    "file": "components/expenses/QuickExpenseModal.tsx",
+    "root_cause": "ExpensesClient.tsx passes tenantId={profile?.tenantId ?? ''} straight from the useProfile() context value at render time. Unlike every other write path in this app (which awaits a resolveTenant() helper inside the save handler itself before writing), QuickExpenseModal.save() used the prop as-is with no readiness check. If a user opens the quick-add modal and saves before ProfileContext.load() has resolved (reproduced in a real browser run — a fresh/cold session where profile briefly stayed null), tenantId is \"\" and the insert hits Postgres's uuid column with an empty string, surfacing a raw DB error instead of a friendly message.",
+    "fix": "Added a guard at the top of save(): if (!tenantId) { showToast('הפרופיל עדיין נטען, נסה שוב בעוד רגע', 'error'); return }. Same shape as the existing if (!tid) return pattern used across the app before any write.",
+    "tags": [
+      "race-condition",
+      "tenantId",
+      "profile-context",
+      "quick-capture",
+      "uuid"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-09-16"
   }
 ]

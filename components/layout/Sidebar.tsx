@@ -11,6 +11,8 @@ const NAV_ITEMS = [
   { href: '/dashboard',   label: 'ראשי',                    color: '#3b82f6,#60a5fa', module: null },
   { href: '/expenses',    label: 'הוצאות',                  color: '#f59e0b,#fbbf24', module: 'expenses' },
   { href: '/checks',      label: 'יומן צ׳קים',               color: '#4338ca,#818cf8', module: ['expenses', 'suppliers'] },
+  { href: '/bank-sync',   label: 'התאמת בנק',               color: '#0891b2,#22d3ee', module: 'bank_sync' },
+  { href: '/reports',     label: 'דוח ותחזית',              color: '#7c3aed,#a78bfa', module: 'financial_reports' },
   { href: '/debts',       label: 'חובות',                   color: '#ef4444,#f87171', module: 'debts' },
   { href: '/employees',   label: 'עובדים',                  color: '#0ea5e9,#38bdf8', module: null },
   { href: '/products',    label: 'מוצרים',                  color: '#f97316,#fb923c', module: ['products', 'products_view'] },
@@ -32,7 +34,7 @@ const NAV_ITEMS = [
 // ─── חלוקה לקטגוריות — ערוך כאן כרצונך ──────────────────────────────────────
 const SECTIONS: { label: string | null; hrefs: string[] }[] = [
   { label: null,       hrefs: ['/dashboard'] },
-  { label: 'כספים',   hrefs: ['/expenses', '/checks', '/debts', '/suppliers', '/customers'] },
+  { label: 'כספים',   hrefs: ['/expenses', '/checks', '/bank-sync', '/reports', '/debts', '/suppliers', '/customers'] },
   { label: 'אנשים',   hrefs: ['/employees'] },
   { label: 'מלאי',    hrefs: ['/products', '/tires', '/scan', '/cars'] },
   { label: 'עסקאות',  hrefs: ['/quotes', '/alignment', '/inspections', '/test-transfer'] },
@@ -45,6 +47,8 @@ const ICONS: Record<string, React.ReactNode> = {
   '/dashboard':   <><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
   '/expenses':    <><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></>,
   '/checks':      <><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="12" y2="10"/><path d="M14 14c1-2 2-2 3 0s2 2 3 0"/></>,
+  '/bank-sync':   <><path d="M3 21h18M3 10h18M5 6l7-4 7 4M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></>,
+  '/reports':     <><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></>,
   '/debts':       <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
   '/employees':   <><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></>,
   '/products':    <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></>,

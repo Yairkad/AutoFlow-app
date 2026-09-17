@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T00:13:45.577Z
-> Files: 15 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T07:31:45.269Z
+> Files: 23 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -17,13 +17,15 @@
 
 ## ../../../../0411~1/AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/e595c8a6-b0b1-4a83-8e29-3cc073550cc3/scratchpad/
 
-- `verify.mjs` — Declares shot (~923 tok)
 
 ## ../../../.claude/plans/
 
 
 ## ../../../.claude/projects/c--Users-----------Desktop-projects-autoline-app/memory/
 
+- `MEMORY.md` — Memory Index (~142 tok)
+- `project_bank_sync_feature.md` (~671 tok)
+- `project_concurrent_sessions_conflict.md` (~1151 tok)
 
 ## ../../../AppData/Local/Temp/claude/c--Users-----------Desktop-projects-autoline-app/b832685e-2011-43a5-a71e-5b15984bedbf/scratchpad/
 
@@ -33,8 +35,9 @@
 
 ## ./
 
-- `_tmp_debug_login.mjs` — Declares shot (~368 tok)
-- `_tmp_verify_rowactions.mjs` — shot: doLogin (~987 tok)
+- `_tmp_list_tenants.mjs` — Declares env (~166 tok)
+- `_tmp_verify_banksync.mjs` — BASE: shot, run (~1754 tok)
+- `_tmp_verify_reports.mjs` — BASE: shot, run (~964 tok)
 
 ## .claude/
 
@@ -49,6 +52,9 @@
 
 
 ## app/(app)/alignment/
+
+
+## app/(app)/bank-sync/
 
 
 ## app/(app)/billing/
@@ -95,6 +101,10 @@
 
 ## app/(app)/reminders/
 
+
+## app/(app)/reports/
+
+- `page.tsx` — ReportsPage (~45 tok)
 
 ## app/(app)/scan/
 
@@ -176,6 +186,7 @@
 
 ## app/api/public/plate/
 
+- `route.ts` — Next.js API route: GET (~514 tok)
 
 ## app/api/store/
 
@@ -332,21 +343,24 @@
 
 ## components/alignment/
 
-- `AlignmentClient.tsx` — STATUSES (~8464 tok)
+
+## components/bank-sync/
+
 
 ## components/billing/
 
 
 ## components/cars/
 
-- `CarsClient.tsx` — CONDITIONS (~28538 tok)
 
 ## components/checks/
 
 
 ## components/customers/
 
-- `CustomerTrackingTab.tsx` — fmtDMY (~26130 tok)
+- `CustomerDetailsTab.tsx` — CustomerDetailsTab (~11072 tok)
+- `CustomersClient.tsx` — CustomersClient (~2007 tok)
+- `CustomerTrackingTab.tsx` — fmtDMY (~24654 tok)
 
 ## components/dashboard/
 
@@ -356,58 +370,58 @@
 
 ## components/documents/
 
-- `DocumentsClient.tsx` — emptyForm — renders table (~22465 tok)
 
 ## components/employees/
 
-- `EmployeesClient.tsx` — Convert "MM/YYYY" → "YYYY-MM" for date comparisons (~19696 tok)
 
 ## components/expenses/
 
-- `ExpensesClient.tsx` — DEFAULT_EXPENSE_CATS (~20878 tok)
+- `QuickExpenseModal.tsx` — LAST_CATEGORY_KEY — renders modal (~1388 tok)
 
 ## components/inspections/
 
-- `InspectionsClient.tsx` — emptyForm (~16773 tok)
 
 ## components/landing/
 
 
 ## components/layout/
 
+- `Sidebar.tsx` — NAV_ITEMS (~5597 tok)
 
 ## components/products/
 
-- `ProductsClient.tsx` — UNITS (~16532 tok)
 
 ## components/quotes/
 
-- `QuotesClient.tsx` — WIDTHS (~17223 tok)
 
 ## components/reminders/
 
+
+## components/reports/
+
+- `CashFlowForecastTab.tsx` — fmt — renders table (~2002 tok)
+- `FinancialReportClient.tsx` — FinancialReportClient (~558 tok)
+- `UnifiedReportTab.tsx` — fmt — renders table (~1632 tok)
 
 ## components/scan/
 
 
 ## components/settings/
 
-- `SettingsClient.tsx` — ALL_MODULES (~30346 tok)
+- `SettingsClient.tsx` — ALL_MODULES (~30376 tok)
 
 ## components/suppliers/
 
-- `SupplierTrackingTab.tsx` — fmtDMY (~37074 tok)
 
 ## components/test-transfer/
 
 
 ## components/tires/
 
-- `TiresClient.tsx` — WIDTHS — renders table (~18683 tok)
 
 ## components/ui/
 
-- `RowActionsMenu.tsx` — shared inline "⋮" row/card actions kebab menu (variant button|plain, danger styling) — replaces the old top-pinned "selection action bar" pattern across the app (~500 tok)
+- `RowActionsMenu.tsx` — RowActionsMenu (~1186 tok)
 
 ## components/yard/
 
@@ -418,20 +432,34 @@
 ## lib/auth/
 
 
+## lib/bank-sync/
+
+- `parseStatementFile.ts` — Exports AmountMode, AmountSign, ColumnMapping, ParsedLine + 4 more (~1581 tok)
+
 ## lib/contexts/
 
+- `ProfileContext.tsx` — ProfileContext (~1066 tok)
 
 ## lib/debts/
 
 
+## lib/expenses/
+
+
 ## lib/hooks/
 
+
+## lib/reports/
+
+- `buildForecast.ts` — Exports ForecastEvent, ForecastResult, buildForecast (~1520 tok)
+- `buildUnifiedReport.ts` — Exports MonthlyReportRow, UnifiedReportResult, buildUnifiedReport (~1516 tok)
 
 ## lib/supabase/
 
 
 ## lib/utils/
 
+- `plateApi.ts` — Israel data.gov.il vehicle API (~1161 tok)
 
 ## lib/yard/
 

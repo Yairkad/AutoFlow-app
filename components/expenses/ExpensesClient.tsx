@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { RecurringExpense } from './RecurringTab'
 import ScheduledPaymentsModal from './ScheduledPaymentsModal'
+import QuickExpenseModal from './QuickExpenseModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -243,6 +244,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
 
   // Add/Edit modal
   const [modal,    setModal]    = useState(false)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [editItem, setEditItem] = useState<Expense | Income | null>(null)
   const [saving,   setSaving]   = useState(false)
 
@@ -865,7 +867,17 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
             <button onClick={() => shiftMonth(-1)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '2px 6px', lineHeight: 1 }}>‹</button>
           </div>
           <Button onClick={openAdd}>+ הוסף {tab === 'expenses' ? 'הוצאה' : 'הכנסה'}</Button>
+          <Button variant="secondary" onClick={() => setQuickAddOpen(true)}>⚡ הוספה מהירה</Button>
         </> : undefined}
+      />
+
+      <QuickExpenseModal
+        open={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        tenantId={profile?.tenantId ?? ''}
+        categories={tab === 'income' ? incCats : expCats}
+        direction={tab === 'income' ? 'income' : 'expense'}
+        onSaved={() => fetchData()}
       />
 
       {/* ── Summary cards ─────────────────────────────────────────────────────── */}

@@ -69,6 +69,8 @@ type Tab = 'business' | 'users' | 'vault' | 'landing' | 'backup'
 
 const ALL_MODULES = [
   { key: 'expenses',   label: '💰 הוצאות' },
+  { key: 'bank_sync',  label: '🏦 התאמת בנק' },
+  { key: 'financial_reports', label: '📈 דוח ותחזית' },
   { key: 'debts',      label: '💳 חובות' },
   { key: 'employees',  label: '👷 עובדים' },
   { key: 'products',   label: '📦 מוצרים' },
