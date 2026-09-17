@@ -33,6 +33,8 @@ export interface BankLine {
   direction: 'debit' | 'credit'
   amount: number
   balance_after: number | null
+  charge_date: string | null
+  card_number: string | null
   raw_row: unknown
   status: LineStatus
   matched_expense_id: string | null

@@ -5,7 +5,7 @@ export interface ForecastEvent {
   label: string
   amount: number // signed: negative = outflow, positive = inflow
   runningBalance: number
-  source: 'scheduled' | 'recurring_item' | 'recurring_expense'
+  source: 'scheduled' | 'recurring_item' | 'recurring_expense' | 'card_charge'
 }
 
 export interface ForecastResult {
@@ -49,12 +49,20 @@ function projectMonthly(referenceIso: string, stepMonths: number, day: number, a
 }
 
 // Builds a forward cash-flow projection anchored on the most recent bank/credit
-// statement's known balance (balance_after), fed by scheduled checks/transfers
-// and known-amount recurring items/expenses. Deliberately excludes open
+// statement's known balance (balance_after), fed by scheduled checks/transfers,
+// known-amount recurring items/expenses, and already-imported credit-card
+// transactions that haven't posted to the bank yet. Deliberately excludes open
 // supplier/customer debts (no reliable due date) and recurring_items of
 // type='meter' (amount unknown until a reading is entered) — only dated,
 // known-amount commitments are projected, per the "suggest, don't guess"
 // philosophy used throughout this app's money-matching features.
+//
+// Card charges are keyed by charge_date (when the money actually leaves the
+// bank), never by the transaction's own `date` (when the purchase happened,
+// which is what reconciliation matching uses instead) — a credit-card
+// statement's transactions are typically all billed together weeks after
+// they happened, so using the transaction date here would place the outflow
+// far too early relative to the anchor balance.
 export async function buildForecast(
   supabase: SupabaseClient,
   tenantId: string,
@@ -84,16 +92,21 @@ export async function buildForecast(
     anchorSourceName = src?.name ?? null
   }
 
-  const [scheduledRes, recurringItemsRes, recurringExpensesRes] = await Promise.all([
+  const [scheduledRes, recurringItemsRes, recurringExpensesRes, cardChargesRes] = await Promise.all([
     supabase.from('scheduled_payments').select('description, amount, due_date').eq('tenant_id', tenantId).eq('is_paid', false).gt('due_date', anchorDate).lte('due_date', until),
     supabase.from('recurring_items').select('name, amount, supplier_id, customer_id, type, valid_from, active').eq('tenant_id', tenantId).eq('active', true).eq('type', 'fixed'),
     supabase.from('recurring_expenses').select('description, amount, frequency, is_active, is_variable, last_applied, created_at').eq('tenant_id', tenantId).eq('is_active', true).eq('is_variable', false),
+    supabase.from('bank_statement_lines').select('description, amount, direction, charge_date').eq('tenant_id', tenantId).not('charge_date', 'is', null).neq('status', 'ignored').gt('charge_date', anchorDate).lte('charge_date', until),
   ])
 
   const events: Omit<ForecastEvent, 'runningBalance'>[] = []
 
   for (const p of scheduledRes.data ?? []) {
     events.push({ date: p.due_date, label: p.description, amount: -Number(p.amount), source: 'scheduled' })
+  }
+
+  for (const c of cardChargesRes.data ?? []) {
+    events.push({ date: c.charge_date, label: c.description, amount: c.direction === 'debit' ? -Number(c.amount) : Number(c.amount), source: 'card_charge' })
   }
 
   for (const it of recurringItemsRes.data ?? []) {

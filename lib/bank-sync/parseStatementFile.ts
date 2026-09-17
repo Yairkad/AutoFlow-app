@@ -7,13 +7,15 @@ export interface ColumnMapping {
   headerRowIndex: number
   amountMode: AmountMode
   columns: {
-    date: number
+    date: number            // transaction/purchase date -- this is what matching uses, never chargeDate
     description: number
     amount?: number        // amountMode === 'single'
     amountSign?: AmountSign // amountMode === 'single'
     debit?: number         // amountMode === 'debit_credit'
     credit?: number        // amountMode === 'debit_credit'
     balance?: number
+    chargeDate?: number    // credit-card statements: when it actually posts to the bank account, informational only
+    cardNumber?: number    // credit-card statements: which card, when a tenant has more than one, informational only
   }
 }
 
@@ -24,6 +26,8 @@ export interface ParsedLine {
   direction: 'debit' | 'credit'
   amount: number
   balanceAfter: number | null
+  chargeDate: string | null
+  cardNumber: string | null
   raw: unknown[]
 }
 
@@ -104,8 +108,10 @@ export function applyMapping(rawRows: unknown[][], mapping: ColumnMapping): Pars
     if (!amount || amount <= 0) continue
 
     const balanceAfter = columns.balance != null ? parseCellAmount(row[columns.balance]) : null
+    const chargeDate = columns.chargeDate != null ? parseCellDate(row[columns.chargeDate]) : null
+    const cardNumber = columns.cardNumber != null ? String(row[columns.cardNumber] ?? '').trim() || null : null
 
-    lines.push({ rowIndex: i, date: isoDate, description, direction, amount, balanceAfter, raw: row })
+    lines.push({ rowIndex: i, date: isoDate, description, direction, amount, balanceAfter, chargeDate, cardNumber, raw: row })
   }
 
   return lines

@@ -1981,3 +1981,39 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:13 | Edited components/debts/DebtsClient.tsx | added 1 condition(s) | ~144 |
 | 11:14 | Edited components/debts/DebtsClient.tsx | expanded (+58 lines) | ~836 |
 | 11:32 | Created _tmp_resolve_memory.mjs | — | ~151 |
+| 11:37 | Created supabase/migrations/082_bank_statement_charge_date_card.sql | — | ~172 |
+| 11:37 | Edited lib/bank-sync/parseStatementFile.ts | 23→27 lines | ~281 |
+| 11:38 | Edited lib/bank-sync/parseStatementFile.ts | added nullish coalescing | ~124 |
+| 11:38 | Edited components/bank-sync/types.ts | 3→5 lines | ~36 |
+| 11:39 | Edited components/bank-sync/ImportWizard.tsx | CSS: chargeDate, cardNumber | ~100 |
+| 11:39 | Edited components/bank-sync/ImportWizard.tsx | added 2 condition(s) | ~84 |
+| 11:39 | Edited components/bank-sync/ImportWizard.tsx | CSS: chargeDate, cardNumber | ~513 |
+| 11:39 | Edited components/bank-sync/ImportWizard.tsx | 4→6 lines | ~147 |
+| 11:40 | Edited components/bank-sync/ImportWizard.tsx | added nullish coalescing | ~122 |
+| 11:40 | Edited components/bank-sync/ImportWizard.tsx | CSS: charge_date, card_number | ~88 |
+| 11:40 | Edited lib/reports/buildForecast.ts | inline fix | ~23 |
+| 11:40 | Edited lib/reports/buildForecast.ts | expanded (+8 lines) | ~295 |
+| 11:40 | Edited lib/reports/buildForecast.ts | modified for() | ~381 |
+| 11:40 | Edited components/reports/CashFlowForecastTab.tsx | CSS: card_charge | ~56 |
+| 11:41 | Edited components/reports/CashFlowForecastTab.tsx | 3→3 lines | ~96 |
+| 11:41 | Edited components/bank-sync/ReconciliationReview.tsx | CSS: color, color | ~146 |
+| 11:41 | Session end: 117 writes across 39 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 81 reads | ~189975 tok |
+| 11:41 | Session end: 117 writes across 39 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 81 reads | ~189975 tok |
+| 11:55 | Session end: 117 writes across 39 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 81 reads | ~189975 tok |
+| 12:01 | Session end: 117 writes across 39 files (wiggly-hugging-mist.md, 080_bank_reconciliation.sql, parseStatementFile.ts, matchSuggestions.ts, reconcileLine.ts) | 81 reads | ~189975 tok |
+
+## Session: 2026-09-17 12:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-09-17 12:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:05 | Edited lib/reports/buildUnifiedReport.ts | added 2 condition(s) | ~1105 |
+| 12:06 | Edited lib/reports/buildUnifiedReport.ts | 2→2 lines | ~70 |
+| 12:06 | Edited components/reports/UnifiedReportTab.tsx | inline fix | ~148 |
+| 12:06 | Edited components/reports/UnifiedReportTab.tsx | 3→3 lines | ~190 |
+| 12:07 | Session end: 4 writes across 2 files (buildUnifiedReport.ts, UnifiedReportTab.tsx) | 1 reads | ~3207 tok |
+| 12:07 | Session end: 4 writes across 2 files (buildUnifiedReport.ts, UnifiedReportTab.tsx) | 1 reads | ~3207 tok |

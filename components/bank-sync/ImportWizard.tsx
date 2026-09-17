@@ -17,11 +17,12 @@ const SEL: React.CSSProperties = {
   background: '#f8fafc', color: 'var(--text)', fontFamily: 'inherit', outline: 'none',
 }
 
-type Role = 'date' | 'description' | 'amount' | 'debit' | 'credit' | 'balance' | 'ignore'
+type Role = 'date' | 'description' | 'amount' | 'debit' | 'credit' | 'balance' | 'chargeDate' | 'cardNumber' | 'ignore'
 
 const ROLE_LABELS: Record<Role, string> = {
-  date: 'תאריך', description: 'תיאור', amount: 'סכום',
-  debit: 'חובה', credit: 'זכות', balance: 'יתרה', ignore: 'התעלם',
+  date: 'תאריך עסקה', description: 'תיאור', amount: 'סכום',
+  debit: 'חובה', credit: 'זכות', balance: 'יתרה',
+  chargeDate: 'תאריך חיוב', cardNumber: 'מספר כרטיס', ignore: 'התעלם',
 }
 
 interface Props {
@@ -66,6 +67,8 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
     if (mapping.columns.debit != null) roles[mapping.columns.debit] = 'debit'
     if (mapping.columns.credit != null) roles[mapping.columns.credit] = 'credit'
     if (mapping.columns.balance != null) roles[mapping.columns.balance] = 'balance'
+    if (mapping.columns.chargeDate != null) roles[mapping.columns.chargeDate] = 'chargeDate'
+    if (mapping.columns.cardNumber != null) roles[mapping.columns.cardNumber] = 'cardNumber'
     setRoleByCol(roles)
   }
 
@@ -95,6 +98,13 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
     const descCol = Object.entries(roleByCol).find(([, r]) => r === 'description')?.[0]
     if (dateCol == null || descCol == null) return null
 
+    const chargeDateCol = Object.entries(roleByCol).find(([, r]) => r === 'chargeDate')?.[0]
+    const cardNumberCol = Object.entries(roleByCol).find(([, r]) => r === 'cardNumber')?.[0]
+    const extra = {
+      chargeDate: chargeDateCol != null ? Number(chargeDateCol) : undefined,
+      cardNumber: cardNumberCol != null ? Number(cardNumberCol) : undefined,
+    }
+
     if (amountMode === 'single') {
       const amtCol = Object.entries(roleByCol).find(([, r]) => r === 'amount')?.[0]
       if (amtCol == null) return null
@@ -105,6 +115,7 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
           date: Number(dateCol), description: Number(descCol),
           amount: Number(amtCol), amountSign,
           balance: balCol != null ? Number(balCol) : undefined,
+          ...extra,
         },
       }
     }
@@ -118,6 +129,7 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
         date: Number(dateCol), description: Number(descCol),
         debit: Number(debitCol), credit: Number(creditCol),
         balance: balCol != null ? Number(balCol) : undefined,
+        ...extra,
       },
     }
   }
@@ -175,6 +187,7 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
         tenant_id: tenantId, import_id: imp.id, source_id: sourceId,
         row_index: l.rowIndex, date: l.date, description: l.description,
         direction: l.direction, amount: l.amount, balance_after: l.balanceAfter,
+        charge_date: l.chargeDate, card_number: l.cardNumber,
         raw_row: l.raw,
       }))
     )
@@ -296,10 +309,12 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
                   <th style={{ padding: '6px 8px' }}></th>
-                  <th style={{ padding: '6px 8px', textAlign: 'right' }}>תאריך</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'right' }}>תאריך עסקה</th>
                   <th style={{ padding: '6px 8px', textAlign: 'right' }}>תיאור</th>
                   <th style={{ padding: '6px 8px', textAlign: 'right' }}>כיוון</th>
                   <th style={{ padding: '6px 8px', textAlign: 'right' }}>סכום</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'right' }}>תאריך חיוב</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'right' }}>כרטיס</th>
                 </tr>
               </thead>
               <tbody>
@@ -321,6 +336,8 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
                       <td style={{ padding: '5px 8px' }}>{l.description}</td>
                       <td style={{ padding: '5px 8px' }}>{l.direction === 'debit' ? 'חובה' : 'זכות'}</td>
                       <td style={{ padding: '5px 8px' }}>₪{l.amount.toLocaleString('he-IL', { minimumFractionDigits: 2 })}</td>
+                      <td style={{ padding: '5px 8px' }}>{l.chargeDate ?? '—'}</td>
+                      <td style={{ padding: '5px 8px' }}>{l.cardNumber ?? '—'}</td>
                     </tr>
                   )
                 })}

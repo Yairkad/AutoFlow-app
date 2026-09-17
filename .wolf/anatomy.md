@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T08:32:58.684Z
-> Files: 1 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T09:06:52.450Z
+> Files: 10 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -345,6 +345,9 @@
 
 ## components/bank-sync/
 
+- `ImportWizard.tsx` — SEL (~4985 tok)
+- `ReconciliationReview.tsx` — SEL (~4271 tok)
+- `types.ts` — Exports BankSource, BankImport, LineStatus, BankLine (~320 tok)
 
 ## components/billing/
 
@@ -393,6 +396,8 @@
 
 ## components/reports/
 
+- `CashFlowForecastTab.tsx` — fmt — renders table (~2035 tok)
+- `UnifiedReportTab.tsx` — fmt — renders table (~1707 tok)
 
 ## components/scan/
 
@@ -423,6 +428,7 @@
 
 ## lib/bank-sync/
 
+- `parseStatementFile.ts` — Exports AmountMode, AmountSign, ColumnMapping, ParsedLine + 4 more (~1756 tok)
 
 ## lib/contexts/
 
@@ -438,6 +444,8 @@
 
 ## lib/reports/
 
+- `buildForecast.ts` — Exports ForecastEvent, ForecastResult, buildForecast (~1802 tok)
+- `buildUnifiedReport.ts` — Exports MonthlyReportRow, UnifiedReportResult, buildUnifiedReport (~1993 tok)
 
 ## lib/supabase/
 
@@ -456,6 +464,7 @@
 
 ## supabase/migrations/
 
+- `082_bank_statement_charge_date_card.sql` — Credit-card statements commonly carry two distinct dates per transaction -- (~172 tok)
 
 ## tests/
 

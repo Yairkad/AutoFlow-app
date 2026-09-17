@@ -14,6 +14,7 @@ const SOURCE_LABEL: Record<string, string> = {
   scheduled: "צ'ק/העברה מתוזמנים",
   recurring_item: 'פריט חוזר',
   recurring_expense: 'הוצאה חוזרת',
+  card_charge: 'עסקת אשראי (לפי תאריך חיוב)',
 }
 
 const SEL: React.CSSProperties = {
@@ -83,7 +84,7 @@ export default function CashFlowForecastTab({ tenantId }: Props) {
       </div>
 
       <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-        התחזית כוללת רק צ'קים/העברות מתוזמנים ופריטים/הוצאות חוזרים בסכום קבוע וידוע מראש — לא כוללת חובות פתוחים ללא תאריך פירעון קבוע, ולא פריטי מונה (חשמל) שסכומם תלוי בקריאה עתידית.
+        התחזית כוללת צ'קים/העברות מתוזמנים, פריטים/הוצאות חוזרים בסכום קבוע, ועסקאות אשראי שכבר יובאו וטרם חויבו בפועל (לפי <b>תאריך חיוב</b>, לא תאריך העסקה) — לא כוללת חובות פתוחים ללא תאריך פירעון קבוע, ולא פריטי מונה (חשמל) שסכומם תלוי בקריאה עתידית.
       </div>
 
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px' }}>

@@ -223,6 +223,8 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
                     {line.direction === 'debit' ? 'חובה' : 'זכות'}
                   </span>
                   <span style={{ fontSize: '13px', flex: 1 }}>{line.description}</span>
+                  {line.card_number && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }} title="מספר כרטיס">💳 {line.card_number}</span>}
+                  {line.charge_date && line.charge_date !== line.date && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }} title="תאריך חיוב">חיוב {fmtDMY(line.charge_date)}</span>}
                   <span style={{ fontWeight: 700 }}>{fmt(line.amount)}</span>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{STATUS_LABELS[line.status]}</span>
                   {line.status !== 'unmatched' && (
