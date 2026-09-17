@@ -759,17 +759,24 @@ export default function CustomerTrackingTab({
             const cust = customers.find(c => c.id === cid)
             const totalBal = balanceOf(debts, payments)
 
-            if (search.trim()) {
-              const q = search.toLowerCase()
-              const nameMatch = (cust?.name ?? '').toLowerCase().includes(q)
-              const descMatch = debts.some(d => d.description?.toLowerCase().includes(q))
-              const invMatch = debts.some(d =>
-                d.doc_number?.toLowerCase().includes(q) ||
-                (d.invoices ?? []).some(inv => inv.number?.toLowerCase().includes(q)))
-              if (!nameMatch && !descMatch && !invMatch) return null
-            }
+            const q = search.trim().toLowerCase()
+            const nameMatch = !!q && (cust?.name ?? '').toLowerCase().includes(q)
+            const lineMatch = (d: CustomerLedgerDebt) =>
+              !!d.description?.toLowerCase().includes(q) ||
+              !!d.doc_number?.toLowerCase().includes(q) ||
+              (d.invoices ?? []).some(inv => inv.number?.toLowerCase().includes(q))
+
+            if (q && !nameMatch && !debts.some(lineMatch)) return null
             if (filter === 'open'   && totalBal === 0) return null
             if (filter === 'closed' && totalBal > 0)  return null
+
+            // A search that matched a specific invoice/description (not the customer's name)
+            // narrows the visible rows to just that match instead of dumping the customer's
+            // whole history around it — searching "8484" shouldn't surface neighboring invoices
+            // like 8483/8485 just because they belong to the same customer. A name match still
+            // shows everything, since that's a deliberate "show me this customer" search.
+            const narrowToMatches = !!q && !nameMatch
+            const visibleDebts = narrowToMatches ? debts.filter(lineMatch) : debts
 
             const monthMap: Record<string, CustomerLedgerDebt[]> = {}
             debts.forEach(d => {
@@ -777,14 +784,24 @@ export default function CustomerTrackingTab({
               if (!monthMap[mk]) monthMap[mk] = []
               monthMap[mk].push(d)
             })
+            const displayMonthMap: Record<string, CustomerLedgerDebt[]> = {}
+            visibleDebts.forEach(d => {
+              const mk = monthKeyOf(d.date)
+              if (!displayMonthMap[mk]) displayMonthMap[mk] = []
+              displayMonthMap[mk].push(d)
+            })
             // A payment recorded in a month with no invoice of its own still needs a month
             // block to render under — otherwise it's counted correctly in totalBal (below)
             // but has nowhere on screen to show up, and looks like it silently vanished.
+            // Skipped while narrowing to a specific invoice match, so an unrelated payment
+            // month doesn't reappear as extra noise around the invoice being searched for.
             payments.forEach(p => {
               const mk = monthKeyOf(paymentDateOf(p))
               if (!monthMap[mk]) monthMap[mk] = []
+              if (!narrowToMatches && !displayMonthMap[mk]) displayMonthMap[mk] = []
             })
             const months = Object.keys(monthMap).sort().reverse()
+            const displayMonths = Object.keys(displayMonthMap).sort().reverse()
 
             // "Settled through this month" = applying the customer's WHOLE payment pool (every
             // payment ever recorded, regardless of its own date — payments aren't tied to a
@@ -793,7 +810,9 @@ export default function CustomerTrackingTab({
             // totalPaid tells us whether that running total is already covered. This is a
             // display-only FIFO heuristic (never persisted, never decides which debt a payment
             // "belongs to") — at the most recent month it always equals totalBal exactly, same
-            // as balanceOf(debts, payments), which doubles as a consistency check.
+            // as balanceOf(debts, payments), which doubles as a consistency check. Always walks
+            // the FULL month map (not the search-narrowed one) so the running balance shown next
+            // to a narrowed-down month is still correct.
             const totalPaid = payments.reduce((s, p) => s + Number(p.amount), 0)
             let cumCharge = 0
             const cumBalanceByMonth: Record<string, number> = {}
@@ -802,7 +821,7 @@ export default function CustomerTrackingTab({
               cumBalanceByMonth[mk] = cumCharge - totalPaid
             }
 
-            return { cid, cust, totalBal, payments, monthMap, months, cumBalanceByMonth }
+            return { cid, cust, totalBal, payments, monthMap: displayMonthMap, months: displayMonths, cumBalanceByMonth }
           }).filter(Boolean) as {
             cid: string | null; cust: Customer | undefined; totalBal: number; payments: CustomerLedgerPayment[]
             monthMap: Record<string, CustomerLedgerDebt[]>; months: string[]; cumBalanceByMonth: Record<string, number>

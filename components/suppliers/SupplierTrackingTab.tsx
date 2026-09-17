@@ -1071,20 +1071,26 @@ export default function SupplierTrackingTab({
               const supp = suppliers.find(s => s.id === sid)
               const totalBal = debts.reduce((s, d) => s + bal(d), 0)
 
-              if (search.trim()) {
-                const q = search.toLowerCase()
-                const nameMatch = (supp?.name ?? '').toLowerCase().includes(q)
-                const descMatch = debts.some(d => d.description?.toLowerCase().includes(q))
-                const invMatch = debts.some(d =>
-                  d.doc_number?.toLowerCase().includes(q) ||
-                  (d.invoices ?? []).some(inv => inv.number?.toLowerCase().includes(q)))
-                if (!nameMatch && !descMatch && !invMatch) return null
-              }
+              const q = search.trim().toLowerCase()
+              const nameMatch = !!q && (supp?.name ?? '').toLowerCase().includes(q)
+              const lineMatch = (d: SupplierDebt) =>
+                !!d.description?.toLowerCase().includes(q) ||
+                !!d.doc_number?.toLowerCase().includes(q) ||
+                (d.invoices ?? []).some(inv => inv.number?.toLowerCase().includes(q))
+
+              if (q && !nameMatch && !debts.some(lineMatch)) return null
               if (filter === 'open'   && totalBal === 0) return null
               if (filter === 'closed' && totalBal > 0)  return null
 
+              // A search that matched a specific invoice/description (not the supplier's name)
+              // narrows the visible rows to just that match instead of dumping the supplier's
+              // whole history around it — searching "8484" shouldn't surface neighboring
+              // invoices like 8483/8485 just because they belong to the same supplier.
+              const narrowToMatches = !!q && !nameMatch
+              const visibleDebts = narrowToMatches ? debts.filter(lineMatch) : debts
+
               const monthMap: Record<string, SupplierDebt[]> = {}
-              debts.forEach(d => {
+              visibleDebts.forEach(d => {
                 const mk = monthKeyOf(d.date)
                 if (!monthMap[mk]) monthMap[mk] = []
                 monthMap[mk].push(d)

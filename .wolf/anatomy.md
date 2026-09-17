@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T11:49:54.168Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T12:06:19.635Z
 > Files: 22 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -363,7 +363,7 @@
 
 - `CustomerDetailsTab.tsx` — "פרטים" tab: flat customer record CRUD (name/contact/etc), no expand state (~10100 tok)
 - `CustomersClient.tsx` — Shell: loads customers/debts/payments, tab switch (מעקב/פרטים), first-load-only loading spinner via hasLoadedRef (~2300 tok)
-- `CustomerTrackingTab.tsx` — "מעקב" tab: per-customer accordion, month blocks, debt/invoice CRUD modal, bulk-edit, pay/print/Excel; search box also matches doc_number/invoices[].number, not just name/description (2026-09-17) (~26461 tok)
+- `CustomerTrackingTab.tsx` — "מעקב" tab: per-customer accordion, month blocks, debt/invoice CRUD modal, bulk-edit, pay/print/Excel; search matches doc_number/invoices[].number too, and (unless it matched the customer's name) narrows visible rows to just the matching invoice instead of showing the whole ledger (2026-09-17, bug-039) (~26862 tok)
 
 ## components/dashboard/
 
@@ -418,7 +418,7 @@
 
 - `SupplierDetailsTab.tsx` — "פרטים" tab: flat supplier record CRUD (name/contact/etc), no expand state (~9300 tok)
 - `SuppliersClient.tsx` — Shell: loads suppliers/debts/payments, tab switch (מעקב/פרטים), first-load-only loading spinner via hasLoadedRef (~2600 tok)
-- `SupplierTrackingTab.tsx` — "מעקב" tab: per-supplier accordion, month blocks, debt/invoice CRUD modal, bulk-edit, pay/print/Excel; search box also matches doc_number/invoices[].number, not just name/description (2026-09-17) (~38222 tok)
+- `SupplierTrackingTab.tsx` — "מעקב" tab: per-supplier accordion, month blocks, debt/invoice CRUD modal, bulk-edit, pay/print/Excel; search matches doc_number/invoices[].number too, and (unless it matched the supplier's name) narrows visible rows to just the matching invoice instead of showing the whole ledger (2026-09-17, bug-039) (~38353 tok)
 
 ## components/test-transfer/
 
