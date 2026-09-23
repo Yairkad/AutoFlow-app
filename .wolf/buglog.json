@@ -810,5 +810,38 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-09-17"
+  },
+  {
+    "id": "bug-040",
+    "timestamp": "2026-09-23",
+    "error_message": "דף לקוחות: '+ הוסף שורה' לא מציג שדה מספר רכב לשורה החדשה — כל השורות נשמרות על אותו מספר רכב",
+    "file": "components/customers/CustomerTrackingTab.tsx",
+    "root_cause": "Plate was a single modal-level state (dPlate) applied to every inserted row, though each line is saved as its own record",
+    "fix": "Moved plate into InvoiceEntry (plate/plateMeta/uid); PlateInput rendered per line, keyed by uid; handlePlateFill(lineIdx); save uses each line's own plate",
+    "tags": [
+      "customer-tracking",
+      "plate",
+      "multi-line"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-09-23"
+  },
+  {
+    "id": "bug-041",
+    "timestamp": "2026-09-23",
+    "error_message": "קליטת בדיקת רכב: אחרי שמירה, טאב היסטוריה ריק עד רענון הדף",
+    "file": "components/inspections/InspectionsClient.tsx",
+    "root_cause": "Not reproduced; loadInspections ran un-awaited after save and on any fetch error did setInspections(data ?? []) — wiping the list to empty",
+    "fix": "loadInspections keeps previous list on error (logs it); save handlers await the reload; clicking the history tab refetches",
+    "tags": [
+      "inspections",
+      "history",
+      "stale-list",
+      "refetch"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-09-23"
   }
 ]

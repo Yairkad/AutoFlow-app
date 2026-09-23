@@ -2119,3 +2119,10 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 15:06 | Edited components/customers/CustomerTrackingTab.tsx | CSS: d, displayMonthMap, months | ~1200 |
 | 15:06 | Edited components/suppliers/SupplierTrackingTab.tsx | CSS: d | ~452 |
 | 15:11 | Session end: 16 writes across 4 files (CustomerTrackingTab.tsx, SupplierTrackingTab.tsx, Header.tsx, DashboardStats.tsx) | 10 reads | ~89884 tok |
+
+## Session: 2026-09-23 14:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:00 | Customer debt modal: plate per invoice line (was one plate for all lines) | CustomerTrackingTab.tsx | done, tsc clean | ~6k |
+| 00:00 | Inspections: history refetch on tab open, awaited reload after save, no wipe on fetch error | InspectionsClient.tsx | done | ~3k |

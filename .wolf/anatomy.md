@@ -363,7 +363,7 @@
 
 - `CustomerDetailsTab.tsx` — "פרטים" tab: flat customer record CRUD (name/contact/etc), no expand state (~10100 tok)
 - `CustomersClient.tsx` — Shell: loads customers/debts/payments, tab switch (מעקב/פרטים), first-load-only loading spinner via hasLoadedRef (~2300 tok)
-- `CustomerTrackingTab.tsx` — "מעקב" tab: per-customer accordion, month blocks, debt/invoice CRUD modal, bulk-edit, pay/print/Excel; search matches doc_number/invoices[].number too, and (unless it matched the customer's name) narrows visible rows to just the matching invoice instead of showing the whole ledger (2026-09-17, bug-039) (~26862 tok)
+- `CustomerTrackingTab.tsx` — "מעקב" tab: per-customer accordion (debt modal: plate is per invoice line, 2026-09-23), month blocks, debt/invoice CRUD modal, bulk-edit, pay/print/Excel; search matches doc_number/invoices[].number too, and (unless it matched the customer's name) narrows visible rows to just the matching invoice instead of showing the whole ledger (2026-09-17, bug-039) (~26862 tok)
 
 ## components/dashboard/
 

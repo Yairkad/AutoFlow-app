@@ -335,11 +335,13 @@ export default function InspectionsClient() {
 
   const loadInspections = useCallback(async () => {
     if (!tenantId.current) return
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('car_inspections')
       .select('*')
       .eq('tenant_id', tenantId.current)
       .order('created_at', { ascending: false })
+    // A failed refetch (e.g. right after a save) must not wipe the list to empty — keep what we had.
+    if (error) { console.error('loadInspections failed:', error); return }
     setInspections(data ?? [])
   }, [supabase])
 
@@ -488,8 +490,8 @@ export default function InspectionsClient() {
       saved = data
     }
 
+    await loadInspections()
     setSaving(false)
-    loadInspections()
     clearForm()
 
     if (saved) printReport(saved, bizInfo.current)
@@ -549,9 +551,9 @@ export default function InspectionsClient() {
       if (error) { showToast('שגיאה בשמירה', 'error'); setSaving(false); return }
     }
 
+    await loadInspections()
     setSaving(false)
     showToast('נשמר בהצלחה', 'success')
-    loadInspections()
     clearForm()
   }
 
@@ -673,7 +675,7 @@ export default function InspectionsClient() {
         ] as const).map(t => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => { setTab(t.key); if (t.key === 'history') loadInspections() }}
             style={{
               padding: '7px 16px', border: 'none', cursor: 'pointer',
               fontFamily: 'inherit', fontSize: 13, fontWeight: tab === t.key ? 600 : 400,

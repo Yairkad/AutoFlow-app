@@ -25,6 +25,12 @@ interface InvoiceEntry {
   date: string
   direction: Direction
   notes: string
+  // Per-line vehicle plate — each line is saved as its own record, so "+ הוסף שורה" for a
+  // second invoice can carry a different car. plateMeta tracks the make/model block this line's
+  // plate lookup inserted into its notes, so re-searching replaces it instead of duplicating.
+  plate: string
+  plateMeta: string
+  uid: string
 }
 
 type Filter = 'open' | 'closed' | 'all'
@@ -53,7 +59,7 @@ const fmtDMY = (d: string | Date) => {
 }
 const todayISO = () => new Date().toISOString().slice(0, 10)
 const monthISO = () => new Date().toISOString().slice(0, 7)
-const EMPTY_INV = (): InvoiceEntry => ({ type: 'invoice', number: '', amount: '', date: todayISO(), direction: 'charge', notes: '' })
+const EMPTY_INV = (): InvoiceEntry => ({ type: 'invoice', number: '', amount: '', date: todayISO(), direction: 'charge', notes: '', plate: '', plateMeta: '', uid: crypto.randomUUID() })
 const paymentDateOf = (p: CustomerLedgerPayment) => p.payment_date ?? p.check_date ?? p.created_at.slice(0, 10)
 
 // Numeric value of an invoice number for sorting (e.g. "475810" → 475810). Non-numeric/missing
@@ -148,12 +154,10 @@ export default function CustomerTrackingTab({
   const [dInvoices, setDInvoices] = useState<InvoiceEntry[]>([EMPTY_INV()])
   const [dSaving, setDSaving]     = useState(false)
 
-  // Quick-fill: per-visit vehicle plate lookup + per-customer "actions" catalog selection.
-  // Both compose into dInvoices[0].notes (not dNotes — see openDebtModal, which on edit
-  // always routes the saved description into the line's own notes, making dNotes a no-op there).
-  const [dPlate, setDPlate] = useState('')
+  // Quick-fill: per-line vehicle plate lookup (see InvoiceEntry.plate) + per-customer "actions"
+  // catalog selection, which composes into dInvoices[0].notes (not dNotes — see openDebtModal,
+  // which on edit always routes the saved description into the line's own notes).
   const [selectedActionIds, setSelectedActionIds] = useState<string[]>([])
-  const lastPlateMetaRef   = useRef('')
 
   // Payment modal — records one flat amount for a customer (2026-08-18 redesign: no more
   // per-invoice allocation). No check-series/calendar system for customers — a single "צ'ק"
@@ -243,19 +247,16 @@ export default function CustomerTrackingTab({
     if (d) {
       setEditDebt(d); setDCustomer(d.customer_id ?? ''); setDNotes('')
       const existing = Array.isArray(d.invoices) && d.invoices.length > 0
-        ? d.invoices.map(i => ({ type: i.type as 'invoice' | 'karteset', number: i.number, amount: String(i.amount), date: d.date, direction: d.direction, notes: d.description ?? '' }))
+        ? d.invoices.map(i => ({ ...EMPTY_INV(), type: i.type as 'invoice' | 'karteset', number: i.number, amount: String(i.amount), date: d.date, direction: d.direction, notes: d.description ?? '', plate: d.plate ?? '' }))
         : d.doc_number
-          ? [{ type: (d.doc_type ?? 'invoice') as 'invoice' | 'karteset', number: d.doc_number, amount: String(d.amount), date: d.date, direction: d.direction, notes: d.description ?? '' }]
-          : [{ ...EMPTY_INV(), date: d.date, direction: d.direction, notes: d.description ?? '' }]
+          ? [{ ...EMPTY_INV(), type: (d.doc_type ?? 'invoice') as 'invoice' | 'karteset', number: d.doc_number, amount: String(d.amount), date: d.date, direction: d.direction, notes: d.description ?? '', plate: d.plate ?? '' }]
+          : [{ ...EMPTY_INV(), date: d.date, direction: d.direction, notes: d.description ?? '', plate: d.plate ?? '' }]
       setDInvoices(existing)
-      setDPlate(d.plate ?? '')
       setSelectedActionIds(d.customer_id ? detectSelectedActionIds(existing[0]?.notes ?? '', d.customer_id) : [])
     } else {
       setEditDebt(null); setDCustomer(''); setDNotes(''); setDInvoices([EMPTY_INV()])
-      setDPlate('')
       setSelectedActionIds([])
     }
-    lastPlateMetaRef.current = ''
     setShowDebtModal(true)
   }
 
@@ -306,14 +307,14 @@ export default function CustomerTrackingTab({
     return base ? `${base} — ${nextBlock}` : nextBlock
   }
 
-  const handlePlateFill = (data: Partial<VehicleData>) => {
-    if (data.plate) setDPlate(String(data.plate))
+  const handlePlateFill = (lineIdx: number, data: Partial<VehicleData>) => {
     const meta = [data.make, data.model, data.year].filter(Boolean).join(' ')
-    if (!meta) return
-    setDInvoices(prev => prev.map((inv, idx) => idx === 0
-      ? { ...inv, notes: replaceTrackedBlock(inv.notes, lastPlateMetaRef.current, meta) }
-      : inv))
-    lastPlateMetaRef.current = meta
+    setDInvoices(prev => prev.map((inv, idx) => {
+      if (idx !== lineIdx) return inv
+      const next = { ...inv, plate: data.plate ? String(data.plate) : inv.plate }
+      if (!meta) return next
+      return { ...next, notes: replaceTrackedBlock(inv.notes, inv.plateMeta, meta), plateMeta: meta }
+    }))
   }
 
   // Each pill only ever adds or removes its OWN name, joined by " + " — it never recomputes or
@@ -371,7 +372,7 @@ export default function CustomerTrackingTab({
         customer_id: dCustomer || null,
         amount: total || parseFloat(validLines[0]?.amount) || 0,
         description: validLines[0]?.notes.trim() || dNotes.trim() || null,
-        plate: dPlate.trim() || null,
+        plate: validLines[0]?.plate.trim() || null,
         date: validLines[0]?.date || todayISO(),
         doc_type: validLines[0]?.type ?? 'invoice',
         doc_number: validLines[0]?.number.trim() || null,
@@ -388,7 +389,7 @@ export default function CustomerTrackingTab({
         customer_id: dCustomer || null,
         amount: parseFloat(l.amount) || 0,
         description: l.notes.trim() || dNotes.trim() || null,
-        plate: dPlate.trim() || null,
+        plate: l.plate.trim() || null,
         date: l.date,
         doc_type: l.type,
         doc_number: l.number.trim() || null,
@@ -412,7 +413,7 @@ export default function CustomerTrackingTab({
 
   const addDebtForCustomer = (custId: string) => {
     setEditDebt(null); setDCustomer(custId); setDNotes(''); setDInvoices([EMPTY_INV()])
-    setDPlate(''); setSelectedActionIds([]); lastPlateMetaRef.current = ''
+    setSelectedActionIds([])
     setShowDebtModal(true)
   }
 
@@ -1135,18 +1136,6 @@ export default function CustomerTrackingTab({
                 </div>
               )}
 
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
-                🚗 מספר רכב (אופציונלי — פרטי הרכב יתווספו אוטומטית להערה)
-                {/* Keyed by the record being edited (or 'new') so switching records — e.g. the
-                    bulk-edit walk closing one modal and immediately opening the next — always
-                    remounts this uncontrolled input fresh. showDebtModal itself never visibly
-                    flips to false during that walk (closeSuppModal/closeDebtModal set it false
-                    then true again in the same batch), so without this key React would keep the
-                    same PlateInput instance alive and it'd still show the previous record's
-                    typed plate number. */}
-                <PlateInput key={editDebt?.id ?? 'new'} module="tracking" onFill={handlePlateFill} />
-              </label>
-
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <span style={{ fontSize: '13px', fontWeight: 600 }}>חשבוניות / זיכויים</span>
@@ -1156,7 +1145,7 @@ export default function CustomerTrackingTab({
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {dInvoices.map((inv, i) => (
-                    <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'var(--bg)', borderRadius: '8px', padding: '10px' }}>
+                    <div key={inv.uid} style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'var(--bg)', borderRadius: '8px', padding: '10px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', gap: '4px' }}>
                           {(['invoice', 'karteset'] as const).map(t => (
@@ -1190,6 +1179,12 @@ export default function CustomerTrackingTab({
                         <input type="date" value={inv.date} onChange={e => updateInvoiceLine(i, 'date', e.target.value)} className="form-input" style={{ margin: 0 }} />
                       </div>
                       <input value={inv.notes} onChange={e => updateInvoiceLine(i, 'notes', e.target.value)} placeholder="הערות לשורה זו (אופציונלי)..." className="form-input" style={{ margin: 0 }} />
+                      {/* Per-line plate — keyed by the line's uid (fresh per modal open, so the
+                          bulk-edit walk still remounts this uncontrolled input clean). */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600 }}>
+                        <span>🚗 מספר רכב לשורה זו (אופציונלי){inv.plate ? ` — נוכחי: ${inv.plate}` : ''}</span>
+                        <PlateInput key={inv.uid} module="tracking" onFill={data => handlePlateFill(i, data)} />
+                      </div>
                     </div>
                   ))}
                 </div>
