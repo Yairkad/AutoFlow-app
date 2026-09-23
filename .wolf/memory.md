@@ -2126,3 +2126,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 00:00 | Customer debt modal: plate per invoice line (was one plate for all lines) | CustomerTrackingTab.tsx | done, tsc clean | ~6k |
 | 00:00 | Inspections: history refetch on tab open, awaited reload after save, no wipe on fetch error | InspectionsClient.tsx | done | ~3k |
+
+## Session: 2026-09-23 14:14
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:20 | Landing page SEO recommendations (advice only, no code) | - | answered, awaiting user clarifications | ~5k |
