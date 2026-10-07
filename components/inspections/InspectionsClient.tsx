@@ -49,6 +49,7 @@ interface Inspection {
   intake_token: string | null
   intake_files: IntakeFile[] | null
   intake_submitted_at: string | null
+  intake_source: 'link' | 'qr' | null
 }
 
 // Pre-fill rows still waiting for the customer — they live in the "טפסים מלקוחות" tab, not history.

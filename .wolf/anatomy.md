@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-07T11:43:00.140Z
-> Files: 28 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-07T12:30:02.441Z
+> Files: 29 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -35,6 +35,10 @@
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
 
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/
+
+- `poster.mjs` — Declares src (~290 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/intake-design/project/
 
@@ -268,6 +272,10 @@
 ## app/inspections/
 
 
+## app/api/inspection-intake/public-link/
+
+- `route.ts` — authed GET (get/create tenants.intake_public_token) / POST (admin: regenerate)
+
 ## app/intake/[token]/
 
 
@@ -402,6 +410,8 @@
 
 
 ## components/inspections/
+
+- `IntakeQrModal.tsx` — fixed business link as QR (qrcode lib): show/copy/print A4 poster, admin 'replace link'
 
 
 ## components/landing/

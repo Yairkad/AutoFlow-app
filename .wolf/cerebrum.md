@@ -6,6 +6,10 @@
 
 ## User Preferences
 
+- **Always reply in Hebrew (2026-10-07):** user asked for a Hebrew summary after an English one — write all user-facing replies in Hebrew.
+
+- **No tables in explanations (2026-10-07):** user said he doesn't like looking at tables — explain comparisons in short prose / bullet points instead.
+
 <!-- How the user likes things done. Code style, tools, patterns, communication. -->
 - **Salary model (2026-06-03):** Salary tab uses simple monthly net-entry model. No hourly/monthly type distinction. Each month user enters the net payslip amount directly (stored in `salaries.base`). External bonuses/deductions stored in `additions`/`deductions` JSONB. `total = base + additions - deductions`. Employee profile has no salary reference field.
 - **Manual over automatic for money-matching (2026-07-05):** User explicitly rejected automatic FIFO reconciliation for supplier checks vs. debts — he sometimes deliberately pays a newer month's invoices while intentionally leaving an older month open (a dispute or business reason), and does NOT want the system to silently close the older debt first. Any debt/payment matching logic must let the user pick which specific debt(s)/month(s) a payment settles, with the system only suggesting a default (editable), never deciding unilaterally.
@@ -26,6 +30,8 @@
 - **Netfree-evasion proxy on every Supabase call (found 2026-07-14):** `lib/supabase/client.ts`'s `createClient()` passes a custom `proxyFetch` to `createBrowserClient()` — every request whose URL starts with the real Supabase URL gets rewritten to `${NEXT_PUBLIC_APP_URL}/api/store?p=<base64(path+query)>` instead (comment: "hides the real Supabase path... so Netfree never sees supabase.co"). This means the browser never talks to `*.supabase.co` directly for REST/session calls; it all funnels through the `/api/store` Next.js API route. Two consequences to remember: (1) `tests/fixtures/mock.ts`'s `mockSupabase()` only does `page.route(SB_URL...)` — it does **not** intercept `/api/store`, so its empty-table stubs may silently not apply to some/most client calls; if the Playwright suite's data-dependent tests are flaky in ways that don't correlate with any real code change, suspect this mismatch before assuming cold-dev-server-compile timing. (2) Synthetic/scripted auth (e.g., constructing a session via `supabase.auth.admin.generateLink()` + injecting the resulting hash tokens into `/auth/callback` from a standalone script, bypassing the real `/login` form) does **not** reliably reproduce a real logged-in session in this app — confirmed the page renders (proxy.ts's server-side gate passes) but `useProfile()`/data fetches come back empty client-side, most likely because the proxy/session-cookie plumbing this synthetic path skips doesn't get set up the same way a real `/login` flow does. For any future need to browser-verify authenticated behavior, drive the real `/login` form with valid credentials rather than trying to shortcut auth.
 
 ## Do-Not-Repeat
+
+- [2026-10-07] `pkill -f "<pattern>"` inside a Bash tool call kills the tool's own shell (its command line contains the pattern) → exit 144 and the rest of the command never runs. Kill by PID from `pgrep` of a pattern not present in the command, or run the kill as its own call.
 
 - [2026-10-07] **Tailwind spacing classes (p-*, px-*, m*, mx-auto…) silently do nothing in this app**: `app/globals.css` has an unlayered `* { margin:0; padding:0 }` reset, which beats Tailwind v4's `@layer utilities`. Use inline styles or the v4 important suffix (`p-5!`, `mx-auto!`) for spacing. Hit while restyling `IntakeFormClient.tsx` (screenshots showed zero padding). Don't "fix" globals.css without a full-app visual check — many screens may rely on it.
 - [2026-10-07] File-based `icon.png` inside a route segment (app/intake/icon.png) did NOT override the root layout's config `icons` — set `icons` in the page's `generateMetadata` instead (done for /intake/[token]).
@@ -105,6 +111,8 @@
 - **Inspection checklist skeleton_only (2026-06-17):** skeleton_only flag stored in `findings` JSON as `{ skeleton_only: true, items: [...], notes: '' }`. No DB column needed. SKELETON_SYSTEM_INDICES = Set([16, 17]) — שלדת מרכב, מרכב (פחחות). Status 'na' added to ChecklistItem for non-skeleton systems. parseFindings() auto-applies 'na' when skeleton_only=true.
 
 ## Decision Log
+
+- **[2026-10-07] Intake: personal links AND a fixed business link / QR (user chose both).** `tenants.intake_public_token` (migration 085) shares the `/intake/[token]` URL with personal `car_inspections.intake_token`; the public API resolves personal first, then business. A details POST via the business token inserts a new row (`intake_source='qr'`, status submitted) — or reuses a pending one with the same phone+plate — and returns a new personal token; the client then `history.replaceState`s to it and uploads files there. Abuse cap: 30 QR submissions/hour/tenant (no IP stored). Office: "📱 ברקוד / קישור קבוע" in the intake tab → `IntakeQrModal` (qrcode lib, print A4 poster, admin-only "replace link" to kill old printed QRs) via `/api/inspection-intake/public-link`.
 
 - **[2026-10-07] Customer intake form look:** user picked design A (teal #0b5c55, Assistant font, 3-step stepper w/ progress bar, license-plate-styled plate input, 52px+ inputs, inline field errors) and link preview A (`public/og/inspection-intake.png`, 1200×630, + `public/og/inspection-icon.png`), rendered from the design canvas https://claude.ai/artifact/TsGyvmQ6HZZkhSw3e1JA1J with Playwright. Page metadata: title "בדיקת קנייה – {business}", noindex.
 

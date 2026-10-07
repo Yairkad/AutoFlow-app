@@ -2167,3 +2167,20 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:42 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/intake-design/project/PreviewA.dc.html | — | ~493 |
 | 11:43 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/intake-design/project/PreviewB.dc.html | — | ~940 |
 | 12:00 | Intake form redesigned (design A, stepper), WhatsApp OG image + icon, page metadata | IntakeFormClient, app/intake/[token]/page.tsx, public/og/* | build ok, screenshots verified | ~25k |
+
+## Session: 2026-10-07 12:10
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-07 12:22
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:30 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/poster.mjs | — | ~290 |
+| 13:00 | Fixed business link/QR for intake alongside personal links (migration 085, public-link API, QR modal+poster, source badge) | api/public/inspection-intake, api/inspection-intake/public-link, IntakeQrModal, IntakeTab, IntakeFormClient | build ok, browser flow test ok | ~20k |
+
+## Session: 2026-10-07 12:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

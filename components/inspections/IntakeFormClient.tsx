@@ -109,6 +109,9 @@ export default function IntakeFormClient({ token }: { token: string }) {
   const [consent, setConsent]   = useState(false)
   const [consentErr, setConsentErr] = useState(false)
   const topRef = useRef<HTMLDivElement>(null)
+  // The fixed business link (QR) hands back a personal token after the first submit — uploads
+  // and later edits go through that one.
+  const activeToken = useRef(token)
 
   useEffect(() => {
     fetch(`/api/public/inspection-intake/${token}`)
@@ -189,8 +192,13 @@ export default function IntakeFormClient({ token }: { token: string }) {
       const fd = new FormData()
       Object.entries(data).forEach(([k, v]) => fd.append(k, v))
       fd.append('consent', '1')
-      let r = await fetch(`/api/public/inspection-intake/${token}`, { method: 'POST', body: fd })
-      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? 'שגיאה בשמירה')
+      let r = await fetch(`/api/public/inspection-intake/${activeToken.current}`, { method: 'POST', body: fd })
+      const saved = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(saved.error ?? 'שגיאה בשמירה')
+      if (saved.token && saved.token !== activeToken.current) {
+        activeToken.current = saved.token
+        window.history.replaceState(null, '', `/intake/${saved.token}`)
+      }
 
       const done = [...uploaded]
       for (const { kind, label } of INTAKE_FILE_KINDS) {
@@ -202,7 +210,7 @@ export default function IntakeFormClient({ token }: { token: string }) {
         const ffd = new FormData()
         ffd.append('kind', kind)
         ffd.append('file', small)
-        r = await fetch(`/api/public/inspection-intake/${token}`, { method: 'POST', body: ffd })
+        r = await fetch(`/api/public/inspection-intake/${activeToken.current}`, { method: 'POST', body: ffd })
         if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? `שגיאה בהעלאת ${label}`)
         if (!done.includes(kind)) done.push(kind)
         setFiles(m => { const n = { ...m }; delete n[kind]; return n })
