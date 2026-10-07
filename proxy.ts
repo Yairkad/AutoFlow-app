@@ -11,6 +11,7 @@ const PUBLIC_PREFIXES = [
   '/auth/callback',
   '/onboarding',
   '/track',
+  '/intake',           // purchase-inspection pre-fill form (customer link)
   '/privacy',
   '/terms',
   '/accessibility',

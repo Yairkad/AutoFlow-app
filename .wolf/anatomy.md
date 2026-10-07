@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-09-17T12:06:19.635Z
-> Files: 22 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-07T10:11:37.040Z
+> Files: 23 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -184,6 +184,22 @@
 
 ## app/api/public/customer-search/
 
+
+## app/api/public/inspection-intake/[token]/
+
+- `route.ts` — public GET (form state) / POST (details OR single file `kind`+`file`) for the inspection pre-fill link; service client, token-scoped, only while intake_status link_sent|submitted
+
+## app/api/inspection-intake/files/
+
+- `route.ts` — authed GET signed URLs / DELETE storage objects for an inspection's intake_files (tenant-checked)
+
+## app/intake/[token]/
+
+- `page.tsx` — public page wrapper for IntakeFormClient
+
+## lib/inspections/
+
+- `intake.ts` — IntakeStatus/IntakeFile types, INTAKE_FILE_KINDS, intakeMissing(), newIntakeToken(), bucket name + 4MB limit
 
 ## app/api/public/plate/
 
@@ -383,6 +399,10 @@
 
 ## components/inspections/
 
+- `IntakeFormClient.tsx` — PUBLIC customer pre-fill form for a purchase inspection (/intake/[token]): personal+vehicle details (plate autofill via fetchVehicleByPlate), 3 optional docs; posts details then each file separately (client-side image compression)
+- `IntakeTab.tsx` — "טפסים מלקוחות" tab: create/send personal link (WhatsApp/copy), list pending rows w/ missing-data marker, "הלקוח הגיע" opens edit drawer
+- `IntakeFilesModal.tsx` — signed-URL document viewer w/ per-file print (standalone window); exports printIntakeFile
+
 
 ## components/landing/
 
@@ -477,6 +497,7 @@
 ## supabase/migrations/
 
 - `082_bank_statement_charge_date_card.sql` — Credit-card statements commonly carry two distinct dates per transaction -- (~172 tok)
+- `083_inspection_intake.sql` — Purchase-inspection pre-fill ("טופס מילוי מראש"): the office sends the customer a personal (~352 tok)
 
 ## tests/
 

@@ -294,7 +294,10 @@ export default function FreeSearchClient({ session, filterType }: Props) {
         )}
         <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
           <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">−</button>
-          <span className="w-9 text-center font-bold border-x-2 border-slate-200 h-10 flex items-center justify-center">{qty}</span>
+          <input value={qty} inputMode="numeric" aria-label="כמות"
+            onFocus={e => e.currentTarget.select()}
+            onChange={e => setQty(Math.max(1, Number(e.target.value.replace(/\D/g, '')) || 1))}
+            className="w-9 text-center font-bold border-x-2 border-slate-200 h-10 outline-none" />
           <button onClick={() => setQty(q => q + 1)} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">+</button>
         </div>
       </div>
