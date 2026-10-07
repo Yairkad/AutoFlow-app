@@ -6,6 +6,8 @@
 
 ## User Preferences
 
+- **Always reply in Hebrew (2026-10-07):** user asked for a Hebrew summary after an English one — write all user-facing replies in Hebrew.
+
 - **No tables in explanations (2026-10-07):** user said he doesn't like looking at tables — explain comparisons in short prose / bullet points instead.
 
 <!-- How the user likes things done. Code style, tools, patterns, communication. -->
