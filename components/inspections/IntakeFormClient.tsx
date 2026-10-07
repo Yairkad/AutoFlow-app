@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fetchVehicleByPlate, type VehicleData } from '@/lib/utils/plateApi'
 import { INTAKE_FILE_KINDS, INTAKE_FILE_RETENTION_DAYS, INTAKE_MAX_FILE_BYTES, type IntakeFileKind } from '@/lib/inspections/intake'
 
@@ -33,21 +33,69 @@ async function compressImage(file: File): Promise<File> {
   }
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+// NOTE: globals.css has an unlayered `* { margin:0; padding:0 }` reset that beats Tailwind v4's
+// layered utilities, so spacing classes here carry the `!` (important) suffix.
+
+// ── Design tokens (design A: clean, stepped) ──
+const C = {
+  accent: '#0b5c55', accentDark: '#073f3a', accentSoft: '#e8f3f1',
+  text: '#15201e', muted: '#45524f', border: '#8a9794', card: '#dde3e1', bg: '#f4f6f5',
+  error: '#b42318', errorBg: '#fff7f6',
+}
+
+const STEPS = ['פרטים אישיים', 'הרכב', 'מסמכים'] as const
+
+function Field({ id, label, required, optional, error, children }: {
+  id: string; label: string; required?: boolean; optional?: boolean; error?: string; children: React.ReactNode
+}) {
   return (
-    <label className="block">
-      <span className="block text-sm font-semibold text-slate-700 mb-1">
-        {label}{required && <span className="text-red-500"> *</span>}
-      </span>
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={id} className="text-base font-bold" style={{ color: C.text }}>
+        {label}
+        {required && <span style={{ color: C.error }} aria-hidden="true"> *</span>}
+        {optional && <span className="font-normal" style={{ color: C.muted }}> (לא חובה)</span>}
+      </label>
       {children}
-    </label>
+      {error && (
+        <span id={`${id}-err`} role="alert" className="flex items-center gap-1.5 text-[15px] font-bold" style={{ color: C.error }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v5.5M12 16.5v.01" /></svg>
+          {error}
+        </span>
+      )}
+    </div>
   )
 }
 
-const inputCls = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-base focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200'
+const inputStyle = (bad: boolean): React.CSSProperties => ({
+  height: 52, boxSizing: 'border-box', borderRadius: 12, padding: '0 14px', fontSize: 18, width: '100%',
+  border: `2px solid ${bad ? C.error : C.border}`, background: bad ? C.errorBg : '#fff', color: C.text,
+})
+const inputCls = 'outline-none focus-visible:ring-4 focus-visible:ring-[#0b5c55]/30 focus-visible:!border-[#0b5c55] placeholder:text-[#6b7774]'
+
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-4 rounded-[18px] bg-white p-5!" style={{ border: `1px solid ${C.card}` }}>
+      <h2 className="m-0 text-xl font-extrabold" style={{ color: C.text }}>{title}</h2>
+      {children}
+    </section>
+  )
+}
+
+const CheckIcon = ({ color = C.accent, size = 22 }: { color?: string; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+)
+const DocIcon = () => (
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="9" cy="11" r="2" /><path d="M14 10h4M14 14h4M6 16h6" /></svg>
+)
+
+const ERR: Partial<Record<keyof Data, string>> = {
+  first_name: 'יש להזין שם פרטי', last_name: 'יש להזין שם משפחה', owner_id: 'יש להזין מספר תעודת זהות',
+  owner_phone: 'יש להזין מספר טלפון נייד', plate: 'יש להזין מספר רכב',
+}
 
 export default function IntakeFormClient({ token }: { token: string }) {
   const [state, setState]       = useState<'loading' | 'notfound' | 'closed' | 'form' | 'done'>('loading')
+  const [step, setStep]         = useState(0)
   const [business, setBusiness] = useState<Business | null>(null)
   const [data, setData]         = useState<Data>(emptyData)
   const [uploaded, setUploaded] = useState<IntakeFileKind[]>([])
@@ -60,6 +108,7 @@ export default function IntakeFormClient({ token }: { token: string }) {
   const [busy, setBusy]         = useState('')
   const [consent, setConsent]   = useState(false)
   const [consentErr, setConsentErr] = useState(false)
+  const topRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch(`/api/public/inspection-intake/${token}`)
@@ -88,27 +137,51 @@ export default function IntakeFormClient({ token }: { token: string }) {
     setPlateBusy(true); setPlateMsg('')
     const v = await fetchVehicleByPlate(clean)
     setVehicle(v)
-    if (!v) setPlateMsg('לא נמצאו פרטים במאגר משרד התחבורה — בדוק את המספר')
+    if (!v) setPlateMsg('לא נמצאו פרטים במאגר משרד התחבורה – כדאי לבדוק את המספר')
     setPlateBusy(false)
   }
 
   function pickFile(kind: IntakeFileKind, f: File | undefined) {
     setError('')
     if (!f) return
-    if (!/^(image\/|application\/pdf$)/.test(f.type)) { setError('ניתן להעלות רק תמונה או PDF'); return }
-    if (f.type === 'application/pdf' && f.size > INTAKE_MAX_FILE_BYTES) { setError('קובץ PDF גדול מדי (עד 4MB) — אפשר לצלם תמונה במקום'); return }
+    if (!/^(image\/|application\/pdf$)/.test(f.type)) { setError('ניתן להעלות רק תמונה או קובץ PDF'); return }
+    if (f.type === 'application/pdf' && f.size > INTAKE_MAX_FILE_BYTES) { setError('קובץ ה-PDF גדול מדי (עד 4MB) – אפשר לצלם תמונה במקום'); return }
     setFiles(m => ({ ...m, [kind]: f }))
+  }
+
+  function stepErrors(i: number): Set<keyof Data> {
+    const bad = new Set<keyof Data>()
+    if (i === 0) {
+      if (!data.first_name.trim()) bad.add('first_name')
+      if (!data.last_name.trim()) bad.add('last_name')
+      if (data.owner_id.replace(/\D/g, '').length < 5) bad.add('owner_id')
+      if (data.owner_phone.replace(/\D/g, '').length < 9) bad.add('owner_phone')
+    }
+    if (i === 1 && data.plate.replace(/\D/g, '').length < 5) bad.add('plate')
+    return bad
+  }
+
+  function goTo(i: number) {
+    setError('')
+    // Moving forward requires the current step to be valid; going back never does.
+    if (i > step) {
+      const bad = stepErrors(step)
+      if (bad.size) {
+        setErrors(bad)
+        document.getElementById(`f-${[...bad][0]}`)?.focus()
+        return
+      }
+    }
+    setStep(i)
+    topRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   async function submit() {
     setError('')
-    const bad = new Set<keyof Data>()
-    if (!data.first_name.trim()) bad.add('first_name')
-    if (!data.last_name.trim()) bad.add('last_name')
-    if (data.owner_id.replace(/\D/g, '').length < 5) bad.add('owner_id')
-    if (data.owner_phone.replace(/\D/g, '').length < 9) bad.add('owner_phone')
-    if (data.plate.replace(/\D/g, '').length < 5) bad.add('plate')
-    if (bad.size) { setErrors(bad); setError('יש למלא את כל שדות החובה המסומנים'); return }
+    for (const i of [0, 1]) {
+      const bad = stepErrors(i)
+      if (bad.size) { setErrors(bad); setStep(i); return }
+    }
     if (!consent) { setConsentErr(true); setError('יש לאשר את השימוש בפרטים כדי לשלוח'); return }
 
     try {
@@ -125,7 +198,7 @@ export default function IntakeFormClient({ token }: { token: string }) {
         if (!f) continue
         setBusy(`מעלה: ${label}...`)
         const small = await compressImage(f)
-        if (small.size > INTAKE_MAX_FILE_BYTES) throw new Error(`הקובץ "${label}" גדול מדי — נסה לצלם שוב`)
+        if (small.size > INTAKE_MAX_FILE_BYTES) throw new Error(`הקובץ "${label}" גדול מדי – נסה לצלם שוב`)
         const ffd = new FormData()
         ffd.append('kind', kind)
         ffd.append('file', small)
@@ -136,166 +209,236 @@ export default function IntakeFormClient({ token }: { token: string }) {
       }
       setUploaded(done)
       setState('done')
+      window.scrollTo({ top: 0 })
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'שגיאה — נסה שוב')
+      setError(e instanceof Error ? e.message : 'שגיאה – נסה שוב')
     } finally {
       setBusy('')
     }
   }
 
+  const fieldProps = (k: keyof Data) => ({
+    id: `f-${k}`,
+    value: data[k],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => set(k, e.target.value),
+    className: inputCls,
+    style: inputStyle(errors.has(k)),
+    'aria-invalid': errors.has(k) || undefined,
+    'aria-describedby': errors.has(k) ? `f-${k}-err` : undefined,
+  })
+  const errOf = (k: keyof Data) => (errors.has(k) ? ERR[k] : undefined)
+
   const bringList = INTAKE_FILE_KINDS.filter(k => !uploaded.includes(k.kind))
+
   const header = (
-    <div className="text-center mb-6">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      {business?.logo && <img src={business.logo} alt="" className="mx-auto mb-3 max-h-16 object-contain" />}
-      <div className="text-xl font-black text-slate-900">{business?.name}</div>
-      <div className="text-slate-500 text-sm mt-1">טופס פרטים לבדיקת קנייה</div>
+    <header className="flex flex-col items-center gap-2.5 bg-white px-5! pb-5! pt-7!" style={{ borderBottom: `1px solid ${C.card}` }}>
+      {business?.logo
+        // eslint-disable-next-line @next/next/no-img-element
+        ? <img src={business.logo} alt="" className="max-h-14 object-contain" />
+        : (
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl" style={{ background: C.accent }}>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="M15.5 15.5 21 21" /><path d="m7.8 10.6 2 2 3.7-3.8" /></svg>
+          </div>
+        )}
+      {business?.name && <div className="text-[22px] font-extrabold" style={{ color: C.text }}>{business.name}</div>}
+      <div className="text-[17px]" style={{ color: C.muted }}>טופס פרטים לבדיקת קנייה</div>
+    </header>
+  )
+
+  const shell = (children: React.ReactNode) => (
+    <div dir="rtl" className="min-h-screen" style={{ background: C.bg, color: C.text }}>
+      <div className="mx-auto! max-w-lg" ref={topRef}>
+        {header}
+        {children}
+      </div>
     </div>
   )
 
   if (state === 'loading') {
-    return <div className="min-h-screen flex items-center justify-center text-slate-500" dir="rtl">טוען...</div>
+    return <div dir="rtl" role="status" className="flex min-h-screen items-center justify-center text-lg" style={{ background: C.bg, color: C.muted }}>טוען...</div>
   }
 
   if (state === 'notfound' || state === 'closed') {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4" dir="rtl">
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
-          {header}
-          <div className="text-5xl mb-4">{state === 'closed' ? '✅' : '🔍'}</div>
-          <p className="text-slate-600">{state === 'closed' ? 'הטופס הזה כבר טופל. תודה!' : 'הלינק לא תקין או שפג תוקפו.'}</p>
+    return shell(
+      <main className="p-5!">
+        <div className="flex flex-col items-center gap-3 rounded-[18px] bg-white p-8! text-center" style={{ border: `1px solid ${C.card}` }}>
+          {state === 'closed' && <CheckIcon size={44} />}
+          <p className="m-0 text-lg" style={{ color: C.text }}>
+            {state === 'closed' ? 'הטופס הזה כבר טופל. תודה!' : 'הלינק לא תקין או שפג תוקפו. אפשר לפנות לעסק לקבלת לינק חדש.'}
+          </p>
         </div>
-      </div>
+      </main>
     )
   }
 
   if (state === 'done') {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4" dir="rtl">
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
-          {header}
-          <div className="text-5xl mb-3">✅</div>
-          <h1 className="text-xl font-bold text-slate-800 mb-2">הפרטים התקבלו, תודה!</h1>
-          <p className="text-slate-500 text-sm">נתראה בבדיקה.</p>
-          {bringList.length > 0 && (
-            <div className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-right">
-              <div className="font-bold text-amber-800 mb-1">📌 יש להביא איתך לבדיקה:</div>
-              <ul className="list-disc pr-5 text-amber-900 text-sm space-y-0.5">
-                {bringList.map(k => <li key={k.kind}>{k.bring}</li>)}
-              </ul>
-            </div>
-          )}
-          <button onClick={() => setState('form')} className="mt-5 text-sm text-emerald-700 underline">עריכת הפרטים</button>
-        </div>
-      </div>
+    return shell(
+      <main className="flex flex-col gap-4 p-5!">
+        <section className="flex flex-col items-center gap-3 rounded-[18px] bg-white p-7! text-center" style={{ border: `1px solid ${C.card}` }}>
+          <div className="flex h-16 w-16 items-center justify-center rounded-full" style={{ background: C.accentSoft }}><CheckIcon size={34} /></div>
+          <h1 className="m-0 text-2xl font-extrabold">הפרטים התקבלו, תודה!</h1>
+          <p className="m-0 text-[17px]" style={{ color: C.muted }}>נתראה בבדיקה.</p>
+        </section>
+        {bringList.length > 0 && (
+          <section className="rounded-[18px] p-5!" style={{ background: '#fff4e0', border: '1px solid #f1c27d' }}>
+            <h2 className="m-0 mb-2! text-lg font-extrabold" style={{ color: '#5c2408' }}>יש להביא איתך לבדיקה:</h2>
+            <ul className="m-0 flex list-disc flex-col gap-1 pr-5! text-[17px]" style={{ color: '#5c2408' }}>
+              {bringList.map(k => <li key={k.kind}>{k.bring}</li>)}
+            </ul>
+          </section>
+        )}
+        <button onClick={() => { setStep(0); setState('form') }}
+          className="h-12 rounded-xl bg-white text-base font-bold" style={{ border: `2px solid ${C.border}`, color: C.text }}>
+          עריכת הפרטים
+        </button>
+      </main>
     )
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50 py-6 px-4" dir="rtl">
-      <div className="max-w-lg mx-auto">
-        {header}
+  return shell(
+    <>
+      <nav aria-label="שלבי הטופס" className="flex gap-2 px-5! pb-1.5! pt-[18px]!">
+        {STEPS.map((label, i) => (
+          <button key={label} type="button" onClick={() => goTo(i)} aria-current={i === step ? 'step' : undefined}
+            className="flex flex-1 flex-col gap-1.5 bg-transparent p-0 text-right">
+            <span className="h-1.5 w-full rounded-full" style={{ background: i <= step ? C.accent : '#c9d2cf' }} />
+            <span className="text-sm" style={{ fontWeight: i === step ? 700 : 600, color: i === step ? C.text : C.muted }}>{i + 1}. {label}</span>
+          </button>
+        ))}
+      </nav>
 
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-4 space-y-4">
-          <h2 className="font-bold text-lg text-slate-800">👤 פרטים אישיים</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="שם פרטי" required>
-              <input className={inputCls + (errors.has('first_name') ? ' border-red-500' : '')} value={data.first_name} onChange={e => set('first_name', e.target.value)} autoComplete="given-name" />
-            </Field>
-            <Field label="שם משפחה" required>
-              <input className={inputCls + (errors.has('last_name') ? ' border-red-500' : '')} value={data.last_name} onChange={e => set('last_name', e.target.value)} autoComplete="family-name" />
-            </Field>
-          </div>
-          <Field label="תעודת זהות" required>
-            <input className={inputCls + (errors.has('owner_id') ? ' border-red-500' : '')} value={data.owner_id} onChange={e => set('owner_id', e.target.value)} inputMode="numeric" dir="ltr" maxLength={9} />
-          </Field>
-          <Field label="טלפון" required>
-            <input className={inputCls + (errors.has('owner_phone') ? ' border-red-500' : '')} value={data.owner_phone} onChange={e => set('owner_phone', e.target.value)} type="tel" inputMode="tel" dir="ltr" autoComplete="tel" />
-          </Field>
-          <Field label="כתובת">
-            <input className={inputCls} value={data.owner_address} onChange={e => set('owner_address', e.target.value)} placeholder="רחוב, מספר, עיר" autoComplete="street-address" />
-          </Field>
-        </section>
-
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-4 space-y-4">
-          <h2 className="font-bold text-lg text-slate-800">🚗 פרטי הרכב</h2>
-          <Field label="מספר רכב" required>
-            <div className="flex gap-2">
-              <input className={inputCls + ' font-mono font-bold tracking-wider' + (errors.has('plate') ? ' border-red-500' : '')}
-                value={data.plate} onChange={e => { set('plate', e.target.value); setVehicle(null); setPlateMsg('') }}
-                onBlur={() => lookupPlate()} inputMode="numeric" dir="ltr" placeholder="12-345-67" />
-              <button type="button" onClick={() => lookupPlate()} disabled={plateBusy}
-                className="shrink-0 rounded-xl bg-slate-800 px-4 text-white font-bold disabled:opacity-60">
-                {plateBusy ? '...' : 'חפש'}
-              </button>
+      <main className="flex flex-col gap-4 px-5! pb-8! pt-3.5!">
+        {step === 0 && (
+          <Card title="פרטים אישיים">
+            <div className="grid grid-cols-2 gap-3">
+              <Field id="f-first_name" label="שם פרטי" required error={errOf('first_name')}>
+                <input {...fieldProps('first_name')} autoComplete="given-name" />
+              </Field>
+              <Field id="f-last_name" label="שם משפחה" required error={errOf('last_name')}>
+                <input {...fieldProps('last_name')} autoComplete="family-name" />
+              </Field>
             </div>
-          </Field>
-          {vehicle && (
-            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-sm text-emerald-900">
-              <div className="font-bold">{[vehicle.make, vehicle.model].filter(Boolean).join(' ')}</div>
-              <div className="text-emerald-800">{[vehicle.year, vehicle.color].filter(Boolean).join(' · ')}</div>
-            </div>
-          )}
-          {plateMsg && <div className="text-sm text-amber-700">{plateMsg}</div>}
-          <div className="grid grid-cols-2 gap-3">
-            <Field label='קילומטראז׳'>
-              <input className={inputCls} value={data.km} onChange={e => set('km', e.target.value)} inputMode="numeric" dir="ltr" />
+            <Field id="f-owner_id" label="תעודת זהות" required error={errOf('owner_id')}>
+              <input {...fieldProps('owner_id')} inputMode="numeric" maxLength={9} placeholder="9 ספרות" dir="ltr" style={{ ...inputStyle(errors.has('owner_id')), textAlign: 'right' }} />
             </Field>
-            <Field label="קוד רכב (אם יש)">
-              <input className={inputCls} value={data.car_code} onChange={e => set('car_code', e.target.value)} dir="ltr" />
+            <Field id="f-owner_phone" label="טלפון נייד" required error={errOf('owner_phone')}>
+              <input {...fieldProps('owner_phone')} type="tel" inputMode="tel" autoComplete="tel" placeholder="050-0000000" dir="ltr" style={{ ...inputStyle(errors.has('owner_phone')), textAlign: 'right' }} />
             </Field>
-          </div>
-        </section>
+            <Field id="f-owner_address" label="כתובת" optional>
+              <input {...fieldProps('owner_address')} autoComplete="street-address" placeholder="רחוב, מספר, עיר" />
+            </Field>
+          </Card>
+        )}
 
-        <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-4 space-y-3">
-          <h2 className="font-bold text-lg text-slate-800">📎 מסמכים</h2>
-          <p className="text-sm text-slate-500">לא חובה — מה שלא יועלה כאן יש להביא פיזית לבדיקה.</p>
-          {INTAKE_FILE_KINDS.map(({ kind, label }) => {
-            const picked = files[kind]
-            const done = uploaded.includes(kind)
-            return (
-              <div key={kind} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
-                <div className="min-w-0">
-                  <div className="font-semibold text-slate-800 text-sm">{label}</div>
-                  <div className="text-xs truncate mt-0.5">
-                    {picked ? <span className="text-emerald-700">✓ {picked.name}</span>
-                      : done ? <span className="text-emerald-700">✓ הועלה</span>
-                      : <span className="text-amber-700">לא הועלה — יש להביא בהגעה</span>}
+        {step === 1 && (
+          <Card title="פרטי הרכב">
+            <Field id="f-plate" label="מספר רכב" required error={errOf('plate')}>
+              <div dir="ltr" className="flex h-[60px] overflow-hidden rounded-xl focus-within:ring-4 focus-within:ring-[#0b5c55]/30"
+                style={{ border: `2px solid ${errors.has('plate') ? C.error : C.text}`, background: '#f7c600' }}>
+                <div className="flex w-[38px] items-center justify-center text-[11px] font-extrabold text-white" style={{ background: '#1d4ed8' }} aria-hidden="true">IL</div>
+                <input id="f-plate" value={data.plate} inputMode="numeric" placeholder="12-345-67"
+                  onChange={e => { set('plate', e.target.value); setVehicle(null); setPlateMsg('') }}
+                  onBlur={() => lookupPlate()}
+                  aria-invalid={errors.has('plate') || undefined} aria-describedby={errors.has('plate') ? 'f-plate-err' : 'plate-result'}
+                  className="min-w-0 flex-1 border-0 bg-transparent text-center text-[28px] font-extrabold tracking-[3px] outline-none placeholder:text-[#7a6a1a]"
+                  style={{ color: C.text }} />
+              </div>
+            </Field>
+            <div id="plate-result" aria-live="polite">
+              {plateBusy && <div className="text-base" style={{ color: C.muted }}>מחפש במאגר משרד התחבורה...</div>}
+              {vehicle && (
+                <div className="flex items-center gap-3 rounded-xl px-3.5! py-3!" style={{ background: C.accentSoft }}>
+                  <CheckIcon />
+                  <div className="flex flex-col">
+                    <span className="text-[17px] font-extrabold" style={{ color: '#0b3b36' }}>{[vehicle.make, vehicle.model].filter(Boolean).join(' ')}</span>
+                    <span className="text-[15px]" style={{ color: '#26514c' }}>{[vehicle.year, vehicle.color, 'נמצא במאגר משרד התחבורה'].filter(Boolean).join(' · ')}</span>
                   </div>
                 </div>
-                <label className="shrink-0 cursor-pointer rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white active:bg-emerald-700">
-                  {picked || done ? 'החלף' : '📷 צלם / בחר'}
-                  <input type="file" accept="image/*,application/pdf" className="hidden"
-                    onChange={e => { pickFile(kind, e.target.files?.[0]); e.target.value = '' }} />
-                </label>
-              </div>
-            )
-          })}
-        </section>
+              )}
+              {plateMsg && <div className="text-base font-semibold" style={{ color: '#8a4b00' }}>{plateMsg}</div>}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field id="f-km" label="קילומטראז׳">
+                <input {...fieldProps('km')} inputMode="numeric" placeholder="לדוגמה 85000" dir="ltr" style={{ ...inputStyle(false), textAlign: 'right' }} />
+              </Field>
+              <Field id="f-car_code" label="קוד רכב">
+                <input {...fieldProps('car_code')} placeholder="אם יש" dir="ltr" style={{ ...inputStyle(false), textAlign: 'right' }} />
+              </Field>
+            </div>
+          </Card>
+        )}
 
-        <label className={`mb-4 flex items-start gap-3 rounded-xl border bg-white p-4 text-sm text-slate-700 ${consentErr ? 'border-red-500' : 'border-slate-200'}`}>
-          <input type="checkbox" checked={consent} className="mt-0.5 h-5 w-5 shrink-0 accent-emerald-600"
-            onChange={e => { setConsent(e.target.checked); setConsentErr(false) }} />
-          <span>
-            אני מאשר/ת ל{business?.name || 'העסק'} לשמור את הפרטים והמסמכים שמסרתי לצורך ביצוע בדיקת הקנייה בלבד.
-            צילומי המסמכים יימחקו {INTAKE_FILE_RETENTION_DAYS} יום לאחר הבדיקה.{' '}
-            <a href="/privacy" target="_blank" className="text-emerald-700 underline">מדיניות הפרטיות</a>
-            <span className="text-red-500"> *</span>
-          </span>
-        </label>
+        {step === 2 && (
+          <>
+            <Card title="מסמכים">
+              <p className="m-0 text-base leading-relaxed" style={{ color: C.muted }}>לא חובה. מה שלא תעלה כאן – יש להביא איתך לבדיקה.</p>
+              {INTAKE_FILE_KINDS.map(({ kind, label, hint }) => {
+                const picked = files[kind]
+                const has = !!picked || uploaded.includes(kind)
+                return (
+                  <div key={kind} className="flex items-center gap-3 rounded-[14px] p-3!"
+                    style={has ? { border: `2px solid ${C.accent}`, background: '#f0f8f6' } : { border: `2px dashed ${C.border}` }}>
+                    <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[10px]" style={{ background: has ? '#cfe3df' : '#eef1f0' }}>
+                      {has ? <CheckIcon size={26} /> : <DocIcon />}
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <span className="text-[17px] font-extrabold">{label}</span>
+                      <span className="truncate text-[15px]" style={{ color: has ? '#26514c' : C.muted }}>
+                        {picked ? picked.name : has ? 'הועלה' : hint}
+                      </span>
+                    </div>
+                    <label className="flex h-11 shrink-0 cursor-pointer items-center rounded-[10px] px-3.5! text-base font-bold focus-within:ring-4 focus-within:ring-[#0b5c55]/30"
+                      style={has ? { border: `2px solid ${C.border}`, background: '#fff', color: C.text } : { background: C.accent, color: '#fff' }}>
+                      {has ? 'החלף' : 'צלם / בחר'}
+                      <input type="file" accept="image/*,application/pdf" className="sr-only" aria-label={`${has ? 'החלפת' : 'העלאת'} ${label}`}
+                        onChange={e => { pickFile(kind, e.target.files?.[0]); e.target.value = '' }} />
+                    </label>
+                  </div>
+                )
+              })}
+            </Card>
 
-        {error && <div className="mb-3 rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-700">{error}</div>}
+            <label className="flex items-start gap-3 rounded-[14px] bg-white p-4! text-base leading-relaxed"
+              style={{ border: `${consentErr ? 2 : 1}px solid ${consentErr ? C.error : C.card}` }}>
+              <input type="checkbox" checked={consent} className="mt-0.5! h-6 w-6 shrink-0" style={{ accentColor: C.accent }}
+                onChange={e => { setConsent(e.target.checked); setConsentErr(false) }} />
+              <span>
+                אני מאשר/ת ל{business?.name || 'העסק'} לשמור את הפרטים והמסמכים לצורך בדיקת הקנייה בלבד.
+                צילומי המסמכים יימחקו {INTAKE_FILE_RETENTION_DAYS} יום לאחר הבדיקה.{' '}
+                <a href="/privacy" target="_blank" className="font-semibold underline" style={{ color: C.accent }}>מדיניות הפרטיות</a>
+              </span>
+            </label>
+          </>
+        )}
 
-        <button onClick={submit} disabled={!!busy}
-          className="w-full rounded-2xl bg-emerald-600 py-4 text-lg font-black text-white shadow active:bg-emerald-700 disabled:opacity-70">
-          {busy || 'שליחה'}
-        </button>
+        {error && <div role="alert" className="rounded-xl p-3! text-base font-semibold" style={{ background: C.errorBg, border: `1px solid ${C.error}`, color: C.error }}>{error}</div>}
+
+        <div className="flex gap-3">
+          {step > 0 && (
+            <button type="button" onClick={() => goTo(step - 1)} disabled={!!busy}
+              className="h-[60px] rounded-2xl bg-white px-5! text-lg font-bold" style={{ border: `2px solid ${C.border}`, color: C.text }}>
+              חזרה
+            </button>
+          )}
+          {step < STEPS.length - 1 ? (
+            <button type="button" onClick={() => goTo(step + 1)}
+              className="h-[60px] flex-1 rounded-2xl text-xl font-extrabold text-white" style={{ background: C.accent }}>
+              המשך
+            </button>
+          ) : (
+            <button type="button" onClick={submit} disabled={!!busy} aria-busy={!!busy}
+              className="h-[60px] flex-1 rounded-2xl text-xl font-extrabold text-white disabled:opacity-80" style={{ background: busy ? C.accentDark : C.accent }}>
+              {busy || 'שליחת הפרטים'}
+            </button>
+          )}
+        </div>
+
         {business?.phone && (
-          <p className="text-center text-sm text-slate-500 mt-4">
-            שאלות? <a href={`tel:${business.phone}`} className="text-emerald-700 font-semibold" dir="ltr">{business.phone}</a>
+          <p className="m-0 text-center text-base" style={{ color: C.muted }}>
+            שאלות? <a href={`tel:${business.phone}`} dir="ltr" className="font-semibold" style={{ color: C.accent }}>{business.phone}</a>
           </p>
         )}
-      </div>
-    </div>
+      </main>
+    </>
   )
 }

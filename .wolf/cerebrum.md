@@ -27,6 +27,9 @@
 
 ## Do-Not-Repeat
 
+- [2026-10-07] **Tailwind spacing classes (p-*, px-*, m*, mx-auto…) silently do nothing in this app**: `app/globals.css` has an unlayered `* { margin:0; padding:0 }` reset, which beats Tailwind v4's `@layer utilities`. Use inline styles or the v4 important suffix (`p-5!`, `mx-auto!`) for spacing. Hit while restyling `IntakeFormClient.tsx` (screenshots showed zero padding). Don't "fix" globals.css without a full-app visual check — many screens may rely on it.
+- [2026-10-07] File-based `icon.png` inside a route segment (app/intake/icon.png) did NOT override the root layout's config `icons` — set `icons` in the page's `generateMetadata` instead (done for /intake/[token]).
+
 - [2026-10-07] User wants physical-keyboard typing to work in EVERY numeric field, including the yard terminal. Found keypad-only spots after the 2026-09-01 NewCarClient fix: WorkCardClient price-edit modal (`priceDigits` with no `<input>`) and the qty `<span>`s between −/+ steppers in FreeSearchClient/ReceiveClient. Fixed with real controlled inputs (`inputMode='none'` when the on-screen-keyboard pref is on). Also put `onMouseDown={e=>e.preventDefault()}` on the on-screen numpad container so tapping keys doesn't steal focus from the input. Any new stepper/numpad must display its value in an `<input>`, never a `<span>`/`<div>`.
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->
@@ -102,6 +105,8 @@
 - **Inspection checklist skeleton_only (2026-06-17):** skeleton_only flag stored in `findings` JSON as `{ skeleton_only: true, items: [...], notes: '' }`. No DB column needed. SKELETON_SYSTEM_INDICES = Set([16, 17]) — שלדת מרכב, מרכב (פחחות). Status 'na' added to ChecklistItem for non-skeleton systems. parseFindings() auto-applies 'na' when skeleton_only=true.
 
 ## Decision Log
+
+- **[2026-10-07] Customer intake form look:** user picked design A (teal #0b5c55, Assistant font, 3-step stepper w/ progress bar, license-plate-styled plate input, 52px+ inputs, inline field errors) and link preview A (`public/og/inspection-intake.png`, 1200×630, + `public/og/inspection-icon.png`), rendered from the design canvas https://claude.ai/artifact/TsGyvmQ6HZZkhSw3e1JA1J with Playwright. Page metadata: title "בדיקת קנייה – {business}", noindex.
 
 - **[2026-10-07] Intake privacy:** public form requires a consent checkbox (server rejects details POST without `consent=1`, stores `intake_consent_at`; file uploads only allowed after details = status `submitted`). Uploaded ID/license images auto-deleted after `INTAKE_FILE_RETENTION_DAYS`=30 from `intake_arrived_at` (or `intake_submitted_at` if customer never came) — user said he doesn't need them after printing. App has NO cron infra, so purge runs lazily via POST /api/inspection-intake/purge when the inspections screen loads. Privacy page (app/privacy/page.tsx) sections 2+8 state this — keep text in sync if the retention changes (migration 084).
 
