@@ -43,6 +43,10 @@ export function intakeMissing(row: {
   return missing
 }
 
+// Uploaded documents are deleted this many days after the customer arrived (or, if they never
+// arrived, after they submitted the form). Stated in the privacy policy — keep both in sync.
+export const INTAKE_FILE_RETENTION_DAYS = 30
+
 export function newIntakeToken(): string {
   const bytes = new Uint8Array(16)
   crypto.getRandomValues(bytes)

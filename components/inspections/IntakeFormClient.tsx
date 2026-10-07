@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { fetchVehicleByPlate, type VehicleData } from '@/lib/utils/plateApi'
-import { INTAKE_FILE_KINDS, INTAKE_MAX_FILE_BYTES, type IntakeFileKind } from '@/lib/inspections/intake'
+import { INTAKE_FILE_KINDS, INTAKE_FILE_RETENTION_DAYS, INTAKE_MAX_FILE_BYTES, type IntakeFileKind } from '@/lib/inspections/intake'
 
 // Public pre-fill form for a purchase inspection — opened by the customer from the personal
 // link the office sent. Details are posted first, then each document in its own request.
@@ -58,6 +58,8 @@ export default function IntakeFormClient({ token }: { token: string }) {
   const [errors, setErrors]     = useState<Set<keyof Data>>(new Set())
   const [error, setError]       = useState('')
   const [busy, setBusy]         = useState('')
+  const [consent, setConsent]   = useState(false)
+  const [consentErr, setConsentErr] = useState(false)
 
   useEffect(() => {
     fetch(`/api/public/inspection-intake/${token}`)
@@ -107,11 +109,13 @@ export default function IntakeFormClient({ token }: { token: string }) {
     if (data.owner_phone.replace(/\D/g, '').length < 9) bad.add('owner_phone')
     if (data.plate.replace(/\D/g, '').length < 5) bad.add('plate')
     if (bad.size) { setErrors(bad); setError('יש למלא את כל שדות החובה המסומנים'); return }
+    if (!consent) { setConsentErr(true); setError('יש לאשר את השימוש בפרטים כדי לשלוח'); return }
 
     try {
       setBusy('שומר פרטים...')
       const fd = new FormData()
       Object.entries(data).forEach(([k, v]) => fd.append(k, v))
+      fd.append('consent', '1')
       let r = await fetch(`/api/public/inspection-intake/${token}`, { method: 'POST', body: fd })
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? 'שגיאה בשמירה')
 
@@ -268,6 +272,17 @@ export default function IntakeFormClient({ token }: { token: string }) {
             )
           })}
         </section>
+
+        <label className={`mb-4 flex items-start gap-3 rounded-xl border bg-white p-4 text-sm text-slate-700 ${consentErr ? 'border-red-500' : 'border-slate-200'}`}>
+          <input type="checkbox" checked={consent} className="mt-0.5 h-5 w-5 shrink-0 accent-emerald-600"
+            onChange={e => { setConsent(e.target.checked); setConsentErr(false) }} />
+          <span>
+            אני מאשר/ת ל{business?.name || 'העסק'} לשמור את הפרטים והמסמכים שמסרתי לצורך ביצוע בדיקת הקנייה בלבד.
+            צילומי המסמכים יימחקו {INTAKE_FILE_RETENTION_DAYS} יום לאחר הבדיקה.{' '}
+            <a href="/privacy" target="_blank" className="text-emerald-700 underline">מדיניות הפרטיות</a>
+            <span className="text-red-500"> *</span>
+          </span>
+        </label>
 
         {error && <div className="mb-3 rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-700">{error}</div>}
 

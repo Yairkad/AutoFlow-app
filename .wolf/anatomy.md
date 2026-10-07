@@ -193,6 +193,10 @@
 
 - `route.ts` — authed GET signed URLs / DELETE storage objects for an inspection's intake_files (tenant-checked)
 
+## app/api/inspection-intake/purge/
+
+- `route.ts` — authed POST: deletes tenant's intake_files 30 days after intake_arrived_at (or submitted_at if never arrived); called on InspectionsClient load (no cron in app)
+
 ## app/intake/[token]/
 
 - `page.tsx` — public page wrapper for IntakeFormClient
