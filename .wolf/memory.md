@@ -2177,3 +2177,5 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 12:30 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/poster.mjs | — | ~290 |
+| 13:00 | Fixed business link/QR for intake alongside personal links (migration 085, public-link API, QR modal+poster, source badge) | api/public/inspection-intake, api/inspection-intake/public-link, IntakeQrModal, IntakeTab, IntakeFormClient | build ok, browser flow test ok | ~20k |

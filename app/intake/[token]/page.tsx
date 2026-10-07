@@ -14,11 +14,12 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
   if (/^[a-f0-9]{32}$/.test(token)) {
     try {
       const sb = createServiceClient()
+      // Personal link (one inspection) or the business's fixed link / QR.
       const { data } = await sb.from('car_inspections').select('tenant_id').eq('intake_token', token).maybeSingle()
-      if (data) {
-        const { data: t } = await sb.from('tenants').select('name').eq('id', data.tenant_id).maybeSingle()
-        business = t?.name ?? ''
-      }
+      const { data: t } = data
+        ? await sb.from('tenants').select('name').eq('id', data.tenant_id).maybeSingle()
+        : await sb.from('tenants').select('name').eq('intake_public_token', token).maybeSingle()
+      business = t?.name ?? ''
     } catch { /* preview falls back to the generic title */ }
   }
   const title       = business ? `בדיקת קנייה – ${business}` : 'בדיקת קנייה'

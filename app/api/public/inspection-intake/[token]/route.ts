@@ -2,16 +2,34 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import {
-  INTAKE_BUCKET, INTAKE_FILE_KINDS, INTAKE_MAX_FILE_BYTES,
+  INTAKE_BUCKET, INTAKE_FILE_KINDS, INTAKE_MAX_FILE_BYTES, newIntakeToken,
   type IntakeFile, type IntakeFileKind,
 } from '@/lib/inspections/intake'
 
-// Public endpoint behind the personal link the office sends to the customer.
-// The token is the only credential, so every query is scoped by it and the row must still be
-// waiting for the customer (link_sent / submitted) — once the customer arrived the link is dead.
+// Public endpoint behind the pre-fill links. Two kinds of token share the same URL shape:
+//   • personal – car_inspections.intake_token: one inspection; the row must still be waiting for
+//     the customer (link_sent / submitted) — once the customer arrived the link is dead.
+//   • business – tenants.intake_public_token (the fixed link / QR): submitting details creates a
+//     new inspection and returns its personal token, used from then on for uploads and edits.
 
 const OPEN_STATUSES = ['link_sent', 'submitted']
 const ALLOWED_TYPES = /^(image\/|application\/pdf$)/
+
+// Abuse guards for the fixed business link, which anyone holding the QR can submit.
+const QR_MAX_PER_HOUR = 30
+
+async function loadTenantByPublicToken(token: string) {
+  if (!/^[a-f0-9]{32}$/.test(token)) return null
+  const sb = createServiceClient()
+  const { data } = await sb.from('tenants').select('id').eq('intake_public_token', token).maybeSingle()
+  return data
+}
+
+async function loadBusiness(tenantId: string) {
+  const sb = createServiceClient()
+  const { data: tenant } = await sb.from('tenants').select('name, phone, logo_base64').eq('id', tenantId).maybeSingle()
+  return { name: tenant?.name ?? '', phone: tenant?.phone ?? null, logo: tenant?.logo_base64 ?? null }
+}
 
 async function loadRow(token: string) {
   if (!/^[a-f0-9]{32}$/.test(token)) return null
@@ -27,11 +45,13 @@ async function loadRow(token: string) {
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   const row = await loadRow(token)
-  if (!row) return NextResponse.json({ error: 'not_found' }, { status: 404 })
+  if (!row) {
+    const tenant = await loadTenantByPublicToken(token)
+    if (!tenant) return NextResponse.json({ error: 'not_found' }, { status: 404 })
+    return NextResponse.json({ closed: false, business: await loadBusiness(tenant.id), submitted: false, data: {}, uploaded: [] })
+  }
 
-  const sb = createServiceClient()
-  const { data: tenant } = await sb.from('tenants').select('name, phone, logo_base64').eq('id', row.tenant_id).maybeSingle()
-  const business = { name: tenant?.name ?? '', phone: tenant?.phone ?? null, logo: tenant?.logo_base64 ?? null }
+  const business = await loadBusiness(row.tenant_id)
 
   if (!OPEN_STATUSES.includes(row.intake_status ?? '')) {
     return NextResponse.json({ closed: true, business })
@@ -58,8 +78,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   const row = await loadRow(token)
-  if (!row) return NextResponse.json({ error: 'הלינק לא נמצא' }, { status: 404 })
-  if (!OPEN_STATUSES.includes(row.intake_status ?? '')) {
+  const publicTenant = row ? null : await loadTenantByPublicToken(token)
+  if (!row && !publicTenant) return NextResponse.json({ error: 'הלינק לא נמצא' }, { status: 404 })
+  if (row && !OPEN_STATUSES.includes(row.intake_status ?? '')) {
     return NextResponse.json({ error: 'הטופס כבר נסגר' }, { status: 410 })
   }
 
@@ -70,6 +91,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
 
   // ── Single document upload ──
   if (fd.has('kind')) {
+    if (!row) return NextResponse.json({ error: 'יש לשלוח קודם את הפרטים' }, { status: 400 })
     const kind = String(fd.get('kind')) as IntakeFileKind
     const f    = fd.get('file')
     if (row.intake_status !== 'submitted') return NextResponse.json({ error: 'יש לשלוח קודם את הפרטים' }, { status: 400 })
@@ -126,7 +148,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
 
   const vehicle = await fetchVehicleByPlate(plate)
 
-  const { error } = await sb.from('car_inspections').update({
+  const details = {
     owner_name:    `${first} ${last}`,
     owner_id:      ownerId,
     owner_phone:   phone,
@@ -142,11 +164,46 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     intake_status: 'submitted',
     intake_submitted_at: new Date().toISOString(),
     intake_consent_at:   new Date().toISOString(),
-  }).eq('id', row.id)
+  }
 
+  // ── Personal link: update its inspection ──
+  if (row) {
+    const { error } = await sb.from('car_inspections').update(details).eq('id', row.id)
+    if (error) {
+      console.error('intake submit failed:', error)
+      return NextResponse.json({ error: 'שגיאה בשמירה — נסה שוב' }, { status: 500 })
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Fixed business link: create a new inspection (or reuse this customer's pending one) ──
+  const tenantId = publicTenant!.id
+  const { data: existing } = await sb.from('car_inspections')
+    .select('id, intake_token')
+    .eq('tenant_id', tenantId).eq('intake_status', 'submitted')
+    .eq('owner_phone', phone).eq('plate', plate)
+    .limit(1).maybeSingle()
+  if (existing?.intake_token) {
+    const { error } = await sb.from('car_inspections').update(details).eq('id', existing.id)
+    if (error) return NextResponse.json({ error: 'שגיאה בשמירה — נסה שוב' }, { status: 500 })
+    return NextResponse.json({ ok: true, token: existing.intake_token })
+  }
+
+  const { count } = await sb.from('car_inspections')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId).eq('intake_source', 'qr')
+    .gte('created_at', new Date(Date.now() - 3_600_000).toISOString())
+  if ((count ?? 0) >= QR_MAX_PER_HOUR) {
+    return NextResponse.json({ error: 'יותר מדי פניות כרגע – נסה שוב מאוחר יותר או צור קשר עם העסק' }, { status: 429 })
+  }
+
+  const personal = newIntakeToken()
+  const { error } = await sb.from('car_inspections').insert({
+    ...details, tenant_id: tenantId, status: 'draft', intake_source: 'qr', intake_token: personal,
+  })
   if (error) {
-    console.error('intake submit failed:', error)
+    console.error('intake qr create failed:', error)
     return NextResponse.json({ error: 'שגיאה בשמירה — נסה שוב' }, { status: 500 })
   }
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, token: personal })
 }

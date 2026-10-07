@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { intakeMissing, newIntakeToken, type IntakeFile, type IntakeStatus } from '@/lib/inspections/intake'
 import IntakeFilesModal from './IntakeFilesModal'
+import IntakeQrModal from './IntakeQrModal'
 
 // "טפסים מלקוחות" tab: send a personal pre-fill link, then see what each customer submitted
 // (with a missing-data marker) until they physically arrive.
@@ -26,6 +27,7 @@ export interface IntakeRow {
   intake_token: string | null
   intake_files: IntakeFile[] | null
   intake_submitted_at: string | null
+  intake_source: 'link' | 'qr' | null
   created_at: string
 }
 
@@ -57,6 +59,7 @@ export default function IntakeTab({ rows, tenantId, businessName, onChanged, onA
   const [phone, setPhone]       = useState('')
   const [creating, setCreating] = useState(false)
   const [filesFor, setFilesFor] = useState<IntakeRow | null>(null)
+  const [qrOpen, setQrOpen]     = useState(false)
 
   async function createLink(send: 'whatsapp' | 'copy') {
     if (!tenantId) return
@@ -64,7 +67,7 @@ export default function IntakeTab({ rows, tenantId, businessName, onChanged, onA
     const token = newIntakeToken()
     const { error } = await supabase.from('car_inspections').insert({
       tenant_id: tenantId, plate: '', owner_name: '', owner_phone: phone.trim() || null,
-      status: 'draft', intake_status: 'link_sent', intake_token: token,
+      status: 'draft', intake_status: 'link_sent', intake_token: token, intake_source: 'link',
     })
     setCreating(false)
     if (error) { console.error('create intake link failed:', error); showToast('שגיאה ביצירת הלינק', 'error'); return }
@@ -86,9 +89,12 @@ export default function IntakeTab({ rows, tenantId, businessName, onChanged, onA
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-          שלח ללקוח לינק — הוא ממלא פרטים ומעלה מסמכים, והבדיקה מחכה כאן עד שיגיע.
+          לקוח ממלא פרטים ומעלה מסמכים – דרך לינק אישי או הברקוד הקבוע – והבדיקה מחכה כאן עד שיגיע.
         </div>
-        <Button size="sm" onClick={() => setNewOpen(o => !o)}>➕ שלח לינק ללקוח</Button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Button size="sm" variant="secondary" onClick={() => setQrOpen(true)}>📱 ברקוד / קישור קבוע</Button>
+          <Button size="sm" onClick={() => setNewOpen(o => !o)}>➕ שלח לינק ללקוח</Button>
+        </div>
       </div>
 
       {newOpen && (
@@ -128,6 +134,9 @@ export default function IntakeTab({ rows, tenantId, businessName, onChanged, onA
                       background: submitted ? '#d1fae5' : '#f1f5f9', color: submitted ? '#065f46' : '#475569',
                     }}>
                       {submitted ? `✓ מולא ${r.intake_submitted_at ? fmtDateTime(r.intake_submitted_at) : ''}` : `⏳ ממתין למילוי · נשלח ${fmtDateTime(r.created_at)}`}
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                      {r.intake_source === 'qr' ? '📱 מהברקוד' : '🔗 לינק אישי'}
                     </span>
                     {r.plate && (
                       <span style={{ background: 'var(--primary-light,#e8f7f0)', color: 'var(--primary)', fontWeight: 800, fontFamily: 'monospace', padding: '2px 10px', borderRadius: 6, fontSize: 14 }}>
@@ -179,6 +188,8 @@ export default function IntakeTab({ rows, tenantId, businessName, onChanged, onA
           })}
         </div>
       )}
+
+      {qrOpen && <IntakeQrModal businessName={businessName} onClose={() => setQrOpen(false)} />}
 
       {filesFor && (
         <IntakeFilesModal inspectionId={filesFor.id} title={filesFor.owner_name || filesFor.plate} onClose={() => setFilesFor(null)} />

@@ -29,6 +29,8 @@
 
 ## Do-Not-Repeat
 
+- [2026-10-07] `pkill -f "<pattern>"` inside a Bash tool call kills the tool's own shell (its command line contains the pattern) → exit 144 and the rest of the command never runs. Kill by PID from `pgrep` of a pattern not present in the command, or run the kill as its own call.
+
 - [2026-10-07] **Tailwind spacing classes (p-*, px-*, m*, mx-auto…) silently do nothing in this app**: `app/globals.css` has an unlayered `* { margin:0; padding:0 }` reset, which beats Tailwind v4's `@layer utilities`. Use inline styles or the v4 important suffix (`p-5!`, `mx-auto!`) for spacing. Hit while restyling `IntakeFormClient.tsx` (screenshots showed zero padding). Don't "fix" globals.css without a full-app visual check — many screens may rely on it.
 - [2026-10-07] File-based `icon.png` inside a route segment (app/intake/icon.png) did NOT override the root layout's config `icons` — set `icons` in the page's `generateMetadata` instead (done for /intake/[token]).
 
@@ -107,6 +109,8 @@
 - **Inspection checklist skeleton_only (2026-06-17):** skeleton_only flag stored in `findings` JSON as `{ skeleton_only: true, items: [...], notes: '' }`. No DB column needed. SKELETON_SYSTEM_INDICES = Set([16, 17]) — שלדת מרכב, מרכב (פחחות). Status 'na' added to ChecklistItem for non-skeleton systems. parseFindings() auto-applies 'na' when skeleton_only=true.
 
 ## Decision Log
+
+- **[2026-10-07] Intake: personal links AND a fixed business link / QR (user chose both).** `tenants.intake_public_token` (migration 085) shares the `/intake/[token]` URL with personal `car_inspections.intake_token`; the public API resolves personal first, then business. A details POST via the business token inserts a new row (`intake_source='qr'`, status submitted) — or reuses a pending one with the same phone+plate — and returns a new personal token; the client then `history.replaceState`s to it and uploads files there. Abuse cap: 30 QR submissions/hour/tenant (no IP stored). Office: "📱 ברקוד / קישור קבוע" in the intake tab → `IntakeQrModal` (qrcode lib, print A4 poster, admin-only "replace link" to kill old printed QRs) via `/api/inspection-intake/public-link`.
 
 - **[2026-10-07] Customer intake form look:** user picked design A (teal #0b5c55, Assistant font, 3-step stepper w/ progress bar, license-plate-styled plate input, 52px+ inputs, inline field errors) and link preview A (`public/og/inspection-intake.png`, 1200×630, + `public/og/inspection-icon.png`), rendered from the design canvas https://claude.ai/artifact/TsGyvmQ6HZZkhSw3e1JA1J with Playwright. Page metadata: title "בדיקת קנייה – {business}", noindex.
 
