@@ -7,6 +7,7 @@ import type { YardSession, YardSessionItem, YardService, TirePosition } from '@/
 import { sessionTotal, formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
+import { useOnScreenKeyboardPref } from '@/lib/hooks/useOnScreenKeyboardPref'
 import type { SearchResult } from '@/app/api/yard/search/route'
 
 interface Props {
@@ -22,6 +23,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const [confirmBusy,  setConfirmBusy]  = useState(false)
   const [editItem,    setEditItem]     = useState<YardSessionItem | null>(null)
   const [priceDigits, setPriceDigits]  = useState('')
+  const { enabled: kbEnabled }         = useOnScreenKeyboardPref()
   const [error,       setError]        = useState<string | null>(null)
   const [sending,      setSending]      = useState(false)
   const [isMobile,      setIsMobile]      = useState(false)
@@ -746,10 +748,25 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
                 </div>
                 <button onClick={() => setEditItem(null)} className="text-slate-400 hover:text-slate-700 font-bold text-lg">✕</button>
               </div>
-              <div className="text-center font-black text-blue-600" style={{ padding: '14px 20px 8px', fontSize: '36px' }}>
-                {displayPrice.toLocaleString()}₪
+              {/* Real input behind the numpad so a physical keyboard can type the price too */}
+              <div className="flex items-center justify-center font-black text-blue-600" dir="ltr" style={{ padding: '14px 20px 8px', fontSize: '36px' }}>
+                <input
+                  autoFocus
+                  value={priceDigits}
+                  placeholder={String(editItem.unit_price)}
+                  onChange={e => setPriceDigits(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); confirmPrice() }
+                    if (e.key === 'Escape') setEditItem(null)
+                  }}
+                  inputMode={kbEnabled ? 'none' : 'numeric'}
+                  aria-label="מחיר חדש"
+                  className="text-center font-black text-blue-600 bg-transparent outline-none placeholder:text-blue-600"
+                  style={{ width: `${Math.max(String(displayPrice).length, 1) + 1}ch`, fontSize: '36px' }}
+                />
+                <span>₪</span>
               </div>
-              <div className="flex" style={{ gap: '8px', padding: '0 20px 12px' }}>
+              <div className="flex" style={{ gap: '8px', padding: '0 20px 12px' }} onMouseDown={e => e.preventDefault()}>
                 {[20, 50, 100].map(d => (
                   <button key={d} onClick={() => applyDiscount(d)}
                     className="flex-1 bg-amber-50 border-2 border-amber-300 text-amber-700 rounded-xl font-bold active:bg-amber-100"
@@ -758,7 +775,8 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
                   </button>
                 ))}
               </div>
-              <div className="grid grid-cols-3" dir="ltr" style={{ gap: '8px', padding: '0 20px 16px' }}>
+              {/* mousedown preventDefault keeps focus in the price input, so mixing taps and typing works */}
+              <div className="grid grid-cols-3" dir="ltr" style={{ gap: '8px', padding: '0 20px 16px' }} onMouseDown={e => e.preventDefault()}>
                 {['1','2','3','4','5','6','7','8','9'].map(k => (
                   <button key={k} onClick={() => pressPriceKey(k)}
                     className="bg-slate-100 rounded-xl font-bold text-slate-800 active:bg-slate-200"

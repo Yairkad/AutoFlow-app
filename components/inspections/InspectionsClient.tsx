@@ -11,6 +11,9 @@ import PageHeader from '@/components/ui/PageHeader'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import InspectionChecklistModal, { ChecklistBadge, parseFindings, printChecklist } from './InspectionChecklistModal'
+import IntakeTab from './IntakeTab'
+import IntakeFilesModal from './IntakeFilesModal'
+import { intakeMissing, type IntakeFile, type IntakeStatus } from '@/lib/inspections/intake'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -42,7 +45,14 @@ interface Inspection {
   created_at: string
   drive_file_id: string | null
   inspection_number: number | null
+  intake_status: IntakeStatus | null
+  intake_token: string | null
+  intake_files: IntakeFile[] | null
+  intake_submitted_at: string | null
 }
+
+// Pre-fill rows still waiting for the customer — they live in the "טפסים מלקוחות" tab, not history.
+const isPendingIntake = (ins: Inspection) => ins.intake_status === 'link_sent' || ins.intake_status === 'submitted'
 
 interface BusinessInfo {
   name: string
@@ -313,7 +323,7 @@ export default function InspectionsClient() {
 
   const [inspections, setInspections] = useState<Inspection[]>([])
   const [loading, setLoading]         = useState(true)
-  const [tab, setTab]                 = useState<'entry' | 'history'>('entry')
+  const [tab, setTab]                 = useState<'entry' | 'history' | 'intake'>('entry')
   const [editingId, setEditingId]     = useState<string | null>(null)
   const [form, setForm]               = useState({ ...emptyForm })
   const [saving, setSaving]           = useState(false)
@@ -329,6 +339,7 @@ export default function InspectionsClient() {
   const [findingsMenuId, setFindingsMenuId] = useState<string | null>(null)
   const [skeletonOnly,   setSkeletonOnly]   = useState(false)
   const [editingInspection, setEditingInspection] = useState<Inspection | null>(null)
+  const [filesIns,       setFilesIns]       = useState<Inspection | null>(null)
   const inspectorNames = ['שרון מועלם']
 
   // ── Load ────────────────────────────────────────────────────────────────────
@@ -473,6 +484,8 @@ export default function InspectionsClient() {
       time:         nowTimeStr(),
       date:         todayStr(),
       status:       'completed' as const,
+      // Saving a pre-filled form = the customer arrived; it now becomes a regular inspection.
+      ...(editingInspection && isPendingIntake(editingInspection) ? { intake_status: 'arrived' } : {}),
       ...(findingsPayload !== undefined ? { findings: findingsPayload } : {}),
     }
 
@@ -538,6 +551,8 @@ export default function InspectionsClient() {
       time:         nowTimeStr(),
       date:         todayStr(),
       status:       'completed' as const,
+      // Saving a pre-filled form = the customer arrived; it now becomes a regular inspection.
+      ...(editingInspection && isPendingIntake(editingInspection) ? { intake_status: 'arrived' } : {}),
       ...(findingsPayload2 !== undefined ? { findings: findingsPayload2 } : {}),
     }
 
@@ -572,6 +587,9 @@ export default function InspectionsClient() {
   const handleDelete = async (id: string) => {
     const ok = await confirm({ msg: 'למחוק את הבדיקה?', variant: 'danger' })
     if (!ok) return
+    if (inspections.find(i => i.id === id)?.intake_files?.length) {
+      await fetch(`/api/inspection-intake/files?id=${id}`, { method: 'DELETE' }).catch(() => {})
+    }
     await supabase.from('car_inspections').delete().eq('id', id)
     showToast('נמחק', 'success')
     loadInspections()
@@ -631,7 +649,10 @@ export default function InspectionsClient() {
 
   // ── Filter ───────────────────────────────────────────────────────────────────
 
+  const pendingIntake   = inspections.filter(isPendingIntake)
+  const submittedIntake = pendingIntake.filter(i => i.intake_status === 'submitted').length
   const filtered = inspections.filter(ins => {
+    if (isPendingIntake(ins)) return false
     if (!search) return true
     const q = search.toLowerCase()
     return (
@@ -664,7 +685,7 @@ export default function InspectionsClient() {
         iconBg="linear-gradient(135deg,#10b981,#34d399)"
         iconShadow="#10b98144"
         title="בדיקות קניה"
-        subtitle={`${inspections.length} בדיקות שמורות`}
+        subtitle={`${inspections.length - pendingIntake.length} בדיקות שמורות`}
       />
 
       {/* Tab bar */}
@@ -672,10 +693,11 @@ export default function InspectionsClient() {
         {([
           { key: 'entry',   label: 'הזנת נתונים', icon: '📝' },
           { key: 'history', label: 'היסטוריה',    icon: '📋' },
+          { key: 'intake',  label: 'טפסים מלקוחות', icon: '📨' },
         ] as const).map(t => (
           <button
             key={t.key}
-            onClick={() => { setTab(t.key); if (t.key === 'history') loadInspections() }}
+            onClick={() => { setTab(t.key); if (t.key !== 'entry') loadInspections() }}
             style={{
               padding: '7px 16px', border: 'none', cursor: 'pointer',
               fontFamily: 'inherit', fontSize: 13, fontWeight: tab === t.key ? 600 : 400,
@@ -687,6 +709,11 @@ export default function InspectionsClient() {
             }}
           >
             {t.icon} {t.label}
+            {t.key === 'intake' && submittedIntake > 0 && (
+              <span style={{ marginInlineStart: 6, background: '#f59e0b', color: '#fff', borderRadius: 10, padding: '0 7px', fontSize: 11, fontWeight: 800 }}>
+                {submittedIntake}
+              </span>
+            )}
           </button>
         ))}
       </div></div>
@@ -856,6 +883,18 @@ export default function InspectionsClient() {
         </div>
       )}
 
+      {/* ── TAB: טפסים מלקוחות ── */}
+      {tab === 'intake' && (
+        <IntakeTab
+          rows={pendingIntake}
+          tenantId={tenantId.current}
+          businessName={bizInfo.current.name}
+          onChanged={loadInspections}
+          onArrived={id => { const ins = inspections.find(i => i.id === id); if (ins) openEdit(ins) }}
+          onDelete={handleDelete}
+        />
+      )}
+
       {/* ── TAB: היסטוריה ── */}
       {tab === 'history' && (
         <div>
@@ -917,6 +956,7 @@ export default function InspectionsClient() {
                       <RowActionsMenu actions={[
                         { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openEdit(ins) },
                         { key: 'print', label: 'הדפס', icon: '🖨️', onClick: () => handlePrint(ins) },
+                        ...(ins.intake_files?.length ? [{ key: 'docs', label: 'מסמכי לקוח', icon: '📎', onClick: () => setFilesIns(ins) }] : []),
                         { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => handleDelete(ins.id) },
                       ]} />
                     </div>
@@ -1040,6 +1080,10 @@ export default function InspectionsClient() {
         />
       )}
 
+      {filesIns && (
+        <IntakeFilesModal inspectionId={filesIns.id} title={filesIns.owner_name || filesIns.plate} onClose={() => setFilesIns(null)} />
+      )}
+
       {/* ── Edit Modal ── */}
       {editModalOpen && (
         <>
@@ -1069,8 +1113,29 @@ export default function InspectionsClient() {
                 background: 'none', border: 'none', fontSize: 20, lineHeight: 1,
                 cursor: 'pointer', color: 'var(--text-muted)', padding: 4,
               }}>✕</button>
-              <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>עריכת בדיקה</span>
+              <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>
+                {editingInspection && isPendingIntake(editingInspection) ? 'קליטת לקוח מטופס' : 'עריכת בדיקה'}
+              </span>
+              {!!editingInspection?.intake_files?.length && (
+                <button onClick={() => setFilesIns(editingInspection)} style={{
+                  marginInlineStart: 'auto', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  border: '1px solid var(--border)', background: 'var(--bg)', cursor: 'pointer', fontFamily: 'inherit',
+                }}>📎 מסמכים ({editingInspection.intake_files.length})</button>
+              )}
             </div>
+
+            {editingInspection && isPendingIntake(editingInspection) && (() => {
+              const missing = intakeMissing({ ...editingInspection, owner_address: form.owner_address, km: form.km })
+              return (
+                <div style={{ margin: '16px 20px 0', fontSize: 13, fontWeight: 700, borderRadius: 8, padding: '8px 12px',
+                  ...(missing.length
+                    ? { color: '#92400e', background: '#fef3c7', border: '1px solid #fcd34d' }
+                    : { color: '#065f46', background: '#d1fae5', border: '1px solid #6ee7b7' }) }}>
+                  {missing.length ? `⚠️ חסר — להשלים עכשיו: ${missing.join(' · ')}` : '✓ כל הנתונים התקבלו מהלקוח'}
+                  <div style={{ fontWeight: 400, marginTop: 2 }}>שמירה תעביר את הבדיקה להיסטוריה עם התאריך והשעה של עכשיו.</div>
+                </div>
+              )
+            })()}
 
             {/* Form */}
             <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 12 }}>

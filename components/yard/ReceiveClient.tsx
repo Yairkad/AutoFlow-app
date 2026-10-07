@@ -406,7 +406,10 @@ export default function ReceiveClient() {
               <div className="bg-white rounded-2xl shadow flex items-center gap-3" style={{ padding: '16px' }}>
                 <span className="font-bold text-slate-700 flex-shrink-0">כמות:</span>
                 <button onClick={() => setQty(q => Math.max(1, q - 1))} className="bg-slate-100 rounded-lg font-black text-slate-600 active:bg-slate-200" style={{ width: '40px', height: '40px', fontSize: '20px' }}>−</button>
-                <span className="font-black text-slate-900 w-10 text-center" style={{ fontSize: '22px' }}>{qty}</span>
+                <input value={qty} inputMode="numeric" aria-label="כמות"
+                  onFocus={e => e.currentTarget.select()}
+                  onChange={e => setQty(Math.max(1, Number(e.target.value.replace(/\D/g, '')) || 1))}
+                  className="font-black text-slate-900 w-10 text-center bg-transparent outline-none" style={{ fontSize: '22px' }} />
                 <button onClick={() => setQty(q => q + 1)} className="bg-slate-100 rounded-lg font-black text-green-600 active:bg-slate-200" style={{ width: '40px', height: '40px', fontSize: '20px' }}>+</button>
               </div>
 

@@ -2126,3 +2126,17 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 00:00 | Customer debt modal: plate per invoice line (was one plate for all lines) | CustomerTrackingTab.tsx | done, tsc clean | ~6k |
 | 00:00 | Inspections: history refetch on tab open, awaited reload after save, no wipe on fetch error | InspectionsClient.tsx | done | ~3k |
+
+## Session: 2026-10-07 09:56
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-07 10:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:11 | Created supabase/migrations/083_inspection_intake.sql | — | ~352 |
+
+| 10:00 | Yard price-edit modal + qty steppers now accept physical keyboard (real inputs) | WorkCardClient, FreeSearchClient, ReceiveClient | done | ~3k |
+| 10:30 | Purchase-inspection pre-fill link feature (public form, docs to private bucket, intake tab, arrival flow) | migration 083, app/intake, api/public/inspection-intake, api/inspection-intake/files, components/inspections/* | build passes | ~40k |

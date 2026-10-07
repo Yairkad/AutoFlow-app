@@ -843,5 +843,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-09-23"
+  },
+  {
+    "id": "bug-042",
+    "timestamp": "2026-10-07T10:00:00Z",
+    "error_message": "Changing an item price (and qty) in the yard works only via the on-screen keypad, not with a regular keyboard",
+    "file": "components/yard/WorkCardClient.tsx",
+    "root_cause": "Price modal and qty steppers rendered the value in a div/span with no backing <input>, so keyboard events had nowhere to go",
+    "fix": "Replaced with controlled inputs (digits-only, Enter confirms, Esc closes); numpad mousedown preventDefault keeps focus; same for qty in FreeSearchClient/ReceiveClient",
+    "tags": [
+      "keyboard",
+      "yard",
+      "numpad",
+      "input"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-07"
   }
 ]
