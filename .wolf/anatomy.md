@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-07T10:11:37.040Z
-> Files: 23 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-07T11:43:00.140Z
+> Files: 28 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -35,6 +35,14 @@
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
 
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/intake-design/project/
+
+- `canvas.json` (~195 tok)
+- `DesignB.dc.html` — טופס בדיקת קנייה – עיצוב ב (~3304 tok)
+- `Main.dc.html` — טופס בדיקת קנייה – עיצוב א (~3369 tok)
+- `PreviewA.dc.html` — תמונת לינק א (~493 tok)
+- `PreviewB.dc.html` — תמונת לינק ב (~940 tok)
 
 ## ./
 
@@ -179,6 +187,12 @@
 ## app/api/employees/invite/
 
 
+## app/api/inspection-intake/files/
+
+
+## app/api/inspection-intake/purge/
+
+
 ## app/api/onboarding/complete/
 
 
@@ -187,23 +201,6 @@
 
 ## app/api/public/inspection-intake/[token]/
 
-- `route.ts` — public GET (form state) / POST (details OR single file `kind`+`file`) for the inspection pre-fill link; service client, token-scoped, only while intake_status link_sent|submitted
-
-## app/api/inspection-intake/files/
-
-- `route.ts` — authed GET signed URLs / DELETE storage objects for an inspection's intake_files (tenant-checked)
-
-## app/api/inspection-intake/purge/
-
-- `route.ts` — authed POST: deletes tenant's intake_files 30 days after intake_arrived_at (or submitted_at if never arrived); called on InspectionsClient load (no cron in app)
-
-## app/intake/[token]/
-
-- `page.tsx` — public page wrapper for IntakeFormClient
-
-## lib/inspections/
-
-- `intake.ts` — IntakeStatus/IntakeFile types, INTAKE_FILE_KINDS, intakeMissing(), newIntakeToken(), bucket name + 4MB limit
 
 ## app/api/public/plate/
 
@@ -269,6 +266,9 @@
 
 
 ## app/inspections/
+
+
+## app/intake/[token]/
 
 
 ## app/login/
@@ -403,10 +403,6 @@
 
 ## components/inspections/
 
-- `IntakeFormClient.tsx` — PUBLIC customer pre-fill form for a purchase inspection (/intake/[token]): personal+vehicle details (plate autofill via fetchVehicleByPlate), 3 optional docs; posts details then each file separately (client-side image compression)
-- `IntakeTab.tsx` — "טפסים מלקוחות" tab: create/send personal link (WhatsApp/copy), list pending rows w/ missing-data marker, "הלקוח הגיע" opens edit drawer
-- `IntakeFilesModal.tsx` — signed-URL document viewer w/ per-file print (standalone window); exports printIntakeFile
-
 
 ## components/landing/
 
@@ -476,6 +472,9 @@
 
 
 ## lib/hooks/
+
+
+## lib/inspections/
 
 
 ## lib/reports/
