@@ -16,11 +16,11 @@ export const INTAKE_BUCKET = 'inspection-intake'
 // Each file is posted in its own request; Vercel rejects request bodies above ~4.5MB.
 export const INTAKE_MAX_FILE_BYTES = 4 * 1024 * 1024
 
-// label = form field; bring = "bring it physically" note for the customer; office = office screen name
-export const INTAKE_FILE_KINDS: { kind: IntakeFileKind; label: string; bring: string; office: string }[] = [
-  { kind: 'buyer_id',    label: 'צילום תעודת זהות שלך',             bring: 'תעודת זהות',                        office: 'ת.ז קונה' },
-  { kind: 'seller_id',   label: 'צילום תעודת זהות של המוכר (אם יש)', bring: 'תעודת זהות של המוכר (אם רלוונטי)', office: 'ת.ז מוכר' },
-  { kind: 'car_license', label: 'צילום רישיון רכב',                 bring: 'רישיון רכב (מקור)',                 office: 'רישיון רכב' },
+// label/hint = customer form; bring = "bring it physically" note for the customer; office = office screen name
+export const INTAKE_FILE_KINDS: { kind: IntakeFileKind; label: string; hint: string; bring: string; office: string }[] = [
+  { kind: 'buyer_id',    label: 'תעודת זהות שלך',      hint: 'צילום ברור של הצד עם התמונה', bring: 'תעודת זהות',                        office: 'ת.ז קונה' },
+  { kind: 'seller_id',   label: 'תעודת זהות של המוכר', hint: 'אם יש לך',                    bring: 'תעודת זהות של המוכר (אם רלוונטי)', office: 'ת.ז מוכר' },
+  { kind: 'car_license', label: 'רישיון רכב',          hint: 'צילום ברור',                  bring: 'רישיון רכב (מקור)',                 office: 'רישיון רכב' },
 ]
 
 export const intakeFileLabel = (kind: IntakeFileKind) =>
@@ -42,6 +42,10 @@ export function intakeMissing(row: {
   if (!has('car_license'))        missing.push('רישיון רכב')
   return missing
 }
+
+// Uploaded documents are deleted this many days after the customer arrived (or, if they never
+// arrived, after they submitted the form). Stated in the privacy policy — keep both in sync.
+export const INTAKE_FILE_RETENTION_DAYS = 30
 
 export function newIntakeToken(): string {
   const bytes = new Uint8Array(16)

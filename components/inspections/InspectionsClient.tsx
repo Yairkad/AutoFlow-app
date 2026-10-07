@@ -379,6 +379,10 @@ export default function InspectionsClient() {
         }
       }
 
+      // Retention: drop customer-uploaded ID/license images older than 30 days (fire-and-forget;
+      // runs whenever the office opens this screen — there is no cron in this app).
+      fetch('/api/inspection-intake/purge', { method: 'POST' }).catch(() => {})
+
       await loadInspections()
       setLoading(false)
     }
@@ -485,7 +489,7 @@ export default function InspectionsClient() {
       date:         todayStr(),
       status:       'completed' as const,
       // Saving a pre-filled form = the customer arrived; it now becomes a regular inspection.
-      ...(editingInspection && isPendingIntake(editingInspection) ? { intake_status: 'arrived' } : {}),
+      ...(editingInspection && isPendingIntake(editingInspection) ? { intake_status: 'arrived', intake_arrived_at: new Date().toISOString() } : {}),
       ...(findingsPayload !== undefined ? { findings: findingsPayload } : {}),
     }
 
@@ -552,7 +556,7 @@ export default function InspectionsClient() {
       date:         todayStr(),
       status:       'completed' as const,
       // Saving a pre-filled form = the customer arrived; it now becomes a regular inspection.
-      ...(editingInspection && isPendingIntake(editingInspection) ? { intake_status: 'arrived' } : {}),
+      ...(editingInspection && isPendingIntake(editingInspection) ? { intake_status: 'arrived', intake_arrived_at: new Date().toISOString() } : {}),
       ...(findingsPayload2 !== undefined ? { findings: findingsPayload2 } : {}),
     }
 

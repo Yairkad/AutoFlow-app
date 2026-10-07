@@ -54,7 +54,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
 
 // Two request shapes (each file goes in its own request — Vercel caps a request body at ~4.5MB):
 //   • details:  first_name, last_name, owner_id, owner_phone, owner_address, plate, km, car_code
-//   • one file: kind + file
+//   • one file: kind + file   (only after details were saved — that's where consent is recorded)
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   const row = await loadRow(token)
@@ -72,6 +72,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   if (fd.has('kind')) {
     const kind = String(fd.get('kind')) as IntakeFileKind
     const f    = fd.get('file')
+    if (row.intake_status !== 'submitted') return NextResponse.json({ error: 'יש לשלוח קודם את הפרטים' }, { status: 400 })
     if (!INTAKE_FILE_KINDS.some(k => k.kind === kind)) return NextResponse.json({ error: 'סוג מסמך לא תקין' }, { status: 400 })
     if (!(f instanceof File) || f.size === 0) return NextResponse.json({ error: 'לא נבחר קובץ' }, { status: 400 })
     if (f.size > INTAKE_MAX_FILE_BYTES) return NextResponse.json({ error: 'קובץ גדול מדי' }, { status: 400 })
@@ -112,6 +113,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   const km      = str('km', 9).replace(/\D/g, '')
   const carCode = str('car_code', 30)
 
+  if (fd.get('consent') !== '1') {
+    return NextResponse.json({ error: 'יש לאשר את מדיניות הפרטיות' }, { status: 400 })
+  }
+
   const missing: string[] = []
   if (!first || !last)     missing.push('שם מלא')
   if (ownerId.length < 5)  missing.push('תעודת זהות')
@@ -136,6 +141,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     chassis:       vehicle?.chassis ?? null,
     intake_status: 'submitted',
     intake_submitted_at: new Date().toISOString(),
+    intake_consent_at:   new Date().toISOString(),
   }).eq('id', row.id)
 
   if (error) {

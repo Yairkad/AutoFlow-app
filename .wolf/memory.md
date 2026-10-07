@@ -2140,3 +2140,30 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | 10:00 | Yard price-edit modal + qty steppers now accept physical keyboard (real inputs) | WorkCardClient, FreeSearchClient, ReceiveClient | done | ~3k |
 | 10:30 | Purchase-inspection pre-fill link feature (public form, docs to private bucket, intake tab, arrival flow) | migration 083, app/intake, api/public/inspection-intake, api/inspection-intake/files, components/inspections/* | build passes | ~40k |
+
+## Session: 2026-10-07 11:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:00 | Intake privacy: consent checkbox, 30-day doc purge, privacy policy update | migration 084, purge route, IntakeFormClient, privacy page | build passes | ~8k |
+
+## Session: 2026-10-07 11:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-07 11:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-07 11:39
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:40 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/intake-design/project/canvas.json | — | ~195 |
+| 11:41 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/intake-design/project/Main.dc.html | — | ~3369 |
+| 11:42 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/intake-design/project/DesignB.dc.html | — | ~3304 |
+| 11:42 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/intake-design/project/PreviewA.dc.html | — | ~493 |
+| 11:43 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/intake-design/project/PreviewB.dc.html | — | ~940 |
+| 12:00 | Intake form redesigned (design A, stepper), WhatsApp OG image + icon, page metadata | IntakeFormClient, app/intake/[token]/page.tsx, public/og/* | build ok, screenshots verified | ~25k |
