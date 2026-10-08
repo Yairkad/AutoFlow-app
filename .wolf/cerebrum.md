@@ -31,6 +31,10 @@
 
 ## Do-Not-Repeat
 
+- [2026-10-08] Vercel is on the Hobby plan: keep `export const maxDuration` ≤ 60 and Vercel crons at most once per day — a higher maxDuration fails the deploy even though a local `next build` passes (bug-043).
+
+- [2026-10-08] `lib/drive.ts::uploadFile` grants `anyone: reader` on every upload by default (for car-photo thumbnails). Anything sensitive (backups, ID documents) must pass `{ public: false }`.
+
 - [2026-10-07] `pkill -f "<pattern>"` inside a Bash tool call kills the tool's own shell (its command line contains the pattern) → exit 144 and the rest of the command never runs. Kill by PID from `pgrep` of a pattern not present in the command, or run the kill as its own call.
 
 - [2026-10-07] **Tailwind spacing classes (p-*, px-*, m*, mx-auto…) silently do nothing in this app**: `app/globals.css` has an unlayered `* { margin:0; padding:0 }` reset, which beats Tailwind v4's `@layer utilities`. Use inline styles or the v4 important suffix (`p-5!`, `mx-auto!`) for spacing. Hit while restyling `IntakeFormClient.tsx` (screenshots showed zero padding). Don't "fix" globals.css without a full-app visual check — many screens may rely on it.
@@ -111,6 +115,8 @@
 - **Inspection checklist skeleton_only (2026-06-17):** skeleton_only flag stored in `findings` JSON as `{ skeleton_only: true, items: [...], notes: '' }`. No DB column needed. SKELETON_SYSTEM_INDICES = Set([16, 17]) — שלדת מרכב, מרכב (פחחות). Status 'na' added to ChecklistItem for non-skeleton systems. parseFindings() auto-applies 'na' when skeleton_only=true.
 
 ## Decision Log
+
+- **[2026-10-08] Full backup + automatic Drive backup + reminder (user asked for all three after a Supabase outage; free tier has NO backups).** `lib/backup/backup.ts` is the single source of the table list (parents-first restore order; `tire_inventory_count_entries` via session ids; `profiles`/tenant row record-only; vault_items + registration_tokens excluded; tenant *_token columns and settings.vault_pin_hash stripped). Reads paginate 1000 rows and THROW on error (old client export silently returned [] past 1000 rows / on error). Routes: GET /api/backup/export (admin download), POST /api/backup/drive (admin), GET /api/cron/backup (Vercel cron 00:30 UTC daily, needs CRON_SECRET env). Drive copies go to "<root>/גיבויים", private (`uploadFile(..., { public: false })` — the helper made every upload public by default!), keep last 30. `tenants.last_backup_at/kind/error` (migration 086) drives `components/layout/BackupReminder.tsx` (admins, >7 days, session-dismissable) and the status card in Settings → גיבוי (deep link `/settings?tab=backup`).
 
 - **[2026-10-07] Intake: personal links AND a fixed business link / QR (user chose both).** `tenants.intake_public_token` (migration 085) shares the `/intake/[token]` URL with personal `car_inspections.intake_token`; the public API resolves personal first, then business. A details POST via the business token inserts a new row (`intake_source='qr'`, status submitted) — or reuses a pending one with the same phone+plate — and returns a new personal token; the client then `history.replaceState`s to it and uploads files there. Abuse cap: 30 QR submissions/hour/tenant (no IP stored). Office: "📱 ברקוד / קישור קבוע" in the intake tab → `IntakeQrModal` (qrcode lib, print A4 poster, admin-only "replace link" to kill old printed QRs) via `/api/inspection-intake/public-link`.
 

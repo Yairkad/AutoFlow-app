@@ -102,6 +102,7 @@ export async function uploadFile(
   mimeType: string,
   fileName: string,
   folderId?: string | null,
+  opts: { public?: boolean } = {},
 ): Promise<DriveFile> {
   const metaObj: Record<string, unknown> = { name: fileName }
   if (folderId) metaObj.parents = [folderId]
@@ -127,8 +128,9 @@ export async function uploadFile(
   const data = await res.json()
   if (!data.id) throw new Error('Upload failed: ' + JSON.stringify(data))
 
-  // Make file publicly readable (so thumbnails work without auth)
-  await fetch(`${DRIVE_URL}/files/${data.id}/permissions`, {
+  // Make file publicly readable (so thumbnails work without auth). Pass { public: false } for
+  // anything sensitive — e.g. data backups must stay private to the Drive owner.
+  if (opts.public !== false) await fetch(`${DRIVE_URL}/files/${data.id}/permissions`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ role: 'reader', type: 'anyone' }),
