@@ -860,5 +860,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-07"
+  },
+  {
+    "id": "bug-043",
+    "timestamp": "2026-10-08T11:00:00Z",
+    "error_message": "Vercel emailed: build failed after pushing the backup feature (local next build passed)",
+    "file": "app/api/cron/backup/route.ts",
+    "root_cause": "Most likely `export const maxDuration = 300` — above the Vercel Hobby plan limit (60s without Fluid compute), which Vercel rejects at deploy time; not reproducible with a local next build. Vercel logs were not accessible from the session, so this is inferred from the only Vercel-specific settings in the push (vercel.json cron + maxDuration).",
+    "fix": "maxDuration lowered to 60 on the cron route (other routes already 60).",
+    "tags": [
+      "vercel",
+      "deploy",
+      "maxDuration",
+      "cron",
+      "hobby"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
   }
 ]

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { backupTenantToDrive } from '@/lib/backup/driveBackup'
 
-export const maxDuration = 300
+// 60s = the Vercel Hobby limit (a higher value fails the deploy). Enough for one business.
+export const maxDuration = 60
 
 // Daily automatic backup (Vercel Cron, see vercel.json) of every business that connected Drive.
 // Vercel sends `Authorization: Bearer $CRON_SECRET`; without CRON_SECRET set the route refuses.

@@ -31,6 +31,8 @@
 
 ## Do-Not-Repeat
 
+- [2026-10-08] Vercel is on the Hobby plan: keep `export const maxDuration` ≤ 60 and Vercel crons at most once per day — a higher maxDuration fails the deploy even though a local `next build` passes (bug-043).
+
 - [2026-10-08] `lib/drive.ts::uploadFile` grants `anyone: reader` on every upload by default (for car-photo thumbnails). Anything sensitive (backups, ID documents) must pass `{ public: false }`.
 
 - [2026-10-07] `pkill -f "<pattern>"` inside a Bash tool call kills the tool's own shell (its command line contains the pattern) → exit 144 and the rest of the command never runs. Kill by PID from `pgrep` of a pattern not present in the command, or run the kill as its own call.
