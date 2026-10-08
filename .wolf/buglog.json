@@ -878,5 +878,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-08"
+  },
+  {
+    "id": "bug-044",
+    "timestamp": "2026-10-08T11:30:00Z",
+    "error_message": "Creating the fixed purchase-inspection link shows 'שגיאה ביצירת הקישור'",
+    "file": "app/api/inspection-intake/public-link/route.ts",
+    "root_cause": "Almost certainly migration 085 (tenants.intake_public_token, car_inspections.intake_source) not yet run in Supabase; the route swallowed the select error and returned a generic message. Same missing column would also break 'שלח לינק ללקוח' (insert with intake_source).",
+    "fix": "Route now returns the DB error, with a specific 'run migration 085' message on missing-column codes (42703/PGRST204); IntakeTab retries the personal-link insert without intake_source when that column is missing.",
+    "tags": [
+      "intake",
+      "qr",
+      "migration",
+      "supabase",
+      "error-handling"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-08"
   }
 ]
