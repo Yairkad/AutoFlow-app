@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast'
 import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
+import { BACKUP_TABLES, CHILD_TABLES } from '@/lib/backup/backup'
 
 type ToastFn = (msg: string, type?: 'success' | 'error' | 'info') => void
 
@@ -1458,44 +1459,63 @@ function PricesSection({ supabase, tenantId, showToast }: { supabase: ReturnType
 
 // ── BackupTab ───────────────────────────────────────────────────────────────
 
-const BACKUP_TABLES = [
-  'tires','tire_sales','products','product_sales',
-  'alignment_jobs','recurring_items',
-  'cars','car_requests','car_sale_requests',
-  'customer_debts','supplier_debts','supplier_debt_payments','supplier_categories','suppliers',
-  'customers','customer_categories','customer_ledger_debts','customer_ledger_payments',
-  'employees','salaries','scheduled_payments',
-  'expense_categories','expenses','income','income_categories','recurring_expenses',
-  'quotes','car_inspections','reminders',
-] as const
+// The table list, order and what a backup contains live in lib/backup/backup.ts (shared with
+// the server-side export, "back up to Drive now" and the daily automatic Drive backup).
+const RESTORE_TABLES: string[] = [...BACKUP_TABLES, ...Object.keys(CHILD_TABLES)]
 
-function BackupTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
+function fmtBackupDate(iso: string | null) {
+  if (!iso) return null
+  const d = new Date(iso)
+  return `${d.toLocaleDateString('he-IL')} ${d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`
+}
+
+function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn; driveConnected: boolean | null }) {
   const [exporting, setExporting] = useState(false)
+  const [drivingUp, setDrivingUp] = useState(false)
+  const [last, setLast] = useState<{ at: string | null; kind: string | null; error: string | null } | null>(null)
   const [restoreFile, setRestoreFile] = useState<File | null>(null)
   const [showPassModal, setShowPassModal] = useState(false)
   const [password, setPassword] = useState('')
   const [restoring, setRestoring] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const loadLast = useCallback(async () => {
+    const { data } = await supabase.from('tenants').select('last_backup_at, last_backup_kind, last_backup_error').eq('id', tenantId).maybeSingle()
+    if (data) setLast({ at: data.last_backup_at, kind: data.last_backup_kind, error: data.last_backup_error })
+  }, [supabase, tenantId])
+  useEffect(() => { loadLast() }, [loadLast])
+
   async function doExport() {
     setExporting(true)
     try {
-      const backup: Record<string, unknown[]> = { _version: 1, _exported_at: new Date().toISOString(), _tenant_id: tenantId } as never
-      for (const table of BACKUP_TABLES) {
-        const { data } = await supabase.from(table).select('*').eq('tenant_id', tenantId)
-        backup[table] = data ?? []
-      }
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+      const res = await fetch('/api/backup/export')
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`)
+      const blob = await res.blob()
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
       a.download = `גיבוי_${new Date().toISOString().slice(0, 10)}.json`
       a.click()
       URL.revokeObjectURL(a.href)
       showToast('גיבוי יוצא בהצלחה ✓', 'success')
-    } catch {
-      showToast('שגיאה בייצוא גיבוי', 'error')
+      loadLast()
+    } catch (e) {
+      showToast(`שגיאה בייצוא גיבוי: ${e instanceof Error ? e.message : ''}`, 'error')
     }
     setExporting(false)
+  }
+
+  async function doDriveBackup() {
+    setDrivingUp(true)
+    try {
+      const res = await fetch('/api/backup/drive', { method: 'POST' })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(j.error ?? `HTTP ${res.status}`)
+      showToast('הגיבוי נשמר בדרייב ✓', 'success')
+      loadLast()
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'שגיאה בגיבוי לדרייב', 'error')
+    }
+    setDrivingUp(false)
   }
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -1520,16 +1540,27 @@ function BackupTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typ
       const text = await restoreFile.text()
       const backup = JSON.parse(text) as Record<string, unknown[]>
 
-      // Upsert each table
+      // Upsert each table (parents first). Tables that fail — usually a foreign key to a table
+      // later in the list — get one more pass at the end. Profiles / tenant are never restored.
       let restored = 0
-      for (const table of BACKUP_TABLES) {
-        const rows = backup[table]
-        if (!Array.isArray(rows) || rows.length === 0) continue
-        const { error } = await supabase.from(table).upsert(rows as never, { onConflict: 'id' })
-        if (!error) restored += rows.length
+      let pending = RESTORE_TABLES.filter(t => Array.isArray(backup[t]) && backup[t].length > 0)
+      for (let pass = 0; pass < 2 && pending.length; pass++) {
+        const failed: string[] = []
+        for (const table of pending) {
+          const rows = backup[table]
+          let ok = true
+          for (let i = 0; i < rows.length; i += 500) {
+            const { error } = await supabase.from(table).upsert(rows.slice(i, i + 500) as never, { onConflict: 'id' })
+            if (error) { ok = false; console.error(`restore ${table}:`, error); break }
+          }
+          if (ok) restored += rows.length
+          else failed.push(table)
+        }
+        pending = failed
       }
 
-      showToast(`שוחזרו ${restored} רשומות ✓`, 'success')
+      if (pending.length) showToast(`שוחזרו ${restored} רשומות. נכשלו: ${pending.join(', ')}`, 'error')
+      else showToast(`שוחזרו ${restored} רשומות ✓`, 'success')
       setShowPassModal(false)
       setRestoreFile(null)
       setPassword('')
@@ -1546,11 +1577,48 @@ function BackupTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typ
 
   return (
     <div>
+      {/* Status */}
+      {last && (
+        <div style={{ ...cardSt, padding: '14px 20px', background: last.at && Date.now() - new Date(last.at).getTime() < 7 * 86_400_000 ? '#f0fdf6' : '#fffbeb' }}>
+          <div style={{ fontWeight: 700, fontSize: '14px' }}>
+            {last.at
+              ? `גיבוי אחרון: ${fmtBackupDate(last.at)} (${last.kind === 'auto' ? 'אוטומטי לדרייב' : last.kind === 'drive' ? 'ידני לדרייב' : 'הורדה למחשב'})`
+              : '⚠️ עדיין לא בוצע גיבוי'}
+          </div>
+          {last.error && (
+            <div style={{ fontSize: '12px', color: 'var(--danger)', marginTop: 4 }}>הגיבוי האוטומטי האחרון נכשל: {last.error}</div>
+          )}
+        </div>
+      )}
+
+      {/* Drive */}
+      <div style={cardSt}>
+        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>☁️ גיבוי לגוגל דרייב</div>
+        <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.6 }}>
+          {driveConnected
+            ? <>כל לילה נשמר אוטומטית גיבוי מלא בתיקייה &quot;גיבויים&quot; בדרייב של העסק (נשמרים 30 הגיבויים האחרונים). הקבצים פרטיים – רק לבעל הדרייב.</>
+            : <>חבר את Google Drive (למעלה בעמוד) כדי שיישמר גיבוי אוטומטי כל לילה – גם אם המערכת לא זמינה, הגיבוי נשאר אצלך.</>}
+        </div>
+        <button
+          onClick={doDriveBackup}
+          disabled={drivingUp || !driveConnected}
+          style={{
+            padding: '10px 20px', borderRadius: '8px', border: 'none',
+            background: 'var(--primary)', color: '#fff', fontWeight: 700,
+            fontSize: '14px', cursor: drivingUp || !driveConnected ? 'not-allowed' : 'pointer',
+            opacity: drivingUp || !driveConnected ? 0.6 : 1, fontFamily: 'inherit',
+          }}
+        >
+          {drivingUp ? 'מגבה...' : '☁️ גבה עכשיו לדרייב'}
+        </button>
+      </div>
+
       {/* Export */}
       <div style={cardSt}>
         <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>📤 ייצוא גיבוי מלא</div>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
-          מוריד קובץ JSON עם כל הנתונים של העסק — צמיגים, מוצרים, הוצאות, חובות, רכבים ועוד.
+          מוריד קובץ JSON עם כל הנתונים של העסק — צמיגים, מוצרים, הוצאות, חובות, לקוחות, ספקים, בנק, מסוף רחבה, בדיקות קנייה ועוד.
+          לא כולל את הכספת (סיסמאות) ואת הקבצים שבדרייב.
         </div>
         <button
           onClick={doExport}
@@ -1652,6 +1720,11 @@ export default function SettingsClient() {
   const { showToast } = useToast()
   const { profile, loading } = useProfile()
   const [tab,            setTab]            = useState<Tab | null>(null)
+  // Deep link, e.g. the "no recent backup" reminder → /settings?tab=backup
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab')
+    if (t === 'backup' || t === 'business' || t === 'users' || t === 'landing' || t === 'vault') setTab(t)
+  }, [])
 
   const tenantId  = profile?.tenantId ?? null
   const myId      = profile?.userId ?? null
@@ -1708,7 +1781,7 @@ export default function SettingsClient() {
     users:    <UsersTab    supabase={supabase} tenantId={tenantId} myId={myId} showToast={showToast} />,
     landing:  <LandingTab  supabase={supabase} tenantId={tenantId} showToast={showToast} />,
     vault:    canVault ? <VaultTab supabase={supabase} tenantId={tenantId} showToast={showToast} /> : null,
-    backup:   isAdmin ? <BackupTab supabase={supabase} tenantId={tenantId} showToast={showToast} /> : null,
+    backup:   isAdmin ? <BackupTab supabase={supabase} tenantId={tenantId} showToast={showToast} driveConnected={driveConnected} /> : null,
   }
 
   return (
