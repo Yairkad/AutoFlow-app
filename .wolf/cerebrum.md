@@ -37,6 +37,8 @@
 
 ## Do-Not-Repeat
 
+- [2026-10-13] Any new upload to an /api route (Drive etc.) MUST go through `shrinkForUpload` from lib/utils/uploadCompress.ts and handle 413 / non-JSON responses — Vercel rejects bodies >4.5MB before the route runs, and `await res.json()` in a try/catch turns that into a misleading 'שגיאת רשת'.
+
 - [2026-10-07] `pkill -f "<pattern>"` inside a Bash tool call kills the tool's own shell (its command line contains the pattern) → exit 144 and the rest of the command never runs. Kill by PID from `pgrep` of a pattern not present in the command, or run the kill as its own call.
 
 - [2026-10-07] **Tailwind spacing classes (p-*, px-*, m*, mx-auto…) silently do nothing in this app**: `app/globals.css` has an unlayered `* { margin:0; padding:0 }` reset, which beats Tailwind v4's `@layer utilities`. Use inline styles or the v4 important suffix (`p-5!`, `mx-auto!`) for spacing. Hit while restyling `IntakeFormClient.tsx` (screenshots showed zero padding). Don't "fix" globals.css without a full-app visual check — many screens may rely on it.

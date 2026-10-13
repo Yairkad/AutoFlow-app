@@ -15,6 +15,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
 import { VehicleData } from '@/lib/utils/plateApi'
+import { MAX_UPLOAD_BYTES, shrinkForUpload } from '@/lib/utils/uploadCompress'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -490,14 +491,16 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
 
   async function uploadPhoto(idx: number, file: File) {
     setUploadingIdx(idx)
+    const small = await shrinkForUpload(file)
     const fd = new FormData()
-    fd.append('file', file)
+    fd.append('file', small)
     fd.append('tenant_id', tenantId.current)
     fd.append('sub_folder', 'רכבים')
     if (carForm.plate) fd.append('item_name', carForm.plate)
     try {
       const res  = await fetch('/api/drive/upload', { method: 'POST', body: fd })
-      const data = await res.json()
+      if (res.status === 413) { toast('התמונה גדולה מדי להעלאה (מקסימום כ-4MB)', 'error'); return }
+      const data = await res.json().catch(() => ({ error: `שגיאת שרת (${res.status})` }))
       if (data.id) {
         setPhotoUrls(p => p.map((u, i) => i === idx ? data.id : u))
         toast('התמונה הועלתה ✓', 'success')
@@ -543,17 +546,25 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     }
     const docLabel = name.trim()
     if (!docLabel) { toast('יש להזין שם למסמך', 'error'); return }
-    const dot = file.name.lastIndexOf('.')
-    const ext = dot > 0 ? file.name.slice(dot) : (file.type === 'application/pdf' ? '.pdf' : '')
-    const named = new File([file], `${carDrivePlate} - ${docLabel}${ext}`, { type: file.type })
     setCarDriveUploading(true)
+    // Phone photos / scans are often over Vercel's ~4.5MB request limit → shrink first.
+    const small = await shrinkForUpload(file)
+    if (small.size > MAX_UPLOAD_BYTES) {
+      setCarDriveUploading(false)
+      toast(`הקובץ גדול מדי (${(small.size / 1048576).toFixed(1)}MB) — מקסימום כ-4MB. נסו לסרוק שוב באיכות נמוכה יותר`, 'error')
+      return
+    }
+    const dot = small.name.lastIndexOf('.')
+    const ext = dot > 0 ? small.name.slice(dot) : (small.type === 'application/pdf' ? '.pdf' : '')
+    const named = new File([small], `${carDrivePlate} - ${docLabel}${ext}`, { type: small.type })
     const fd = new FormData()
     fd.append('file', named)
     fd.append('tenant_id', tenantId.current)
     fd.append('folder_id', carDriveFolderId)
     try {
       const res  = await fetch('/api/drive/upload', { method: 'POST', body: fd })
-      const data = await res.json()
+      if (res.status === 413) { toast('הקובץ גדול מדי להעלאה (מקסימום כ-4MB)', 'error'); return }
+      const data = await res.json().catch(() => ({ error: `שגיאת שרת (${res.status})` }))
       if (data.id) {
         setCarDriveFiles(f => [{ id: data.id, name: data.name, mimeType: named.type || '', webViewLink: data.webViewLink }, ...f])
         setPendingDoc(null)

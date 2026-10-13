@@ -877,5 +877,24 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-13T09:00:00Z"
+  },
+  {
+    "id": "bug-044",
+    "timestamp": "2026-10-13T10:30:00Z",
+    "error_message": "User: uploading a car document shows 'שגיאת רשת' and nothing uploads",
+    "file": "components/cars/CarsClient.tsx",
+    "root_cause": "Phone photos/scans exceed Vercel's ~4.5MB serverless body limit → 413 with a non-JSON body; res.json() threw and the catch reported a generic network error. Suppliers had already solved this (compressImageIfNeeded/compressPdfIfNeeded) but the helpers were private to SupplierTrackingTab.",
+    "fix": "Moved helpers to lib/utils/uploadCompress.ts (+shrinkForUpload); cars document + photo uploads shrink before upload, show a size message on 413/too-large, and parse non-JSON responses as 'שגיאת שרת (status)'.",
+    "tags": [
+      "upload",
+      "drive",
+      "vercel",
+      "413",
+      "compress",
+      "cars"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-13T10:30:00Z"
   }
 ]

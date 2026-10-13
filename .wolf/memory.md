@@ -2203,3 +2203,14 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 09:30 | Cars: filter 'בהפקדה – לא הוגש החזר' | CarsClient.tsx | tsc clean | ~2k |
 | 10:10 | Branded intake OG image: tenant logo + logo-derived colours, satori RTL fix, sharp dep | lib/og/*, app/api/public/og/intake/route.tsx, app/intake/[token]/page.tsx, next.config.ts | rendered + verified locally | ~25k |
+
+## Session: 2026-10-13 10:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-13 11:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:30 | Fix car doc upload 'שגיאת רשת' (Vercel 4.5MB): shared uploadCompress helpers, shrink + 413 handling | CarsClient.tsx, SupplierTrackingTab.tsx, lib/utils/uploadCompress.ts | tsc clean | ~8k |
