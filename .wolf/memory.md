@@ -2214,3 +2214,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 10:30 | Fix car doc upload 'שגיאת רשת' (Vercel 4.5MB): shared uploadCompress helpers, shrink + 413 handling | CarsClient.tsx, SupplierTrackingTab.tsx, lib/utils/uploadCompress.ts | tsc clean | ~8k |
+| 10:45 | Cars: hand + original ownership fields (migration 088); always compress images/PDFs before upload | CarsClient.tsx, uploadCompress.ts | tsc clean | ~6k |

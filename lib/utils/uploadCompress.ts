@@ -5,8 +5,9 @@
 export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 
 // Downscale/recompress an oversized image (camera capture or a large photo) so it clears the upload limit.
-export async function compressImageIfNeeded(file: File): Promise<File> {
-  if (!file.type.startsWith('image/') || file.size <= MAX_UPLOAD_BYTES) return file
+// `force` recompresses even when the file is already under the limit.
+export async function compressImageIfNeeded(file: File, force = false): Promise<File> {
+  if (!file.type.startsWith('image/') || /gif|svg/.test(file.type) || (!force && file.size <= MAX_UPLOAD_BYTES)) return file
   try {
     const dataUrl = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader()
@@ -27,6 +28,8 @@ export async function compressImageIfNeeded(file: File): Promise<File> {
     canvas.height = Math.round(img.height * scale)
     const ctx = canvas.getContext('2d')
     if (!ctx) return file
+    ctx.fillStyle = '#fff'  // transparent PNG → JPEG would otherwise turn black
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
     const baseName = file.name.replace(/\.\w+$/, '') || 'scan'
     for (const quality of [0.8, 0.6, 0.45, 0.3]) {
@@ -41,8 +44,8 @@ export async function compressImageIfNeeded(file: File): Promise<File> {
 
 // Re-rasterize an oversized scanned PDF (each page → JPEG at a shrinking quality) and rebuild
 // a smaller PDF, so a high-DPI scan from external scanner software also clears the upload limit.
-export async function compressPdfIfNeeded(file: File): Promise<File> {
-  if (file.type !== 'application/pdf' || file.size <= MAX_UPLOAD_BYTES) return file
+export async function compressPdfIfNeeded(file: File, force = false): Promise<File> {
+  if (file.type !== 'application/pdf' || (!force && file.size <= MAX_UPLOAD_BYTES)) return file
   try {
     const [{ getDocument, GlobalWorkerOptions }, { PDFDocument: PDFLibDocument }] = await Promise.all([
       import('pdfjs-dist'),
@@ -82,7 +85,11 @@ export async function compressPdfIfNeeded(file: File): Promise<File> {
   }
 }
 
-/** Shrink an image or scanned PDF so it fits under MAX_UPLOAD_BYTES (returns the original if it can't). */
+/**
+ * Always compress images and PDFs before upload, whatever their size; keep the
+ * original if compression didn't make it smaller. Other file types pass through.
+ */
 export async function shrinkForUpload(file: File): Promise<File> {
-  return compressPdfIfNeeded(await compressImageIfNeeded(file))
+  const out = await compressPdfIfNeeded(await compressImageIfNeeded(file, true), true)
+  return out.size < file.size ? out : file
 }

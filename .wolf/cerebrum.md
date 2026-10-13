@@ -6,6 +6,8 @@
 
 ## User Preferences
 
+- [2026-10-13] User wants uploads auto-compressed always (any size), not only above the limit — cars use shrinkForUpload (keeps original if compression didn't help).
+
 - [2026-10-13] For visual changes, user wants a mockup image first, then approval. Branding should use the tenant's own logo + logo colours (not the app's green).
 
 - **Always reply in Hebrew (2026-10-07):** user asked for a Hebrew summary after an English one — write all user-facing replies in Hebrew.
