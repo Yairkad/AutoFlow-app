@@ -58,6 +58,8 @@ interface Car {
   current_location: string | null
   license_deposited: boolean
   license_deposit_date: string | null
+  deposit_refund_requested: boolean
+  deposit_refund_requested_date: string | null
   notes: string | null
   created_at: string
 }
@@ -147,6 +149,8 @@ const emptyCarForm = {
   current_location: '',
   license_deposited: false,
   license_deposit_date: '',
+  deposit_refund_requested: false,
+  deposit_refund_requested_date: '',
   notes: '',
 }
 
@@ -292,6 +296,7 @@ export default function CarsClient() {
       photos: Array.isArray(x.photos) ? x.photos : [],
       interested_buyers: Array.isArray(x.interested_buyers) ? x.interested_buyers : [],
       license_deposited: !!x.license_deposited,
+      deposit_refund_requested: !!x.deposit_refund_requested,
     })))
     setRequests(r || [])
     setSaleRequests(sr || [])
@@ -442,6 +447,8 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
         current_location: car.current_location || '',
         license_deposited:    !!car.license_deposited,
         license_deposit_date: car.license_deposit_date || '',
+        deposit_refund_requested:      !!car.deposit_refund_requested,
+        deposit_refund_requested_date: car.deposit_refund_requested_date || '',
       })
       setPhotoUrls(car.photos.length ? [...car.photos] : [''])
       if (driveConnected) loadCarDriveFiles(car.plate || '')
@@ -615,6 +622,8 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       current_location: carForm.current_location || null,
       license_deposited:    carForm.license_deposited,
       license_deposit_date: carForm.license_deposited ? (carForm.license_deposit_date || null) : null,
+      deposit_refund_requested:      carForm.license_deposited && carForm.deposit_refund_requested,
+      deposit_refund_requested_date: carForm.license_deposited && carForm.deposit_refund_requested ? (carForm.deposit_refund_requested_date || null) : null,
       updated_at:       new Date().toISOString(),
     }
 
@@ -1082,7 +1091,12 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           {car.ask_price ? <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--primary)' }}>{fmt(car.ask_price)}</div> : null}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 'auto', paddingTop: 3 }}>
             {car.license_deposited
-              ? <span style={{ ...tag, background: '#ffedd5', color: '#c2410c' }}>🅿️ בהפקדה</span>
+              ? <>
+                  <span style={{ ...tag, background: '#ffedd5', color: '#c2410c' }}>🅿️ בהפקדה</span>
+                  {car.deposit_refund_requested
+                    ? <span style={{ ...tag, background: '#dcfce7', color: '#166534' }}>💸 הוגש החזר</span>
+                    : <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>💸 לא הוגש החזר</span>}
+                </>
               : test
                 ? <span style={{ ...tag, background: test.bg, color: test.color }}>🔧 {test.label}</span>
                 : <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>🔧 אין טסט</span>
@@ -1486,6 +1500,9 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             ['תוקף טסט', c.test_date ? <span style={{ color: test?.color, fontWeight: 700 }}>{c.test_date}{test && test.label !== c.test_date ? ` (${test.label})` : ''}</span> : null],
             ['תוקף ביטוח', c.insur_date ? <span style={{ color: insur?.color, fontWeight: 700 }}>{c.insur_date}{insur && insur.label !== c.insur_date ? ` (${insur.label})` : ''}</span> : null],
             ['הפקדת רישיון', c.license_deposited ? `🅿️ מופקד${c.license_deposit_date ? ' מ-' + c.license_deposit_date : ''}` : null],
+            ['הוגשה בקשה להחזר?', !c.license_deposited ? null : c.deposit_refund_requested
+              ? <span style={{ color: '#166534' }}>✅ כן{c.deposit_refund_requested_date ? ` (${c.deposit_refund_requested_date})` : ''}</span>
+              : <span style={{ color: '#dc2626' }}>❌ לא</span>],
             ['מיקום', c.current_location], ['בעלים', c.owner_name], ['איש קשר', c.contact],
             ['שמור עבור', c.status === 'reserved' ? c.reserved_for : null],
             ['קונה', c.buyer_name ? `${c.buyer_name}${c.buyer_phone ? ' · ' + c.buyer_phone : ''}` : null],
@@ -1639,6 +1656,17 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
               </Field>
               {carForm.license_deposited && (
                 <Field label="תאריך הפקדה"><input type="date" value={carForm.license_deposit_date} onChange={e => setCarForm(f=>({...f,license_deposit_date:e.target.value}))} style={inp()} /></Field>
+              )}
+              {carForm.license_deposited && (
+                <Field label="האם הוגשה בקשה להחזר?">
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', minHeight: 38 }}>
+                    <input type="checkbox" checked={carForm.deposit_refund_requested} onChange={e => setCarForm(f=>({...f,deposit_refund_requested:e.target.checked}))} />
+                    💸 כן, הוגשה בקשה להחזר
+                  </label>
+                </Field>
+              )}
+              {carForm.license_deposited && carForm.deposit_refund_requested && (
+                <Field label="תאריך הגשת הבקשה"><input type="date" value={carForm.deposit_refund_requested_date} onChange={e => setCarForm(f=>({...f,deposit_refund_requested_date:e.target.value}))} style={inp()} /></Field>
               )}
             </Grid>
           </Section>

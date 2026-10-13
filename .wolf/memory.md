@@ -2190,3 +2190,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:00 | Cars tab redesign: compact cards, detail modal w/ Drive docs (named "<plate> - <name>"), license deposit flag + filters, migration 086 | components/cars/CarsClient.tsx, supabase/migrations/086_cars_license_deposit.sql | tsc clean, lint errors only pre-existing | ~40k |
+
+## Session: 2026-10-13 09:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:20 | Cars: 'הוגשה בקשה להחזר?' field for deposited cars (form, card tag, detail row), migration 087 | CarsClient.tsx, 087_cars_deposit_refund.sql | tsc clean | ~6k |
