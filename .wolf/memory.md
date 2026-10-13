@@ -2189,3 +2189,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 09:00 | Cars tab redesign: compact cards, detail modal w/ Drive docs (named "<plate> - <name>"), license deposit flag + filters, migration 086 | components/cars/CarsClient.tsx, supabase/migrations/086_cars_license_deposit.sql | tsc clean, lint errors only pre-existing | ~40k |

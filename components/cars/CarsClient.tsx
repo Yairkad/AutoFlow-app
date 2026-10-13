@@ -56,6 +56,8 @@ interface Car {
   interested_buyers: InterestedBuyer[]
   reserved_for: string | null
   current_location: string | null
+  license_deposited: boolean
+  license_deposit_date: string | null
   notes: string | null
   created_at: string
 }
@@ -143,6 +145,8 @@ const emptyCarForm = {
   fuel_type: '', seats: '',
   reserved_for: '',
   current_location: '',
+  license_deposited: false,
+  license_deposit_date: '',
   notes: '',
 }
 
@@ -225,6 +229,14 @@ export default function CarsClient() {
   const [carDriveLoading,   setCarDriveLoading]   = useState(false)
   const [carDriveUploading, setCarDriveUploading] = useState(false)
   const [showCarScanner,   setShowCarScanner]   = useState(false)
+  const [carDrivePlate,    setCarDrivePlate]    = useState('')
+  const [pendingDoc,       setPendingDoc]       = useState<File | null>(null)
+  const [docName,          setDocName]          = useState('')
+
+  // Car detail view + list filters
+  const [viewCarId,  setViewCarId]  = useState<string | null>(null)
+  const [flagFilter, setFlagFilter] = useState<'all' | 'deposited' | 'no_test' | 'expiring'>('all')
+  const [search,     setSearch]     = useState('')
   const isMobile = useIsMobile()
 
   // Car form
@@ -279,6 +291,7 @@ export default function CarsClient() {
       ...x,
       photos: Array.isArray(x.photos) ? x.photos : [],
       interested_buyers: Array.isArray(x.interested_buyers) ? x.interested_buyers : [],
+      license_deposited: !!x.license_deposited,
     })))
     setRequests(r || [])
     setSaleRequests(sr || [])
@@ -427,6 +440,8 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
         notes:           car.notes            || '',
         reserved_for:    car.reserved_for     || '',
         current_location: car.current_location || '',
+        license_deposited:    !!car.license_deposited,
+        license_deposit_date: car.license_deposit_date || '',
       })
       setPhotoUrls(car.photos.length ? [...car.photos] : [''])
       if (driveConnected) loadCarDriveFiles(car.plate || '')
@@ -490,6 +505,9 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
   }
 
   async function loadCarDriveFiles(plate: string) {
+    setCarDrivePlate(plate)
+    setPendingDoc(null)
+    setDocName('')
     if (!plate) { setCarDriveFiles([]); setCarDriveFolderId(null); return }
     setCarDriveLoading(true)
     try {
@@ -510,22 +528,30 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     }
   }
 
-  async function uploadCarDriveFile(file: File) {
+  // Every car document is saved in Drive as "<plate> - <doc name>.<ext>" inside רכבים/<plate>/
+  async function uploadCarDriveFile(file: File, name: string) {
     if (!carDriveFolderId) {
       toast('לא ניתן להעלות — יש להזין מספר לוחית רישוי לרכב תחילה', 'error')
       return
     }
+    const docLabel = name.trim()
+    if (!docLabel) { toast('יש להזין שם למסמך', 'error'); return }
+    const dot = file.name.lastIndexOf('.')
+    const ext = dot > 0 ? file.name.slice(dot) : (file.type === 'application/pdf' ? '.pdf' : '')
+    const named = new File([file], `${carDrivePlate} - ${docLabel}${ext}`, { type: file.type })
     setCarDriveUploading(true)
     const fd = new FormData()
-    fd.append('file', file)
+    fd.append('file', named)
     fd.append('tenant_id', tenantId.current)
     fd.append('folder_id', carDriveFolderId)
     try {
       const res  = await fetch('/api/drive/upload', { method: 'POST', body: fd })
       const data = await res.json()
       if (data.id) {
-        setCarDriveFiles(f => [{ id: data.id, name: data.name, mimeType: data.mimeType, webViewLink: data.webViewLink }, ...f])
-        toast('הקובץ הועלה ✓', 'success')
+        setCarDriveFiles(f => [{ id: data.id, name: data.name, mimeType: named.type || '', webViewLink: data.webViewLink }, ...f])
+        setPendingDoc(null)
+        setDocName('')
+        toast('המסמך נשמר ב-Drive ✓', 'success')
       } else {
         toast(data.error || 'שגיאה בהעלאה', 'error')
       }
@@ -587,6 +613,8 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       notes:            carForm.notes            || null,
       reserved_for:     carForm.status === 'reserved' ? (carForm.reserved_for || null) : null,
       current_location: carForm.current_location || null,
+      license_deposited:    carForm.license_deposited,
+      license_deposit_date: carForm.license_deposited ? (carForm.license_deposit_date || null) : null,
       updated_at:       new Date().toISOString(),
     }
 
@@ -864,7 +892,52 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
 
   // ── Filtered lists ────────────────────────────────────────────────
 
-  const displayInv = invFilter === 'all' ? invCars : invCars.filter(c => c.status === invFilter)
+  function daysUntil(d: string | null) {
+    return d ? Math.ceil((new Date(d).getTime() - Date.now()) / 86400000) : null
+  }
+  function applyFlags(list: Car[]) {
+    const q = search.trim().toLowerCase()
+    return list.filter(c => {
+      if (q && ![c.plate, c.make, c.model, c.owner_name, c.current_location].some(v => v?.toLowerCase().includes(q))) return false
+      const t = daysUntil(c.test_date), ins = daysUntil(c.insur_date)
+      if (flagFilter === 'deposited') return c.license_deposited
+      if (flagFilter === 'no_test')   return !c.license_deposited && (t === null || t < 0)
+      if (flagFilter === 'expiring')  return !c.license_deposited && ((t !== null && t >= 0 && t <= 30) || (ins !== null && ins <= 30))
+      return true
+    })
+  }
+  const allCars    = applyFlags([...invCars, ...checkCars, ...soldCars])
+  const displayInv = applyFlags(invFilter === 'all' ? invCars : invCars.filter(c => c.status === invFilter))
+  const viewCar    = viewCarId ? cars.find(c => c.id === viewCarId) ?? null : null
+  const CARD_GRID: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(190px, calc(50% - 6px)), 1fr))', gap: 12 }
+  const depositedCount = [...invCars, ...checkCars].filter(c => c.license_deposited).length
+  const noTestCount    = [...invCars, ...checkCars].filter(c => { const t = daysUntil(c.test_date); return !c.license_deposited && (t === null || t < 0) }).length
+
+  function renderFlagBar() {
+    const chip = (active: boolean): React.CSSProperties => ({
+      padding: '5px 12px', borderRadius: 16, border: '1.5px solid var(--border)',
+      background: active ? '#0f172a' : '#fff', color: active ? '#fff' : 'var(--text-muted)',
+      fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
+    })
+    return (
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input
+          value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 חיפוש לפי מספר רכב / יצרן / דגם"
+          style={{ ...inp(), width: 'auto', flex: '1 1 220px', maxWidth: 320, padding: '6px 10px', fontSize: 13 }}
+        />
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          {([
+            { v: 'all',       l: 'הכל' },
+            { v: 'deposited', l: `🅿️ בהפקדה (${depositedCount})` },
+            { v: 'no_test',   l: `🔧 ללא טסט בתוקף (${noTestCount})` },
+            { v: 'expiring',  l: '⏳ טסט/ביטוח עד 30 יום' },
+          ] as const).map(f => (
+            <button key={f.v} onClick={() => setFlagFilter(f.v)} style={chip(flagFilter === f.v)}>{f.l}</button>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   // ── Render helpers ────────────────────────────────────────────────
 
@@ -887,102 +960,137 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     ]
   }
 
+  const DOC_SUGGESTIONS = ['רישיון רכב', 'ביטוח חובה', 'ביטוח מקיף', 'טסט', 'אישור הפקדה', 'חשבונית קנייה', 'הסכם מכירה', 'ייפוי כוח']
+
+  function renderCarDocs() {
+    if (carDriveLoading) return <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '6px 0' }}>טוען...</div>
+    if (!carDrivePlate) return <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>יש להזין מספר רכב כדי לשמור מסמכים</div>
+    const btn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, padding: '6px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }
+    return (
+      <>
+        {carDriveFiles.length === 0 && !pendingDoc && (
+          <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 8 }}>אין עדיין מסמכים לרכב זה</div>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+          {carDriveFiles.map(f => {
+            const mt = f.mimeType || ''
+            return (
+              <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 9px', background: '#f8fafc', borderRadius: 7, border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: 16 }}>{mt.startsWith('image/') ? '🖼️' : mt === 'application/pdf' ? '📄' : '📎'}</span>
+                <span style={{ flex: 1, fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={f.name}>{f.name}</span>
+                {f.webViewLink && (
+                  <a href={f.webViewLink} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--primary)', textDecoration: 'none', flexShrink: 0 }}>פתח</a>
+                )}
+                <button onClick={() => deleteCarDriveFile(f.id)} aria-label="מחק מסמך" style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 14, flexShrink: 0 }}>✕</button>
+              </div>
+            )
+          })}
+        </div>
+
+        {pendingDoc ? (
+          <div style={{ border: '1.5px solid var(--primary)', borderRadius: 10, padding: 10, background: '#f0fdf4' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>📎 {pendingDoc.name}</div>
+            <label style={{ fontSize: 12, fontWeight: 700 }}>שם המסמך</label>
+            <input
+              autoFocus value={docName} onChange={e => setDocName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && docName.trim()) uploadCarDriveFile(pendingDoc, docName) }}
+              placeholder="לדוגמה: רישיון רכב" style={{ ...inp(), marginTop: 4 }}
+            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, margin: '8px 0' }}>
+              {DOC_SUGGESTIONS.map(n => (
+                <button key={n} onClick={() => setDocName(n)} style={{ fontSize: 11, padding: '3px 9px', borderRadius: 12, border: '1px solid var(--border)', background: docName === n ? 'var(--primary)' : '#fff', color: docName === n ? '#fff' : 'var(--text)', cursor: 'pointer', fontFamily: 'inherit' }}>{n}</button>
+              ))}
+            </div>
+            {docName.trim() && (
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
+                יישמר כ: <strong style={{ color: 'var(--text)' }}>{carDrivePlate} - {docName.trim()}</strong>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button onClick={() => uploadCarDriveFile(pendingDoc, docName)} disabled={!docName.trim() || carDriveUploading}>
+                {carDriveUploading ? '⏳ מעלה...' : '📤 שמור ב-Drive'}
+              </Button>
+              <button onClick={() => { setPendingDoc(null); setDocName('') }} disabled={carDriveUploading} style={btn}>ביטול</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            {isMobile && <button onClick={() => setShowCarScanner(true)} style={btn}>📷 סרוק</button>}
+            <label style={{ cursor: 'pointer' }}>
+              <input type="file" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setPendingDoc(f); setDocName('') } e.target.value = '' }} />
+              <span style={btn}>📤 הוסף מסמך</span>
+            </label>
+          </div>
+        )}
+        {showCarScanner && (
+          <DocumentScannerModal
+            onComplete={file => { setShowCarScanner(false); setPendingDoc(file); setDocName('') }}
+            onClose={() => setShowCarScanner(false)}
+          />
+        )}
+      </>
+    )
+  }
+
+  function openCarView(car: Car) {
+    setViewCarId(car.id)
+    if (driveConnected) loadCarDriveFiles(car.plate || '')
+    else { setCarDriveFiles([]); setCarDriveFolderId(null); setCarDrivePlate(car.plate || '') }
+  }
+
   function CarCard({ car }: { car: Car }) {
     const st    = STATUS_MAP[car.status]
-    const cond  = CONDITIONS.find(c => c.value === car.condition)
     const thumb = car.photos[0] ? driveThumb(car.photos[0]) : null
     const test  = dateChipStyle(car.test_date)
     const insur = dateChipStyle(car.insur_date)
+    const tag: React.CSSProperties = { fontSize: 10.5, fontWeight: 700, padding: '1px 6px', borderRadius: 6, whiteSpace: 'nowrap' }
 
     return (
       <div
+        role="button" tabIndex={0}
+        onClick={() => openCarView(car)}
+        onKeyDown={e => { if (e.key === 'Enter') openCarView(car) }}
         style={{
-          background: '#fff', borderRadius: 12, height: '100%',
+          background: '#fff', borderRadius: 10, height: '100%', cursor: 'pointer',
           boxShadow: '0 1px 3px rgba(0,0,0,.08)',
-          border: `2px solid ${st?.color || 'var(--border)'}`,
-          display: 'flex', flexDirection: 'column', transition: 'box-shadow .15s',
+          border: '1px solid var(--border)', borderTop: `3px solid ${st?.color || 'var(--border)'}`,
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
-        {/* Photo */}
-        <div
-          onClick={e => { e.stopPropagation(); car.photos.length && setLightbox({ photos: car.photos, idx: 0 }) }}
-          style={{
-            height: 180, background: '#f1f5f9', position: 'relative',
-            cursor: car.photos.length ? 'pointer' : 'default', overflow: 'hidden',
-            borderTopLeftRadius: 10, borderTopRightRadius: 10,
-          }}
-        >
+        {/* Photo strip */}
+        <div style={{ height: 88, background: '#f1f5f9', position: 'relative', flexShrink: 0 }}>
           {thumb
             ? <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52, color: '#cbd5e1' }}>🚗</div>
+            : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34, color: '#cbd5e1' }}>🚗</div>
           }
-          {car.photos.length > 1 && (
-            <span style={{ position: 'absolute', bottom: 8, left: 8, background: 'rgba(0,0,0,.55)', color: '#fff', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700 }}>
-              📷 {car.photos.length}
-            </span>
-          )}
-          <span style={{ position: 'absolute', top: 8, right: 8, background: st?.color || '#64748b', color: '#fff', padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
+          <span style={{ position: 'absolute', top: 6, right: 6, background: st?.color || '#64748b', color: '#fff', padding: '1px 8px', borderRadius: 10, fontSize: 10.5, fontWeight: 700 }}>
             {st?.label}
           </span>
+          <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', top: 2, left: 2, background: 'rgba(255,255,255,.85)', borderRadius: 8 }}>
+            <RowActionsMenu actions={getCarActions(car)} variant="plain" />
+          </div>
         </div>
 
         {/* Body */}
-        <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>
-              {[car.make, car.model].filter(Boolean).join(' ') || 'רכב ללא שם'}
-            </div>
-            <RowActionsMenu actions={getCarActions(car)} variant="plain" />
+        <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3, flex: 1 }}>
+          <div style={{ fontWeight: 800, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {[car.make, car.model].filter(Boolean).join(' ') || 'רכב ללא שם'}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            {[car.year, car.plate, car.color].filter(Boolean).join(' • ')}
+          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', display: 'flex', gap: 6, alignItems: 'center' }}>
+            {car.plate && <span style={{ direction: 'ltr', fontWeight: 700, color: 'var(--text)', background: '#fef9c3', border: '1px solid #facc15', borderRadius: 4, padding: '0 5px' }}>{car.plate}</span>}
+            {car.year && <span>{car.year}</span>}
           </div>
-          {car.status === 'reserved' && (car as any).reserved_for && (
-            <div style={{ fontSize: 12, background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 7, padding: '4px 9px', color: '#92400e', fontWeight: 600 }}>
-              🟡 שמור עבור: {(car as any).reserved_for}
-            </div>
-          )}
-          {car.ask_price && (
-            <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--primary)' }}>{fmt(car.ask_price)}</div>
-          )}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 2 }}>
-            {car.km     && <Chip>{fmtKm(car.km)}</Chip>}
-            {cond       && <Chip color={COND_COLOR[car.condition]}>{cond.label}</Chip>}
-            {car.fuel_type && <Chip>{car.fuel_type}</Chip>}
-            {car.seats  && <Chip>🪑 {car.seats}</Chip>}
-            {car.buy_price && <Chip muted>קנייה: {fmt(car.buy_price)}</Chip>}
+          {car.ask_price ? <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--primary)' }}>{fmt(car.ask_price)}</div> : null}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 'auto', paddingTop: 3 }}>
+            {car.license_deposited
+              ? <span style={{ ...tag, background: '#ffedd5', color: '#c2410c' }}>🅿️ בהפקדה</span>
+              : test
+                ? <span style={{ ...tag, background: test.bg, color: test.color }}>🔧 {test.label}</span>
+                : <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>🔧 אין טסט</span>
+            }
+            {!car.license_deposited && insur && <span style={{ ...tag, background: insur.bg, color: insur.color }}>🛡️ {insur.label}</span>}
+            {car.interested_buyers.length > 0 && <span style={{ ...tag, background: '#fef9c3', color: '#92400e' }}>👥 {car.interested_buyers.length}</span>}
           </div>
-
-          {(test || insur) && (
-            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 2 }}>
-              {test  && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 8, background: test.bg,  color: test.color  }}>🔧 טסט: {test.label}</span>}
-              {insur && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 8, background: insur.bg, color: insur.color }}>🛡️ ביטוח: {insur.label}</span>}
-            </div>
-          )}
-          {car.current_location && (
-            <div style={{ fontSize: 11, fontWeight: 600, background: '#f1f5f9', border: '1px solid var(--border)', borderRadius: 7, padding: '3px 8px', color: 'var(--text-muted)' }}>
-              📍 {car.current_location}
-            </div>
-          )}
-
-          {car.notes && <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>{car.notes}</div>}
-
-          {/* Interested buyers */}
-          {car.interested_buyers.length > 0 && (
-            <div style={{ background: '#fef9c3', borderRadius: 8, padding: '7px 10px', fontSize: 11, marginTop: 4 }}>
-              <div style={{ fontWeight: 700, marginBottom: 4 }}>🟡 מתעניינים ({car.interested_buyers.length}):</div>
-              {car.interested_buyers.map(b => (
-                <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 3 }}>
-                  <div style={{ lineHeight: 1.5 }}>
-                    <strong>{b.name}</strong>{b.phone ? ' · ' + b.phone : ''}
-                    {b.offered_price ? <><br />💰 הציע: {fmt(b.offered_price)}</> : ''}
-                  </div>
-                  <button onClick={() => removeBuyer(car.id, b.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#b45309', fontSize: 13, padding: '0 4px' }}>✕</button>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
-
       </div>
     )
   }
@@ -1054,12 +1162,13 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       {/* ── TAB: ALL ── */}
       {tab === 'all' && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(290px,1fr))', gap: 18 }}>
-            {[...invCars, ...checkCars, ...soldCars].length === 0
-              ? <Empty icon="🚗" text="אין רכבים" />
-              : [...invCars, ...checkCars, ...soldCars].map(c => <div key={c.id}>{CarCard({ car: c })}</div>)
-            }
-          </div>
+          {renderFlagBar()}
+          {allCars.length === 0
+            ? <Empty icon="🚗" text="אין רכבים בסינון זה" />
+            : <div style={CARD_GRID}>
+                {allCars.map(c => <div key={c.id}>{CarCard({ car: c })}</div>)}
+              </div>
+          }
         </>
       )}
 
@@ -1076,9 +1185,10 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
               }}>{f.l}</button>
             ))}
           </div>
+          {renderFlagBar()}
           {displayInv.length === 0
-            ? <Empty icon="📦" text={invFilter === 'all' ? 'אין רכבים במלאי' : 'אין רכבים בסינון זה'} action={invFilter === 'all' ? 'הוסף רכב ראשון' : undefined} onAction={invFilter === 'all' ? () => openCarForm() : undefined} />
-            : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(290px,1fr))', gap: 18 }}>
+            ? <Empty icon="📦" text={invCars.length === 0 ? 'אין רכבים במלאי' : 'אין רכבים בסינון זה'} action={invCars.length === 0 ? 'הוסף רכב ראשון' : undefined} onAction={invCars.length === 0 ? () => openCarForm() : undefined} />
+            : <div style={CARD_GRID}>
                 {displayInv.map(c => <div key={c.id}>{CarCard({ car: c })}</div>)}
               </div>
           }
@@ -1355,10 +1465,104 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       })()}
 
       {/* ── LIGHTBOX ── */}
+      {/* ── Car detail view ── */}
+      <Modal
+        open={!!viewCar} onClose={() => setViewCarId(null)} maxWidth={760}
+        title={viewCar ? ([viewCar.make, viewCar.model].filter(Boolean).join(' ') || 'רכב ללא שם') + (viewCar.plate ? ` · ${viewCar.plate}` : '') : ''}
+      >
+        {viewCar && (() => {
+          const c     = viewCar
+          const st    = STATUS_MAP[c.status]
+          const cond  = CONDITIONS.find(x => x.value === c.condition)
+          const test  = dateChipStyle(c.test_date)
+          const insur = dateChipStyle(c.insur_date)
+          const rows: [string, React.ReactNode][] = [
+            ['מספר רכב', c.plate ? <span style={{ direction: 'ltr', display: 'inline-block' }}>{c.plate}</span> : null],
+            ['שנה', c.year], ['צבע', c.color], ['ק"מ', fmtKm(c.km) || null],
+            ['מצב', cond ? <span style={{ color: COND_COLOR[c.condition] }}>{cond.label}</span> : null], ['דלק', c.fuel_type], ['מושבים', c.seats],
+            ['מחיר קנייה', c.buy_price ? fmt(c.buy_price) : null],
+            ['מחיר מבוקש', c.ask_price ? fmt(c.ask_price) : null],
+            ['מחיר מכירה', c.sold_price ? fmt(c.sold_price) : null],
+            ['תוקף טסט', c.test_date ? <span style={{ color: test?.color, fontWeight: 700 }}>{c.test_date}{test && test.label !== c.test_date ? ` (${test.label})` : ''}</span> : null],
+            ['תוקף ביטוח', c.insur_date ? <span style={{ color: insur?.color, fontWeight: 700 }}>{c.insur_date}{insur && insur.label !== c.insur_date ? ` (${insur.label})` : ''}</span> : null],
+            ['הפקדת רישיון', c.license_deposited ? `🅿️ מופקד${c.license_deposit_date ? ' מ-' + c.license_deposit_date : ''}` : null],
+            ['מיקום', c.current_location], ['בעלים', c.owner_name], ['איש קשר', c.contact],
+            ['שמור עבור', c.status === 'reserved' ? c.reserved_for : null],
+            ['קונה', c.buyer_name ? `${c.buyer_name}${c.buyer_phone ? ' · ' + c.buyer_phone : ''}` : null],
+            ['תאריך מכירה', c.sold_date],
+          ]
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Status + actions */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                <span style={{ background: st?.color || '#64748b', color: '#fff', padding: '3px 12px', borderRadius: 12, fontSize: 12, fontWeight: 700 }}>{st?.label}</span>
+                {c.license_deposited && <span style={{ background: '#ffedd5', color: '#c2410c', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700 }}>🅿️ בהפקדה</span>}
+                <div style={{ flex: 1 }} />
+                {getCarActions(c).map(a => (
+                  <button key={a.key} onClick={() => { setViewCarId(null); a.onClick() }} style={{
+                    fontSize: 12, padding: '5px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+                    border: `1.5px solid ${a.danger ? 'var(--danger)' : 'var(--border)'}`, background: '#fff',
+                    color: a.danger ? 'var(--danger)' : 'var(--text)',
+                  }}>{a.icon} {a.label}</button>
+                ))}
+              </div>
+
+              {/* Photos */}
+              {c.photos.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
+                  {c.photos.map((ph, i) => (
+                    <img key={i} src={driveThumb(ph)} alt="" onClick={() => setLightbox({ photos: c.photos, idx: i })}
+                      style={{ width: 110, height: 76, objectFit: 'cover', borderRadius: 8, cursor: 'pointer', flexShrink: 0, background: '#f1f5f9' }} />
+                  ))}
+                </div>
+              )}
+
+              {/* Details */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(170px, 100%), 1fr))', gap: '8px 16px', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 10, padding: 12 }}>
+                {rows.filter(([, v]) => v !== null && v !== undefined && v !== '').map(([l, v]) => (
+                  <div key={l}>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{l}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+
+              {c.notes && (
+                <div style={{ fontSize: 12.5, whiteSpace: 'pre-wrap', lineHeight: 1.5, background: '#fff', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 12px' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>הערות</div>{c.notes}
+                </div>
+              )}
+
+              {c.interested_buyers.length > 0 && (
+                <div style={{ background: '#fef9c3', borderRadius: 10, padding: '8px 12px', fontSize: 12 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>🟡 מתעניינים ({c.interested_buyers.length})</div>
+                  {c.interested_buyers.map(b => (
+                    <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                      <span><strong>{b.name}</strong>{b.phone ? ' · ' + b.phone : ''}{b.offered_price ? ` · 💰 ${fmt(b.offered_price)}` : ''}</span>
+                      <button onClick={() => removeBuyer(c.id, b.id)} aria-label="הסר מתעניין" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#b45309', fontSize: 13 }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Documents */}
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 8 }}>📁 מסמכי רכב</div>
+                {!isAdmin
+                  ? <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>מסמכים זמינים למנהל בלבד</div>
+                  : !driveConnected
+                    ? <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>יש לחבר Google Drive בהגדרות כדי לשמור מסמכים</div>
+                    : renderCarDocs()}
+              </div>
+            </div>
+          )
+        })()}
+      </Modal>
+
       {lightbox && (
         <div
           onClick={e => e.target === e.currentTarget && setLightbox(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.88)', zIndex: 900, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.88)', zIndex: 1100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
         >
           <button onClick={() => setLightbox(null)} style={{ position: 'absolute', top: 16, left: 16, background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', borderRadius: '50%', width: 38, height: 38, fontSize: 20, cursor: 'pointer' }}>✕</button>
           <img src={driveThumb(lightbox.photos[lightbox.idx])} alt="" style={{ maxWidth: '92vw', maxHeight: '75vh', objectFit: 'contain', borderRadius: 10 }} />
@@ -1427,6 +1631,15 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             <Grid cols={2}>
               <Field label="תוקף טסט"><input type="date" value={carForm.test_date} onChange={e => setCarForm(f=>({...f,test_date:e.target.value}))} style={inp()} /></Field>
               <Field label="תוקף ביטוח"><input type="date" value={carForm.insur_date} onChange={e => setCarForm(f=>({...f,insur_date:e.target.value}))} style={inp()} /></Field>
+              <Field label="הפקדת רישיון (ירד מהכביש)">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', minHeight: 38 }}>
+                  <input type="checkbox" checked={carForm.license_deposited} onChange={e => setCarForm(f=>({...f,license_deposited:e.target.checked}))} />
+                  🅿️ הרישיון מופקד
+                </label>
+              </Field>
+              {carForm.license_deposited && (
+                <Field label="תאריך הפקדה"><input type="date" value={carForm.license_deposit_date} onChange={e => setCarForm(f=>({...f,license_deposit_date:e.target.value}))} style={inp()} /></Field>
+              )}
             </Grid>
           </Section>
 
@@ -1490,46 +1703,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
 
           {/* Car Drive Files */}
           {isAdmin && driveConnected && editCarId && (
-            <Section title="📁 קבצי רכב ב-Drive">
-              {carDriveLoading ? (
-                <div style={{ color: 'var(--muted)', fontSize: 13, padding: '6px 0' }}>טוען...</div>
-              ) : (
-                <>
-                  {carDriveFiles.length === 0 && (
-                    <div style={{ color: 'var(--muted)', fontSize: 12, marginBottom: 8 }}>אין קבצים בתיקיית הרכב</div>
-                  )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
-                    {carDriveFiles.map(f => (
-                      <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px', background: '#f8fafc', borderRadius: 7, border: '1px solid var(--border)' }}>
-                        <span style={{ fontSize: 16 }}>{f.mimeType.startsWith('image/') ? '🖼️' : f.mimeType === 'application/pdf' ? '📄' : '📎'}</span>
-                        <span style={{ flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-                        {f.webViewLink && (
-                          <a href={f.webViewLink} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: 'var(--primary)', textDecoration: 'none', flexShrink: 0 }}>פתח</a>
-                        )}
-                        <button onClick={() => deleteCarDriveFile(f.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 14, flexShrink: 0 }}>✕</button>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {isMobile && <button onClick={() => setShowCarScanner(true)} disabled={carDriveUploading} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, padding: '5px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
-                      📷 סרוק
-                    </button>}
-                    <label style={{ cursor: 'pointer' }}>
-                      <input type="file" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadCarDriveFile(f); e.target.value = '' }} />
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, padding: '5px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        {carDriveUploading ? '⏳ מעלה...' : '📤 העלה קובץ'}
-                      </span>
-                    </label>
-                  </div>
-                  {showCarScanner && (
-                    <DocumentScannerModal
-                      onComplete={file => { setShowCarScanner(false); uploadCarDriveFile(file) }}
-                      onClose={() => setShowCarScanner(false)}
-                    />
-                  )}
-                </>
-              )}
-            </Section>
+            <Section title="📁 מסמכי רכב ב-Drive">{renderCarDocs()}</Section>
           )}
         </div>
 

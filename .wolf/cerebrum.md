@@ -20,6 +20,8 @@
 
 ## Key Learnings
 
+- [2026-10-13] "הפקדת רישיון" (user wrote הפקדת סוחר) = car taken off the road with its license deposited at the licensing office → `cars.license_deposited` (no test/insurance expected). Car documents live in Drive רכבים/<plate>/ (same pattern as suppliers), file name = "<plate> - <user-typed doc name>". `/api/drive/upload` takes the name from `file.name` → rename client-side via `new File([f], name)`; it does NOT return mimeType.
+
 - **Project:** autoline-app
 - **Description:** This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 - **Role check pattern:** `isAdmin = profile.role === 'admin' || profile.role === 'super_admin'`. Non-admin employees should NOT see: AlertsPanel, RemindersPanel (dashboard), movements tab in Tires. Employee view in /employees shows only a phone-book (no salary data).

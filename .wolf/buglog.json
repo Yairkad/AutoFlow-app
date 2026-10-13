@@ -860,5 +860,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-07"
+  },
+  {
+    "id": "bug-043",
+    "timestamp": "2026-10-13T09:00:00Z",
+    "error_message": "Car Drive file list could crash after upload (f.mimeType.startsWith on undefined)",
+    "file": "components/cars/CarsClient.tsx",
+    "root_cause": "uploadCarDriveFile stored data.mimeType from /api/drive/upload, which never returns mimeType",
+    "fix": "Use the uploaded File's type and guard render with (f.mimeType || '')",
+    "tags": [
+      "cars",
+      "drive",
+      "upload",
+      "undefined"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-13T09:00:00Z"
   }
 ]
