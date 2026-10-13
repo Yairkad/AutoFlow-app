@@ -511,6 +511,7 @@
 
 ## supabase/migrations/
 
+- `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
 - `088_cars_hand_ownership.sql` — cars.hand smallint + original_ownership + car_code text (~80 tok)
 - `087_cars_deposit_refund.sql` — cars.deposit_refund_requested bool + date (refund request filed for deposited license) (~90 tok)
 - `086_cars_license_deposit.sql` — cars.license_deposited bool + license_deposit_date (car off the road, license deposited) (~120 tok)

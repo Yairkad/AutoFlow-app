@@ -24,6 +24,8 @@
 
 ## Key Learnings
 
+- [2026-10-13] Israeli annual car test (טסט) = two steps: paying the license fee (אגרה) + passing the track test (מבחן במסלול). cars.test_fee_paid / test_passed reset (in the form onChange) when test_date is moved later; card shows 'חסר: …' only within 60 days of expiry / expired / missing. User: no fee amount needed.
+
 - [2026-10-13] next/og (satori) renders Hebrew mirrored — no bidi. Use `lib/og/rtl.ts` rtl() per line and never let text wrap. Satori needs a static (non-variable) font with Hebrew glyphs: Assistant woff from @fontsource is bundled in lib/og/fonts, read via process.cwd() + outputFileTracingIncludes in next.config.ts. Tenant logo = tenants.logo_base64 (data URL).
 
 - [2026-10-13] "הפקדת רישיון" (user wrote הפקדת סוחר) = car taken off the road with its license deposited at the licensing office → `cars.license_deposited` (no test/insurance expected). Car documents live in Drive רכבים/<plate>/ (same pattern as suppliers), file name = "<plate> - <user-typed doc name>". `/api/drive/upload` takes the name from `file.name` → rename client-side via `new File([f], name)`; it does NOT return mimeType.

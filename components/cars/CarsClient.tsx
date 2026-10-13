@@ -60,6 +60,10 @@ interface Car {
   hand: number | null
   original_ownership: string | null
   car_code: string | null
+  test_fee_paid: boolean
+  test_fee_paid_date: string | null
+  test_passed: boolean
+  test_passed_date: string | null
   license_deposited: boolean
   license_deposit_date: string | null
   deposit_refund_requested: boolean
@@ -152,6 +156,8 @@ const emptyCarForm = {
   reserved_for: '',
   current_location: '',
   hand: '', original_ownership: '', car_code: '',
+  test_fee_paid: false, test_fee_paid_date: '',
+  test_passed: false, test_passed_date: '',
   license_deposited: false,
   license_deposit_date: '',
   deposit_refund_requested: false,
@@ -302,6 +308,8 @@ export default function CarsClient() {
       interested_buyers: Array.isArray(x.interested_buyers) ? x.interested_buyers : [],
       license_deposited: !!x.license_deposited,
       deposit_refund_requested: !!x.deposit_refund_requested,
+      test_fee_paid: !!x.test_fee_paid,
+      test_passed:   !!x.test_passed,
     })))
     setRequests(r || [])
     setSaleRequests(sr || [])
@@ -453,6 +461,10 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
         hand:               car.hand ? String(car.hand) : '',
         original_ownership: car.original_ownership || '',
         car_code:           car.car_code || '',
+        test_fee_paid:      !!car.test_fee_paid,
+        test_fee_paid_date: car.test_fee_paid_date || '',
+        test_passed:        !!car.test_passed,
+        test_passed_date:   car.test_passed_date || '',
         license_deposited:    !!car.license_deposited,
         license_deposit_date: car.license_deposit_date || '',
         deposit_refund_requested:      !!car.deposit_refund_requested,
@@ -641,6 +653,10 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       hand:                 carForm.hand ? Number(carForm.hand) : null,
       original_ownership:   carForm.original_ownership.trim() || null,
       car_code:             carForm.car_code.trim() || null,
+      test_fee_paid:        carForm.test_fee_paid,
+      test_fee_paid_date:   carForm.test_fee_paid ? (carForm.test_fee_paid_date || null) : null,
+      test_passed:          carForm.test_passed,
+      test_passed_date:     carForm.test_passed ? (carForm.test_passed_date || null) : null,
       license_deposited:    carForm.license_deposited,
       license_deposit_date: carForm.license_deposited ? (carForm.license_deposit_date || null) : null,
       deposit_refund_requested:      carForm.license_deposited && carForm.deposit_refund_requested,
@@ -1071,6 +1087,12 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     else { setCarDriveFiles([]); setCarDriveFolderId(null); setCarDrivePlate(car.plate || '') }
   }
 
+  // Fee + track test only matter while renewing: test expired, missing, or due within 60 days.
+  function inTestRenewal(car: Car) {
+    if (!car.test_date) return true
+    return (new Date(car.test_date).getTime() - Date.now()) / 86400000 <= 60
+  }
+
   function CarCard({ car }: { car: Car }) {
     const st    = STATUS_MAP[car.status]
     const thumb = car.photos[0] ? driveThumb(car.photos[0]) : null
@@ -1126,6 +1148,11 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
                 ? <span style={{ ...tag, background: test.bg, color: test.color }}>🔧 {test.label}</span>
                 : <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>🔧 אין טסט</span>
             }
+            {!car.license_deposited && inTestRenewal(car) && (
+              car.test_fee_paid && car.test_passed
+                ? <span style={{ ...tag, background: '#dcfce7', color: '#166534' }}>✓ אגרה+מבחן – לעדכן תוקף</span>
+                : <span style={{ ...tag, background: '#ffedd5', color: '#c2410c' }}>חסר: {[!car.test_fee_paid && 'אגרה', !car.test_passed && 'מבחן'].filter(Boolean).join(' + ')}</span>
+            )}
             {!car.license_deposited && insur && <span style={{ ...tag, background: insur.bg, color: insur.color }}>🛡️ {insur.label}</span>}
             {car.interested_buyers.length > 0 && <span style={{ ...tag, background: '#fef9c3', color: '#92400e' }}>👥 {car.interested_buyers.length}</span>}
           </div>
@@ -1524,6 +1551,12 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             ['מחיר מכירה', c.sold_price ? fmt(c.sold_price) : null],
             ['תוקף טסט', c.test_date ? <span style={{ color: test?.color, fontWeight: 700 }}>{c.test_date}{test && test.label !== c.test_date ? ` (${test.label})` : ''}</span> : null],
             ['תוקף ביטוח', c.insur_date ? <span style={{ color: insur?.color, fontWeight: 700 }}>{c.insur_date}{insur && insur.label !== c.insur_date ? ` (${insur.label})` : ''}</span> : null],
+            ['אגרת טסט', c.license_deposited ? null : c.test_fee_paid
+              ? <span style={{ color: '#166534' }}>✅ שולמה{c.test_fee_paid_date ? ` (${c.test_fee_paid_date})` : ''}</span>
+              : <span style={{ color: '#dc2626' }}>❌ לא שולמה</span>],
+            ['מבחן במסלול', c.license_deposited ? null : c.test_passed
+              ? <span style={{ color: '#166534' }}>✅ עבר{c.test_passed_date ? ` (${c.test_passed_date})` : ''}</span>
+              : <span style={{ color: '#dc2626' }}>❌ לא עבר</span>],
             ['הפקדת רישיון', c.license_deposited ? `🅿️ מופקד${c.license_deposit_date ? ' מ-' + c.license_deposit_date : ''}` : null],
             ['הוגשה בקשה להחזר?', !c.license_deposited ? null : c.deposit_refund_requested
               ? <span style={{ color: '#166534' }}>✅ כן{c.deposit_refund_requested_date ? ` (${c.deposit_refund_requested_date})` : ''}</span>
@@ -1679,8 +1712,29 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           {/* Dates */}
           <Section title="תאריכים">
             <Grid cols={2}>
-              <Field label="תוקף טסט"><input type="date" value={carForm.test_date} onChange={e => setCarForm(f=>({...f,test_date:e.target.value}))} style={inp()} /></Field>
+              <Field label="תוקף טסט"><input type="date" value={carForm.test_date} onChange={e => {
+                const v = e.target.value
+                // New validity later than the saved one = test renewed → next year's fee/test start unchecked.
+                const prev = editCarId ? cars.find(c => c.id === editCarId)?.test_date : null
+                const renewed = !!(prev && v && v > prev)
+                setCarForm(f => ({ ...f, test_date: v, ...(renewed ? { test_fee_paid: false, test_fee_paid_date: '', test_passed: false, test_passed_date: '' } : {}) }))
+              }} style={inp()} /></Field>
               <Field label="תוקף ביטוח"><input type="date" value={carForm.insur_date} onChange={e => setCarForm(f=>({...f,insur_date:e.target.value}))} style={inp()} /></Field>
+              <Field label="טסט – אגרה ומבחן">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={carForm.test_fee_paid} onChange={e => setCarForm(f=>({...f,test_fee_paid:e.target.checked, test_fee_paid_date: e.target.checked ? (f.test_fee_paid_date || todayISO()) : ''}))} />
+                    💳 אגרה שולמה
+                    {carForm.test_fee_paid && <input type="date" value={carForm.test_fee_paid_date} onChange={e => setCarForm(f=>({...f,test_fee_paid_date:e.target.value}))} style={{ ...inp(), width: 'auto', padding: '3px 6px', fontSize: 12 }} />}
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={carForm.test_passed} onChange={e => setCarForm(f=>({...f,test_passed:e.target.checked, test_passed_date: e.target.checked ? (f.test_passed_date || todayISO()) : ''}))} />
+                    ✅ עבר מבחן במסלול
+                    {carForm.test_passed && <input type="date" value={carForm.test_passed_date} onChange={e => setCarForm(f=>({...f,test_passed_date:e.target.value}))} style={{ ...inp(), width: 'auto', padding: '3px 6px', fontSize: 12 }} />}
+                  </label>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>מתאפס אוטומטית כשמעדכנים תוקף טסט חדש</span>
+                </div>
+              </Field>
               <Field label="הפקדת רישיון (ירד מהכביש)">
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', minHeight: 38 }}>
                   <input type="checkbox" checked={carForm.license_deposited} onChange={e => setCarForm(f=>({...f,license_deposited:e.target.checked}))} />
