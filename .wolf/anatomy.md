@@ -511,6 +511,7 @@
 
 ## supabase/migrations/
 
+- `090_cars_docs_gov_test.sql` — cars.doc_names text[] (card doc chips) + gov_last_test_date (~100 tok)
 - `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
 - `088_cars_hand_ownership.sql` — cars.hand smallint + original_ownership + car_code text (~80 tok)
 - `087_cars_deposit_refund.sql` — cars.deposit_refund_requested bool + date (refund request filed for deposited license) (~90 tok)
@@ -539,3 +540,7 @@
 ## lib/utils/ (addition)
 
 - `uploadCompress.ts` — MAX_UPLOAD_BYTES (4MB), compressImageIfNeeded, compressPdfIfNeeded, shrinkForUpload — client-side shrink to clear Vercel's 4.5MB limit (shared by suppliers + cars) (~900 tok)
+
+## app/api/public/plate/test-status/
+
+- `route.ts` — POST {plates[]} → {plate: {tokef, lastTest}} from data.gov.il (local+imported, chunks of 100, filters array). Used by CarsClient auto-sync on load (~400 tok)

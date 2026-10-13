@@ -24,6 +24,8 @@
 
 ## Key Learnings
 
+- [2026-10-13] Cars test sync: data.gov.il has tokef_dt (license valid until) + mivchan_acharon_dt (last track test) but NO fee-paid field. govTestPatch in CarsClient: later tokef → renewal done (reset flags); lastTest ≥ tokef−120d → test_passed. Runs once per page load. Car doc names cached in cars.doc_names (synced on folder listing/upload/delete + 'סרוק מסמכים מ-Drive' button) — never list Drive per card. data.gov.il is blocked from the dev container (proxy 403), so field names are unverified there.
+
 - [2026-10-13] Israeli annual car test (טסט) = two steps: paying the license fee (אגרה) + passing the track test (מבחן במסלול). cars.test_fee_paid / test_passed reset (in the form onChange) when test_date is moved later; card shows 'חסר: …' only within 60 days of expiry / expired / missing. User: no fee amount needed.
 
 - [2026-10-13] next/og (satori) renders Hebrew mirrored — no bidi. Use `lib/og/rtl.ts` rtl() per line and never let text wrap. Satori needs a static (non-variable) font with Hebrew glyphs: Assistant woff from @fontsource is bundled in lib/og/fonts, read via process.cwd() + outputFileTracingIncludes in next.config.ts. Tenant logo = tenants.logo_base64 (data URL).
