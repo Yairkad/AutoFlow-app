@@ -6,6 +6,8 @@
 
 ## User Preferences
 
+- [2026-10-13] For visual changes, user wants a mockup image first, then approval. Branding should use the tenant's own logo + logo colours (not the app's green).
+
 - **Always reply in Hebrew (2026-10-07):** user asked for a Hebrew summary after an English one — write all user-facing replies in Hebrew.
 
 - **No tables in explanations (2026-10-07):** user said he doesn't like looking at tables — explain comparisons in short prose / bullet points instead.
@@ -19,6 +21,10 @@
 - **Dictates requirements in a stream, expects them folded into the current task** (2026-07-06): during a single implementation pass on supplier-tracking payments, the user kept sending follow-up asks mid-edit (multi-debt payment picker → payment-method selector → quick-add-supplier → collapse-by-default accordion → color swap on charge/credit → per-line notes → retroactively link an already-issued check to a debt → Excel import → styled print). None were meant to interrupt or replace the current step — each was additive scope for the same feature. Pattern: finish the in-flight edit to a non-broken state first, then absorb the new ask into the same pass rather than asking "should I stop and redo?".
 
 ## Key Learnings
+
+- [2026-10-13] next/og (satori) renders Hebrew mirrored — no bidi. Use `lib/og/rtl.ts` rtl() per line and never let text wrap. Satori needs a static (non-variable) font with Hebrew glyphs: Assistant woff from @fontsource is bundled in lib/og/fonts, read via process.cwd() + outputFileTracingIncludes in next.config.ts. Tenant logo = tenants.logo_base64 (data URL).
+
+- [2026-10-13] "הפקדת רישיון" (user wrote הפקדת סוחר) = car taken off the road with its license deposited at the licensing office → `cars.license_deposited` (no test/insurance expected). Car documents live in Drive רכבים/<plate>/ (same pattern as suppliers), file name = "<plate> - <user-typed doc name>". `/api/drive/upload` takes the name from `file.name` → rename client-side via `new File([f], name)`; it does NOT return mimeType.
 
 - **Project:** autoline-app
 - **Description:** This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
