@@ -41,6 +41,8 @@
 
 ## Do-Not-Repeat
 
+- [2026-10-13] User merges PRs themselves mid-session — before pushing follow-ups to a PR branch, check whether the PR is already merged; if so open a new PR (rebase branch onto main).
+
 - [2026-10-13] Any new upload to an /api route (Drive etc.) MUST go through `shrinkForUpload` from lib/utils/uploadCompress.ts and handle 413 / non-JSON responses — Vercel rejects bodies >4.5MB before the route runs, and `await res.json()` in a try/catch turns that into a misleading 'שגיאת רשת'.
 
 - [2026-10-07] `pkill -f "<pattern>"` inside a Bash tool call kills the tool's own shell (its command line contains the pattern) → exit 144 and the rest of the command never runs. Kill by PID from `pgrep` of a pattern not present in the command, or run the kill as its own call.

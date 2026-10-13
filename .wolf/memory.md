@@ -2222,3 +2222,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 10:55 | Cars: car_code field (added to migration 088) | CarsClient.tsx, 088 | tsc clean | ~2k |
 | 11:05 | Cars: test = fee paid + track test passed (migration 089), auto-reset on renewal, card 'חסר' tag | CarsClient.tsx, 089_cars_test_steps.sql | tsc clean | ~8k |
+| 11:30 | PR #36 was already merged before last 4 commits; rebased onto main, opened PR #37; awaiting migration 088/089 confirmation before merge | - | PR #37 open | ~3k |
