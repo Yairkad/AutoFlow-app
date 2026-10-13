@@ -15,6 +15,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
 import { VehicleData } from '@/lib/utils/plateApi'
+import { MAX_UPLOAD_BYTES, shrinkForUpload } from '@/lib/utils/uploadCompress'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,13 @@ interface Car {
   interested_buyers: InterestedBuyer[]
   reserved_for: string | null
   current_location: string | null
+  hand: number | null
+  original_ownership: string | null
+  car_code: string | null
+  test_fee_paid: boolean
+  test_fee_paid_date: string | null
+  test_passed: boolean
+  test_passed_date: string | null
   license_deposited: boolean
   license_deposit_date: string | null
   deposit_refund_requested: boolean
@@ -147,6 +155,9 @@ const emptyCarForm = {
   fuel_type: '', seats: '',
   reserved_for: '',
   current_location: '',
+  hand: '', original_ownership: '', car_code: '',
+  test_fee_paid: false, test_fee_paid_date: '',
+  test_passed: false, test_passed_date: '',
   license_deposited: false,
   license_deposit_date: '',
   deposit_refund_requested: false,
@@ -297,6 +308,8 @@ export default function CarsClient() {
       interested_buyers: Array.isArray(x.interested_buyers) ? x.interested_buyers : [],
       license_deposited: !!x.license_deposited,
       deposit_refund_requested: !!x.deposit_refund_requested,
+      test_fee_paid: !!x.test_fee_paid,
+      test_passed:   !!x.test_passed,
     })))
     setRequests(r || [])
     setSaleRequests(sr || [])
@@ -445,6 +458,13 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
         notes:           car.notes            || '',
         reserved_for:    car.reserved_for     || '',
         current_location: car.current_location || '',
+        hand:               car.hand ? String(car.hand) : '',
+        original_ownership: car.original_ownership || '',
+        car_code:           car.car_code || '',
+        test_fee_paid:      !!car.test_fee_paid,
+        test_fee_paid_date: car.test_fee_paid_date || '',
+        test_passed:        !!car.test_passed,
+        test_passed_date:   car.test_passed_date || '',
         license_deposited:    !!car.license_deposited,
         license_deposit_date: car.license_deposit_date || '',
         deposit_refund_requested:      !!car.deposit_refund_requested,
@@ -490,14 +510,16 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
 
   async function uploadPhoto(idx: number, file: File) {
     setUploadingIdx(idx)
+    const small = await shrinkForUpload(file)
     const fd = new FormData()
-    fd.append('file', file)
+    fd.append('file', small)
     fd.append('tenant_id', tenantId.current)
     fd.append('sub_folder', 'רכבים')
     if (carForm.plate) fd.append('item_name', carForm.plate)
     try {
       const res  = await fetch('/api/drive/upload', { method: 'POST', body: fd })
-      const data = await res.json()
+      if (res.status === 413) { toast('התמונה גדולה מדי להעלאה (מקסימום כ-4MB)', 'error'); return }
+      const data = await res.json().catch(() => ({ error: `שגיאת שרת (${res.status})` }))
       if (data.id) {
         setPhotoUrls(p => p.map((u, i) => i === idx ? data.id : u))
         toast('התמונה הועלתה ✓', 'success')
@@ -543,17 +565,25 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     }
     const docLabel = name.trim()
     if (!docLabel) { toast('יש להזין שם למסמך', 'error'); return }
-    const dot = file.name.lastIndexOf('.')
-    const ext = dot > 0 ? file.name.slice(dot) : (file.type === 'application/pdf' ? '.pdf' : '')
-    const named = new File([file], `${carDrivePlate} - ${docLabel}${ext}`, { type: file.type })
     setCarDriveUploading(true)
+    // Phone photos / scans are often over Vercel's ~4.5MB request limit → shrink first.
+    const small = await shrinkForUpload(file)
+    if (small.size > MAX_UPLOAD_BYTES) {
+      setCarDriveUploading(false)
+      toast(`הקובץ גדול מדי (${(small.size / 1048576).toFixed(1)}MB) — מקסימום כ-4MB. נסו לסרוק שוב באיכות נמוכה יותר`, 'error')
+      return
+    }
+    const dot = small.name.lastIndexOf('.')
+    const ext = dot > 0 ? small.name.slice(dot) : (small.type === 'application/pdf' ? '.pdf' : '')
+    const named = new File([small], `${carDrivePlate} - ${docLabel}${ext}`, { type: small.type })
     const fd = new FormData()
     fd.append('file', named)
     fd.append('tenant_id', tenantId.current)
     fd.append('folder_id', carDriveFolderId)
     try {
       const res  = await fetch('/api/drive/upload', { method: 'POST', body: fd })
-      const data = await res.json()
+      if (res.status === 413) { toast('הקובץ גדול מדי להעלאה (מקסימום כ-4MB)', 'error'); return }
+      const data = await res.json().catch(() => ({ error: `שגיאת שרת (${res.status})` }))
       if (data.id) {
         setCarDriveFiles(f => [{ id: data.id, name: data.name, mimeType: named.type || '', webViewLink: data.webViewLink }, ...f])
         setPendingDoc(null)
@@ -620,6 +650,13 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       notes:            carForm.notes            || null,
       reserved_for:     carForm.status === 'reserved' ? (carForm.reserved_for || null) : null,
       current_location: carForm.current_location || null,
+      hand:                 carForm.hand ? Number(carForm.hand) : null,
+      original_ownership:   carForm.original_ownership.trim() || null,
+      car_code:             carForm.car_code.trim() || null,
+      test_fee_paid:        carForm.test_fee_paid,
+      test_fee_paid_date:   carForm.test_fee_paid ? (carForm.test_fee_paid_date || null) : null,
+      test_passed:          carForm.test_passed,
+      test_passed_date:     carForm.test_passed ? (carForm.test_passed_date || null) : null,
       license_deposited:    carForm.license_deposited,
       license_deposit_date: carForm.license_deposited ? (carForm.license_deposit_date || null) : null,
       deposit_refund_requested:      carForm.license_deposited && carForm.deposit_refund_requested,
@@ -1050,6 +1087,12 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     else { setCarDriveFiles([]); setCarDriveFolderId(null); setCarDrivePlate(car.plate || '') }
   }
 
+  // Fee + track test only matter while renewing: test expired, missing, or due within 60 days.
+  function inTestRenewal(car: Car) {
+    if (!car.test_date) return true
+    return (new Date(car.test_date).getTime() - Date.now()) / 86400000 <= 60
+  }
+
   function CarCard({ car }: { car: Car }) {
     const st    = STATUS_MAP[car.status]
     const thumb = car.photos[0] ? driveThumb(car.photos[0]) : null
@@ -1090,6 +1133,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           <div style={{ fontSize: 11.5, color: 'var(--text-muted)', display: 'flex', gap: 6, alignItems: 'center' }}>
             {car.plate && <span style={{ direction: 'ltr', fontWeight: 700, color: 'var(--text)', background: '#fef9c3', border: '1px solid #facc15', borderRadius: 4, padding: '0 5px' }}>{car.plate}</span>}
             {car.year && <span>{car.year}</span>}
+            {car.hand != null && <span>יד {car.hand}</span>}
           </div>
           {car.ask_price ? <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--primary)' }}>{fmt(car.ask_price)}</div> : null}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 'auto', paddingTop: 3 }}>
@@ -1104,6 +1148,11 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
                 ? <span style={{ ...tag, background: test.bg, color: test.color }}>🔧 {test.label}</span>
                 : <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>🔧 אין טסט</span>
             }
+            {!car.license_deposited && inTestRenewal(car) && (
+              car.test_fee_paid && car.test_passed
+                ? <span style={{ ...tag, background: '#dcfce7', color: '#166534' }}>✓ אגרה+מבחן – לעדכן תוקף</span>
+                : <span style={{ ...tag, background: '#ffedd5', color: '#c2410c' }}>חסר: {[!car.test_fee_paid && 'אגרה', !car.test_passed && 'מבחן'].filter(Boolean).join(' + ')}</span>
+            )}
             {!car.license_deposited && insur && <span style={{ ...tag, background: insur.bg, color: insur.color }}>🛡️ {insur.label}</span>}
             {car.interested_buyers.length > 0 && <span style={{ ...tag, background: '#fef9c3', color: '#92400e' }}>👥 {car.interested_buyers.length}</span>}
           </div>
@@ -1123,7 +1172,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
   // ── Excel / JSON ──────────────────────────────────────────────────
 
   function exportExcel() {
-    const rows = cars.map(c => ({ לוחית: c.plate, יצרן: c.make ?? '', דגם: c.model ?? '', שנה: c.year ?? '', צבע: c.color ?? '', 'ק"מ': c.km ?? '', סטטוס: c.status ?? '', 'מחיר קנייה': c.buy_price ?? '', 'מחיר מבוקש': c.ask_price ?? '', 'מחיר מכירה': c.sell_price ?? '', הערות: c.notes ?? '' }))
+    const rows = cars.map(c => ({ לוחית: c.plate, יצרן: c.make ?? '', דגם: c.model ?? '', שנה: c.year ?? '', יד: c.hand ?? '', 'בעלות מקורית': c.original_ownership ?? '', 'קוד רכב': c.car_code ?? '', צבע: c.color ?? '', 'ק"מ': c.km ?? '', סטטוס: c.status ?? '', 'מחיר קנייה': c.buy_price ?? '', 'מחיר מבוקש': c.ask_price ?? '', 'מחיר מכירה': c.sell_price ?? '', הערות: c.notes ?? '' }))
     const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'רכבים')
@@ -1495,13 +1544,19 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           const insur = dateChipStyle(c.insur_date)
           const rows: [string, React.ReactNode][] = [
             ['מספר רכב', c.plate ? <span style={{ direction: 'ltr', display: 'inline-block' }}>{c.plate}</span> : null],
-            ['שנה', c.year], ['צבע', c.color], ['ק"מ', fmtKm(c.km) || null],
+            ['שנה', c.year], ['יד', c.hand], ['בעלות מקורית', c.original_ownership], ['קוד רכב', c.car_code], ['צבע', c.color], ['ק"מ', fmtKm(c.km) || null],
             ['מצב', cond ? <span style={{ color: COND_COLOR[c.condition] }}>{cond.label}</span> : null], ['דלק', c.fuel_type], ['מושבים', c.seats],
             ['מחיר קנייה', c.buy_price ? fmt(c.buy_price) : null],
             ['מחיר מבוקש', c.ask_price ? fmt(c.ask_price) : null],
             ['מחיר מכירה', c.sold_price ? fmt(c.sold_price) : null],
             ['תוקף טסט', c.test_date ? <span style={{ color: test?.color, fontWeight: 700 }}>{c.test_date}{test && test.label !== c.test_date ? ` (${test.label})` : ''}</span> : null],
             ['תוקף ביטוח', c.insur_date ? <span style={{ color: insur?.color, fontWeight: 700 }}>{c.insur_date}{insur && insur.label !== c.insur_date ? ` (${insur.label})` : ''}</span> : null],
+            ['אגרת טסט', c.license_deposited ? null : c.test_fee_paid
+              ? <span style={{ color: '#166534' }}>✅ שולמה{c.test_fee_paid_date ? ` (${c.test_fee_paid_date})` : ''}</span>
+              : <span style={{ color: '#dc2626' }}>❌ לא שולמה</span>],
+            ['מבחן במסלול', c.license_deposited ? null : c.test_passed
+              ? <span style={{ color: '#166534' }}>✅ עבר{c.test_passed_date ? ` (${c.test_passed_date})` : ''}</span>
+              : <span style={{ color: '#dc2626' }}>❌ לא עבר</span>],
             ['הפקדת רישיון', c.license_deposited ? `🅿️ מופקד${c.license_deposit_date ? ' מ-' + c.license_deposit_date : ''}` : null],
             ['הוגשה בקשה להחזר?', !c.license_deposited ? null : c.deposit_refund_requested
               ? <span style={{ color: '#166534' }}>✅ כן{c.deposit_refund_requested_date ? ` (${c.deposit_refund_requested_date})` : ''}</span>
@@ -1616,6 +1671,14 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
               <Field label="שנה"><input type="number" value={carForm.year} onChange={e => setCarForm(f=>({...f,year:e.target.value}))} style={inp()} placeholder="2020" /></Field>
               <Field label="ק״מ"><input type="number" value={carForm.km} onChange={e => setCarForm(f=>({...f,km:e.target.value}))} style={inp()} /></Field>
               <Field label="צבע"><input value={carForm.color} onChange={e => setCarForm(f=>({...f,color:e.target.value}))} style={inp()} /></Field>
+              <Field label="יד"><input type="number" value={carForm.hand} onChange={e => setCarForm(f=>({...f,hand:e.target.value}))} style={inp()} placeholder="1" min="0" max="20" /></Field>
+              <Field label="בעלות מקורית">
+                <input list="ownership-options" value={carForm.original_ownership} onChange={e => setCarForm(f=>({...f,original_ownership:e.target.value}))} style={inp()} placeholder="פרטי / ליסינג / השכרה..." />
+                <datalist id="ownership-options">
+                  {['פרטי', 'ליסינג', 'השכרה', 'חברה', 'מונית', 'לימוד נהיגה', 'ממשלתי', 'יבוא אישי'].map(o => <option key={o} value={o} />)}
+                </datalist>
+              </Field>
+              <Field label="קוד רכב"><input value={carForm.car_code} onChange={e => setCarForm(f=>({...f,car_code:e.target.value}))} style={inp()} placeholder="אם יש" /></Field>
             </Grid>
             <Grid cols={3}>
               <Field label="סוג דלק"><input value={carForm.fuel_type} onChange={e => setCarForm(f=>({...f,fuel_type:e.target.value}))} style={inp()} /></Field>
@@ -1649,8 +1712,29 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           {/* Dates */}
           <Section title="תאריכים">
             <Grid cols={2}>
-              <Field label="תוקף טסט"><input type="date" value={carForm.test_date} onChange={e => setCarForm(f=>({...f,test_date:e.target.value}))} style={inp()} /></Field>
+              <Field label="תוקף טסט"><input type="date" value={carForm.test_date} onChange={e => {
+                const v = e.target.value
+                // New validity later than the saved one = test renewed → next year's fee/test start unchecked.
+                const prev = editCarId ? cars.find(c => c.id === editCarId)?.test_date : null
+                const renewed = !!(prev && v && v > prev)
+                setCarForm(f => ({ ...f, test_date: v, ...(renewed ? { test_fee_paid: false, test_fee_paid_date: '', test_passed: false, test_passed_date: '' } : {}) }))
+              }} style={inp()} /></Field>
               <Field label="תוקף ביטוח"><input type="date" value={carForm.insur_date} onChange={e => setCarForm(f=>({...f,insur_date:e.target.value}))} style={inp()} /></Field>
+              <Field label="טסט – אגרה ומבחן">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={carForm.test_fee_paid} onChange={e => setCarForm(f=>({...f,test_fee_paid:e.target.checked, test_fee_paid_date: e.target.checked ? (f.test_fee_paid_date || todayISO()) : ''}))} />
+                    💳 אגרה שולמה
+                    {carForm.test_fee_paid && <input type="date" value={carForm.test_fee_paid_date} onChange={e => setCarForm(f=>({...f,test_fee_paid_date:e.target.value}))} style={{ ...inp(), width: 'auto', padding: '3px 6px', fontSize: 12 }} />}
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={carForm.test_passed} onChange={e => setCarForm(f=>({...f,test_passed:e.target.checked, test_passed_date: e.target.checked ? (f.test_passed_date || todayISO()) : ''}))} />
+                    ✅ עבר מבחן במסלול
+                    {carForm.test_passed && <input type="date" value={carForm.test_passed_date} onChange={e => setCarForm(f=>({...f,test_passed_date:e.target.value}))} style={{ ...inp(), width: 'auto', padding: '3px 6px', fontSize: 12 }} />}
+                  </label>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>מתאפס אוטומטית כשמעדכנים תוקף טסט חדש</span>
+                </div>
+              </Field>
               <Field label="הפקדת רישיון (ירד מהכביש)">
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', minHeight: 38 }}>
                   <input type="checkbox" checked={carForm.license_deposited} onChange={e => setCarForm(f=>({...f,license_deposited:e.target.checked}))} />

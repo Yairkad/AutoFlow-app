@@ -2203,3 +2203,23 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 09:30 | Cars: filter 'בהפקדה – לא הוגש החזר' | CarsClient.tsx | tsc clean | ~2k |
 | 10:10 | Branded intake OG image: tenant logo + logo-derived colours, satori RTL fix, sharp dep | lib/og/*, app/api/public/og/intake/route.tsx, app/intake/[token]/page.tsx, next.config.ts | rendered + verified locally | ~25k |
+
+## Session: 2026-10-13 10:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-13 11:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:30 | Fix car doc upload 'שגיאת רשת' (Vercel 4.5MB): shared uploadCompress helpers, shrink + 413 handling | CarsClient.tsx, SupplierTrackingTab.tsx, lib/utils/uploadCompress.ts | tsc clean | ~8k |
+| 10:45 | Cars: hand + original ownership fields (migration 088); always compress images/PDFs before upload | CarsClient.tsx, uploadCompress.ts | tsc clean | ~6k |
+
+## Session: 2026-10-13 11:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:55 | Cars: car_code field (added to migration 088) | CarsClient.tsx, 088 | tsc clean | ~2k |
+| 11:05 | Cars: test = fee paid + track test passed (migration 089), auto-reset on renewal, card 'חסר' tag | CarsClient.tsx, 089_cars_test_steps.sql | tsc clean | ~8k |
+| 11:30 | PR #36 was already merged before last 4 commits; rebased onto main, opened PR #37; awaiting migration 088/089 confirmation before merge | - | PR #37 open | ~3k |

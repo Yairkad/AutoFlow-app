@@ -6,6 +6,8 @@
 
 ## User Preferences
 
+- [2026-10-13] User wants uploads auto-compressed always (any size), not only above the limit — cars use shrinkForUpload (keeps original if compression didn't help).
+
 - [2026-10-13] For visual changes, user wants a mockup image first, then approval. Branding should use the tenant's own logo + logo colours (not the app's green).
 
 - **Always reply in Hebrew (2026-10-07):** user asked for a Hebrew summary after an English one — write all user-facing replies in Hebrew.
@@ -22,6 +24,8 @@
 
 ## Key Learnings
 
+- [2026-10-13] Israeli annual car test (טסט) = two steps: paying the license fee (אגרה) + passing the track test (מבחן במסלול). cars.test_fee_paid / test_passed reset (in the form onChange) when test_date is moved later; card shows 'חסר: …' only within 60 days of expiry / expired / missing. User: no fee amount needed.
+
 - [2026-10-13] next/og (satori) renders Hebrew mirrored — no bidi. Use `lib/og/rtl.ts` rtl() per line and never let text wrap. Satori needs a static (non-variable) font with Hebrew glyphs: Assistant woff from @fontsource is bundled in lib/og/fonts, read via process.cwd() + outputFileTracingIncludes in next.config.ts. Tenant logo = tenants.logo_base64 (data URL).
 
 - [2026-10-13] "הפקדת רישיון" (user wrote הפקדת סוחר) = car taken off the road with its license deposited at the licensing office → `cars.license_deposited` (no test/insurance expected). Car documents live in Drive רכבים/<plate>/ (same pattern as suppliers), file name = "<plate> - <user-typed doc name>". `/api/drive/upload` takes the name from `file.name` → rename client-side via `new File([f], name)`; it does NOT return mimeType.
@@ -36,6 +40,10 @@
 - **Netfree-evasion proxy on every Supabase call (found 2026-07-14):** `lib/supabase/client.ts`'s `createClient()` passes a custom `proxyFetch` to `createBrowserClient()` — every request whose URL starts with the real Supabase URL gets rewritten to `${NEXT_PUBLIC_APP_URL}/api/store?p=<base64(path+query)>` instead (comment: "hides the real Supabase path... so Netfree never sees supabase.co"). This means the browser never talks to `*.supabase.co` directly for REST/session calls; it all funnels through the `/api/store` Next.js API route. Two consequences to remember: (1) `tests/fixtures/mock.ts`'s `mockSupabase()` only does `page.route(SB_URL...)` — it does **not** intercept `/api/store`, so its empty-table stubs may silently not apply to some/most client calls; if the Playwright suite's data-dependent tests are flaky in ways that don't correlate with any real code change, suspect this mismatch before assuming cold-dev-server-compile timing. (2) Synthetic/scripted auth (e.g., constructing a session via `supabase.auth.admin.generateLink()` + injecting the resulting hash tokens into `/auth/callback` from a standalone script, bypassing the real `/login` form) does **not** reliably reproduce a real logged-in session in this app — confirmed the page renders (proxy.ts's server-side gate passes) but `useProfile()`/data fetches come back empty client-side, most likely because the proxy/session-cookie plumbing this synthetic path skips doesn't get set up the same way a real `/login` flow does. For any future need to browser-verify authenticated behavior, drive the real `/login` form with valid credentials rather than trying to shortcut auth.
 
 ## Do-Not-Repeat
+
+- [2026-10-13] User merges PRs themselves mid-session — before pushing follow-ups to a PR branch, check whether the PR is already merged; if so open a new PR (rebase branch onto main).
+
+- [2026-10-13] Any new upload to an /api route (Drive etc.) MUST go through `shrinkForUpload` from lib/utils/uploadCompress.ts and handle 413 / non-JSON responses — Vercel rejects bodies >4.5MB before the route runs, and `await res.json()` in a try/catch turns that into a misleading 'שגיאת רשת'.
 
 - [2026-10-07] `pkill -f "<pattern>"` inside a Bash tool call kills the tool's own shell (its command line contains the pattern) → exit 144 and the rest of the command never runs. Kill by PID from `pgrep` of a pattern not present in the command, or run the kill as its own call.
 
