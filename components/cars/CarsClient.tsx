@@ -59,6 +59,7 @@ interface Car {
   current_location: string | null
   hand: number | null
   original_ownership: string | null
+  car_code: string | null
   license_deposited: boolean
   license_deposit_date: string | null
   deposit_refund_requested: boolean
@@ -150,7 +151,7 @@ const emptyCarForm = {
   fuel_type: '', seats: '',
   reserved_for: '',
   current_location: '',
-  hand: '', original_ownership: '',
+  hand: '', original_ownership: '', car_code: '',
   license_deposited: false,
   license_deposit_date: '',
   deposit_refund_requested: false,
@@ -451,6 +452,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
         current_location: car.current_location || '',
         hand:               car.hand ? String(car.hand) : '',
         original_ownership: car.original_ownership || '',
+        car_code:           car.car_code || '',
         license_deposited:    !!car.license_deposited,
         license_deposit_date: car.license_deposit_date || '',
         deposit_refund_requested:      !!car.deposit_refund_requested,
@@ -638,6 +640,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       current_location: carForm.current_location || null,
       hand:                 carForm.hand ? Number(carForm.hand) : null,
       original_ownership:   carForm.original_ownership.trim() || null,
+      car_code:             carForm.car_code.trim() || null,
       license_deposited:    carForm.license_deposited,
       license_deposit_date: carForm.license_deposited ? (carForm.license_deposit_date || null) : null,
       deposit_refund_requested:      carForm.license_deposited && carForm.deposit_refund_requested,
@@ -1142,7 +1145,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
   // ── Excel / JSON ──────────────────────────────────────────────────
 
   function exportExcel() {
-    const rows = cars.map(c => ({ לוחית: c.plate, יצרן: c.make ?? '', דגם: c.model ?? '', שנה: c.year ?? '', יד: c.hand ?? '', 'בעלות מקורית': c.original_ownership ?? '', צבע: c.color ?? '', 'ק"מ': c.km ?? '', סטטוס: c.status ?? '', 'מחיר קנייה': c.buy_price ?? '', 'מחיר מבוקש': c.ask_price ?? '', 'מחיר מכירה': c.sell_price ?? '', הערות: c.notes ?? '' }))
+    const rows = cars.map(c => ({ לוחית: c.plate, יצרן: c.make ?? '', דגם: c.model ?? '', שנה: c.year ?? '', יד: c.hand ?? '', 'בעלות מקורית': c.original_ownership ?? '', 'קוד רכב': c.car_code ?? '', צבע: c.color ?? '', 'ק"מ': c.km ?? '', סטטוס: c.status ?? '', 'מחיר קנייה': c.buy_price ?? '', 'מחיר מבוקש': c.ask_price ?? '', 'מחיר מכירה': c.sell_price ?? '', הערות: c.notes ?? '' }))
     const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'רכבים')
@@ -1514,7 +1517,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           const insur = dateChipStyle(c.insur_date)
           const rows: [string, React.ReactNode][] = [
             ['מספר רכב', c.plate ? <span style={{ direction: 'ltr', display: 'inline-block' }}>{c.plate}</span> : null],
-            ['שנה', c.year], ['יד', c.hand], ['בעלות מקורית', c.original_ownership], ['צבע', c.color], ['ק"מ', fmtKm(c.km) || null],
+            ['שנה', c.year], ['יד', c.hand], ['בעלות מקורית', c.original_ownership], ['קוד רכב', c.car_code], ['צבע', c.color], ['ק"מ', fmtKm(c.km) || null],
             ['מצב', cond ? <span style={{ color: COND_COLOR[c.condition] }}>{cond.label}</span> : null], ['דלק', c.fuel_type], ['מושבים', c.seats],
             ['מחיר קנייה', c.buy_price ? fmt(c.buy_price) : null],
             ['מחיר מבוקש', c.ask_price ? fmt(c.ask_price) : null],
@@ -1642,6 +1645,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
                   {['פרטי', 'ליסינג', 'השכרה', 'חברה', 'מונית', 'לימוד נהיגה', 'ממשלתי', 'יבוא אישי'].map(o => <option key={o} value={o} />)}
                 </datalist>
               </Field>
+              <Field label="קוד רכב"><input value={carForm.car_code} onChange={e => setCarForm(f=>({...f,car_code:e.target.value}))} style={inp()} placeholder="אם יש" /></Field>
             </Grid>
             <Grid cols={3}>
               <Field label="סוג דלק"><input value={carForm.fuel_type} onChange={e => setCarForm(f=>({...f,fuel_type:e.target.value}))} style={inp()} /></Field>
