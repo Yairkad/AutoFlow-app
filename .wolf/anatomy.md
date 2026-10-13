@@ -521,3 +521,15 @@
 
 ## tests/fixtures/
 
+
+## lib/og/
+
+- `intakeImage.tsx` — renderIntakeOgImage(name, logoBase64): branded 1200x630 link preview (logo card + inspection badge, colours from logo) via next/og ImageResponse (~1100 tok)
+- `logoColors.ts` — logoPalette(buf): dominant dark colour → bg, bright saturated → accent (sharp) (~700 tok)
+- `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
+- `intakeTenant.ts` — getIntakeTenant(token): tenant name+logo for personal/fixed intake link (~250 tok)
+- `fonts/` — Assistant hebrew+latin 400/800 woff (OFL) for OG rendering
+
+## app/api/public/og/intake/
+
+- `route.tsx` — GET ?t=<token>&v=<logo hash>: branded OG image; redirects to static /og/inspection-intake.png when no logo (~250 tok)

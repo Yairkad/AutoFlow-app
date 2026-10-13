@@ -2202,3 +2202,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:30 | Cars: filter 'בהפקדה – לא הוגש החזר' | CarsClient.tsx | tsc clean | ~2k |
+| 10:10 | Branded intake OG image: tenant logo + logo-derived colours, satori RTL fix, sharp dep | lib/og/*, app/api/public/og/intake/route.tsx, app/intake/[token]/page.tsx, next.config.ts | rendered + verified locally | ~25k |
