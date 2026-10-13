@@ -239,7 +239,7 @@ export default function CarsClient() {
 
   // Car detail view + list filters
   const [viewCarId,  setViewCarId]  = useState<string | null>(null)
-  const [flagFilter, setFlagFilter] = useState<'all' | 'deposited' | 'no_test' | 'expiring'>('all')
+  const [flagFilter, setFlagFilter] = useState<'all' | 'deposited' | 'no_refund' | 'no_test' | 'expiring'>('all')
   const [search,     setSearch]     = useState('')
   const isMobile = useIsMobile()
 
@@ -910,6 +910,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       if (q && ![c.plate, c.make, c.model, c.owner_name, c.current_location].some(v => v?.toLowerCase().includes(q))) return false
       const t = daysUntil(c.test_date), ins = daysUntil(c.insur_date)
       if (flagFilter === 'deposited') return c.license_deposited
+      if (flagFilter === 'no_refund') return c.license_deposited && !c.deposit_refund_requested
       if (flagFilter === 'no_test')   return !c.license_deposited && (t === null || t < 0)
       if (flagFilter === 'expiring')  return !c.license_deposited && ((t !== null && t >= 0 && t <= 30) || (ins !== null && ins <= 30))
       return true
@@ -920,6 +921,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
   const viewCar    = viewCarId ? cars.find(c => c.id === viewCarId) ?? null : null
   const CARD_GRID: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(190px, calc(50% - 6px)), 1fr))', gap: 12 }
   const depositedCount = [...invCars, ...checkCars].filter(c => c.license_deposited).length
+  const noRefundCount  = [...invCars, ...checkCars].filter(c => c.license_deposited && !c.deposit_refund_requested).length
   const noTestCount    = [...invCars, ...checkCars].filter(c => { const t = daysUntil(c.test_date); return !c.license_deposited && (t === null || t < 0) }).length
 
   function renderFlagBar() {
@@ -938,6 +940,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           {([
             { v: 'all',       l: 'הכל' },
             { v: 'deposited', l: `🅿️ בהפקדה (${depositedCount})` },
+            { v: 'no_refund', l: `💸 בהפקדה – לא הוגש החזר (${noRefundCount})` },
             { v: 'no_test',   l: `🔧 ללא טסט בתוקף (${noTestCount})` },
             { v: 'expiring',  l: '⏳ טסט/ביטוח עד 30 יום' },
           ] as const).map(f => (

@@ -2196,3 +2196,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:20 | Cars: 'הוגשה בקשה להחזר?' field for deposited cars (form, card tag, detail row), migration 087 | CarsClient.tsx, 087_cars_deposit_refund.sql | tsc clean | ~6k |
+
+## Session: 2026-10-13 09:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:30 | Cars: filter 'בהפקדה – לא הוגש החזר' | CarsClient.tsx | tsc clean | ~2k |
