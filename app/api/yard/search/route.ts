@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createServiceClient } from '@/lib/supabase/service'
+import { tireSizeText } from '@/lib/tires/size'
 
 export interface SearchResult {
   id:         string
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
     const { data: tires } = await tireQuery.order('brand').limit(40)
 
     for (const t of tires ?? []) {
-      const size = `${t.width}/${t.profile}/${t.rim}`
+      const size = tireSizeText(t, '/') || 'ללא מידה'
       results.push({
         id:    t.id,
         type:  'tire',

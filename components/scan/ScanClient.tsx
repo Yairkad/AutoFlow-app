@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { tireSizeText } from '@/lib/tires/size'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
 
@@ -94,7 +95,7 @@ export default function ScanClient() {
       sb.from('products').select('id,name,sku,barcode,qty').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
     ])
     const tireItems: InventoryItem[] = (tires ?? []).map(t => ({
-      id: t.id, type: 'tire', name: `${t.brand ?? ''} ${t.width}/${t.profile}R${t.rim}`.trim(),
+      id: t.id, type: 'tire', name: `${t.brand ?? ''} ${tireSizeText(t) || 'ללא מידה'}`.trim(),
       sku: t.sku ?? null, barcode: t.sku ?? null, qty: t.qty,
     }))
     const prodItems: InventoryItem[] = (products ?? []).map(p => ({

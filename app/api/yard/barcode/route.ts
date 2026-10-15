@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createServiceClient } from '@/lib/supabase/service'
+import { tireSizeText } from '@/lib/tires/size'
 import type { SearchResult } from '@/app/api/yard/search/route'
 
 // GET /api/yard/barcode?code=XXXXX — exact SKU match across tires and products
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     .maybeSingle()
 
   if (tire) {
-    const size = `${tire.width}/${tire.profile}/${tire.rim}`
+    const size = tireSizeText(tire, '/') || 'ללא מידה'
     const result: SearchResult = {
       id:    tire.id,
       type:  'tire',

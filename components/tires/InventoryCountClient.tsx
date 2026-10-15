@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import Button from '@/components/ui/Button'
+import { tireSizeText } from '@/lib/tires/size'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -13,9 +14,9 @@ interface TireRow {
   id: string
   sku: string | null
   brand: string | null
-  width: number
-  profile: number
-  rim: number
+  width: number | null
+  profile: number | null
+  rim: number | null
   qty: number
 }
 
@@ -49,7 +50,7 @@ interface TireSale {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function tireSize(t: TireRow) { return `${t.width}/${t.profile}R${t.rim}` }
+function tireSize(t: TireRow) { return tireSizeText(t) || 'ללא מידה' }
 function tireLabel(t: TireRow) { return [t.brand, tireSize(t)].filter(Boolean).join(' ') }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -176,9 +177,26 @@ export default function InventoryCountClient() {
   // ── Confirm ───────────────────────────────────────────────────────────────────
 
   async function confirmUpdate() {
-    const known = entries.filter(e => e.tireId !== null)
-    if (known.length === 0) { showToast('אין פריטים לעדכון', 'error'); return }
+    if (entries.length === 0) { showToast('אין פריטים לעדכון', 'error'); return }
     setSaving(true)
+
+    // Unknown barcodes are saved as new tires (sku + counted qty only) so they stay in stock;
+    // their size/brand/price are filled in later from /tires → "חסרי נתונים".
+    const unknownEntries = entries.filter(e => e.tireId === null)
+    let created: ScanEntry[] = []
+    if (unknownEntries.length > 0) {
+      const { data: newTires, error: newErr } = await sb
+        .from('tires')
+        .insert(unknownEntries.map(e => ({ tenant_id: tenantId.current, sku: e.sku, qty: e.scanned })))
+        .select('id, sku')
+      if (newErr || !newTires) {
+        console.error('[inventory-count] create unknown tires', newErr)
+        showToast('שגיאה בשמירת צמיגים לא מזוהים', 'error'); setSaving(false); return
+      }
+      const idBySku = new Map(newTires.map(t => [String(t.sku).toLowerCase(), t.id as string]))
+      created = unknownEntries.map(e => ({ ...e, tireId: idBySku.get(e.sku.toLowerCase()) ?? null, label: `${e.sku} (ממתין לפרטים)` }))
+    }
+    const known = entries.filter(e => e.tireId !== null)
 
     const isFirst = !lastSession
 
@@ -190,7 +208,7 @@ export default function InventoryCountClient() {
 
     if (sessErr || !session) { showToast('שגיאה בשמירה', 'error'); setSaving(false); return }
 
-    const sessEntries = known.map(e => {
+    const sessEntries = [...known, ...created].map(e => {
       const tire = tires.find(t => t.id === e.tireId)
       const { expectedQty } = e.tireId ? getExpected(e.tireId) : { expectedQty: null }
       return {
@@ -204,10 +222,12 @@ export default function InventoryCountClient() {
       }
     })
 
-    await Promise.all([
+    const results = await Promise.all([
       sb.from('tire_inventory_count_entries').insert(sessEntries),
       ...known.map(e => sb.from('tires').update({ qty: e.scanned }).eq('id', e.tireId!)),
     ])
+    const failed = results.find(r => r.error)
+    if (failed) console.error('[inventory-count] save', failed.error)
 
     const discrepancyCount = known.filter(e => {
       if (!e.tireId || isFirst) return false
@@ -219,7 +239,7 @@ export default function InventoryCountClient() {
     if (!isFirst && discrepancyCount > 0)
       showToast(`נשמרה ספירה — ${discrepancyCount} חריגות זוהו ✓`, 'success')
     else
-      showToast(`עודכנו ${known.length} צמיגים ✓`, 'success')
+      showToast(`עודכנו ${known.length} צמיגים ✓${created.length ? ` · ${created.length} חדשים ממתינים לפרטים` : ''}`, 'success')
     router.push('/tires')
   }
 
@@ -471,7 +491,7 @@ export default function InventoryCountClient() {
                       <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontSize: '12px', color: '#92400e' }}>{e.sku}</td>
                       {!isFirst && <td colSpan={3} />}
                       <td colSpan={3} style={{ padding: '10px 14px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
-                        יש לשייך מקט בניהול הצמיגים
+                        ייקלט למלאי ({e.scanned} יח׳) כצמיג חדש — להשלמת פרטים בדף הצמיגים
                       </td>
                     </tr>
                   ))}
@@ -503,8 +523,8 @@ export default function InventoryCountClient() {
           {/* Actions */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
             <Button variant="secondary" onClick={() => setPhase('scan')}>← חזור לסריקה</Button>
-            <Button onClick={confirmUpdate} loading={saving} disabled={known.length === 0}>
-              {isFirst ? '✓ שמור ספירה ראשונה' : `✓ אשר ועדכן ${known.length} צמיגים`}
+            <Button onClick={confirmUpdate} loading={saving} disabled={entries.length === 0}>
+              {isFirst ? '✓ שמור ספירה ראשונה' : `✓ אשר ועדכן ${entries.length} צמיגים`}
             </Button>
           </div>
         </>
