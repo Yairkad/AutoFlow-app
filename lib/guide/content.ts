@@ -7,13 +7,22 @@ export interface L { he: string; en: string }
 
 export type DiagramKey = 'toe' | 'camber' | 'caster' | 'size' | 'dot' | 'puncture'
 
+export interface GuideImage {
+  src: string                      // data URL (compressed in the editor)
+  credit?: string | null           // shown under the image, e.g. "Image by X on Freepik"
+  position?: 'before' | 'after'    // before or after the text (default: before)
+}
+
 export interface GuideSection {
   id: string
   title: L
   body: L
   diagram?: DiagramKey | null
-  image?: string | null        // data URL (compressed in the editor)
-  imageCredit?: string | null  // shown under the image, e.g. "Image by X on Freepik"
+  hideDiagram?: boolean            // garage chose to show only its own images
+  images?: GuideImage[]
+  /** @deprecated single image from the first version — read via sectionImages() */
+  image?: string | null
+  imageCredit?: string | null
 }
 
 export interface GuideTopic {
@@ -25,6 +34,8 @@ export interface GuideTopic {
   title: L
   summary: L
   intro: L
+  images?: GuideImage[]
+  /** @deprecated read via sectionImages() */
   image?: string | null
   imageCredit?: string | null
   sections: GuideSection[]
@@ -130,3 +141,9 @@ export function resolveGuide(saved: unknown): GuideContent {
 }
 
 export const pick = (v: L | undefined, lang: Lang) => (lang === 'en' ? v?.en?.trim() || v?.he : v?.he) ?? ''
+
+/** Images of a section/topic, including the single legacy `image` field. */
+export function sectionImages(s: { images?: GuideImage[]; image?: string | null; imageCredit?: string | null }): GuideImage[] {
+  if (s.images) return s.images
+  return s.image ? [{ src: s.image, credit: s.imageCredit ?? null }] : []
+}

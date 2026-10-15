@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import GuideDiagram from '@/components/guide/GuideDiagrams'
-import { pick, type GuideContent, type GuideSection, type GuideTopic, type Lang } from '@/lib/guide/content'
+import { pick, sectionImages, type GuideContent, type GuideImage, type GuideSection, type GuideTopic, type Lang } from '@/lib/guide/content'
 
 export interface GuideBusiness { name: string; subTitle: string; phone: string; address: string; logo: string | null; bg: string; accent: string }
 
@@ -48,6 +48,10 @@ function Body({ text }: { text: string }) {
   return <div style={{ fontSize: 14.5, color: '#334155' }}>{out}</div>
 }
 
+function Photos({ images }: { images: GuideImage[] }) {
+  return <>{images.map((im, i) => <Photo key={i} src={im.src} credit={im.credit} />)}</>
+}
+
 function Photo({ src, credit }: { src?: string | null; credit?: string | null }) {
   if (!src) return null
   return (
@@ -60,10 +64,12 @@ function Photo({ src, credit }: { src?: string | null; credit?: string | null })
 }
 
 function SectionContent({ s, lang }: { s: GuideSection; lang: Lang }) {
+  const imgs = sectionImages(s)
   return <>
-    {s.diagram && <GuideDiagram kind={s.diagram} lang={lang} />}
-    <Photo src={s.image} credit={s.imageCredit} />
+    {s.diagram && !s.hideDiagram && <GuideDiagram kind={s.diagram} lang={lang} />}
+    <Photos images={imgs.filter(im => im.position !== 'after')} />
     <Body text={pick(s.body, lang)} />
+    <Photos images={imgs.filter(im => im.position === 'after')} />
   </>
 }
 
@@ -88,8 +94,6 @@ export default function GuideView({ content, business }: { content: GuideContent
 
   const changeLang = setLang
 
-  const phoneDigits = business.phone.replace(/\D/g, '')
-  const waNumber    = phoneDigits.startsWith('0') ? '972' + phoneDigits.slice(1) : phoneDigits
 
   const LangToggle = (
     <div dir="ltr" style={{ display: 'flex', background: 'rgba(255,255,255,.18)', borderRadius: 999, padding: 3, fontSize: 13, fontWeight: 800 }}>
@@ -150,7 +154,7 @@ export default function GuideView({ content, business }: { content: GuideContent
         {/* Topic */}
         {topic && (
           <div style={{ padding: '4px 14px' }}>
-            <Photo src={topic.image} credit={topic.imageCredit} />
+            <Photos images={sectionImages(topic).filter(im => im.position !== 'after')} />
             {topic.layout === 'cards' ? topic.sections.map(s => (
               <section key={s.id} style={{ ...card, padding: '14px 16px', margin: '12px 0' }}>
                 <h2 style={{ fontSize: 17, fontWeight: 900, margin: '0 0 6px' }}>{pick(s.title, lang)}</h2>
@@ -176,6 +180,7 @@ export default function GuideView({ content, business }: { content: GuideContent
                 })}
               </div>
             )}
+            <Photos images={sectionImages(topic).filter(im => im.position === 'after')} />
           </div>
         )}
 
@@ -186,16 +191,6 @@ export default function GuideView({ content, business }: { content: GuideContent
               {lang === 'en' ? 'Questions? We\'re here' : 'שאלה? אנחנו כאן'}
               <div style={{ opacity: .7, fontSize: 12.5, marginTop: 2 }}>{[business.phone, business.address].filter(Boolean).join(' · ')}</div>
             </div>
-            {phoneDigits && (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <a href={`tel:${phoneDigits}`} style={{ background: '#fff', color: '#0f172a', fontWeight: 800, borderRadius: 12, padding: '9px 14px', fontSize: 13.5, textDecoration: 'none' }}>
-                  {lang === 'en' ? 'Call' : 'התקשר'}
-                </a>
-                <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer" style={{ background: '#22c55e', color: '#fff', fontWeight: 800, borderRadius: 12, padding: '9px 14px', fontSize: 13.5, textDecoration: 'none' }}>
-                  WhatsApp
-                </a>
-              </div>
-            )}
           </div>
         )}
         <p style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', margin: '14px 16px 0' }}>{pick(content.footerNote, lang)}</p>

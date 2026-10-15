@@ -5,7 +5,7 @@ import QRCode from 'qrcode'
 import type { createClient } from '@/lib/supabase/client'
 import Button from '@/components/ui/Button'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
-import { DEFAULT_GUIDE, resolveGuide, type GuideContent, type GuideSection, type GuideTopic, type L } from '@/lib/guide/content'
+import { DEFAULT_GUIDE, resolveGuide, sectionImages, type GuideContent, type GuideImage, type GuideSection, type GuideTopic, type L } from '@/lib/guide/content'
 
 // Settings → דף נחיתה → מדריך צמיגים: edit the public tire guide (/guide/<token>), images, and its QR.
 // Content is saved as one JSON on tenants.guide_content; "reset" sets it back to null (= built-in default).
@@ -63,40 +63,54 @@ function LField({ label, value, onChange, showEn, multiline }: { label: string; 
   )
 }
 
-function ImageField({ image, credit, onChange, showToast }: {
-  image?: string | null; credit?: string | null
-  onChange: (image: string | null, credit: string | null) => void; showToast: ToastFn
+function ImagesField({ images, onChange, showToast, afterLabel }: {
+  images: GuideImage[]; onChange: (imgs: GuideImage[]) => void; showToast: ToastFn; afterLabel: string
 }) {
   const [busy, setBusy] = useState(false)
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0]
+  async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
     e.target.value = ''
-    if (!f) return
-    if (!f.type.startsWith('image/')) { showToast('יש לבחור קובץ תמונה', 'error'); return }
+    if (!files.length) return
+    if (files.some(f => !f.type.startsWith('image/'))) { showToast('יש לבחור קבצי תמונה בלבד', 'error'); return }
     setBusy(true)
-    try { onChange(await compressToDataUrl(f), credit ?? null) }
-    catch { showToast('לא ניתן לקרוא את התמונה', 'error') }
+    try {
+      const added = await Promise.all(files.map(async f => ({ src: await compressToDataUrl(f), credit: null, position: 'before' as const })))
+      onChange([...images, ...added])
+    } catch { showToast('לא ניתן לקרוא את התמונה', 'error') }
     finally { setBusy(false) }
   }
+  const set = (i: number, patch: Partial<GuideImage>) => onChange(images.map((im, j) => j === i ? { ...im, ...patch } : im))
+  function move(i: number, d: -1 | 1) {
+    const j = i + d
+    if (j < 0 || j >= images.length) return
+    const arr = [...images]; [arr[i], arr[j]] = [arr[j], arr[i]]; onChange(arr)
+  }
   return (
-    <div style={{ marginBottom: 10, padding: 10, border: '1px dashed var(--border)', borderRadius: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        {image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" style={{ width: 90, height: 60, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }} />
-        )}
-        <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', cursor: 'pointer' }}>
-          {busy ? 'דוחס...' : image ? '🔄 החלף תמונה' : '🖼️ הוסף תמונה'}
-          <input type="file" accept="image/*" onChange={onFile} style={{ display: 'none' }} />
-        </label>
-        {image && (
-          <button onClick={() => onChange(null, null)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 13 }}>✕ הסר</button>
-        )}
-      </div>
-      {image && (
-        <input className="form-input" style={{ marginTop: 8, fontSize: 12 }} placeholder='קרדיט לתמונה (אם צריך), למשל: Image by X on Freepik'
-          value={credit ?? ''} onChange={e => onChange(image, e.target.value || null)} />
-      )}
+    <div style={{ marginBottom: 10, padding: 10, border: '1px dashed var(--border)', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {images.map((im, i) => (
+        <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={im.src} alt="" style={{ width: 90, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }} />
+          <div style={{ flex: 1, minWidth: 180, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+              <select className="form-input" style={{ width: 'auto', fontSize: 12, padding: '4px 8px' }} value={im.position ?? 'before'}
+                onChange={e => set(i, { position: e.target.value as 'before' | 'after' })}>
+                <option value="before">לפני הטקסט</option>
+                <option value="after">{afterLabel}</option>
+              </select>
+              <button title="הקדם" onClick={() => move(i, -1)} disabled={i === 0} style={iconBtn}>▲</button>
+              <button title="אחר" onClick={() => move(i, 1)} disabled={i === images.length - 1} style={iconBtn}>▼</button>
+              <button title="הסר" onClick={() => onChange(images.filter((_, j) => j !== i))} style={{ ...iconBtn, color: 'var(--danger)' }}>✕</button>
+            </div>
+            <input className="form-input" style={{ fontSize: 12 }} placeholder="קרדיט לתמונה (אם צריך), למשל: Image by X on Freepik"
+              value={im.credit ?? ''} onChange={e => set(i, { credit: e.target.value || null })} />
+          </div>
+        </div>
+      ))}
+      <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', cursor: 'pointer', alignSelf: 'flex-start' }}>
+        {busy ? 'דוחס...' : images.length ? '🖼️ הוסף עוד תמונות' : '🖼️ הוסף תמונות'}
+        <input type="file" accept="image/*" multiple onChange={onFiles} style={{ display: 'none' }} />
+      </label>
     </div>
   )
 }
@@ -251,14 +265,15 @@ export default function GuideEditor({ supabase, tenantId, showToast }: { supabas
         <LField label="שם הקובייה" value={topic.title} showEn={showEn} onChange={v => updateTopic({ title: v })} />
         <LField label="תיאור קצר (מתחת לשם בקובייה)" value={topic.summary} showEn={showEn} onChange={v => updateTopic({ summary: v })} />
         <LField label="פתיחה (בראש הדף של הנושא)" value={topic.intro} showEn={showEn} multiline onChange={v => updateTopic({ intro: v })} />
-        <label className="form-label">תמונה בראש הדף</label>
-        <ImageField image={topic.image} credit={topic.imageCredit} showToast={showToast} onChange={(image, imageCredit) => updateTopic({ image, imageCredit })} />
+        <label className="form-label">תמונות בדף הזה</label>
+        <ImagesField images={sectionImages(topic)} afterLabel="בסוף הדף" showToast={showToast}
+          onChange={images => updateTopic({ images, image: null, imageCredit: null })} />
       </div>
 
       {topic.sections.map((s, i) => (
         <div key={s.id} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 14, background: 'var(--bg-card)', marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{s.diagram ? '✏️ כולל ציור הסבר' : `נושא ${i + 1}`}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{`נושא ${i + 1}`}</span>
             <div style={{ display: 'flex', gap: 4 }}>
               <button title="למעלה" onClick={() => moveSection(i, -1)} disabled={i === 0} style={iconBtn}>▲</button>
               <button title="למטה" onClick={() => moveSection(i, 1)} disabled={i === topic.sections.length - 1} style={iconBtn}>▼</button>
@@ -267,7 +282,15 @@ export default function GuideEditor({ supabase, tenantId, showToast }: { supabas
           </div>
           <LField label="כותרת" value={s.title} showEn={showEn} onChange={v => updateSection(s.id, { title: v })} />
           <LField label="טקסט" value={s.body} showEn={showEn} multiline onChange={v => updateSection(s.id, { body: v })} />
-          <ImageField image={s.image} credit={s.imageCredit} showToast={showToast} onChange={(image, imageCredit) => updateSection(s.id, { image, imageCredit })} />
+          {s.diagram && (
+            <label style={{ fontSize: 13, display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={!s.hideDiagram} onChange={e => updateSection(s.id, { hideDiagram: !e.target.checked })} />
+              הצג את הציור המובנה (בטל כדי להציג רק את התמונות שלך)
+            </label>
+          )}
+          <label className="form-label">תמונות</label>
+          <ImagesField images={sectionImages(s)} afterLabel="אחרי הטקסט" showToast={showToast}
+            onChange={images => updateSection(s.id, { images, image: null, imageCredit: null })} />
         </div>
       ))}
 

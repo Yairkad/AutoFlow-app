@@ -2261,3 +2261,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 15:29 | Created components/guide/GuideView.tsx | — | ~3196 |
 | 15:31 | Created components/settings/GuideEditor.tsx | — | ~4931 |
 | 15:40 | Public tire guide: /guide/[token], editor in settings landing tab, QR print, migration 091, own SVG diagrams; screenshots verified via temp preview page | lib/guide, components/guide, app/guide, app/api/guide, GuideEditor, SettingsClient, proxy.ts | tsc+eslint ok | ~60k |
+
+## Session: 2026-10-15 17:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:10 | Guide: removed call/WhatsApp buttons; multiple images per section/topic (before/after text, reorder, credit), optional hide built-in diagram | lib/guide/content.ts, GuideView, GuideEditor | tsc+eslint ok | ~15k |
