@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast'
 import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
+import GuideEditor from '@/components/settings/GuideEditor'
 
 type ToastFn = (msg: string, type?: 'success' | 'error' | 'info') => void
 
@@ -978,7 +979,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
 
 // ── LandingTab ──────────────────────────────────────────────────────────────
 
-type LandingSub = 'services' | 'promotions' | 'prices' | 'faq'
+type LandingSub = 'services' | 'promotions' | 'prices' | 'faq' | 'guide'
 
 interface LandingService { id: string; name: string; description: string | null; icon: string | null; image_url: string | null; sort_order: number; is_active: boolean }
 interface LandingPromotion { id: string; title: string; description: string | null; fine_print: string | null; image_url: string | null; link_url: string | null; start_date: string | null; end_date: string | null; sort_order: number; is_active: boolean }
@@ -993,6 +994,7 @@ function LandingTab({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
     { key: 'promotions', label: '🏷️ מבצעים' },
     { key: 'prices',     label: '💲 מחירון' },
     { key: 'faq',        label: '❓ שאלות נפוצות' },
+    { key: 'guide',      label: '🛞 מדריך צמיגים' },
   ]
 
   return (
@@ -1000,7 +1002,7 @@ function LandingTab({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
       <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
         ניהול תוכן דף הנחיתה הציבורי. פרטי העסק (שם, טלפון, כתובת) מנוהלים בטאב &quot;פרטי עסק&quot;.
       </p>
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid var(--border)', overflowX: 'auto', whiteSpace: 'nowrap' }}>
         {subTabs.map(t => (
           <button key={t.key} onClick={() => setSub(t.key)} style={{
             padding: '8px 16px', border: 'none', background: 'transparent', cursor: 'pointer',
@@ -1015,6 +1017,7 @@ function LandingTab({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
       {sub === 'promotions' && <PromotionsSection supabase={supabase} tenantId={tenantId} showToast={showToast} />}
       {sub === 'prices'     && <PricesSection     supabase={supabase} tenantId={tenantId} showToast={showToast} />}
       {sub === 'faq'        && <FaqSection        supabase={supabase} tenantId={tenantId} showToast={showToast} />}
+      {sub === 'guide'      && <GuideEditor       supabase={supabase} tenantId={tenantId} showToast={showToast} />}
     </div>
   )
 }

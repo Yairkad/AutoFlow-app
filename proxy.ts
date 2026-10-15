@@ -12,6 +12,7 @@ const PUBLIC_PREFIXES = [
   '/onboarding',
   '/track',
   '/intake',           // purchase-inspection pre-fill form (customer link)
+  '/guide',            // public tire & wheel guide (QR at the garage)
   '/privacy',
   '/terms',
   '/accessibility',

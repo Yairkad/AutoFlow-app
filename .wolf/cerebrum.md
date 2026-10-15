@@ -6,6 +6,7 @@
 
 ## User Preferences
 
+- [2026-10-15] Public tire guide: user wants all content editable from business settings (text + image upload), Hebrew first; translation to English will be done later in one batch when user sends a link (don't build an auto-translate integration). Topics: כיוון פרונט, מידע על הצמיגים (accordion headings, not tiles), תיקון פנצ'ר; no rotation.
 - [2026-10-15] Scanned items that aren't in the system must NEVER be dropped — keep them (in stock) and let the user complete details later. User wants quick filters for incomplete records (missing price / missing data).
 
 - [2026-10-13] User wants uploads auto-compressed always (any size), not only above the limit — cars use shrinkForUpload (keeps original if compression didn't help).
@@ -26,6 +27,8 @@
 
 ## Key Learnings
 
+- [2026-10-15] proxy.ts PUBLIC_PREFIXES: new public pages must be added there (e.g. '/guide'). Note '/' is in the list and matched with startsWith.
+- [2026-10-15] tenants.logo_base64 is a full data URL (data:image/...;base64,...), not raw base64.
 - [2026-10-15] **Tires may have no size:** since migration 090, tires.width/profile/rim are nullable (tire saved from unknown barcode / manual receive, details completed later via the "חסרי נתונים" filter on /tires). Always format sizes with `tireSizeText()` from `lib/tires/size.ts` — never `${t.width}/${t.profile}R${t.rim}` (renders "null/nullRnull").
 - [2026-10-15] **Multi-tenant model:** each garage = row in `tenants`; every login (admin/employee) is a `profiles` row with one `tenant_id`, RLS scopes everything to it. Public per-garage pages use a random token on tenants (pattern: `intake_public_token`, migration 085) + service client — not the tenant id in the URL.
 

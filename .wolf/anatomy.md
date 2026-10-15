@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-15T12:19:08.713Z
-> Files: 41 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-15T15:31:19.789Z
+> Files: 47 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -413,6 +413,11 @@
 ## components/expenses/
 
 
+## components/guide/
+
+- `GuideDiagrams.tsx` — Top view: car body + two front wheels rotated by `deg` (positive = fronts point inward). (~2059 tok)
+- `GuideView.tsx` — "**bold**" inside a line → <strong>. Text is rendered as React text, never as HTML. (~3196 tok)
+
 ## components/inspections/
 
 
@@ -444,6 +449,7 @@
 
 ## components/settings/
 
+- `GuideEditor.tsx` — Always recompress to a ~100–200KB JPEG data URL (stored inside guide_content). (~4931 tok)
 - `SettingsClient.tsx` — ALL_MODULES (~30392 tok)
 
 ## components/suppliers/
@@ -467,14 +473,9 @@
 ## docs/
 
 - `public-guide-content.md` — תוכן הדף הציבורי — "מדריך הצמיגים והגלגלים" (~2044 tok)
+(content moved to lib/guide/content.ts)
 
 ## lib/
-
-## lib/tires/
-- `size.ts` — null-safe tire size helpers: tireSizeText, hasTireSize, isTireMissingDetails/Price, parseTireSize (~350 tok)
-
-## docs/
-- `public-guide-content.md` — draft HE/EN text for the public tire guide page (awaiting approval) (~3000 tok)
 
 
 ## lib/auth/
@@ -492,6 +493,10 @@
 
 ## lib/expenses/
 
+
+## lib/guide/
+
+- `content.ts` — cards = every section shown open; accordion = titles that open on tap (~3551 tok)
 
 ## lib/hooks/
 
@@ -513,6 +518,26 @@
 
 ## lib/supabase/
 
+
+## lib/guide/
+- `content.ts` — public tire guide types, DEFAULT_GUIDE (HE+EN), resolveGuide(saved), pick(L, lang) (~5500 tok)
+
+## components/guide/
+- `GuideView.tsx` — public guide UI: hub of topic cards, topic page (cards/accordion), HE/EN toggle, call/WhatsApp footer; topic in URL hash (~2800 tok)
+- `GuideDiagrams.tsx` — own SVG diagrams: toe, camber, caster, tire size, DOT, puncture zones (~2200 tok)
+
+## app/guide/[token]/
+- `page.tsx` — public guide page by tenants.guide_public_token, header colour from logo (logoPalette) (~600 tok)
+
+## app/api/guide/public-link/
+- `route.ts` — GET/POST guide_public_token (same pattern as inspection-intake public-link) (~450 tok)
+
+## components/settings/ (guide)
+- `GuideEditor.tsx` — Settings → דף נחיתה → מדריך צמיגים: QR/print, edit texts (HE, optional EN), images (compressed data URL) + credit, add/move/delete sections, reset (~4200 tok)
+
+## lib/tires/
+
+- `size.ts` — null-safe tire size helpers: tireSizeText, hasTireSize, isTireMissingDetails/Price, parseTireSize (~350 tok)
 
 ## lib/utils/
 
