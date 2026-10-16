@@ -2272,3 +2272,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 08:30 | Guide edit admin-only: DB trigger migration 092 (settings page already admin-only via proxy) | supabase/migrations/092_guide_admin_only.sql | written | ~3k |
