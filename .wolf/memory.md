@@ -2267,3 +2267,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 16:10 | Guide: removed call/WhatsApp buttons; multiple images per section/topic (before/after text, reorder, credit), optional hide built-in diagram | lib/guide/content.ts, GuideView, GuideEditor | tsc+eslint ok | ~15k |
+
+## Session: 2026-10-16 08:16
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
