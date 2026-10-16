@@ -6,6 +6,10 @@
 
 ## User Preferences
 
+- [2026-10-15] Guide page: no call/WhatsApp buttons. User wants full control over images: many per section, choose position (before/after text) and whether they replace or sit alongside built-in diagrams.
+- [2026-10-15] Public tire guide: user wants all content editable from business settings (text + image upload), Hebrew first; translation to English will be done later in one batch when user sends a link (don't build an auto-translate integration). Topics: כיוון פרונט, מידע על הצמיגים (accordion headings, not tiles), תיקון פנצ'ר; no rotation.
+- [2026-10-15] Scanned items that aren't in the system must NEVER be dropped — keep them (in stock) and let the user complete details later. User wants quick filters for incomplete records (missing price / missing data).
+
 - [2026-10-13] User wants uploads auto-compressed always (any size), not only above the limit — cars use shrinkForUpload (keeps original if compression didn't help).
 
 - [2026-10-13] For visual changes, user wants a mockup image first, then approval. Branding should use the tenant's own logo + logo colours (not the app's green).
@@ -23,6 +27,11 @@
 - **Dictates requirements in a stream, expects them folded into the current task** (2026-07-06): during a single implementation pass on supplier-tracking payments, the user kept sending follow-up asks mid-edit (multi-debt payment picker → payment-method selector → quick-add-supplier → collapse-by-default accordion → color swap on charge/credit → per-line notes → retroactively link an already-issued check to a debt → Excel import → styled print). None were meant to interrupt or replace the current step — each was additive scope for the same feature. Pattern: finish the in-flight edit to a non-broken state first, then absorb the new ask into the same pass rather than asking "should I stop and redo?".
 
 ## Key Learnings
+
+- [2026-10-15] proxy.ts PUBLIC_PREFIXES: new public pages must be added there (e.g. '/guide'). Note '/' is in the list and matched with startsWith.
+- [2026-10-15] tenants.logo_base64 is a full data URL (data:image/...;base64,...), not raw base64.
+- [2026-10-15] **Tires may have no size:** since migration 090, tires.width/profile/rim are nullable (tire saved from unknown barcode / manual receive, details completed later via the "חסרי נתונים" filter on /tires). Always format sizes with `tireSizeText()` from `lib/tires/size.ts` — never `${t.width}/${t.profile}R${t.rim}` (renders "null/nullRnull").
+- [2026-10-15] **Multi-tenant model:** each garage = row in `tenants`; every login (admin/employee) is a `profiles` row with one `tenant_id`, RLS scopes everything to it. Public per-garage pages use a random token on tenants (pattern: `intake_public_token`, migration 085) + service client — not the tenant id in the URL.
 
 - [2026-10-13] Israeli annual car test (טסט) = two steps: paying the license fee (אגרה) + passing the track test (מבחן במסלול). cars.test_fee_paid / test_passed reset (in the form onChange) when test_date is moved later; card shows 'חסר: …' only within 60 days of expiry / expired / missing. User: no fee amount needed.
 

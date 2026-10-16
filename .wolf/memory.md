@@ -2223,3 +2223,52 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:55 | Cars: car_code field (added to migration 088) | CarsClient.tsx, 088 | tsc clean | ~2k |
 | 11:05 | Cars: test = fee paid + track test passed (migration 089), auto-reset on renewal, card 'חסר' tag | CarsClient.tsx, 089_cars_test_steps.sql | tsc clean | ~8k |
 | 11:30 | PR #36 was already merged before last 4 commits; rebased onto main, opened PR #37; awaiting migration 088/089 confirmation before merge | - | PR #37 open | ~3k |
+
+## Session: 2026-10-15 11:50
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-15 12:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:19 | Created docs/public-guide-content.md | — | ~2180 |
+| 12:30 | Tires: nullable size (mig 090), unknown scans kept as pending tires (receive quick + inventory count), manual receive modal wired w/ new tires, missing-data/price filter | lib/tires/size.ts, TiresClient, ReceiveClient, InventoryCountClient, yard APIs, Header, ScanClient | tsc ok | ~40k |
+| 12:40 | Public guide: mockup (scratchpad) + bilingual content draft for approval | docs/public-guide-content.md | awaiting approval | ~10k |
+
+## Session: 2026-10-15 12:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-15 13:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-15 13:35
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-15 15:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:28 | Created lib/guide/content.ts | — | ~3551 |
+| 15:29 | Created components/guide/GuideDiagrams.tsx | — | ~2059 |
+| 15:29 | Created components/guide/GuideView.tsx | — | ~3196 |
+| 15:31 | Created components/settings/GuideEditor.tsx | — | ~4931 |
+| 15:40 | Public tire guide: /guide/[token], editor in settings landing tab, QR print, migration 091, own SVG diagrams; screenshots verified via temp preview page | lib/guide, components/guide, app/guide, app/api/guide, GuideEditor, SettingsClient, proxy.ts | tsc+eslint ok | ~60k |
+
+## Session: 2026-10-15 17:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:10 | Guide: removed call/WhatsApp buttons; multiple images per section/topic (before/after text, reorder, credit), optional hide built-in diagram | lib/guide/content.ts, GuideView, GuideEditor | tsc+eslint ok | ~15k |
+
+## Session: 2026-10-16 08:16
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

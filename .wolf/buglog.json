@@ -896,5 +896,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-13T10:30:00Z"
+  },
+  {
+    "id": "bug-045",
+    "timestamp": "2026-10-15T12:30:00Z",
+    "error_message": "Quick receive (/yard/receive) and inventory count dropped unknown barcodes ('ברקודים לא זוהו ולא יקלטו') — user lost track of new tires in a scanned pile",
+    "file": "components/yard/ReceiveClient.tsx, components/tires/InventoryCountClient.tsx",
+    "root_cause": "tires.width/profile/rim were required, so a tire couldn't exist before its size was known; unknown scans were simply discarded",
+    "fix": "Migration 090 drops NOT NULL on size; unknown barcodes are inserted as tires (sku+qty) and listed under the 'חסרי נתונים' filter on /tires. Manual receive modal (was dead code with no opening button) now wired and supports new tires. Shared lib/tires/size.ts for null-safe size text.",
+    "tags": [
+      "tires",
+      "scan",
+      "receive",
+      "inventory",
+      "nullable"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-15T12:30:00Z"
   }
 ]

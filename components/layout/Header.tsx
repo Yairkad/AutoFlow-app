@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { tireSizeText } from '@/lib/tires/size'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 
 // ── Hebrew numeral conversion ──────────────────────────────────────────────
@@ -304,7 +305,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
     cars.data?.forEach(r => all.push({ id: r.id, icon: '🚗', category: 'רכבים', primary: [r.make, r.model, r.plate].filter(Boolean).join(' '), secondary: (r.owner_name || r.buyer_name) ?? undefined, href: '/cars' }))
     expenses.data?.forEach(r => all.push({ id: r.id, icon: '💰', category: 'הוצאות', primary: r.description ?? '—', secondary: r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : undefined, href: '/expenses' }))
     products.data?.forEach(r => all.push({ id: r.id, icon: '📦', category: 'מוצרים', primary: r.name, secondary: r.sku ?? undefined, href: '/products' }))
-    tires.data?.forEach(r => all.push({ id: r.id, icon: '🏁', category: 'צמיגים', primary: `${r.brand ?? ''} ${r.width}/${r.profile}R${r.rim}`.trim(), secondary: r.sku ?? undefined, href: '/tires' }))
+    tires.data?.forEach(r => all.push({ id: r.id, icon: '🏁', category: 'צמיגים', primary: `${r.brand ?? ''} ${tireSizeText(r) || 'ללא מידה'}`.trim(), secondary: r.sku ?? undefined, href: '/tires' }))
 
     setResults(all)
     setLoading(false)

@@ -30,7 +30,7 @@ export default function ReceiveClient() {
   const [quickMode,       setQuickMode]       = useState(false)
   const quickMapRef = useRef<Record<string, QuickEntry>>({})
   const [quickEntries,    setQuickEntries]    = useState<QuickEntry[]>([])
-  const [unknownQuick,    setUnknownQuick]    = useState<string[]>([])
+  const [unknownQuick,    setUnknownQuick]    = useState<Record<string, number>>({})
   const [lastQuick,       setLastQuick]       = useState<string | null>(null)
   const [showQuickConfirm,setShowQuickConfirm]= useState(false)
   const [savingQuick,     setSavingQuick]     = useState(false)
@@ -113,7 +113,7 @@ export default function ReceiveClient() {
     const data: SearchResult | null = await res.json()
     if (!data) {
       setLastQuick(`❓ ${code}`)
-      setUnknownQuick(p => p.includes(code) ? p : [...p, code])
+      setUnknownQuick(p => ({ ...p, [code]: (p[code] ?? 0) + 1 }))
       refocus(); return
     }
     const prev  = quickMapRef.current[data.id]
@@ -127,7 +127,7 @@ export default function ReceiveClient() {
   function startQuick() {
     quickMapRef.current = {}
     setQuickEntries([])
-    setUnknownQuick([])
+    setUnknownQuick({})
     setLastQuick(null)
     setQuickMode(true)
   }
@@ -141,23 +141,37 @@ export default function ReceiveClient() {
   async function confirmQuick() {
     setSavingQuick(true)
     const entries = Object.values(quickMapRef.current)
+    let failed = 0
     for (const e of entries) {
-      await fetch('/api/yard/receive', {
+      const res = await fetch('/api/yard/receive', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: e.item.type, id: e.item.id, qty_add: e.count }),
       })
+      if (!res.ok) failed++
     }
+    // Unknown barcodes are kept: saved as new tires (barcode + qty) waiting for details on /tires
+    for (const [code, count] of Object.entries(unknownQuick)) {
+      const res = await fetch('/api/yard/receive', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'tire', sku: code, qty: count }),
+      })
+      if (!res.ok) failed++
+    }
+    const newCount = Object.keys(unknownQuick).length
     setSavingQuick(false)
     setShowQuickConfirm(false)
     setQuickMode(false)
-    showToast(`✓ קלטת ${entries.length} פריטים`)
+    showToast(failed
+      ? `⚠ ${failed} פריטים לא נקלטו — נסה שוב`
+      : `✓ קלטת ${entries.length + newCount} פריטים${newCount ? ` · ${newCount} חדשים ממתינים לפרטים` : ''}`)
     refocus()
   }
 
   const tf = (k: keyof typeof emptyTireForm, v: string) => setTireForm(f => ({ ...f, [k]: v }))
   const pf = (k: keyof typeof emptyProdForm, v: string) => setProdForm(f => ({ ...f, [k]: v }))
 
-  const totalQuickUnits = quickEntries.reduce((s, e) => s + e.count, 0)
+  const unknownCodes    = Object.entries(unknownQuick)
+  const totalQuickUnits = quickEntries.reduce((s, e) => s + e.count, 0) + unknownCodes.reduce((s, [, c]) => s + c, 0)
 
   // ═══════════════════════════════════════════════════════════════════════════
   return (
@@ -176,7 +190,7 @@ export default function ReceiveClient() {
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
           <div className="bg-white rounded-2xl shadow-2xl" style={{ width: 420, maxWidth: '95vw', maxHeight: '85vh', overflow: 'auto', padding: '24px 28px' }}>
             <p className="font-black text-slate-800 text-xl mb-1">אישור קליטה מהירה</p>
-            <p className="text-slate-500 text-sm mb-4">{quickEntries.length} פריטים · {totalQuickUnits} יח׳ סה״כ</p>
+            <p className="text-slate-500 text-sm mb-4">{quickEntries.length + unknownCodes.length} פריטים · {totalQuickUnits} יח׳ סה״כ</p>
             <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
               {quickEntries.map((e, i) => (
                 <div key={e.item.id} className="flex items-center justify-between"
@@ -186,8 +200,15 @@ export default function ReceiveClient() {
                 </div>
               ))}
             </div>
-            {unknownQuick.length > 0 && (
-              <p className="text-red-500 text-sm font-semibold mb-4">⚠ {unknownQuick.length} ברקודים לא זוהו ולא יקלטו</p>
+            {unknownCodes.length > 0 && (
+              <div className="mb-4" style={{ border: '1px solid #fed7aa', background: '#fff7ed', borderRadius: '12px', padding: '10px 14px' }}>
+                <p className="text-amber-800 text-sm font-bold mb-1">🆕 {unknownCodes.length} ברקודים חדשים — ייקלטו כצמיגים ממתינים לפרטים</p>
+                {unknownCodes.map(([code, count]) => (
+                  <div key={code} className="flex justify-between text-sm text-amber-900">
+                    <span style={{ fontFamily: 'monospace' }}>{code}</span><span className="font-bold">+{count}</span>
+                  </div>
+                ))}
+              </div>
             )}
             <div className="flex gap-3">
               <button onClick={confirmQuick} disabled={savingQuick}
@@ -237,11 +258,11 @@ export default function ReceiveClient() {
             </div>
 
             {/* Running list */}
-            {quickEntries.length > 0 && (
+            {(quickEntries.length > 0 || unknownCodes.length > 0) && (
               <div className="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden mb-4">
                 <div className="bg-amber-50 border-b border-amber-200 flex items-center justify-between" style={{ padding: '10px 16px' }}>
-                  <span className="font-bold text-amber-800">{quickEntries.length} פריטים · {totalQuickUnits} יח׳</span>
-                  {unknownQuick.length > 0 && <span className="text-red-500 text-sm font-semibold">⚠ {unknownQuick.length} לא זוהו</span>}
+                  <span className="font-bold text-amber-800">{quickEntries.length + unknownCodes.length} פריטים · {totalQuickUnits} יח׳</span>
+                  {unknownCodes.length > 0 && <span className="text-amber-700 text-sm font-semibold">🆕 {unknownCodes.length} חדשים</span>}
                 </div>
                 {quickEntries.map((e, i) => (
                   <div key={e.item.id} className="flex items-center justify-between"
@@ -253,14 +274,24 @@ export default function ReceiveClient() {
                     <span className="font-black text-amber-600" style={{ fontSize: '22px' }}>+{e.count}</span>
                   </div>
                 ))}
+                {unknownCodes.map(([code, count]) => (
+                  <div key={code} className="flex items-center justify-between"
+                    style={{ padding: '12px 16px', borderTop: '1px solid #fef3c7', background: '#fff7ed' }}>
+                    <div>
+                      <p className="font-semibold text-slate-800 text-sm" style={{ fontFamily: 'monospace' }}>{code}</p>
+                      <p className="text-amber-700 text-xs">🆕 לא במערכת — יישמר כצמיג חדש, פרטים יושלמו בדף הצמיגים</p>
+                    </div>
+                    <span className="font-black text-amber-600" style={{ fontSize: '22px' }}>+{count}</span>
+                  </div>
+                ))}
               </div>
             )}
 
-            {quickEntries.length === 0 && (
+            {quickEntries.length === 0 && unknownCodes.length === 0 && (
               <p className="text-center text-slate-400 py-10">עדיין לא נסרקו פריטים</p>
             )}
 
-            <button onClick={() => setShowQuickConfirm(true)} disabled={quickEntries.length === 0}
+            <button onClick={() => setShowQuickConfirm(true)} disabled={quickEntries.length === 0 && unknownCodes.length === 0}
               className="w-full bg-green-700 text-white font-bold rounded-2xl disabled:opacity-40 active:scale-[.98] transition-all"
               style={{ padding: '18px', fontSize: '17px' }}>
               ✓ סיים וקלוט הכל ({totalQuickUnits} יח׳)

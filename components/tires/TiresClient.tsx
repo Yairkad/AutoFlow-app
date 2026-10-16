@@ -12,6 +12,7 @@ import StatCard from '@/components/ui/StatCard'
 import * as XLSX from 'xlsx'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
+import { tireSizeText, hasTireSize, isTireMissingDetails, isTireMissingPrice, parseTireSize } from '@/lib/tires/size'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -19,9 +20,9 @@ interface Tire {
   id: string
   tenant_id: string
   brand: string | null
-  width: number
-  profile: number
-  rim: number
+  width: number | null
+  profile: number | null
+  rim: number | null
   load_idx: string | null
   speed_idx: string | null
   cost_price: number | null
@@ -67,8 +68,23 @@ const emptyForm = {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function tireSize(t: Pick<Tire, 'width' | 'profile' | 'rim'>) {
-  return `${t.width}/${t.profile}R${t.rim}`
+  return tireSizeText(t) || 'ללא מידה'
 }
+function sortTires(a: Tire, b: Tire) {
+  // Tires still waiting for a size go first, so they're easy to spot and complete
+  if ((a.width ?? 0) !== (b.width ?? 0))     return (a.width ?? 0)   - (b.width ?? 0)
+  if ((a.profile ?? 0) !== (b.profile ?? 0)) return (a.profile ?? 0) - (b.profile ?? 0)
+  if ((a.rim ?? 0) !== (b.rim ?? 0))         return (a.rim ?? 0)     - (b.rim ?? 0)
+  return (a.brand || '').localeCompare(b.brand || '')
+}
+const numStr = (n: number | null) => n != null ? String(n) : ''
+
+interface RecvItem {
+  tireId: string; search: string; qty: string; dropOpen: boolean
+  // used only when no existing tire was picked (new tire, details completed later)
+  brand: string; sku: string
+}
+const emptyRecvItem: RecvItem = { tireId: '', search: '', qty: '', dropOpen: false, brand: '', sku: '' }
 function fmtPrice(n: number | null | undefined) {
   if (!n) return '—'
   return '₪' + n.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -103,9 +119,7 @@ export default function TiresClient() {
   // Receiving order modal
   const [recvOpen,    setRecvOpen]    = useState(false)
   const [recvSupplier, setRecvSupplier] = useState('')
-  const [recvItems,   setRecvItems]   = useState<{ tireId: string; search: string; qty: string; dropOpen: boolean }[]>([
-    { tireId: '', search: '', qty: '', dropOpen: false }
-  ])
+  const [recvItems,   setRecvItems]   = useState<RecvItem[]>([emptyRecvItem])
   const [recvSaving,  setRecvSaving]  = useState(false)
 
   // Filters
@@ -115,6 +129,7 @@ export default function TiresClient() {
   const [filterRim,        setFilterRim]        = useState('')
   const [filterStock,      setFilterStock]      = useState('')
   const [filterCondition,  setFilterCondition]  = useState('')
+  const [filterMissing,    setFilterMissing]    = useState<'' | 'any' | 'details' | 'price'>('')
 
   // Add/Edit modal
   const [formOpen, setFormOpen] = useState(false)
@@ -162,6 +177,7 @@ export default function TiresClient() {
   const totalUnits   = tires.reduce((s, t) => s + t.qty, 0)
   const inStock      = tires.filter(t => t.qty > 0).length
   const outOfStock   = tires.filter(t => t.qty === 0).length
+  const missingCount = tires.filter(t => isTireMissingDetails(t) || isTireMissingPrice(t)).length
   const monthStart   = thisMonthStart()
   const monthSales   = movements.filter(m => m.movement_type === 'sale' && m.sold_date >= monthStart)
   const soldThisMonth = monthSales.reduce((s, m) => s + Number(m.qty), 0)
@@ -180,6 +196,9 @@ export default function TiresClient() {
       if (filterStock === 'out'     && t.qty !== 0) return false
       if (filterStock === 'instock' && t.qty === 0) return false
       if (filterCondition && t.condition !== filterCondition) return false
+      if (filterMissing === 'details' && !isTireMissingDetails(t)) return false
+      if (filterMissing === 'price'   && !isTireMissingPrice(t))   return false
+      if (filterMissing === 'any'     && !isTireMissingDetails(t) && !isTireMissingPrice(t)) return false
       if (search) {
         const hay = [t.brand, tireSize(t), t.location, t.notes, t.load_idx, t.speed_idx, t.sku]
           .join(' ').toLowerCase()
@@ -187,12 +206,7 @@ export default function TiresClient() {
       }
       return true
     })
-    .sort((a, b) => {
-      if (a.width   !== b.width)   return a.width   - b.width
-      if (a.profile !== b.profile) return a.profile - b.profile
-      if (a.rim     !== b.rim)     return a.rim     - b.rim
-      return (a.brand || '').localeCompare(b.brand || '')
-    })
+    .sort(sortTires)
 
   // ── Form helpers ──────────────────────────────────────────────────────────────
 
@@ -214,13 +228,8 @@ export default function TiresClient() {
 
   function printPriceList() {
     const rows = tires
-      .filter(t => (t.sell_price ?? 0) > 0)
-      .sort((a, b) => {
-        if (a.width   !== b.width)   return a.width   - b.width
-        if (a.profile !== b.profile) return a.profile - b.profile
-        if (a.rim     !== b.rim)     return a.rim     - b.rim
-        return (a.brand || '').localeCompare(b.brand || '')
-      })
+      .filter(t => (t.sell_price ?? 0) > 0 && hasTireSize(t))
+      .sort(sortTires)
     if (rows.length === 0) return showToast('אין צמיגים עם מחיר מכירה לייצוא', 'error')
     const rowsHTML = rows.map(t => `
       <tr>
@@ -268,7 +277,7 @@ export default function TiresClient() {
   function openEdit(t: Tire) {
     setEditId(t.id)
     setForm({
-      brand: t.brand || '', width: String(t.width), profile: String(t.profile), rim: String(t.rim),
+      brand: t.brand || '', width: numStr(t.width), profile: numStr(t.profile), rim: numStr(t.rim),
       load_idx: t.load_idx || '', speed_idx: t.speed_idx || '', sku: t.sku || '',
       cost_price: t.cost_price != null ? String(t.cost_price) : '',
       margin: t.margin ? String(t.margin) : '',
@@ -285,7 +294,7 @@ export default function TiresClient() {
   function openDuplicate(t: Tire) {
     setEditId(null)
     setForm({
-      brand: t.brand || '', width: String(t.width), profile: String(t.profile), rim: String(t.rim),
+      brand: t.brand || '', width: numStr(t.width), profile: numStr(t.profile), rim: numStr(t.rim),
       load_idx: t.load_idx || '', speed_idx: t.speed_idx || '', sku: '',
       cost_price: t.cost_price != null ? String(t.cost_price) : '',
       margin: t.margin ? String(t.margin) : '',
@@ -301,19 +310,22 @@ export default function TiresClient() {
   // ── Save (modal) ──────────────────────────────────────────────────────────────
 
   async function saveForm() {
+    // Size may stay empty (tire waiting for details) — but if started, it must be complete
+    const anySize = !!(form.width || form.profile || form.rim)
     const errs = {
-      width:   !form.width,
-      profile: !form.profile,
-      rim:     !form.rim,
+      width:   anySize && !form.width,
+      profile: anySize && !form.profile,
+      rim:     anySize && !form.rim,
     }
     setFormErrs(errs)
     if (Object.values(errs).some(Boolean)) return showToast('יש להזין מידת צמיג מלאה', 'error')
+    if (!anySize && !form.sku.trim() && !form.brand.trim()) return showToast('יש להזין לפחות מידה, מותג או מקט', 'error')
 
     const payload = {
       brand:      form.brand.trim() || null,
-      width:      parseInt(form.width),
-      profile:    parseInt(form.profile),
-      rim:        parseInt(form.rim),
+      width:      form.width   ? parseInt(form.width)   : null,
+      profile:    form.profile ? parseInt(form.profile) : null,
+      rim:        form.rim     ? parseInt(form.rim)     : null,
       load_idx:   form.load_idx.trim() || null,
       speed_idx:  form.speed_idx.trim() || null,
       cost_price: form.cost_price !== '' ? parseFloat(form.cost_price) : null,
@@ -344,25 +356,49 @@ export default function TiresClient() {
 
   // ── Receiving order ───────────────────────────────────────────────────────────
 
+  function isNewRecvItem(r: RecvItem) {
+    return !r.tireId && !!(r.search.trim() || r.brand.trim() || r.sku.trim())
+  }
+
   async function saveReceiving() {
-    const valid = recvItems.filter(r => r.tireId && parseInt(r.qty) > 0)
+    const valid = recvItems.filter(r => parseInt(r.qty) > 0 && (r.tireId || isNewRecvItem(r)))
     if (valid.length === 0) return showToast('יש להוסיף לפחות צמיג אחד עם כמות', 'error')
     setRecvSaving(true)
     const date = todayISO()
-    await Promise.all(valid.map(async r => {
+    let failed = 0, created = 0
+    for (const r of valid) {
       const qty = parseInt(r.qty)
-      await sb.from('tire_sales').insert({
-        tenant_id: tenantId.current, tire_id: r.tireId,
+      let tireId = r.tireId
+      if (!tireId) {
+        // Not in the system yet — save what we know; the rest is completed later ("חסרי נתונים")
+        const size = parseTireSize(r.search)
+        const brand = r.brand.trim() || (size ? null : r.search.trim() || null)
+        const { data, error } = await sb.from('tires').insert({
+          tenant_id: tenantId.current, qty: 0,
+          width: size?.width ?? null, profile: size?.profile ?? null, rim: size?.rim ?? null,
+          brand, sku: r.sku.trim() || null, supplier_id: recvSupplier || null,
+        }).select('id').single()
+        if (error || !data) { console.error('[tires] manual receive insert', error); failed++; continue }
+        tireId = data.id
+        created++
+      }
+      const { error: mvErr } = await sb.from('tire_sales').insert({
+        tenant_id: tenantId.current, tire_id: tireId,
         qty, sold_date: date, movement_type: 'order',
       })
-      const tire = tires.find(t => t.id === r.tireId)
-      if (tire) await sb.from('tires').update({ qty: tire.qty + qty }).eq('id', r.tireId)
-    }))
+      if (mvErr) console.error('[tires] manual receive movement', mvErr)
+      const current = tires.find(t => t.id === tireId)?.qty ?? 0
+      const { error: upErr } = await sb.from('tires').update({ qty: current + qty }).eq('id', tireId)
+      if (upErr) { console.error('[tires] manual receive qty', upErr); failed++ }
+    }
     setRecvSaving(false)
-    setRecvOpen(false)
-    setRecvItems([{ tireId: '', search: '', qty: '', dropOpen: false }])
-    setRecvSupplier('')
-    showToast(`קולטו ${valid.length} סוגי צמיגים ✓`, 'success')
+    if (failed) showToast(`${failed} שורות לא נשמרו — נסה שוב`, 'error')
+    else {
+      setRecvOpen(false)
+      setRecvItems([emptyRecvItem])
+      setRecvSupplier('')
+      showToast(`נקלטו ${valid.length} סוגי צמיגים ✓${created ? ` · ${created} חדשים ממתינים לפרטים` : ''}`, 'success')
+    }
     await load()
   }
 
@@ -396,9 +432,9 @@ export default function TiresClient() {
     if (!t || !e) { setEditingTireId(null); return }
     await sb.from('tires').update({
       brand:      e.brand || null,
-      width:      Number(e.width) || t.width,
-      profile:    Number(e.profile) || t.profile,
-      rim:        Number(e.rim) || t.rim,
+      width:      Number(e.width) || t.width || null,
+      profile:    Number(e.profile) || t.profile || null,
+      rim:        Number(e.rim) || t.rim || null,
       load_idx:   e.load_idx || null,
       speed_idx:  e.speed_idx || null,
       cost_price: e.cost_price || null,
@@ -540,6 +576,7 @@ export default function TiresClient() {
         subtitle={viewOnly ? 'מצב צפיה בלבד' : undefined}
         actions={!viewOnly ? <>
           <Button variant="outline" onClick={() => window.location.href = '/yard/receive'}>📦 קבלת סחורה</Button>
+          <Button variant="outline" onClick={() => { setRecvItems([emptyRecvItem]); setRecvOpen(true) }}>✍️ קליטה ידנית</Button>
           <Button onClick={openAdd}>➕ צמיג חדש</Button>
         </> : undefined}
       />
@@ -552,6 +589,12 @@ export default function TiresClient() {
         <StatCard label='סוגים שאזלו'        value={outOfStock}           color='red' />
         <StatCard label="יח' נמכרו החודש"   value={soldThisMonth} />
         <StatCard label='הכנסות החודש'       value={fmt(revenueMonth)}    color='blue' />
+        {missingCount > 0 && (
+          <button onClick={() => { setTab('tires'); setFilterMissing('any') }} title="הצג צמיגים להשלמת פרטים"
+            style={{ border: 'none', padding: 0, cursor: 'pointer', background: 'none', fontFamily: 'inherit', textAlign: 'inherit' }}>
+            <StatCard label='⚠ חסרי נתונים / מחיר' value={missingCount} color='orange' />
+          </button>
+        )}
       </div>
 
       {/* Tabs – movements tab only for admins */}
@@ -605,8 +648,15 @@ export default function TiresClient() {
               <option value='new'>חדש בלבד</option>
               <option value='used'>משומש בלבד</option>
             </select>
-            {(search || filterWidth || filterProf || filterRim || filterStock || filterCondition) && (
-              <button onClick={() => { setSearch(''); setFilterWidth(''); setFilterProf(''); setFilterRim(''); setFilterStock(''); setFilterCondition('') }}
+            <select className="form-input" style={{ flex: '1 1 110px', minWidth: 0, borderColor: filterMissing ? 'var(--warning)' : undefined }}
+              value={filterMissing} onChange={e => setFilterMissing(e.target.value as typeof filterMissing)}>
+              <option value=''>כל הנתונים</option>
+              <option value='any'>⚠ חסר משהו</option>
+              <option value='details'>חסרה מידה / מותג</option>
+              <option value='price'>חסר מחיר מכירה</option>
+            </select>
+            {(search || filterWidth || filterProf || filterRim || filterStock || filterCondition || filterMissing) && (
+              <button onClick={() => { setSearch(''); setFilterWidth(''); setFilterProf(''); setFilterRim(''); setFilterStock(''); setFilterCondition(''); setFilterMissing('') }}
                 style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--danger)', background: '#fef2f2', color: 'var(--danger)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
                 ✕ נקה
               </button>
@@ -717,9 +767,16 @@ export default function TiresClient() {
                               <input style={{ ...cellInp, width: '44px' }} type="number" value={String(e.rim ?? '')} onChange={ev => setCell(t.id, 'rim', parseInt(ev.target.value) || 0)} placeholder="קוטר" />
                             </div>
                           ) : (
-                            <span style={{ fontWeight: 900, fontSize: '14px', color: 'var(--accent)', letterSpacing: '0.5px' }}>
-                              {tireSize(t)}
-                            </span>
+                            hasTireSize(t) ? (
+                              <span style={{ fontWeight: 900, fontSize: '14px', color: 'var(--accent)', letterSpacing: '0.5px' }}>
+                                {tireSize(t)}
+                              </span>
+                            ) : (
+                              <button onClick={() => enterEditForRow(t.id)} title="לחץ להשלמת מידה"
+                                style={{ fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                ⚠ חסרה מידה
+                              </button>
+                            )
                           )}
                         </td>
 
@@ -923,7 +980,7 @@ export default function TiresClient() {
             <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', marginBottom: '12px' }}>מידות הצמיג</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '10px' }}>
               <div>
-                <label className="form-label">רוחב (מ&quot;מ) <span style={{ color: 'var(--danger)' }}>*</span></label>
+                <label className="form-label">רוחב (מ&quot;מ)</label>
                 <select id="f-width" className={`form-input${formErrs.width ? ' error' : ''}`} value={form.width}
                   onChange={e => { setF('width', e.target.value); setFormErrs(p => ({ ...p, width: false })) }}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-profile') as HTMLSelectElement)?.focus() } }}>
@@ -932,7 +989,7 @@ export default function TiresClient() {
                 </select>
               </div>
               <div>
-                <label className="form-label">פרופיל (%) <span style={{ color: 'var(--danger)' }}>*</span></label>
+                <label className="form-label">פרופיל (%)</label>
                 <select id="f-profile" className={`form-input${formErrs.profile ? ' error' : ''}`} value={form.profile}
                   onChange={e => { setF('profile', e.target.value); setFormErrs(p => ({ ...p, profile: false })) }}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-rim') as HTMLSelectElement)?.focus() } }}>
@@ -941,7 +998,7 @@ export default function TiresClient() {
                 </select>
               </div>
               <div>
-                <label className="form-label">קוטר (אינץ') <span style={{ color: 'var(--danger)' }}>*</span></label>
+                <label className="form-label">קוטר (אינץ')</label>
                 <select id="f-rim" className={`form-input${formErrs.rim ? ' error' : ''}`} value={form.rim}
                   onChange={e => { setF('rim', e.target.value); setFormErrs(p => ({ ...p, rim: false })) }}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-brand') as HTMLInputElement)?.focus() } }}>
@@ -1113,7 +1170,7 @@ export default function TiresClient() {
 
       {/* ── Receiving Order Modal ── */}
       <Modal open={recvOpen} onClose={() => setRecvOpen(false)}
-        title="📦 הזמנה שהתקבלה" maxWidth={560}
+        title="✍️ קליטה ידנית למלאי" maxWidth={600}
         footer={<>
           <Button variant="secondary" onClick={() => setRecvOpen(false)}>ביטול</Button>
           <Button onClick={saveReceiving} loading={recvSaving}>💾 קלוט הזמנה</Button>
@@ -1129,10 +1186,13 @@ export default function TiresClient() {
             </div>
           )}
 
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: -4 }}>פריטים שהתקבלו:</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: -4 }}>
+            פריטים שהתקבלו — חפש צמיג קיים, או הקלד מידה (למשל 205/55R16) לצמיג שעוד לא במערכת:
+          </div>
 
           {recvItems.map((item, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
               {/* Tire selector */}
               <div style={{ flex: 1, position: 'relative' }}>
                 <input className="form-input" style={{ borderColor: item.tireId ? 'var(--primary)' : undefined }}
@@ -1146,7 +1206,7 @@ export default function TiresClient() {
                 {item.dropOpen && (() => {
                   const q = item.search.trim().toLowerCase()
                   const matches = q
-                    ? tires.filter(t => tireSize(t).includes(q) || (t.brand ?? '').toLowerCase().includes(q)).slice(0, 8)
+                    ? tires.filter(t => tireSize(t).toLowerCase().includes(q) || (t.brand ?? '').toLowerCase().includes(q) || (t.sku ?? '').toLowerCase().includes(q)).slice(0, 8)
                     : tires.slice(0, 8)
                   if (!matches.length) return null
                   return (
@@ -1176,9 +1236,27 @@ export default function TiresClient() {
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 18, paddingTop: 6 }}>✕</button>
               )}
             </div>
+            {isNewRecvItem(item) && (() => {
+              const size = parseTireSize(item.search)
+              const setR = (k: 'brand' | 'sku', v: string) => setRecvItems(p => p.map((r, i) => i === idx ? { ...r, [k]: v } : r))
+              return (
+                <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#c2410c' }}>
+                    🆕 צמיג חדש{size ? ` · מידה ${size.width}/${size.profile}R${size.rim}` : ' · בלי מידה'} — יישמר וישאר ברשימת &quot;חסרי נתונים&quot; עד להשלמה
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input className="form-input" style={{ flex: 1, minWidth: 0 }} placeholder="מותג (אופציונלי)" list="brand-list-inline"
+                      value={item.brand} onChange={e => setR('brand', e.target.value)} />
+                    <input className="form-input" style={{ flex: 1, minWidth: 0, fontFamily: 'monospace' }} placeholder="מקט / ברקוד (אופציונלי)"
+                      value={item.sku} onChange={e => setR('sku', e.target.value)} />
+                  </div>
+                </div>
+              )
+            })()}
+            </div>
           ))}
 
-          <button onClick={() => setRecvItems(p => [...p, { tireId: '', search: '', qty: '', dropOpen: false }])}
+          <button onClick={() => setRecvItems(p => [...p, emptyRecvItem])}
             style={{ alignSelf: 'flex-start', background: 'none', border: '1px dashed var(--border)', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)' }}>
             + הוסף שורה
           </button>

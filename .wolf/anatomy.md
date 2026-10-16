@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-07T12:30:02.441Z
-> Files: 29 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-15T15:31:19.789Z
+> Files: 47 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -194,6 +194,9 @@
 ## app/api/inspection-intake/files/
 
 
+## app/api/inspection-intake/public-link/
+
+
 ## app/api/inspection-intake/purge/
 
 
@@ -205,6 +208,10 @@
 
 ## app/api/public/inspection-intake/[token]/
 
+
+## app/api/public/og/intake/
+
+- `route.tsx` — GET ?t=<token>&v=<logo hash>: branded OG image; redirects to static /og/inspection-intake.png when no logo (~250 tok)
 
 ## app/api/public/plate/
 
@@ -271,10 +278,6 @@
 
 ## app/inspections/
 
-
-## app/api/inspection-intake/public-link/
-
-- `route.ts` — authed GET (get/create tenants.intake_public_token) / POST (admin: regenerate)
 
 ## app/intake/[token]/
 
@@ -385,7 +388,6 @@
 
 - `CarsClient.tsx` — Cars tab: compact card grid (5/row desktop, 2 mobile) → click opens detail modal (all fields + actions + Drive docs). Docs saved to Drive רכבים/<plate>/ named "<plate> - <doc name>". Filters: search, בהפקדה (license_deposited), ללא טסט, expiring ≤30d (~22000 tok)
 
-
 ## components/checks/
 
 
@@ -411,9 +413,12 @@
 ## components/expenses/
 
 
-## components/inspections/
+## components/guide/
 
-- `IntakeQrModal.tsx` — fixed business link as QR (qrcode lib): show/copy/print A4 poster, admin 'replace link'
+- `GuideDiagrams.tsx` — Top view: car body + two front wheels rotated by `deg` (positive = fronts point inward). (~2059 tok)
+- `GuideView.tsx` — "**bold**" inside a line → <strong>. Text is rendered as React text, never as HTML. (~3196 tok)
+
+## components/inspections/
 
 
 ## components/landing/
@@ -444,6 +449,7 @@
 
 ## components/settings/
 
+- `GuideEditor.tsx` — Always recompress to a ~100–200KB JPEG data URL (stored inside guide_content). (~4931 tok)
 - `SettingsClient.tsx` — ALL_MODULES (~30392 tok)
 
 ## components/suppliers/
@@ -464,6 +470,11 @@
 ## components/yard/
 
 
+## docs/
+
+- `public-guide-content.md` — תוכן הדף הציבורי — "מדריך הצמיגים והגלגלים" (~2044 tok)
+(content moved to lib/guide/content.ts)
+
 ## lib/
 
 
@@ -483,11 +494,22 @@
 ## lib/expenses/
 
 
+## lib/guide/
+
+- `content.ts` — cards = every section shown open; accordion = titles that open on tap (~3551 tok)
+
 ## lib/hooks/
 
 
 ## lib/inspections/
 
+
+## lib/og/
+
+- `intakeImage.tsx` — renderIntakeOgImage(name, logoBase64): branded 1200x630 link preview (logo card + inspection badge, colours from logo) via next/og ImageResponse (~1100 tok)
+- `intakeTenant.ts` — getIntakeTenant(token): tenant name+logo for personal/fixed intake link (~250 tok)
+- `logoColors.ts` — logoPalette(buf): dominant dark colour → bg, bright saturated → accent (sharp) (~700 tok)
+- `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 
 ## lib/reports/
 
@@ -497,8 +519,32 @@
 ## lib/supabase/
 
 
+## lib/guide/
+- `content.ts` — public tire guide types, DEFAULT_GUIDE (HE+EN), resolveGuide(saved), pick(L, lang) (~5500 tok)
+
+## components/guide/
+- `GuideView.tsx` — public guide UI: hub of topic cards, topic page (cards/accordion), HE/EN toggle, call/WhatsApp footer; topic in URL hash (~2800 tok)
+- `GuideDiagrams.tsx` — own SVG diagrams: toe, camber, caster, tire size, DOT, puncture zones (~2200 tok)
+
+## app/guide/[token]/
+- `page.tsx` — public guide page by tenants.guide_public_token, header colour from logo (logoPalette) (~600 tok)
+
+## app/api/guide/public-link/
+- `route.ts` — GET/POST guide_public_token (same pattern as inspection-intake public-link) (~450 tok)
+
+## components/settings/ (guide)
+- `GuideEditor.tsx` — Settings → דף נחיתה → מדריך צמיגים: QR/print, edit texts (HE, optional EN), images (compressed data URL) + credit, add/move/delete sections, reset (~4200 tok)
+
+## lib/tires/
+
+- `size.ts` — null-safe tire size helpers: tireSizeText, hasTireSize, isTireMissingDetails/Price, parseTireSize (~350 tok)
+
 ## lib/utils/
 
+
+## lib/utils/ (addition)
+
+- `uploadCompress.ts` — MAX_UPLOAD_BYTES (4MB), compressImageIfNeeded, compressPdfIfNeeded, shrinkForUpload — client-side shrink to clear Vercel's 4.5MB limit (shared by suppliers + cars) (~900 tok)
 
 ## lib/yard/
 
@@ -511,31 +557,15 @@
 
 ## supabase/migrations/
 
-- `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
-- `088_cars_hand_ownership.sql` — cars.hand smallint + original_ownership + car_code text (~80 tok)
-- `087_cars_deposit_refund.sql` — cars.deposit_refund_requested bool + date (refund request filed for deposited license) (~90 tok)
-- `086_cars_license_deposit.sql` — cars.license_deposited bool + license_deposit_date (car off the road, license deposited) (~120 tok)
 - `082_bank_statement_charge_date_card.sql` — Credit-card statements commonly carry two distinct dates per transaction -- (~172 tok)
 - `083_inspection_intake.sql` — Purchase-inspection pre-fill ("טופס מילוי מראש"): the office sends the customer a personal (~352 tok)
+- `086_cars_license_deposit.sql` — cars.license_deposited bool + license_deposit_date (car off the road, license deposited) (~120 tok)
+- `087_cars_deposit_refund.sql` — cars.deposit_refund_requested bool + date (refund request filed for deposited license) (~90 tok)
+- `088_cars_hand_ownership.sql` — cars.hand smallint + original_ownership + car_code text (~80 tok)
+- `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
 
 ## tests/
 
 
 ## tests/fixtures/
 
-
-## lib/og/
-
-- `intakeImage.tsx` — renderIntakeOgImage(name, logoBase64): branded 1200x630 link preview (logo card + inspection badge, colours from logo) via next/og ImageResponse (~1100 tok)
-- `logoColors.ts` — logoPalette(buf): dominant dark colour → bg, bright saturated → accent (sharp) (~700 tok)
-- `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
-- `intakeTenant.ts` — getIntakeTenant(token): tenant name+logo for personal/fixed intake link (~250 tok)
-- `fonts/` — Assistant hebrew+latin 400/800 woff (OFL) for OG rendering
-
-## app/api/public/og/intake/
-
-- `route.tsx` — GET ?t=<token>&v=<logo hash>: branded OG image; redirects to static /og/inspection-intake.png when no logo (~250 tok)
-
-## lib/utils/ (addition)
-
-- `uploadCompress.ts` — MAX_UPLOAD_BYTES (4MB), compressImageIfNeeded, compressPdfIfNeeded, shrinkForUpload — client-side shrink to clear Vercel's 4.5MB limit (shared by suppliers + cars) (~900 tok)
