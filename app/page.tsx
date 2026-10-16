@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/service'
+import { LANDING_TENANT_ID } from '@/lib/landingTenant'
 import CustomerSearch from '@/components/landing/CustomerSearch'
 import PromotionsCarousel from '@/components/landing/PromotionsCarousel'
 import PriceList from '@/components/landing/PriceList'
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
   description: 'תיקון ומכירת צמיגים, כיוון פרונט, בדיקות רכב לפני קניה, סוכנות רכב יד 2. שירות מקצועי ומהיר.',
 }
 
-const TENANT_ID = 'c618f567-139b-4ce9-ac77-67affe93c27d'
+const TENANT_ID = LANDING_TENANT_ID
 
 type PublicInfo = {
   hours?: string
@@ -271,6 +272,9 @@ export default async function LandingPage() {
             <a href="#customer-area" className="hero-btn hero-btn-secondary">
               מעקב סטטוס טיפול
             </a>
+            <Link href="/guide" className="hero-btn hero-btn-secondary">
+              🛞 מדריך הצמיגים
+            </Link>
           </div>
         </div>
       </section>
@@ -383,6 +387,7 @@ export default async function LandingPage() {
           {BUSINESS.hours && <p style={{ fontSize: '14px', margin: '4px 0' }}>שעות פעילות: {BUSINESS.hours}</p>}
 
           <div style={{ borderTop: '1px solid rgba(255,255,255,.15)', marginTop: '24px', paddingTop: '20px', display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', fontSize: '13px' }}>
+            <Link href="/guide" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>מדריך הצמיגים</Link>
             <Link href="/privacy" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>מדיניות פרטיות</Link>
             <Link href="/terms" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>תנאי שימוש</Link>
             <Link href="/accessibility" style={{ color: 'rgba(255,255,255,.6)', textDecoration: 'none' }}>הצהרת נגישות</Link>
