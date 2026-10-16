@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import type { createClient } from '@/lib/supabase/client'
 import Button from '@/components/ui/Button'
+import { LANDING_TENANT_ID } from '@/lib/landingTenant'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { DEFAULT_GUIDE, resolveGuide, sectionImages, type GuideContent, type GuideImage, type GuideSection, type GuideTopic, type L } from '@/lib/guide/content'
 
@@ -115,7 +116,7 @@ function ImagesField({ images, onChange, showToast, afterLabel }: {
   )
 }
 
-function QrBox({ businessName, showToast }: { businessName: string; showToast: ToastFn }) {
+function QrBox({ businessName, shortLink, showToast }: { businessName: string; shortLink: boolean; showToast: ToastFn }) {
   const { confirm } = useConfirm()
   const [url, setUrl] = useState('')
   const [qr, setQr]   = useState('')
@@ -125,14 +126,15 @@ function QrBox({ businessName, showToast }: { businessName: string; showToast: T
   async function apply(res: Response) {
     const j = await res.json()
     if (!res.ok) throw new Error(j.error ?? 'שגיאה')
-    const link = `${window.location.origin}/guide/${j.token}`
+    // The site's own business also has the short fixed link /guide (same page as the token link)
+    const link = shortLink ? `${window.location.origin}/guide` : `${window.location.origin}/guide/${j.token}`
     setUrl(link)
     setCanRegen(!!j.canRegenerate)
     setQr(await QRCode.toDataURL(link, { width: 640, margin: 1, errorCorrectionLevel: 'M' }))
   }
   useEffect(() => {
     fetch('/api/guide/public-link').then(apply).catch(e => setError(e instanceof Error ? e.message : 'שגיאה'))
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- load once; shortLink is fixed per tenant
 
   async function copy() {
     try { await navigator.clipboard.writeText(url); showToast('הקישור הועתק ✓', 'success') }
@@ -158,7 +160,7 @@ function QrBox({ businessName, showToast }: { businessName: string; showToast: T
           <Button variant="secondary" onClick={copy}>🔗 העתק</Button>
           <Button variant="secondary" onClick={() => window.open(url, '_blank')}>👁️ צפה בדף</Button>
         </div>
-        {canRegen && (
+        {canRegen && !shortLink && (
           <button onClick={regenerate} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
             החלף קישור (מבטל ברקודים ישנים)
           </button>
@@ -225,7 +227,7 @@ export default function GuideEditor({ supabase, tenantId, showToast }: { supabas
 
   return (
     <div>
-      <QrBox businessName={businessName} showToast={showToast} />
+      <QrBox businessName={businessName} shortLink={tenantId === LANDING_TENANT_ID} showToast={showToast} />
 
       <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 12, lineHeight: 1.6 }}>
         טקסט: כל שורה היא פסקה. שורה שמתחילה ב-&quot;- &quot; היא נקודה ברשימה. <b>**מילים**</b> בין שתי כוכביות יוצגו מודגשות.
