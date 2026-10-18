@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	version = "1.1.0"
+	version = "1.1.1"
 	listen  = "127.0.0.1:47321"
 	appName = "AutoFlowScanner"
 	exeName = "autoflow-scanner.exe"

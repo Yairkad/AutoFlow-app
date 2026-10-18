@@ -4,6 +4,14 @@
 
 const AGENT_URL = 'http://127.0.0.1:47321'
 const DEVICE_KEY = 'autoflow-scanner-device'
+// Bump together with tools/scanner-agent version when an agent fix must reach users
+const MIN_AGENT_VERSION = '1.1.1'
+
+function versionLess(a: string, b: string) {
+  const pa = a.split('.').map(Number), pb = b.split('.').map(Number)
+  for (let i = 0; i < 3; i++) if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pa[i] ?? 0) < (pb[i] ?? 0)
+  return false
+}
 
 export const SCANNER_DOWNLOAD_URL = '/downloads/autoflow-scanner.exe'
 
@@ -48,6 +56,8 @@ export function saveScanner(id: string | null) {
 
 /** Scans (feeder if it has paper, otherwise the glass) and returns all pages as one PDF. */
 export async function scanWithAgent(deviceId: string, fileName = 'scan.pdf'): Promise<File> {
+  const { version } = await (await call('/status', undefined, 5_000)).json()
+  if (versionLess(String(version ?? '0'), MIN_AGENT_VERSION)) throw new ScannerAgentOutdatedError()
   const res = await call(`/scan?source=auto&device=${encodeURIComponent(deviceId)}`, { method: 'POST' }, 5 * 60_000)
   return new File([await res.blob()], fileName, { type: 'application/pdf' })
 }
