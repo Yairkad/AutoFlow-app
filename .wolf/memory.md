@@ -2383,3 +2383,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 14:03 | Created ../../../root/.claude/plans/reactive-giggling-petal.md | — | ~550 |
 | 14:04 | Edited ../../../root/.claude/plans/reactive-giggling-petal.md | expanded (+22 lines) | ~326 |
 | 16:00 | Work card scroll + sticky finish on phones; lookup tabs tires/products + out-of-stock | WorkCardClient, NewCarClient, TireLookupClient, api/yard/search | playwright ok, build ok | ~10k |
+| 17:20 | Settings Drive card wraps on phones (buttons below text) | SettingsClient.tsx | replica screenshot ok | ~3k |
