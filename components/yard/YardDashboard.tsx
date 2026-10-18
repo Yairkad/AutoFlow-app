@@ -21,12 +21,14 @@ export default function YardDashboard({ initialSessions }: Props) {
   }, [])
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const refreshSoon = () => { clearTimeout(timer); timer = setTimeout(() => router.refresh(), 400) }
     const channel = supabase
       .channel('yard-dashboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_sessions' }, () => router.refresh())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_session_items' }, () => router.refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_sessions' }, refreshSoon)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_session_items' }, refreshSoon)
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => { clearTimeout(timer); supabase.removeChannel(channel) }
   }, []) // eslint-disable-line
 
   function timerState(openedAt: string): 'ok' | 'warn' | 'critical' {

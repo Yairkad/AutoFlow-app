@@ -456,22 +456,21 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       ),
     }))
 
-    toUpdate.forEach(target => {
-      fetch(`/api/yard/sessions/${session.id}/items/${target.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ unit_price: newPrice }),
-      }).then(r => {
-        if (!r.ok) throw new Error()
-      }).catch(() => {
-        setSession(s => ({
-          ...s,
-          yard_session_items: s.yard_session_items.map(i =>
-            i.id === target.id ? { ...i, unit_price: target.unit_price, price_modified: target.price_modified } : i
-          ),
-        }))
-        showError('שגיאה בעדכון מחיר — נסה שוב')
-      })
+    fetch(`/api/yard/sessions/${session.id}/items`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: toUpdate.map(u => u.id), unit_price: newPrice }),
+    }).then(r => {
+      if (!r.ok) throw new Error()
+    }).catch(() => {
+      setSession(s => ({
+        ...s,
+        yard_session_items: s.yard_session_items.map(i => {
+          const orig = toUpdate.find(u => u.id === i.id)
+          return orig ? { ...i, unit_price: orig.unit_price, price_modified: orig.price_modified } : i
+        }),
+      }))
+      showError('שגיאה בעדכון מחיר — נסה שוב')
     })
   }
 

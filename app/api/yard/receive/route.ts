@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createServiceClient } from '@/lib/supabase/service'
+import { WAITING_STATUSES } from '@/lib/yard/hub'
+
+type Sb = ReturnType<typeof createServiceClient>
+
+// Every receive is logged as an incoming movement ('order') — the same log the tires/products
+// pages already write — so the quick reports and "last receive date" can read it.
+async function logReceipt(sb: Sb, tenantId: string, type: 'tire' | 'product', id: string, qty: number) {
+  const { error } = type === 'tire'
+    ? await sb.from('tire_sales').insert({ tenant_id: tenantId, tire_id: id, qty, movement_type: 'order' })
+    : await sb.from('product_sales').insert({ tenant_id: tenantId, product_id: id, qty, movement_type: 'order' })
+  if (error) console.error('[yard/receive] movement log failed', error.message)
+}
+
+// Customers waiting for this exact tire size — the receive screen offers to tell them
+async function waitingFor(sb: Sb, tenantId: string, t: { width: number | null; profile: number | null; rim: number | null }) {
+  if (!t.width || !t.profile || !t.rim) return []
+  const { data } = await sb.from('customer_requests')
+    .select('id, customer_name, phone, item_desc, qty')
+    .eq('tenant_id', tenantId)
+    .in('status', WAITING_STATUSES)
+    .eq('tire_width', t.width).eq('tire_profile', t.profile).eq('tire_rim', t.rim)
+    .order('created_at')
+  return data ?? []
+}
 
 // POST /api/yard/receive
 // { type: 'tire'|'product', id: string, qty_add: number }
@@ -21,7 +45,7 @@ export async function POST(req: NextRequest) {
 
   const { data: current } = await sb
     .from(tbl)
-    .select('qty')
+    .select('*')
     .eq('id', id)
     .eq('tenant_id', tenantId)
     .single()
@@ -38,7 +62,11 @@ export async function POST(req: NextRequest) {
 
   if (error) return new Response('DB Error', { status: 500 })
 
-  return NextResponse.json({ qty: newQty })
+  const [, waiting] = await Promise.all([
+    logReceipt(sb, tenantId, type, id, qty_add),
+    type === 'tire' ? waitingFor(sb, tenantId, current) : [],
+  ])
+  return NextResponse.json({ qty: newQty, waiting })
 }
 
 // POST /api/yard/receive/tire — create a new tire and set initial stock
@@ -68,7 +96,11 @@ export async function PUT(req: NextRequest) {
       .select('id,brand,width,profile,rim,sell_price,qty,sku')
       .single()
     if (error) return new Response(error.message, { status: 500 })
-    return NextResponse.json(data)
+    const [, waiting] = await Promise.all([
+      logReceipt(sb, tenantId, 'tire', data.id, data.qty),
+      waitingFor(sb, tenantId, data),
+    ])
+    return NextResponse.json({ ...data, waiting })
   } else {
     const { data, error } = await sb
       .from('products')
@@ -76,6 +108,7 @@ export async function PUT(req: NextRequest) {
       .select('id,name,sell_price,qty,sku')
       .single()
     if (error) return new Response(error.message, { status: 500 })
+    await logReceipt(sb, tenantId, 'product', data.id, data.qty)
     return NextResponse.json(data)
   }
 }

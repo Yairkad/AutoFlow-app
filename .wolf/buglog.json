@@ -986,5 +986,42 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-18T09:00:00Z"
+  },
+  {
+    "id": "bug-050",
+    "timestamp": "2026-10-18T12:00:00Z",
+    "error_message": "שינוי מחיר צמיג נתקע הרבה זמן עד שמשתחרר",
+    "file": "components/tires/TiresClient.tsx",
+    "root_cause": "Every save awaited the update through the /api/store proxy and then awaited load() which refetched ALL tires + 300 tire_sales + suppliers (uncompressed, second proxy round-trip) before the screen updated; no saving indicator; saveRowEdit ignored errors. Yard: one PATCH per tire item + every realtime event triggered a full refetch on office/dashboard.",
+    "fix": "saveForm merges update().select().single() result into local state (no load()); saveRowEdit is optimistic with rollback + error toast; Button loading state. Yard price: single batch PATCH /api/yard/sessions/[id]/items {ids, unit_price}; OfficeClient/YardDashboard realtime refetch debounced 400ms. Indexes in 093.",
+    "tags": [
+      "performance",
+      "proxy",
+      "tires",
+      "optimistic",
+      "realtime"
+    ],
+    "related_bugs": [
+      "bug-023"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T12:00:00Z"
+  },
+  {
+    "id": "bug-051",
+    "timestamp": "2026-10-18T12:00:00Z",
+    "error_message": "Creating a new product from yard receive (unknown barcode → מוצר) always failed",
+    "file": "components/yard/ReceiveClient.tsx",
+    "root_cause": "Payload sent cost_price for products; products table has buy_price only (cost_price exists on tires/quotes) → PostgREST unknown-column error.",
+    "fix": "Removed cost_price from the product payload (buy_price kept).",
+    "tags": [
+      "yard",
+      "receive",
+      "products",
+      "schema"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T12:00:00Z"
   }
 ]

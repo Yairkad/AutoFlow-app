@@ -2294,3 +2294,49 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 08:05 | Scanner agent 1.1.0: device picker (/devices), BUSY retry, taskkill self-kill fix; site picker + 'החלף סורק' | tools/scanner-agent/*, lib/scannerAgent.ts, SupplierTrackingTab, public/downloads | go test + tsc ok; untested on Windows | ~25k |
 | 08:40 | Scanner agent 1.1.1: feeder/glass fallback on empty first page + INFO log; site enforces min agent version | scan.ps1, main.go, lib/scannerAgent.ts, public/downloads | go test+tsc ok | ~8k |
 | 09:00 | Scanner agent 1.1.2: BMP→JPEG via System.Drawing (WIA ImageProcess cast error), trap ERR:SCRIPT | scan.ps1, main.go, lib/scannerAgent.ts | go test+tsc ok | ~6k |
+
+## Session: 2026-10-18 10:04
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:12 | Created ../../../root/.claude/plans/reactive-giggling-petal.md | — | ~1587 |
+| 10:18 | Edited ../../../root/.claude/plans/reactive-giggling-petal.md | expanded (+19 lines) | ~245 |
+| 10:18 | Edited ../../../root/.claude/plans/reactive-giggling-petal.md | 1→6 lines | ~57 |
+
+## Session: 2026-10-18 11:04
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-18 11:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:14 | Created supabase/migrations/093_yard_worker_hub.sql | — | ~1248 |
+| 11:15 | Created lib/yard/access.ts | — | ~697 |
+| 11:15 | Created lib/auth/yard-token.ts | — | ~471 |
+| 11:16 | Created components/yard/YardShell.tsx | — | ~1321 |
+| 11:16 | Created app/yard/layout.tsx | — | ~426 |
+| 11:17 | Created lib/yard/hub.ts | — | ~921 |
+
+## Session: 2026-10-18 11:34
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:34 | Created components/yard-hub/ui.tsx | — | ~1642 |
+
+## Session: 2026-10-18 11:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:42 | Created components/yard-hub/LoansPanel.tsx | — | ~3552 |
+
+## Session: 2026-10-18 11:48
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:48 | Created components/yard-hub/RequestsPanel.tsx | — | ~3389 |
+| 11:49 | Created components/yard-hub/QuickReportsPanel.tsx | — | ~1502 |
+| 11:49 | Created components/yard-hub/StockSummaryCards.tsx | — | ~874 |
+| 11:49 | Created components/yard-hub/YardTrackingClient.tsx | — | ~384 |
+| 12:00 | Yard worker hub: sidebar (YardShell) + per-section permissions, loans, customer requests, quick reports, stock value/freshness, /yard-tracking office page; save-latency fixes; migration 093 | components/yard-hub/*, lib/yard/{access,hub,reports}.ts, app/api/yard/{loans,requests,reports,counts,stock-summary}, proxy.ts, 093_yard_worker_hub.sql | build ok, tsc ok | ~60k |

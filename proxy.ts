@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
+import { ALL_YARD_KEYS, YARD_TRACKING_KEY } from '@/lib/yard/access'
 
 // ── Public paths – no auth needed ──────────────────────────────────────────
 const PUBLIC_PREFIXES = [
@@ -47,6 +48,11 @@ const ROUTE_MODULES: [string, string[] | null][] = [
   ['/inspections', ['inspections']],
   ['/reminders',   ['reminders']],
   ['/documents',   ['documents']],
+  // Worker terminal: any yard key gets in; each section is checked again in the
+  // yard layout (pages) and in requireYard() (new API routes).
+  ['/yard',          ALL_YARD_KEYS],
+  ['/api/yard',      ALL_YARD_KEYS],
+  ['/yard-tracking', [YARD_TRACKING_KEY]],
 ]
 
 function requiredModulesFor(pathname: string): string[] | null | undefined {

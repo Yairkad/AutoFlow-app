@@ -54,3 +54,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(isBatch ? data : data[0], { status: 201 })
 }
+
+// PATCH /api/yard/sessions/[id]/items — set one price on several items in one request
+// { ids: string[], unit_price: number }
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const tenantId = getYardTenantId()
+  if (!tenantId) return new Response('Unauthorized', { status: 401 })
+  const { id: sessionId } = await params
+
+  const { ids, unit_price } = await req.json() as { ids?: string[]; unit_price?: number }
+  if (!Array.isArray(ids) || ids.length === 0 || typeof unit_price !== 'number') {
+    return NextResponse.json({ error: 'ids, unit_price required' }, { status: 400 })
+  }
+
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('yard_session_items')
+    .update({ unit_price, price_modified: true })
+    .in('id', ids)
+    .eq('session_id', sessionId)
+    .eq('tenant_id', tenantId)
+    .select()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data)
+}

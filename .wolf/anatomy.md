@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T06:39:38.489Z
-> Files: 53 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T11:49:49.267Z
+> Files: 69 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -29,6 +29,7 @@
 
 ## ../../../root/.claude/plans/
 
+- `reactive-giggling-petal.md` — תכנון: מסך עובד חדש (במקום מסוף הרחבה) + תיקון האיטיות בשמירה (~1759 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
 
@@ -358,6 +359,7 @@
 
 ## app/yard/
 
+- `layout.tsx` — metadata (~426 tok)
 
 ## app/yard/[id]/
 
@@ -481,8 +483,18 @@
 ## components/ui/
 
 
+## components/yard-hub/
+
+- `LoansPanel.tsx` — emptyForm (~3552 tok)
+- `QuickReportsPanel.tsx` — ils (~1502 tok)
+- `RequestsPanel.tsx` — emptyForm (~3389 tok)
+- `StockSummaryCards.tsx` — Office: tire stock value + how up to date the stock data is. (~874 tok)
+- `ui.tsx` — Page frame: dark top bar on the yard terminal, plain block on the office page. (~1642 tok)
+- `YardTrackingClient.tsx` — YardTrackingClient (~384 tok)
+
 ## components/yard/
 
+- `YardShell.tsx` — YardShell (~1321 tok)
 
 ## docs/
 
@@ -493,6 +505,7 @@
 
 ## lib/auth/
 
+- `yard-token.ts` — The logged-in user of the worker terminal, or null when not signed in / inactive. (~471 tok)
 
 ## lib/bank-sync/
 
@@ -530,16 +543,11 @@
 - `buildForecast.ts` — Exports ForecastEvent, ForecastResult, buildForecast (~1802 tok)
 - `buildUnifiedReport.ts` — Exports MonthlyReportRow, UnifiedReportResult, buildUnifiedReport (~1993 tok)
 
+## lib/scannerAgent.ts
+
+
 ## lib/supabase/
 
-
-## tools/scanner-agent/
-- `main.go` — Windows agent: self-install (HKCU Run), HTTP 127.0.0.1:47321 /status /scan, origin approval MessageBox, runs scan.ps1 (~2800 tok)
-- `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
-- `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-
-## lib/scannerAgent.ts
-- scanWithAgent() → File (PDF); ScannerAgentMissingError; SCANNER_DOWNLOAD_URL (~250 tok)
 
 ## lib/tires/
 
@@ -554,6 +562,8 @@
 
 ## lib/yard/
 
+- `access.ts` — Sees money amounts in the quick reports (worker side). (~697 tok)
+- `hub.ts` — Still waiting for the tire itself — these get the "it just arrived" alert on receive. (~921 tok)
 
 ## public/
 
@@ -569,6 +579,7 @@
 - `087_cars_deposit_refund.sql` — cars.deposit_refund_requested bool + date (refund request filed for deposited license) (~90 tok)
 - `088_cars_hand_ownership.sql` — cars.hand smallint + original_ownership + car_code text (~80 tok)
 - `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
+- `093_yard_worker_hub.sql` — ════════════════════════════════════════════ (~1248 tok)
 
 ## tests/
 
@@ -578,4 +589,7 @@
 
 ## tools/scanner-agent/
 
+- `main.go` — Windows agent: self-install (HKCU Run), HTTP 127.0.0.1:47321 /status /scan, origin approval MessageBox, runs scan.ps1 (~2800 tok)
 - `main.go` — go:build windows (~3100 tok)
+- `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
+- `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
