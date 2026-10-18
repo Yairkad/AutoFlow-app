@@ -1,9 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T11:49:49.267Z
-> Files: 69 tracked | Anatomy hits: 0 | Misses: 0
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T10:04:45.805Z
-> Files: 57 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T13:46:34.815Z
+> Files: 71 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -31,7 +29,7 @@
 
 ## ../../../root/.claude/plans/
 
-- `reactive-giggling-petal.md` — תכנון: מסך עובד חדש (במקום מסוף הרחבה) + תיקון האיטיות בשמירה (~1759 tok)
+- `reactive-giggling-petal.md` — תיקון: תפריט המסוף בטלפון נפתח "ריק" (~481 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
 
@@ -480,8 +478,8 @@
 
 
 ## components/tires/
-- `TirePickerModal.tsx` — shared picker: search existing tires by size/brand/SKU (inventory count add/link, tires merge) (~900 tok)
 
+- `TirePickerModal.tsx` — shared picker: search existing tires by size/brand/SKU (inventory count add/link, tires merge) (~900 tok)
 - `TirePickerModal.tsx` — TirePickerModal (~1047 tok)
 
 ## components/ui/
