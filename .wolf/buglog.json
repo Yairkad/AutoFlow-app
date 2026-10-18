@@ -914,5 +914,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-15T12:30:00Z"
+  },
+  {
+    "id": "bug-046",
+    "timestamp": "2026-10-18T07:30:00Z",
+    "error_message": "סורק AutoFlow: downloaded exe does nothing when run — no install, no message",
+    "file": "tools/scanner-agent/main.go",
+    "root_cause": "install() runs `taskkill /F /IM autoflow-scanner.exe` to stop an old copy, but the downloaded installer has the same image name, so it kills itself before copying/registering",
+    "fix": "(pending user approval) exclude own PID: taskkill /FI \"IMAGENAME eq ...\" /FI \"PID ne <self>\"",
+    "tags": [
+      "scanner-agent",
+      "windows",
+      "install",
+      "taskkill"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T07:30:00Z"
   }
 ]
