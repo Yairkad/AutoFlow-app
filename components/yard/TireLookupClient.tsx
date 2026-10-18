@@ -3,20 +3,10 @@
 import { useCallback, useState } from 'react'
 import type { SearchResult } from '@/lib/yard/types'
 import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
-import { tireQueryFromDigits } from '@/lib/tires/size'
+import { tireSizeSearchParams } from '@/lib/tires/size'
 
 type Mode = 'tire' | 'product'
 
-// Accepts 165/65/15 → 165/65R15 so users don't need to type R; on a phone number pad
-// "1656515" works too
-function normalizeTireSize(raw: string): string {
-  const q = tireQueryFromDigits(raw)
-  const full = q.trim().match(/^(\d+)\/(\d+)\/(\d+)$/)
-  if (full) return `${full[1]}/${full[2]}R${full[3]}`
-  const partial = q.trim().match(/^(\d+\/\d+)\/$/)
-  if (partial) return `${partial[1]}R`
-  return q
-}
 
 // Standalone price/stock check — not tied to any open vehicle session. Tires by size,
 // products by name / SKU / barcode; out-of-stock items are shown too (marked "אזל").
@@ -28,9 +18,9 @@ export default function TireLookupClient() {
   const [results, setResults]   = useState<SearchResult[]>([])
   const [selected, setSelected] = useState<SearchResult | null>(null)
 
-  const search = useCallback(async (q: string): Promise<SearchResult[]> => {
-    const term = mode === 'tire' ? normalizeTireSize(q) : q
-    const res  = await fetch(`/api/yard/search?q=${encodeURIComponent(term)}&type=${mode}&include_empty=1`)
+  const search = useCallback(async (q: string, kind: 'text' | 'size'): Promise<SearchResult[]> => {
+    const params = kind === 'size' ? tireSizeSearchParams(q) : `q=${encodeURIComponent(q)}`
+    const res  = await fetch(`/api/yard/search?${params}&type=${mode}&include_empty=1`)
     const data: SearchResult[] = res.ok ? await res.json() : []
     setResults(data)   // keep the list on the page after the sheet closes
     return data
@@ -46,8 +36,8 @@ export default function TireLookupClient() {
       {sheetOpen && (
         <SearchSheet<SearchResult>
           title={mode === 'tire' ? 'בדיקת צמיג לפי מידה' : 'בדיקת מוצר'}
-          placeholder={mode === 'tire' ? 'מידה, למשל 2055516 או 205/55/16' : 'שם מוצר, מק״ט או ברקוד'}
-          inputMode={mode === 'tire' ? 'numeric' : 'search'}
+          placeholder={mode === 'tire' ? 'מידה' : 'שם מוצר, מק״ט או ברקוד'}
+          sizeMode={mode === 'tire' ? 'only' : 'off'}
           initialQuery={lastQuery}
           search={search}
           getKey={r => r.id}
@@ -80,7 +70,7 @@ export default function TireLookupClient() {
         <button onClick={() => setSheetOpen(true)}
           className="w-full border-2 border-blue-500 rounded-xl bg-white text-right font-bold flex items-center gap-2"
           style={{ padding: '12px 14px', fontSize: '16px', color: lastQuery ? '#0f172a' : '#94a3b8' }}>
-          🔍 {lastQuery || (mode === 'tire' ? 'חפש מידת צמיג...' : 'חפש מוצר או ברקוד...')}
+          🔍 {(mode === 'tire' ? lastQuery.replace(/\/+$/, '').replace(/^\/+/, '') : lastQuery) || (mode === 'tire' ? 'חפש מידת צמיג...' : 'חפש מוצר או ברקוד...')}
         </button>
       </div>
 

@@ -7,6 +7,7 @@ import { formatPlate } from '@/lib/yard/types'
 import type { SearchResult } from '@/lib/yard/types'
 import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
+import { handOffToCard, occupiedPositions, tireIdsAt } from '@/lib/yard/handoff'
 import type { TirePosition } from '@/lib/yard/types'
 
 interface Props {
@@ -85,65 +86,28 @@ export default function FreeSearchClient({ session, filterType }: Props) {
     doAdd(item)
   }
 
-  function submitTireWithPosition(positions: TirePosition[]) {
+  function submitTireWithPosition(positions: TirePosition[], replace: TirePosition[]) {
     if (!pickerItem) return
     setPickerItem(null)
     setSaving(true)
-    const finalPrice = pickerItem.price
     const posArr = positions.length > 0 ? positions : [null]
-    const now = Date.now()
-
-    // One batched POST for all positions (instead of one request per position),
-    // and stash every pending item so the work card shows all of them instantly.
-    const pendingItems = posArr.map((pos, i) => ({
-      id: `pending-${now}-${i}`, session_id: session.id, tenant_id: '',
+    handOffToCard(session.id, posArr.map(pos => ({
       item_type: 'tire', ref_id: pickerItem.id, name: pickerItem.name, sku: pickerItem.sku,
-      quantity: 1, unit_price: finalPrice, original_price: pickerItem.price,
+      quantity: 1, unit_price: pickerItem.price, original_price: pickerItem.price,
       price_modified: false, tire_position: pos,
-      created_at: new Date().toISOString(),
-    }))
-    try {
-      sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify(pendingItems))
-    } catch {}
+    })), tireIdsAt(session, replace))
     router.push(`/yard/${session.id}`)
-    fetch(`/api/yard/sessions/${session.id}/items`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(posArr.map(pos => ({
-        item_type: 'tire', ref_id: pickerItem.id, name: pickerItem.name, sku: pickerItem.sku,
-        quantity: 1, unit_price: finalPrice, original_price: pickerItem.price,
-        price_modified: false, tire_position: pos,
-      }))),
-    })
   }
 
   function doAdd(item: SearchResult) {
     setConfirm(null)
     setSaving(true)
-    // Store pending item so WorkCard shows it instantly on mount
-    try {
-      sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify({
-        id: `pending-${Date.now()}`, session_id: session.id, tenant_id: '',
-        item_type: item.type, ref_id: item.id, name: item.name, sku: item.sku,
-        quantity: 1, unit_price: item.price, original_price: item.price,
-        price_modified: false, created_at: new Date().toISOString(),
-      }))
-    } catch {}
+    handOffToCard(session.id, [{
+      item_type: item.type, ref_id: item.id, name: item.name, sku: item.sku,
+      quantity: 1, unit_price: item.price, original_price: item.price,
+      price_modified: false, tire_position: null,
+    }])
     router.push(`/yard/${session.id}`)
-    fetch(`/api/yard/sessions/${session.id}/items`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        item_type:      item.type,
-        ref_id:         item.id,
-        name:           item.name,
-        sku:            item.sku,
-        quantity:       1,
-        unit_price:     item.price,
-        original_price: item.price,
-        price_modified: false,
-      }),
-    })
   }
 
   return (
@@ -159,7 +123,7 @@ export default function FreeSearchClient({ session, filterType }: Props) {
           onClose={() => setSheetOpen(false)}
         />
       )}
-      {pickerItem && <TirePositionPicker onConfirm={submitTireWithPosition} />}
+      {pickerItem && <TirePositionPicker occupied={occupiedPositions(session)} onConfirm={submitTireWithPosition} />}
 
       {/* Hidden input for physical scanner — only in DOM when active to prevent virtual keyboard */}
       {scanMode && (

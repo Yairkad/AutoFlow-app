@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T14:41:54.325Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T15:57:19.932Z
 > Files: 73 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -29,7 +29,7 @@
 
 ## ../../../root/.claude/plans/
 
-- `reactive-giggling-petal.md` — מקלדת המכשיר וחלון חיפוש מלא במסוף הרחבה (~785 tok)
+- `reactive-giggling-petal.md` — כרטיס עבודה: צמיגים שנתקעים על "מסתנכרן..." וצמיגים כפולים באותו מיקום (~1186 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
 

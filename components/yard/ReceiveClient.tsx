@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { SearchResult } from '@/app/api/yard/search/route'
 import { whatsappLink } from '@/lib/yard/hub'
-import { tireQueryFromDigits } from '@/lib/tires/size'
+import { tireSizeSearchParams } from '@/lib/tires/size'
 import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
 
 interface WaitingCustomer { id: string; customer_name: string; phone: string | null; item_desc: string; qty: number }
@@ -234,10 +234,12 @@ export default function ReceiveClient() {
               <span>שמור את הברקוד הזה כמקט של הצמיג <span className="text-slate-400">(רק אם זה הברקוד האמיתי שלו)</span></span>
             </label>
           }
-          placeholder="מידה, מותג או מקט..."
+          placeholder="מותג או מקט..."
+          sizeMode="toggle"
           minChars={2}
-          search={async q => {
-            const res = await fetch(`/api/yard/search?q=${encodeURIComponent(tireQueryFromDigits(q))}&type=tire`)
+          search={async (q, kind) => {
+            const params = kind === 'size' ? tireSizeSearchParams(q) : `q=${encodeURIComponent(q)}`
+            const res = await fetch(`/api/yard/search?${params}&type=tire`)
             return res.ok ? res.json() : []
           }}
           getKey={r => r.id}

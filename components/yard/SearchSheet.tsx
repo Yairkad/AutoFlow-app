@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import TireSizeInput, { parseTireSizeText, type TireSize } from '@/components/yard/TireSizeInput'
 
 // Full-screen search for the yard terminal. The search box sits at the very top and
 // the results fill the space down to the device keyboard, so on a phone you always
@@ -11,12 +12,15 @@ interface Props<T> {
   /** Extra controls shown under the search box (e.g. an option checkbox) */
   extra?:        React.ReactNode
   placeholder:   string
-  /** 'numeric' opens the phone's number pad (tire sizes); 'search' the normal keyboard */
+  /** 'numeric' opens the phone's number pad; 'search' the normal keyboard */
   inputMode?:    'search' | 'numeric'
+  /** Tire size as three boxes (width / profile / rim): 'only', or 'toggle' to switch with free text */
+  sizeMode?:     'off' | 'only' | 'toggle'
   initialQuery?: string
   /** Characters before searching (0 = also search the empty query, e.g. browse all) */
   minChars?:     number
-  search:        (q: string) => Promise<T[]>
+  /** kind 'size': q is "width/profile/rim" with empty parts allowed, e.g. "205//16" */
+  search:        (q: string, kind: 'text' | 'size') => Promise<T[]>
   getKey:        (item: T) => string
   renderItem:    (item: T) => React.ReactNode
   emptyText?:    (q: string) => string
@@ -26,10 +30,12 @@ interface Props<T> {
 }
 
 export default function SearchSheet<T>({
-  title, extra, placeholder, inputMode = 'search', initialQuery = '', minChars = 1,
+  title, extra, placeholder, inputMode = 'search', sizeMode = 'off', initialQuery = '', minChars = 1,
   search, getKey, renderItem, emptyText, onPick, onClose,
 }: Props<T>) {
-  const [query, setQuery]     = useState(initialQuery)
+  const [useSize, setUseSize] = useState(sizeMode !== 'off')
+  const [size, setSize]       = useState<TireSize>(() => parseTireSizeText(sizeMode !== 'off' ? initialQuery : ''))
+  const [query, setQuery]     = useState(sizeMode !== 'off' ? '' : initialQuery)
   const [results, setResults] = useState<T[]>([])
   const [loading, setLoading] = useState(false)
   const [vh, setVh]           = useState<number | null>(null)
@@ -66,22 +72,27 @@ export default function SearchSheet<T>({
     return () => window.removeEventListener('popstate', onPop)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const sizeQuery = `${size.width}/${size.profile}/${size.rim}`
+  const kind: 'text' | 'size' = useSize ? 'size' : 'text'
+  const effective = useSize ? sizeQuery : query.trim()
+  const tooShort = useSize ? !(size.width || size.profile || size.rim) : effective.length < minChars
+
   useEffect(() => {
-    const q = query.trim()
-    if (q.length < minChars) {
+    const q = effective
+    if (tooShort) {
       const t = setTimeout(() => { setResults([]); setLoading(false) }, 0)
       return () => clearTimeout(t)
     }
     let cancelled = false
     const t = setTimeout(() => {
       setLoading(true)
-      searchRef.current(q)
+      searchRef.current(q, kind)
         .then(r => { if (!cancelled) setResults(r) })
         .catch(() => { if (!cancelled) setResults([]) })
         .finally(() => { if (!cancelled) setLoading(false) })
     }, 250)
     return () => { cancelled = true; clearTimeout(t) }
-  }, [query, minChars])
+  }, [effective, kind, tooShort])
 
   function close(after?: () => void) {
     inputRef.current?.blur()
@@ -91,17 +102,22 @@ export default function SearchSheet<T>({
   }
 
   function pick(item: T) {
-    const q = query
+    const q = effective
     close(() => onPick(item, q))
   }
 
-  const q = query.trim()
+  const q = effective
 
   return (
     <div className="fixed inset-x-0 flex flex-col bg-white" dir="rtl"
       style={{ top, height: vh ?? '100dvh', zIndex: 70 }}>
       {/* Search box — always at the top */}
       <div className="flex items-center gap-2 bg-slate-900 flex-shrink-0" style={{ padding: '8px 10px' }}>
+        {useSize ? (
+          <div className="flex-1 flex items-center justify-center">
+            <TireSizeInput value={size} onChange={setSize} autoFocus onEnter={() => results[0] && pick(results[0])} />
+          </div>
+        ) : (
         <div className="flex-1 relative">
           <input
             ref={inputRef}
@@ -128,6 +144,7 @@ export default function SearchSheet<T>({
             </button>
           )}
         </div>
+        )}
         <button
           onClick={() => close()}
           className="bg-slate-700 active:bg-slate-600 text-white rounded-xl font-bold flex-shrink-0"
@@ -136,14 +153,23 @@ export default function SearchSheet<T>({
           ✕ ביטול
         </button>
       </div>
-      {title && <div className="text-xs font-bold text-slate-500 bg-slate-100 flex-shrink-0" style={{ padding: '5px 14px' }}>{title}</div>}
+      {(title || sizeMode === 'toggle') && (
+        <div className="flex items-center justify-between text-xs font-bold text-slate-500 bg-slate-100 flex-shrink-0" style={{ padding: '5px 14px', gap: 8 }}>
+          <span>{title}</span>
+          {sizeMode === 'toggle' && (
+            <button onClick={() => setUseSize(u => !u)} className="bg-white border border-slate-300 rounded-full text-slate-700" style={{ padding: '3px 10px' }}>
+              {useSize ? 'חיפוש חופשי (מותג / מקט)' : 'חיפוש לפי מידה'}
+            </button>
+          )}
+        </div>
+      )}
       {extra && <div className="bg-slate-50 border-b border-slate-200 flex-shrink-0" style={{ padding: '8px 14px' }}>{extra}</div>}
 
       {/* Results — fill the space down to the keyboard */}
       <div className="flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
         {results.length === 0 ? (
           <div className="text-center text-slate-400" style={{ padding: '28px 16px', fontSize: '15px' }}>
-            {loading ? 'מחפש...' : q.length < minChars ? 'התחל להקליד לחיפוש' : (emptyText?.(q) ?? 'לא נמצאו תוצאות')}
+            {loading ? 'מחפש...' : tooShort ? (useSize ? 'הקלד מידה: רוחב / פרופיל / קוטר' : 'התחל להקליד לחיפוש') : (emptyText?.(q) ?? 'לא נמצאו תוצאות')}
           </div>
         ) : results.map((r, i) => (
           <button
