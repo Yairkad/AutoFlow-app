@@ -29,6 +29,8 @@
 
 ## Key Learnings
 
+- [2026-10-18] Scanner agent (tools/scanner-agent, Go, windows-only main.go + portable pdf.go): rebuild the exe into public/downloads after any change (command in its README). Website must NOT probe 127.0.0.1 automatically (Chrome local-network-access prompt for every visitor) — only on user click.
+- [2026-10-18] Google Drive OAuth scope is drive.file — the app can't see files it didn't create (e.g. printer scans in Drive) without Picker or a restricted scope.
 - [2026-10-15] proxy.ts PUBLIC_PREFIXES: new public pages must be added there (e.g. '/guide'). Note '/' is in the list and matched with startsWith.
 - [2026-10-15] tenants.logo_base64 is a full data URL (data:image/...;base64,...), not raw base64.
 - [2026-10-15] **Tires may have no size:** since migration 090, tires.width/profile/rim are nullable (tire saved from unknown barcode / manual receive, details completed later via the "חסרי נתונים" filter on /tires). Always format sizes with `tireSizeText()` from `lib/tires/size.ts` — never `${t.width}/${t.profile}R${t.rim}` (renders "null/nullRnull").
