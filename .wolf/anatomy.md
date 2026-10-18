@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T14:04:51.504Z
-> Files: 71 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T14:41:54.325Z
+> Files: 73 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -29,7 +29,7 @@
 
 ## ../../../root/.claude/plans/
 
-- `reactive-giggling-petal.md` — תיקון: בכרטיס עבודה במסוף לא מגיעים לכפתור "סיים ושלח לתשלום" כשהמסך לאורך (~816 tok)
+- `reactive-giggling-petal.md` — מקלדת המכשיר וחלון חיפוש מלא במסוף הרחבה (~785 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
 
@@ -496,6 +496,8 @@
 
 ## components/yard/
 
+- `SearchSheet.tsx` — 'numeric' opens the phone's number pad (tire sizes); 'search' the normal keyboard (~1753 tok)
+- `TireLookupClient.tsx` — normalizeTireSize (~1660 tok)
 - `YardShell.tsx` — YardShell (~1321 tok)
 
 ## docs/

@@ -4,13 +4,11 @@ import { useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
-import { useOnScreenKeyboardPref } from '@/lib/hooks/useOnScreenKeyboardPref'
 
 type VehicleInfo = { make?: string; model?: string; year?: number } | null
 
 export default function NewCarClient() {
   const router = useRouter()
-  const { enabled: kbEnabled } = useOnScreenKeyboardPref()
   const [digits, setDigits]         = useState('')
   const [vehicle, setVehicle]       = useState<VehicleInfo>(null)
   const [loading, setLoading]       = useState(false)
@@ -49,12 +47,6 @@ export default function NewCarClient() {
       lookingRef.current = false
     }
   }, [])
-
-  function press(k: string) {
-    if (k === 'del') { const n = digits.slice(0,-1); setDigits(n); lookup(n); return }
-    if (digits.length >= 8) return
-    const n = digits + k; setDigits(n); lookup(n)
-  }
 
   // Typed directly from a physical/external keyboard — strip anything but digits
   function handleTyped(raw: string) {
@@ -114,13 +106,11 @@ export default function NewCarClient() {
         <h2 className="text-xl font-bold">קליטת רכב חדש</h2>
       </div>
 
-      {/* Plate input — a real field so a physical/external keyboard can type
-          the plate directly; the numpad below (tablet mode) writes into the
-          same state via press(). */}
+      {/* Plate input — typed with the device's number keyboard */}
       <div style={{ margin: '14px 14px 0' }} className="flex-shrink-0">
         <input
           type="text"
-          inputMode={kbEnabled ? 'none' : 'numeric'}
+          inputMode="numeric"
           dir="ltr"
           autoFocus
           value={plate}
@@ -161,37 +151,13 @@ export default function NewCarClient() {
         {error && <div className="bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm" style={{ padding: '10px 14px' }}>{error}</div>}
       </div>
 
-      {/* Numpad — tablet/touch mode only; hidden when "מקלדת חיצונית" is on
-          so the field is driven purely by the physical keyboard above */}
-      {kbEnabled ? (
-        <div className="flex-1" style={{ padding: '10px 14px' }}>
-          <div className="grid grid-cols-3 h-full" dir="ltr" style={{ gap: '10px' }}>
-            {['1','2','3','4','5','6','7','8','9'].map(k => (
-              <button key={k} onPointerDown={() => press(k)}
-                className="bg-white border-2 border-slate-200 rounded-2xl font-bold text-slate-800 shadow-sm active:scale-95 active:bg-slate-100 transition-all"
-                style={{ fontSize: '28px' }}>{k}</button>
-            ))}
-            <button onPointerDown={confirm} disabled={digits.length < 7 || saving}
-              className="bg-green-700 border-2 border-green-700 rounded-2xl font-bold text-white shadow-sm active:scale-95 disabled:opacity-40 transition-all"
-              style={{ fontSize: '20px' }}>{saving ? '...' : '✓ אישור'}</button>
-            <button onPointerDown={() => press('0')}
-              className="bg-white border-2 border-slate-200 rounded-2xl font-bold text-slate-800 shadow-sm active:scale-95 active:bg-slate-100 transition-all"
-              style={{ fontSize: '28px' }}>0</button>
-            <button onPointerDown={() => press('del')}
-              className="bg-white border-2 border-slate-200 rounded-2xl font-bold text-red-500 shadow-sm active:scale-95 active:bg-slate-100 transition-all"
-              style={{ fontSize: '22px' }}>⌫</button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 flex flex-col items-center justify-center" style={{ gap: '14px', padding: '10px 14px' }}>
-          <div className="text-slate-400 text-sm text-center">הקלידו את מספר הרכב במקלדת ולחצו Enter לאישור</div>
-          <button onClick={confirm} disabled={digits.length < 7 || saving}
-            className="bg-green-700 text-white rounded-2xl font-bold disabled:opacity-40 active:scale-95 transition-all"
-            style={{ padding: '16px 48px', fontSize: '18px' }}>
-            {saving ? '...' : '✓ אישור'}
-          </button>
-        </div>
-      )}
+      <div className="flex flex-col items-center" style={{ gap: '10px', padding: '14px' }}>
+        <button onClick={confirm} disabled={digits.length < 7 || saving}
+          className="w-full bg-green-700 text-white rounded-2xl font-bold disabled:opacity-40 active:scale-95 transition-all"
+          style={{ padding: '16px', fontSize: '19px' }}>
+          {saving ? '...' : '✓ אישור'}
+        </button>
+      </div>
 
       {/* Back button */}
       <div style={{ padding: '0 14px 14px' }} className="flex-shrink-0">

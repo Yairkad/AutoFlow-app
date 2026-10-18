@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import KeyboardDismiss from '@/components/yard/KeyboardDismiss'
-import KeyboardModeToggle from '@/components/yard/KeyboardModeToggle'
 import YardShell from '@/components/yard/YardShell'
 import { getYardUser } from '@/lib/auth/yard-token'
 
@@ -35,7 +34,6 @@ export default async function YardLayout({ children }: { children: React.ReactNo
             {children}
           </YardShell>
           <KeyboardDismiss />
-          <KeyboardModeToggle />
         </div>
       </ConfirmProvider>
     </ToastProvider>

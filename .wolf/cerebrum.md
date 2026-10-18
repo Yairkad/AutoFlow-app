@@ -5,6 +5,7 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+- [2026-10-18] Yard terminal: NO built-in on-screen keyboards anymore (removed HebrewNumKeyboard/TireKeyboard/KeyboardModeToggle/useOnScreenKeyboardPref) — device keyboard only. Every search opens components/yard/SearchSheet.tsx (search box at the very top, results down to the keyboard, ✕ ביטול + clear, Android back closes it). Picking in a work card adds qty 1 directly (tires still ask position). Tire sizes on a phone number pad: tireQueryFromDigits ("2055516"). Camera scanning hidden in the yard (CameraScanner kept). Supplier tab button renamed "📷 צלם". inputMode="none" stays only on hidden external-scanner inputs.
 - [2026-10-18] Yard price/stock lookup: user wanted products too, as two tabs (צמיגים / מוצרים), not one mixed search.
 
 - [2026-10-18] **Do-Not-Repeat:** for any new feature/build, present the plan in Hebrew and WAIT for explicit approval before writing any code. Never write progress/status lines in English to the user — everything user-facing in Hebrew.

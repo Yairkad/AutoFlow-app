@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { YardSession } from '@/lib/yard/types'
 import { formatPlate } from '@/lib/yard/types'
 import type { SearchResult } from '@/lib/yard/types'
-import HebrewNumKeyboard from '@/components/yard/HebrewNumKeyboard'
-import { useOnScreenKeyboardPref } from '@/lib/hooks/useOnScreenKeyboardPref'
-import CameraScanner from '@/components/yard/CameraScanner'
+import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
 import type { TirePosition } from '@/lib/yard/types'
 
@@ -16,37 +14,18 @@ interface Props {
   filterType: 'all' | 'tire' | 'product' | 'service'
 }
 
-const TYPE_LABEL: Record<string, string> = {
-  tire: 'צמיג', product: 'מוצר', service: 'שירות', all: '',
-}
-
 export default function FreeSearchClient({ session, filterType }: Props) {
   const router   = useRouter()
-  const { enabled: kbEnabled } = useOnScreenKeyboardPref()
-  const [query,    setQuery]    = useState('')
   const [results,  setResults]  = useState<SearchResult[]>([])
-  const [selected, setSelected] = useState<SearchResult | null>(null)
-  const [qty,      setQty]      = useState(1)
-  const [price,    setPrice]    = useState<number | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [confirm,      setConfirm]      = useState<{ item: SearchResult; onYes: () => void } | null>(null)
   const [saving,       setSaving]       = useState(false)
   const [confirmBusy,  setConfirmBusy]  = useState(false)
 
   const [scanMode,    setScanMode]    = useState(false)
-  const [cameraOpen,  setCameraOpen]  = useState(false)
   const [scanBuffer,  setScanBuffer]  = useState('')
   const [pickerItem,  setPickerItem]  = useState<SearchResult | null>(null)
   const scanRef = useRef<HTMLInputElement>(null)
-
-  // Keyboard hidden by default — the full inventory list is already cached/shown
-  // for browsing by scroll; the on-screen keyboard only needs to appear while the
-  // user is actively typing a search, otherwise it used to permanently cover the
-  // results (unlike TireSearchClient, which already toggles its keyboard the same way).
-  const [showKeyboard, setShowKeyboard] = useState(false)
-
-  // Global "מקלדת חיצונית" switch (KeyboardModeToggle) force-closes this
-  // keyboard the moment it's toggled off, wherever it currently is
-  useEffect(() => { if (!kbEnabled) setShowKeyboard(false) }, [kbEnabled])
 
   const existingNames = new Set((session.yard_session_items ?? []).map(i => i.name))
   const title = filterType === 'all' ? 'כל המלאי' : 'אביזרים לרכב'
@@ -54,21 +33,17 @@ export default function FreeSearchClient({ session, filterType }: Props) {
   const CACHE_KEY = `yard-search-${filterType}`
   const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
-  const search = useCallback(async (q: string) => {
-    const res  = await fetch(`/api/yard/search?q=${encodeURIComponent(q)}&type=${filterType}`)
-    const data = await res.json()
-    setResults(data)
-    setSelected(null)
-    // Cache empty-query (full list) for instant load next time
-    if (!q) {
-      try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })) } catch {}
-    }
-  }, [filterType]) // eslint-disable-line
+  const fetchResults = useCallback(async (q: string): Promise<SearchResult[]> => {
+    const res = await fetch(`/api/yard/search?q=${encodeURIComponent(q)}&type=${filterType}`)
+    return res.ok ? res.json() : []
+  }, [filterType])
 
-  useEffect(() => {
-    const t = setTimeout(() => search(query), 300)
-    return () => clearTimeout(t)
-  }, [query, search])
+  // Full list (empty query) for browsing; cached for instant load next time
+  const loadAll = useCallback(async () => {
+    const data = await fetchResults('')
+    setResults(data)
+    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })) } catch {}
+  }, [fetchResults]) // eslint-disable-line
 
   // Load defaults on mount — show cache instantly, then refresh
   useEffect(() => {
@@ -79,7 +54,7 @@ export default function FreeSearchClient({ session, filterType }: Props) {
         if (Date.now() - ts < CACHE_TTL) setResults(data)
       }
     } catch {}
-    search('')
+    loadAll()
   }, []) // eslint-disable-line
 
   useEffect(() => {
@@ -90,19 +65,24 @@ export default function FreeSearchClient({ session, filterType }: Props) {
 
   async function handleBarcode(code: string) {
     setScanMode(false)
-    setCameraOpen(false)
     const res = await fetch(`/api/yard/barcode?code=${encodeURIComponent(code)}`)
     if (!res.ok) { alert('לא נמצא פריט עם ברקוד זה'); return }
     const item: SearchResult | null = await res.json()
     if (!item) { alert('לא נמצא פריט עם ברקוד זה'); return }
     if (item.stock !== null && item.stock <= 0) { alert(`פריט אזל מהמלאי: ${item.name}`); return }
-    if (item.type === 'tire') {
-      setPickerItem(item)
-    } else {
-      setSelected(item)
-      setPrice(item.price)
-      setQuery(item.name)
+    pickItem(item)
+  }
+
+  // Picking from the search sheet / list adds straight to the card (qty 1; change it on the card).
+  // Tires still ask for the position on the car.
+  function pickItem(item: SearchResult) {
+    if (item.type === 'tire') { setPickerItem(item); return }
+    if (existingNames.has(item.name)) {
+      setConfirmBusy(false)
+      setConfirm({ item, onYes: () => doAdd(item) })
+      return
     }
+    doAdd(item)
   }
 
   function submitTireWithPosition(positions: TirePosition[]) {
@@ -137,29 +117,16 @@ export default function FreeSearchClient({ session, filterType }: Props) {
     })
   }
 
-  async function addToCart() {
-    if (!selected) return
-    const isTire = selected.type === 'tire'
-    if (!isTire && existingNames.has(selected.name)) {
-      setConfirmBusy(false)
-      setConfirm({ item: selected, onYes: () => doAdd() })
-      return
-    }
-    doAdd()
-  }
-
-  function doAdd() {
-    if (!selected) return
+  function doAdd(item: SearchResult) {
     setConfirm(null)
     setSaving(true)
-    const finalPrice = price ?? selected.price
     // Store pending item so WorkCard shows it instantly on mount
     try {
       sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify({
         id: `pending-${Date.now()}`, session_id: session.id, tenant_id: '',
-        item_type: selected.type, ref_id: selected.id, name: selected.name, sku: selected.sku,
-        quantity: qty, unit_price: finalPrice, original_price: selected.price,
-        price_modified: finalPrice !== selected.price, created_at: new Date().toISOString(),
+        item_type: item.type, ref_id: item.id, name: item.name, sku: item.sku,
+        quantity: 1, unit_price: item.price, original_price: item.price,
+        price_modified: false, created_at: new Date().toISOString(),
       }))
     } catch {}
     router.push(`/yard/${session.id}`)
@@ -167,28 +134,31 @@ export default function FreeSearchClient({ session, filterType }: Props) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        item_type:      selected.type,
-        ref_id:         selected.id,
-        name:           selected.name,
-        sku:            selected.sku,
-        quantity:       qty,
-        unit_price:     finalPrice,
-        original_price: selected.price,
-        price_modified: finalPrice !== selected.price,
+        item_type:      item.type,
+        ref_id:         item.id,
+        name:           item.name,
+        sku:            item.sku,
+        quantity:       1,
+        unit_price:     item.price,
+        original_price: item.price,
+        price_modified: false,
       }),
     })
   }
 
-  const typePill = (type: string) => {
-    const cls = type === 'tire' ? 'bg-blue-100 text-blue-700'
-              : type === 'service' ? 'bg-purple-100 text-purple-700'
-              : 'bg-slate-100 text-slate-600'
-    return <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${cls}`}>{TYPE_LABEL[type]}</span>
-  }
-
   return (
     <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
-      {cameraOpen && <CameraScanner onScan={handleBarcode} onClose={() => setCameraOpen(false)} />}
+      {sheetOpen && (
+        <SearchSheet<SearchResult>
+          title={title}
+          placeholder="חפש מוצר, צמיג, שירות..."
+          search={fetchResults}
+          getKey={r => r.id}
+          renderItem={r => <ResultRow r={r} showType={filterType === 'all'} />}
+          onPick={pickItem}
+          onClose={() => setSheetOpen(false)}
+        />
+      )}
       {pickerItem && <TirePositionPicker onConfirm={submitTireWithPosition} />}
 
       {/* Hidden input for physical scanner — only in DOM when active to prevent virtual keyboard */}
@@ -217,31 +187,13 @@ export default function FreeSearchClient({ session, filterType }: Props) {
       <div className="flex gap-2 flex-shrink-0" style={{ margin: '10px 14px 0' }}>
         <button onClick={() => router.push(`/yard/${session.id}`)}
           className="flex-1 bg-white border-2 border-slate-300 text-slate-700 rounded-xl font-bold active:scale-[.97] hover:bg-slate-50 transition-all"
-          style={{ minHeight: '52px', fontSize: '15px' }}>
+          style={{ minHeight: '48px', fontSize: '15px' }}>
           ← חזור לכרטיס עבודה
         </button>
-        <button onClick={() => router.push('/yard')}
-          className="flex-1 bg-slate-800 text-white rounded-xl font-bold active:scale-[.97] hover:bg-slate-700 transition-all"
-          style={{ minHeight: '52px', fontSize: '15px' }}>
-          🏠 רחבה ראשית
-        </button>
-      </div>
-
-      {/* Scan buttons */}
-      <div className="flex gap-2 flex-shrink-0" style={{ margin: '10px 14px 0' }}>
-        <button onClick={() => setCameraOpen(true)}
-          className="flex-1 bg-blue-600 text-white rounded-xl font-bold active:scale-[.97] transition-all flex items-center justify-center gap-2"
-          style={{ minHeight: '44px', fontSize: '14px' }}>
-          <svg viewBox="0 0 20 16" width="18" height="14" fill="white">
-            <rect x="7" y="0" width="6" height="2" rx="1"/>
-            <path d="M2 3h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
-            <circle cx="10" cy="10" r="3" fill="none" stroke="white" strokeWidth="1.5"/>
-          </svg>
-          סרוק מצלמה
-        </button>
+        {/* Camera scanning is hidden for now (CameraScanner is kept for later) */}
         <button onClick={() => setScanMode(m => !m)}
           className={`flex-1 rounded-xl font-bold active:scale-[.97] transition-all flex items-center justify-center gap-2 ${scanMode ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700'}`}
-          style={{ minHeight: '44px', fontSize: '14px' }}>
+          style={{ minHeight: '48px', fontSize: '14px' }}>
           <svg viewBox="0 0 28 22" width="18" height="14" fill="currentColor">
             <rect x="0"  y="0" width="2" height="22"/><rect x="4"  y="0" width="1" height="22"/>
             <rect x="7"  y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/>
@@ -269,102 +221,27 @@ export default function FreeSearchClient({ session, filterType }: Props) {
         </div>
       )}
 
-      {/* Query display + Quantity row */}
-      <div className="flex items-center flex-shrink-0" style={{ gap: '10px', padding: '10px 14px 0' }}>
-        <input
-          type="text"
-          inputMode="none"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onFocus={() => { if (kbEnabled) setShowKeyboard(true) }}
-          onKeyDown={e => { if (e.key === 'Enter') { search(query); setShowKeyboard(false) } }}
-          placeholder="חפש מוצר, צמיג, שירות..."
-          className="flex-1 border-2 border-blue-500 rounded-xl text-base font-medium bg-white outline-none"
-          style={{ padding: '10px 14px' }}
-        />
-        {showKeyboard && (
-          <button
-            onClick={() => setShowKeyboard(false)}
-            className="rounded-xl border-2 border-slate-300 font-bold text-slate-600 bg-white flex-shrink-0 active:bg-slate-100 transition-colors"
-            style={{ width: '40px', height: '40px', fontSize: '16px' }}
-            aria-label="סגור מקלדת"
-          >
-            ⌄
-          </button>
-        )}
-        <div className="flex items-center border-2 border-slate-200 rounded-xl overflow-hidden bg-white flex-shrink-0">
-          <button onClick={() => setQty(q => Math.max(1, q - 1))} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">−</button>
-          <input value={qty} inputMode="numeric" aria-label="כמות"
-            onFocus={e => e.currentTarget.select()}
-            onChange={e => setQty(Math.max(1, Number(e.target.value.replace(/\D/g, '')) || 1))}
-            className="w-9 text-center font-bold border-x-2 border-slate-200 h-10 outline-none" />
-          <button onClick={() => setQty(q => q + 1)} className="w-10 h-10 text-xl font-bold text-blue-600 hover:bg-slate-50">+</button>
-        </div>
-      </div>
-
-      {/* Results */}
-      <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-slate-200" style={{ margin: '10px 14px 0' }}>
-        {results.length === 0 ? (
-          <div className="p-6 text-center text-slate-400">{query ? 'לא נמצאו תוצאות' : 'טוען...'}</div>
-        ) : (
-          <>
-            <div className="flex items-center border-b" style={{ padding: '8px 16px', background: '#f1f5f9' }}>
-              <span className="flex-1 text-xs font-bold text-slate-400 uppercase tracking-wide">מוצר</span>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">מחיר</span>
-            </div>
-            {results.map((r, i) => (
-              <div
-                key={r.id}
-                onClick={() => { setSelected(r); setPrice(r.price); setShowKeyboard(false) }}
-                className="flex items-center cursor-pointer transition-colors"
-                style={{
-                  minHeight: '62px',
-                  padding: '10px 16px',
-                  borderBottom: '1px solid #e2e8f0',
-                  background: selected?.id === r.id ? '#dbeafe' : i % 2 === 0 ? '#ffffff' : '#f8fafc',
-                }}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-slate-800 flex items-center" style={{ fontSize: '15px', gap: '8px' }}>
-                    {r.name} {typePill(r.type)}
-                  </div>
-                  {r.sku && (
-                    <div className="text-slate-400 font-medium" style={{ fontSize: '12px', marginTop: '1px' }}>מק״ט: {r.sku}</div>
-                  )}
-                  {r.stock != null && (
-                    <div className="text-slate-400 font-medium" style={{ fontSize: '13px', marginTop: '2px' }}>מלאי: {r.stock}</div>
-                  )}
-                </div>
-                <div className="font-black text-blue-600 flex-shrink-0" style={{ fontSize: '16px' }}>
-                  {r.price.toLocaleString()}₪
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-
-      {/* Add button */}
+      {/* Search — opens the full-screen search with the device keyboard */}
       <div className="flex-shrink-0" style={{ padding: '10px 14px 0' }}>
-        <button
-          onClick={addToCart}
-          disabled={!selected || saving}
-          className="w-full bg-green-700 hover:bg-green-800 disabled:opacity-40 text-white rounded-xl text-lg font-bold transition-colors"
-          style={{ padding: '16px' }}
-        >
-          {saving ? '...' : selected ? `הוסף לסל — ${((price ?? selected.price) * qty).toLocaleString()}₪` : 'בחר פריט'}
+        <button onClick={() => setSheetOpen(true)}
+          className="w-full border-2 border-blue-500 rounded-xl bg-white text-right text-slate-400 font-medium flex items-center gap-2"
+          style={{ padding: '12px 14px', fontSize: '16px' }}>
+          🔍 חפש מוצר, צמיג, שירות...
         </button>
       </div>
 
-      {/* Custom keyboard — pinned at bottom, only while actively typing so the
-          results list gets the full screen the rest of the time */}
-      {showKeyboard && !scanMode && (
-        <HebrewNumKeyboard
-          value={query}
-          onChange={setQuery}
-          onConfirm={() => { search(query); setShowKeyboard(false) }}
-        />
-      )}
+      {/* Browse list — tap adds to the card */}
+      <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-slate-200" style={{ margin: '10px 14px 14px', minHeight: 0 }}>
+        {results.length === 0 ? (
+          <div className="p-6 text-center text-slate-400">טוען...</div>
+        ) : results.map((r, i) => (
+          <button key={r.id} onClick={() => !saving && pickItem(r)} disabled={saving}
+            className="w-full text-right flex items-center active:bg-blue-100"
+            style={{ minHeight: '62px', padding: '10px 16px', borderBottom: '1px solid #e2e8f0', background: i % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
+            <ResultRow r={r} showType={filterType === 'all'} />
+          </button>
+        ))}
+      </div>
 
       {/* Duplicate confirm */}
       {confirm && (
