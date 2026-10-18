@@ -20,6 +20,7 @@ import UnitToggle from '@/components/ui/UnitToggle'
 import { withVat, withoutVat } from '@/lib/utils/vat'
 import { Supplier, SupplierDebt, ScheduledPayment, SupplierDebtPayment, RecurringItem, Direction, fmt, bal, waUrl } from './shared'
 import { MAX_UPLOAD_BYTES, compressImageIfNeeded, compressPdfIfNeeded } from '@/lib/utils/uploadCompress'
+import { scanWithAgent, ScannerAgentMissingError, SCANNER_DOWNLOAD_URL } from '@/lib/scannerAgent'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -142,6 +143,10 @@ export default function SupplierTrackingTab({
   const [driveConnected, setDriveConnected] = useState(false)
   const [uploadingLineIdx, setUploadingLineIdx] = useState<number | null>(null)
   const [scannerForLine, setScannerForLine] = useState<number | null>(null)
+  // "📠 סרוק" → the "סורק AutoFlow" agent on this PC. Not probed in advance (that would make Chrome
+  // ask every visitor for local-network permission); the install link shows only after a failed try.
+  const [agentScanningIdx, setAgentScanningIdx] = useState<number | null>(null)
+  const [agentMissing, setAgentMissing] = useState(false)
 
   useEffect(() => {
     fetch(`/api/drive/status?tenant_id=${tenantId}`)
@@ -307,6 +312,19 @@ export default function SupplierTrackingTab({
   const removeInvoiceLine = (i: number) => setSInvoices(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev)
   const updateInvoiceLine = (i: number, field: keyof InvoiceEntry, val: string) =>
     setSInvoices(prev => prev.map((inv, idx) => idx === i ? { ...inv, [field]: val } : inv))
+
+  const scanLineWithAgent = async (i: number) => {
+    setAgentScanningIdx(i)
+    try {
+      const file = await scanWithAgent()
+      await attachScanToLine(i, file)
+    } catch (e) {
+      if (e instanceof ScannerAgentMissingError) setAgentMissing(true)
+      showToast(e instanceof Error ? e.message : 'שגיאת סריקה', 'error')
+    } finally {
+      setAgentScanningIdx(null)
+    }
+  }
 
   const clearInvoiceLineFile = (i: number) =>
     setSInvoices(prev => prev.map((inv, idx) => idx === i ? { ...inv, driveFileId: undefined, driveFileName: undefined, driveFileUrl: undefined } : inv))
@@ -1382,6 +1400,18 @@ export default function SupplierTrackingTab({
                             padding: '5px 10px', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: '6px',
                             fontSize: '11px', fontWeight: 600, cursor: uploadingLineIdx === i ? 'default' : 'pointer', color: 'var(--text)',
                           }}>📷 סרוק במצלמה</button>
+                          <span className="hide-mobile" style={{ display: 'contents' }}>
+                            <button type="button" onClick={() => scanLineWithAgent(i)} disabled={agentScanningIdx !== null || uploadingLineIdx === i} style={{
+                              padding: '5px 10px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px',
+                              fontSize: '11px', fontWeight: 700, cursor: agentScanningIdx !== null ? 'default' : 'pointer', color: '#1d4ed8',
+                            }}>{agentScanningIdx === i ? 'סורק...' : '📠 סרוק'}</button>
+                            {agentMissing && (
+                              <a href={SCANNER_DOWNLOAD_URL} download title="תוכנה קטנה למחשב ווינדוס: סריקה ישירה מהמדפסת לחשבונית"
+                                style={{ alignSelf: 'center', fontSize: '11px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>
+                                ⬇ התקנת סורק למחשב
+                              </a>
+                            )}
+                          </span>
                         </div>
                       )}
                     </div>

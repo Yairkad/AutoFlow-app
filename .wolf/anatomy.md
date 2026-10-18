@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-15T15:31:19.789Z
-> Files: 47 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T06:39:38.489Z
+> Files: 53 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -191,6 +191,10 @@
 ## app/api/employees/invite/
 
 
+## app/api/guide/public-link/
+
+- `route.ts` — GET/POST guide_public_token (same pattern as inspection-intake public-link) (~450 tok)
+
 ## app/api/inspection-intake/files/
 
 
@@ -272,6 +276,10 @@
 
 ## app/expenses/
 
+
+## app/guide/[token]/
+
+- `page.tsx` — public guide page by tenants.guide_public_token, header colour from logo (logoPalette) (~600 tok)
 
 ## app/income/
 
@@ -416,7 +424,9 @@
 ## components/guide/
 
 - `GuideDiagrams.tsx` — Top view: car body + two front wheels rotated by `deg` (positive = fronts point inward). (~2059 tok)
+- `GuideDiagrams.tsx` — own SVG diagrams: toe, camber, caster, tire size, DOT, puncture zones (~2200 tok)
 - `GuideView.tsx` — "**bold**" inside a line → <strong>. Text is rendered as React text, never as HTML. (~3196 tok)
+- `GuideView.tsx` — public guide UI: hub of topic cards, topic page (cards/accordion), HE/EN toggle, call/WhatsApp footer; topic in URL hash (~2800 tok)
 
 ## components/inspections/
 
@@ -452,6 +462,10 @@
 - `GuideEditor.tsx` — Always recompress to a ~100–200KB JPEG data URL (stored inside guide_content). (~4931 tok)
 - `SettingsClient.tsx` — ALL_MODULES (~30392 tok)
 
+## components/settings/ (guide)
+
+- `GuideEditor.tsx` — Settings → דף נחיתה → מדריך צמיגים: QR/print, edit texts (HE, optional EN), images (compressed data URL) + credit, add/move/delete sections, reset (~4200 tok)
+
 ## components/suppliers/
 
 - `SupplierDetailsTab.tsx` — "פרטים" tab: flat supplier record CRUD (name/contact/etc), no expand state (~9300 tok)
@@ -473,7 +487,6 @@
 ## docs/
 
 - `public-guide-content.md` — תוכן הדף הציבורי — "מדריך הצמיגים והגלגלים" (~2044 tok)
-(content moved to lib/guide/content.ts)
 
 ## lib/
 
@@ -497,6 +510,7 @@
 ## lib/guide/
 
 - `content.ts` — cards = every section shown open; accordion = titles that open on tap (~3551 tok)
+- `content.ts` — public tire guide types, DEFAULT_GUIDE (HE+EN), resolveGuide(saved), pick(L, lang) (~5500 tok)
 
 ## lib/hooks/
 
@@ -519,21 +533,13 @@
 ## lib/supabase/
 
 
-## lib/guide/
-- `content.ts` — public tire guide types, DEFAULT_GUIDE (HE+EN), resolveGuide(saved), pick(L, lang) (~5500 tok)
+## tools/scanner-agent/
+- `main.go` — Windows agent: self-install (HKCU Run), HTTP 127.0.0.1:47321 /status /scan, origin approval MessageBox, runs scan.ps1 (~2800 tok)
+- `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
+- `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
 
-## components/guide/
-- `GuideView.tsx` — public guide UI: hub of topic cards, topic page (cards/accordion), HE/EN toggle, call/WhatsApp footer; topic in URL hash (~2800 tok)
-- `GuideDiagrams.tsx` — own SVG diagrams: toe, camber, caster, tire size, DOT, puncture zones (~2200 tok)
-
-## app/guide/[token]/
-- `page.tsx` — public guide page by tenants.guide_public_token, header colour from logo (logoPalette) (~600 tok)
-
-## app/api/guide/public-link/
-- `route.ts` — GET/POST guide_public_token (same pattern as inspection-intake public-link) (~450 tok)
-
-## components/settings/ (guide)
-- `GuideEditor.tsx` — Settings → דף נחיתה → מדריך צמיגים: QR/print, edit texts (HE, optional EN), images (compressed data URL) + credit, add/move/delete sections, reset (~4200 tok)
+## lib/scannerAgent.ts
+- scanWithAgent() → File (PDF); ScannerAgentMissingError; SCANNER_DOWNLOAD_URL (~250 tok)
 
 ## lib/tires/
 
@@ -569,3 +575,7 @@
 
 ## tests/fixtures/
 
+
+## tools/scanner-agent/
+
+- `main.go` — go:build windows (~3100 tok)

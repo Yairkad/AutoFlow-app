@@ -6,6 +6,7 @@
 
 ## User Preferences
 
+- [2026-10-18] **Do-Not-Repeat:** for any new feature/build, present the plan in Hebrew and WAIT for explicit approval before writing any code. Never write progress/status lines in English to the user — everything user-facing in Hebrew.
 - [2026-10-15] Guide page: no call/WhatsApp buttons. User wants full control over images: many per section, choose position (before/after text) and whether they replace or sit alongside built-in diagrams.
 - [2026-10-15] Public tire guide: user wants all content editable from business settings (text + image upload), Hebrew first; translation to English will be done later in one batch when user sends a link (don't build an auto-translate integration). Topics: כיוון פרונט, מידע על הצמיגים (accordion headings, not tiles), תיקון פנצ'ר; no rotation.
 - [2026-10-15] Scanned items that aren't in the system must NEVER be dropped — keep them (in stock) and let the user complete details later. User wants quick filters for incomplete records (missing price / missing data).
@@ -28,6 +29,8 @@
 
 ## Key Learnings
 
+- [2026-10-18] Scanner agent (tools/scanner-agent, Go, windows-only main.go + portable pdf.go): rebuild the exe into public/downloads after any change (command in its README). Website must NOT probe 127.0.0.1 automatically (Chrome local-network-access prompt for every visitor) — only on user click.
+- [2026-10-18] Google Drive OAuth scope is drive.file — the app can't see files it didn't create (e.g. printer scans in Drive) without Picker or a restricted scope.
 - [2026-10-15] proxy.ts PUBLIC_PREFIXES: new public pages must be added there (e.g. '/guide'). Note '/' is in the list and matched with startsWith.
 - [2026-10-15] tenants.logo_base64 is a full data URL (data:image/...;base64,...), not raw base64.
 - [2026-10-15] **Tires may have no size:** since migration 090, tires.width/profile/rim are nullable (tire saved from unknown barcode / manual receive, details completed later via the "חסרי נתונים" filter on /tires). Always format sizes with `tireSizeText()` from `lib/tires/size.ts` — never `${t.width}/${t.profile}R${t.rim}` (renders "null/nullRnull").
