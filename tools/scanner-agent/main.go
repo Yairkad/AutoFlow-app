@@ -7,7 +7,8 @@
 //     registers to start with Windows (HKCU Run, no admin needed) and starts.
 //   - Installed run: serves http://127.0.0.1:47321
 //     GET  /status          → {"ok":true,"version":"..."}
-//     POST /scan?source=auto|feeder|flatbed → application/pdf (all scanned pages)
+//     GET  /devices         → {"devices":[{"id":"...","name":"..."}]}  (WIA scanners)
+//     POST /scan?device=<id>&source=auto|feeder|flatbed → application/pdf (all scanned pages)
 //   - "--uninstall": removes the startup entry and the installed copy.
 //
 // A website may scan only after the user approved its origin once (Windows Yes/No dialog).
@@ -32,7 +33,7 @@ import (
 )
 
 const (
-	version = "1.0.0"
+	version = "1.1.0"
 	listen  = "127.0.0.1:47321"
 	appName = "AutoFlowScanner"
 	exeName = "autoflow-scanner.exe"
@@ -109,8 +110,9 @@ func install(self string) {
 		return
 	}
 	target := filepath.Join(dir, exeName)
-	// An older copy may be running — stop it so the file can be replaced.
-	_ = hiddenCmd("taskkill", "/F", "/IM", exeName).Run()
+	// An older copy may be running — stop it so the file can be replaced (but not ourselves:
+	// the downloaded installer usually has the same file name).
+	killOtherCopies()
 	time.Sleep(500 * time.Millisecond)
 	src, err := os.ReadFile(self)
 	if err == nil {
@@ -130,69 +132,102 @@ func uninstall() {
 	_ = hiddenCmd("reg", "delete", runKey, "/v", appName, "/f").Run()
 	// The running copy can't delete itself — schedule removal of the folder after it exits.
 	_ = hiddenCmd("cmd", "/C", "timeout /T 2 >NUL & rmdir /S /Q \""+appDir()+"\"").Start()
+	killOtherCopies()
 	msgBox("סורק AutoFlow הוסר.", "סורק AutoFlow", mbOK|mbIconInfo)
-	_ = hiddenCmd("taskkill", "/F", "/IM", exeName).Start()
+}
+
+func killOtherCopies() {
+	_ = hiddenCmd("taskkill", "/F", "/FI", "IMAGENAME eq "+exeName, "/FI", fmt.Sprintf("PID ne %d", os.Getpid())).Run()
 }
 
 // ── Scanning ────────────────────────────────────────────────────────────────────
 
-type scanError struct {
-	status int
-	msg    string
-}
-
-func (e *scanError) Error() string { return e.msg }
-
-var errorMessages = map[string]string{
-	"NO_WIA":      "שירות הסריקה של Windows לא זמין במחשב הזה",
-	"NO_SCANNER":  "לא נמצא סורק מחובר. ודאו שהמדפסת דולקת ומחוברת למחשב",
-	"CONNECT":     "לא ניתן להתחבר לסורק. ודאו שהמדפסת דולקת ושאין סריקה אחרת פעילה",
-	"PAPER_EMPTY": "אין דף לסריקה — שימו את החשבונית על הזכוכית או במזין",
-	"BUSY":        "הסורק עסוק — נסו שוב בעוד רגע",
-	"PAPER_JAM":   "נתקע דף במזין — שחררו אותו ונסו שוב",
-}
-
-func scan(source string) ([]byte, error) {
-	scanMu.Lock()
-	defer scanMu.Unlock()
-
-	tmp, err := os.MkdirTemp("", "autoflow-scan-")
+// runScript runs scan.ps1 in a fresh temp folder and returns its output lines and the folder
+// (the caller removes it).
+func runScript(args ...string) (lines []string, tmp string, err error) {
+	tmp, err = os.MkdirTemp("", "autoflow-scan-")
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	defer os.RemoveAll(tmp) // nothing stays on the PC
-
 	script := filepath.Join(tmp, "scan.ps1")
 	// UTF-8 BOM so Windows PowerShell 5 reads the script correctly
 	if err := os.WriteFile(script, append([]byte{0xEF, 0xBB, 0xBF}, scanScript...), 0o600); err != nil {
+		return nil, tmp, err
+	}
+	base := []string{"-NoProfile", "-NonInteractive", "-STA", "-ExecutionPolicy", "Bypass", "-File", script, "-out", tmp}
+	out, runErr := hiddenCmd("powershell.exe", append(base, args...)...).CombinedOutput()
+	text := strings.TrimSpace(strings.ReplaceAll(string(out), "\r", ""))
+	log.Printf("script %v → %q (err=%v)", args, text, runErr)
+	return strings.Split(text, "\n"), tmp, nil
+}
+
+type device struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+func listDevices() ([]device, error) {
+	scanMu.Lock()
+	defer scanMu.Unlock()
+	lines, tmp, err := runScript("-list")
+	if tmp != "" {
+		defer os.RemoveAll(tmp)
+	}
+	if err != nil {
 		return nil, err
 	}
-	out, err := hiddenCmd("powershell.exe", "-NoProfile", "-NonInteractive", "-STA", "-ExecutionPolicy", "Bypass",
-		"-File", script, "-out", tmp, "-source", source, "-dpi", scanDPI).CombinedOutput()
-	text := strings.TrimSpace(string(out))
-	log.Printf("scan source=%s result=%q err=%v", source, text, err)
+	devs := []device{}
+	for _, ln := range lines {
+		ln = strings.TrimSpace(ln)
+		if strings.HasPrefix(ln, "ERR:") {
+			return nil, scriptError(ln)
+		}
+		if id, name, ok := strings.Cut(strings.TrimPrefix(ln, "DEV:"), "|"); ok && strings.HasPrefix(ln, "DEV:") {
+			devs = append(devs, device{id, name})
+		}
+	}
+	return devs, nil
+}
 
-	lines := strings.Split(text, "\n")
+func scan(deviceID, source string) ([]byte, error) {
+	scanMu.Lock()
+	defer scanMu.Unlock()
+
+	// A busy scanner (another app, the printer waking up) usually frees up within seconds
+	var lastErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		if attempt > 1 {
+			time.Sleep(3 * time.Second)
+		}
+		pdf, err := scanOnce(deviceID, source)
+		if se, ok := err.(*scanError); ok && se.code == "BUSY" {
+			lastErr = err
+			continue
+		}
+		return pdf, err
+	}
+	return nil, lastErr
+}
+
+func scanOnce(deviceID, source string) ([]byte, error) {
+	lines, tmp, err := runScript("-source", source, "-dpi", scanDPI, "-device", deviceID)
+	if tmp != "" {
+		defer os.RemoveAll(tmp) // nothing stays on the PC
+	}
+	if err != nil {
+		return nil, err
+	}
 	last := strings.TrimSpace(lines[len(lines)-1])
 	if strings.HasPrefix(last, "ERR:") {
-		parts := strings.SplitN(strings.TrimPrefix(last, "ERR:"), ":", 2)
-		if m, ok := errorMessages[parts[0]]; ok {
-			return nil, &scanError{409, m}
-		}
-		detail := ""
-		if len(parts) > 1 {
-			detail = parts[1]
-		}
-		return nil, &scanError{500, "שגיאת סריקה: " + strings.TrimSpace(detail)}
+		return nil, scriptError(last)
 	}
 	if !strings.HasPrefix(last, "OK:") {
-		return nil, &scanError{500, "שגיאת סריקה לא צפויה"}
+		return nil, &scanError{500, "שגיאת סריקה לא צפויה", "UNKNOWN"}
 	}
-
 	pages, _ := filepath.Glob(filepath.Join(tmp, "p*.jpg"))
 	sort.Strings(pages)
 	if len(pages) == 0 {
-		return nil, &scanError{409, errorMessages["PAPER_EMPTY"]}
+		return nil, &scanError{409, errorMessages["PAPER_EMPTY"], "PAPER_EMPTY"}
 	}
 	return buildPDF(pages)
 }
@@ -223,6 +258,14 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+func writeError(w http.ResponseWriter, err error) {
+	status, code := 500, ""
+	if se, ok := err.(*scanError); ok {
+		status, code = se.status, se.code
+	}
+	writeJSON(w, status, map[string]string{"error": err.Error(), "code": code})
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -256,18 +299,25 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		if source != "feeder" && source != "flatbed" {
 			source = "auto"
 		}
-		pdf, err := scan(source)
+		pdf, err := scan(r.URL.Query().Get("device"), source)
 		if err != nil {
-			status := 500
-			if se, ok := err.(*scanError); ok {
-				status = se.status
-			}
-			writeJSON(w, status, map[string]string{"error": err.Error()})
+			writeError(w, err)
 			return
 		}
 		w.Header().Set("Content-Type", "application/pdf")
 		w.Header().Set("Content-Length", fmt.Sprint(len(pdf)))
 		_, _ = w.Write(pdf)
+	case "/devices":
+		if origin == "" || !originAllowed(origin) {
+			writeJSON(w, 403, map[string]string{"error": "הסריקה לא אושרה לאתר הזה"})
+			return
+		}
+		devs, err := listDevices()
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, 200, map[string]any{"devices": devs})
 	default:
 		writeJSON(w, 404, map[string]string{"error": "not found"})
 	}
