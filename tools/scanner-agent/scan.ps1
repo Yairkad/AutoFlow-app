@@ -1,8 +1,11 @@
-# Scans with the first WIA scanner into JPEG pages: p001.jpg, p002.jpg, ... in $out.
+# -list            → prints one line per WIA scanner: DEV:<DeviceID>|<Name>
+# otherwise         → scans with -device (DeviceID; empty = the only scanner) into JPEG pages
+#                     p001.jpg, p002.jpg, ... in $out.
 # source: auto (feeder if it has paper, else glass) | feeder | flatbed
-# Prints OK:<pages> or ERR:<code>:<message>
-param([string]$out, [string]$source = 'auto', [int]$dpi = 200)
+# Prints OK:<pages> or ERR:<code>:<detail>
+param([string]$out, [string]$source = 'auto', [int]$dpi = 200, [string]$device = '', [switch]$list)
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [Text.Encoding]::UTF8   # Hebrew device names
 
 function SetProp($props, $id, $val) { foreach ($p in $props) { if ($p.PropertyID -eq $id) { try { $p.Value = $val } catch {} } } }
 function GetProp($props, $id) { foreach ($p in $props) { if ($p.PropertyID -eq $id) { return $p.Value } }; return $null }
@@ -11,10 +14,27 @@ $JPEG = '{B96B3CAE-0728-11D3-9D7B-0000F81EF32E}'
 $FEEDER = 1; $FLATBED = 2
 
 try { $dm = New-Object -ComObject WIA.DeviceManager } catch { Write-Output 'ERR:NO_WIA:'; exit 2 }
+$scanners = @()
+foreach ($d in $dm.DeviceInfos) { if ($d.Type -eq 1) { $scanners += $d } }   # 1 = scanner
+function DevName($d) { try { return [string]$d.Properties.Item('Name').Value } catch { return [string]$d.DeviceID } }
+
+if ($list) {
+  foreach ($d in $scanners) { Write-Output ('DEV:' + $d.DeviceID + '|' + (DevName $d)) }
+  Write-Output 'OK:list'
+  exit 0
+}
+
+if ($scanners.Count -eq 0) { Write-Output 'ERR:NO_SCANNER:'; exit 2 }
 $info = $null
-foreach ($d in $dm.DeviceInfos) { if ($d.Type -eq 1) { $info = $d; break } }   # 1 = scanner
-if (-not $info) { Write-Output 'ERR:NO_SCANNER:'; exit 2 }
-try { $dev = $info.Connect() } catch { Write-Output ('ERR:CONNECT:' + $_.Exception.Message); exit 3 }
+if ($device) { foreach ($d in $scanners) { if ($d.DeviceID -eq $device) { $info = $d } } }
+elseif ($scanners.Count -eq 1) { $info = $scanners[0] }
+if (-not $info) { Write-Output 'ERR:DEVICE_NOT_FOUND:'; exit 2 }
+$name = DevName $info
+try { $dev = $info.Connect() } catch {
+  $hr = '{0:X8}' -f $_.Exception.HResult
+  if ($hr -eq '80210006') { Write-Output ('ERR:BUSY:' + $name); exit 4 }
+  Write-Output ('ERR:CONNECT:' + $name); exit 3
+}
 
 $caps = GetProp $dev.Properties 3086      # document handling capabilities
 $status = GetProp $dev.Properties 3087    # document handling status (1 = feed ready)
@@ -38,7 +58,8 @@ while ($true) {
     if ($useFeeder -and $n -gt 0) { break }   # feeder emptied after the last page
     $hr = '{0:X8}' -f $_.Exception.HResult
     if ($hr -eq '80210003') { Write-Output 'ERR:PAPER_EMPTY:'; exit 4 }
-    if ($hr -eq '80210006') { Write-Output 'ERR:BUSY:'; exit 4 }
+    if ($hr -eq '80210006') { Write-Output ('ERR:BUSY:' + $name); exit 4 }
+    if ($hr -eq '80210005') { Write-Output ('ERR:OFFLINE:' + $name); exit 4 }
     if ($hr -eq '80210002') { Write-Output 'ERR:PAPER_JAM:'; exit 4 }
     Write-Output ('ERR:SCAN:' + $hr + ' ' + $_.Exception.Message); exit 5
   }

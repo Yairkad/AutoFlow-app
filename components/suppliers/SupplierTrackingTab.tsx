@@ -20,7 +20,7 @@ import UnitToggle from '@/components/ui/UnitToggle'
 import { withVat, withoutVat } from '@/lib/utils/vat'
 import { Supplier, SupplierDebt, ScheduledPayment, SupplierDebtPayment, RecurringItem, Direction, fmt, bal, waUrl } from './shared'
 import { MAX_UPLOAD_BYTES, compressImageIfNeeded, compressPdfIfNeeded } from '@/lib/utils/uploadCompress'
-import { scanWithAgent, ScannerAgentMissingError, SCANNER_DOWNLOAD_URL } from '@/lib/scannerAgent'
+import { scanWithAgent, listScanners, getSavedScanner, saveScanner, ScannerAgentMissingError, ScannerAgentOutdatedError, ScannerDeviceNotFoundError, SCANNER_DOWNLOAD_URL, type ScannerDevice } from '@/lib/scannerAgent'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -147,6 +147,10 @@ export default function SupplierTrackingTab({
   // ask every visitor for local-network permission); the install link shows only after a failed try.
   const [agentScanningIdx, setAgentScanningIdx] = useState<number | null>(null)
   const [agentMissing, setAgentMissing] = useState(false)
+  // Several scanners connected → let the user pick one (remembered on this computer)
+  const [scannerPicker, setScannerPicker] = useState<{ line: number | null; devices: ScannerDevice[] } | null>(null)
+  const [hasSavedScanner, setHasSavedScanner] = useState(false)
+  useEffect(() => { setHasSavedScanner(!!getSavedScanner()) }, [])
 
   useEffect(() => {
     fetch(`/api/drive/status?tenant_id=${tenantId}`)
@@ -313,17 +317,51 @@ export default function SupplierTrackingTab({
   const updateInvoiceLine = (i: number, field: keyof InvoiceEntry, val: string) =>
     setSInvoices(prev => prev.map((inv, idx) => idx === i ? { ...inv, [field]: val } : inv))
 
-  const scanLineWithAgent = async (i: number) => {
+  const agentError = (e: unknown) => {
+    if (e instanceof ScannerAgentMissingError || e instanceof ScannerAgentOutdatedError) setAgentMissing(true)
+    if (e instanceof ScannerDeviceNotFoundError) { saveScanner(null); setHasSavedScanner(false) }
+    showToast(e instanceof Error ? e.message : 'שגיאת סריקה', 'error')
+  }
+
+  const scanLineWithDevice = async (i: number, deviceId: string) => {
     setAgentScanningIdx(i)
     try {
-      const file = await scanWithAgent()
-      await attachScanToLine(i, file)
+      await attachScanToLine(i, await scanWithAgent(deviceId))
     } catch (e) {
-      if (e instanceof ScannerAgentMissingError) setAgentMissing(true)
-      showToast(e instanceof Error ? e.message : 'שגיאת סריקה', 'error')
+      agentError(e)
     } finally {
       setAgentScanningIdx(null)
     }
+  }
+
+  // line = null → only choose/replace the scanner, don't scan
+  const openScannerPicker = async (line: number | null) => {
+    try {
+      const devices = await listScanners()
+      if (devices.length === 0) { showToast('לא נמצא סורק מחובר למחשב. ודאו שהמדפסת דולקת ומחוברת', 'error'); return }
+      if (devices.length === 1) {
+        saveScanner(devices[0].id); setHasSavedScanner(true)
+        if (line !== null) await scanLineWithDevice(line, devices[0].id)
+        else showToast(`נמצא סורק אחד: ${devices[0].name}`, 'success')
+        return
+      }
+      setScannerPicker({ line, devices })
+    } catch (e) {
+      agentError(e)
+    }
+  }
+
+  const scanLineWithAgent = async (i: number) => {
+    const saved = getSavedScanner()
+    if (saved) await scanLineWithDevice(i, saved)
+    else await openScannerPicker(i)
+  }
+
+  const pickScanner = (d: ScannerDevice) => {
+    const line = scannerPicker?.line ?? null
+    saveScanner(d.id); setHasSavedScanner(true); setScannerPicker(null)
+    if (line !== null) scanLineWithDevice(line, d.id)
+    else showToast(`נבחר הסורק: ${d.name}`, 'success')
   }
 
   const clearInvoiceLineFile = (i: number) =>
@@ -1405,6 +1443,12 @@ export default function SupplierTrackingTab({
                               padding: '5px 10px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px',
                               fontSize: '11px', fontWeight: 700, cursor: agentScanningIdx !== null ? 'default' : 'pointer', color: '#1d4ed8',
                             }}>{agentScanningIdx === i ? 'סורק...' : '📠 סרוק'}</button>
+                            {hasSavedScanner && !agentMissing && i === 0 && (
+                              <button type="button" onClick={() => openScannerPicker(null)} title="בחירת סורק אחר מבין הסורקים המחוברים למחשב"
+                                style={{ alignSelf: 'center', background: 'none', border: 'none', padding: 0, fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                החלף סורק
+                              </button>
+                            )}
                             {agentMissing && (
                               <a href={SCANNER_DOWNLOAD_URL} download title="תוכנה קטנה למחשב ווינדוס: סריקה ישירה מהמדפסת לחשבונית"
                                 style={{ alignSelf: 'center', fontSize: '11px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>
@@ -1435,6 +1479,26 @@ export default function SupplierTrackingTab({
             <div className="sticky-actions">
               <Button variant="secondary" onClick={closeSuppModal}>{bulkQueue && bulkQueue.length > 1 ? 'דלג ⏭' : 'ביטול'}</Button>
               <Button loading={sSaving} onClick={saveSuppDebt}>💾 שמור</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {scannerPicker && (
+        <div onClick={() => setScannerPicker(null)} style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} role="dialog" aria-label="בחירת סורק" style={{ background: 'var(--bg-card)', borderRadius: 14, padding: 18, width: 'min(420px, 100%)', boxShadow: '0 10px 40px rgba(0,0,0,.25)', direction: 'rtl' }}>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>📠 מאיזה סורק לסרוק?</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 12 }}>הבחירה תישמר במחשב הזה. אפשר לשנות אותה בכל רגע דרך &quot;החלף סורק&quot;.</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {scannerPicker.devices.map(d => (
+                <button key={d.id} type="button" onClick={() => pickScanner(d)} style={{
+                  textAlign: 'right', padding: '11px 14px', borderRadius: 10, border: '1px solid var(--border)', background: getSavedScanner() === d.id ? '#eff6ff' : '#fff',
+                  cursor: 'pointer', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', color: 'var(--text)',
+                }}>{d.name}{getSavedScanner() === d.id ? ' ✓' : ''}</button>
+              ))}
+            </div>
+            <div style={{ textAlign: 'left', marginTop: 12 }}>
+              <button type="button" onClick={() => setScannerPicker(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>ביטול</button>
             </div>
           </div>
         </div>

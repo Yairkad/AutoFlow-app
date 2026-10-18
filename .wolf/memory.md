@@ -2286,3 +2286,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-10-18 07:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:05 | Scanner agent 1.1.0: device picker (/devices), BUSY retry, taskkill self-kill fix; site picker + 'החלף סורק' | tools/scanner-agent/*, lib/scannerAgent.ts, SupplierTrackingTab, public/downloads | go test + tsc ok; untested on Windows | ~25k |
