@@ -5,7 +5,7 @@
 const AGENT_URL = 'http://127.0.0.1:47321'
 const DEVICE_KEY = 'autoflow-scanner-device'
 // Bump together with tools/scanner-agent version when an agent fix must reach users
-const MIN_AGENT_VERSION = '1.1.1'
+const MIN_AGENT_VERSION = '1.1.2'
 
 function versionLess(a: string, b: string) {
   const pa = a.split('.').map(Number), pb = b.split('.').map(Number)

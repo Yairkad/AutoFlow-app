@@ -11,6 +11,20 @@ function SetProp($props, $id, $val) { foreach ($p in $props) { if ($p.PropertyID
 function GetProp($props, $id) { foreach ($p in $props) { if ($p.PropertyID -eq $id) { return $p.Value } }; return $null }
 
 $JPEG = '{B96B3CAE-0728-11D3-9D7B-0000F81EF32E}'
+
+Add-Type -AssemblyName System.Drawing
+$jpegCodec = [System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/jpeg' }
+function Save-AsJpeg([string]$src, [string]$dst) {
+  $bmp = [System.Drawing.Image]::FromFile($src)
+  try {
+    $ep = New-Object System.Drawing.Imaging.EncoderParameters(1)
+    $ep.Param[0] = New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality, [long]85)
+    $bmp.Save($dst, $jpegCodec, $ep)
+  } finally { $bmp.Dispose() }
+}
+
+# Any unexpected failure → one ERR line the agent can show (instead of a raw PowerShell error)
+trap { Write-Output ('ERR:SCRIPT:' + $_.Exception.Message); exit 6 }
 $FEEDER = 1; $FLATBED = 2
 
 try { $dm = New-Object -ComObject WIA.DeviceManager } catch { Write-Output 'ERR:NO_WIA:'; exit 2 }
@@ -73,15 +87,18 @@ for ($m = 0; $m -lt $modes.Count; $m++) {
       if ($hr -eq '80210002') { Write-Output 'ERR:PAPER_JAM:'; exit 4 }
       Write-Output ('ERR:SCAN:' + $hr + ' ' + $_.Exception.Message); exit 5
     }
-    if ($img.FormatID -ne $JPEG) {
-      $ip = New-Object -ComObject WIA.ImageProcess
-      $ip.Filters.Add($ip.FilterInfos.Item('Convert').FilterID)
-      $ip.Filters.Item(1).Properties.Item('FormatID').Value = $JPEG
-      $ip.Filters.Item(1).Properties.Item('Quality').Value = 85
-      $img = $ip.Apply($img)
-    }
     $n++
-    $img.SaveFile((Join-Path $out ('p{0:D3}.jpg' -f $n)))
+    $jpgPath = Join-Path $out ('p{0:D3}.jpg' -f $n)
+    if ($img.FormatID -eq $JPEG) {
+      $img.SaveFile($jpgPath)
+    } else {
+      # Many drivers (e.g. Brother) return BMP even when JPEG is requested. WIA.ImageProcess
+      # conversion fails from PowerShell (InvalidCast), so save as-is and convert with .NET.
+      $rawPath = (Join-Path $out ('raw{0:D3}.' -f $n)) + $img.FileExtension
+      $img.SaveFile($rawPath)
+      Save-AsJpeg $rawPath $jpgPath
+      Remove-Item $rawPath -Force
+    }
     if (-not $useFeeder -or $n -ge 60) { break }
   }
   if ($n -gt 0) { break }            # got pages from this source

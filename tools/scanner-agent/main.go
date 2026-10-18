@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	version = "1.1.1"
+	version = "1.1.2"
 	listen  = "127.0.0.1:47321"
 	appName = "AutoFlowScanner"
 	exeName = "autoflow-scanner.exe"
@@ -222,7 +222,7 @@ func scanOnce(deviceID, source string) ([]byte, error) {
 		return nil, scriptError(last)
 	}
 	if !strings.HasPrefix(last, "OK:") {
-		return nil, &scanError{500, "שגיאת סריקה לא צפויה", "UNKNOWN"}
+		return nil, &scanError{500, "שגיאת סריקה לא צפויה: " + last, "UNKNOWN"}
 	}
 	pages, _ := filepath.Glob(filepath.Join(tmp, "p*.jpg"))
 	sort.Strings(pages)
