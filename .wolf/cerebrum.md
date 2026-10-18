@@ -29,6 +29,7 @@
 
 ## Key Learnings
 
+- [2026-10-18] tire_sales.tire_id is ON DELETE CASCADE — when merging/deleting duplicate tires, move tire_sales (and tire_inventory_count_entries) to the target first. Inventory count entries are keyed by `key` (sku:/id:/new:), not sku.
 - [2026-10-18] Scanner agent 1.1.2 confirmed working by user on Brother (feeder + glass, BMP→JPEG, device picker). Direct download: /downloads/autoflow-scanner.exe; installed version at http://127.0.0.1:47321/status.
 - [2026-10-18] Do-Not-Repeat: don't use WIA.ImageProcess Convert from PowerShell (Properties.Item('FormatID').Value assignment throws InvalidCast). Convert scanned images with System.Drawing instead. Brother WIA returns BMP regardless of requested format.
 - [2026-10-18] Brother WIA reports DOCUMENT_HANDLING_STATUS feed-ready even with an empty feeder — never trust it alone; fall back between feeder/flatbed on PAPER_EMPTY (0x80210003). When changing the agent, bump its version AND MIN_AGENT_VERSION in lib/scannerAgent.ts so users get the install prompt.

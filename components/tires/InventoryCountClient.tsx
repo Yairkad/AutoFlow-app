@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import Button from '@/components/ui/Button'
-import { tireSizeText } from '@/lib/tires/size'
+import { tireSizeText, parseTireSize } from '@/lib/tires/size'
+import TirePickerModal from '@/components/tires/TirePickerModal'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -21,10 +22,13 @@ interface TireRow {
 }
 
 interface ScanEntry {
-  sku: string
-  tireId: string | null
+  key: string                 // identity in the list (scanned barcode, picked tire id or a new-tire id)
+  sku: string                 // scanned / typed barcode ('' when the tire was picked from the list)
+  tireId: string | null       // null = will be created as a new tire on save
   label: string
   scanned: number
+  newTire?: { width: number | null; profile: number | null; rim: number | null; brand: string | null }
+  saveSku?: boolean           // linked an unknown barcode to an existing tire and keep it as its SKU
 }
 
 interface CountSession {
@@ -72,6 +76,12 @@ export default function InventoryCountClient() {
   const [entries,      setEntries]      = useState<ScanEntry[]>([])
   const [sessionNotes, setSessionNotes] = useState('')
   const [saving,       setSaving]       = useState(false)
+
+  // Tire picker: add a tire without a barcode (mode 'add') or link an unknown barcode (mode 'link')
+  const [picker, setPicker] = useState<{ mode: 'add' } | { mode: 'link'; key: string } | null>(null)
+  const [linkSaveSku, setLinkSaveSku] = useState(false)
+  const [newTireOpen, setNewTireOpen] = useState(false)
+  const [newTireForm, setNewTireForm] = useState({ size: '', brand: '', qty: '1' })
 
   const [scanMode,   setScanMode]   = useState(false)
   const [scanBuffer, setScanBuffer] = useState('')
@@ -153,17 +163,63 @@ export default function InventoryCountClient() {
     if (!sku) return
     const tire = skuMap.get(sku.toLowerCase()) ?? null
     setEntries(prev => {
-      const idx = prev.findIndex(e => e.sku.toLowerCase() === sku.toLowerCase())
+      // a known tire is one row however it was added (scan, list); an unknown barcode is keyed by itself
+      const idx = tire ? prev.findIndex(e => e.tireId === tire.id) : prev.findIndex(e => !e.tireId && e.sku.toLowerCase() === sku.toLowerCase())
       if (idx >= 0) {
         const next = [...prev]
         next[idx] = { ...next[idx], scanned: next[idx].scanned + 1 }
         return next
       }
-      return [{ sku, tireId: tire?.id ?? null, label: tire ? tireLabel(tire) : '⚠ לא מזוהה', scanned: 1 }, ...prev]
+      return [{ key: 'sku:' + sku.toLowerCase(), sku, tireId: tire?.id ?? null, label: tire ? tireLabel(tire) : '⚠ לא מזוהה', scanned: 1 }, ...prev]
     })
     setQuery('')
     queryRef.current?.focus()
   }
+
+  function addExisting(tire: TireRow) {
+    setEntries(prev => {
+      const idx = prev.findIndex(e => e.tireId === tire.id)
+      if (idx >= 0) {
+        const next = [...prev]
+        next[idx] = { ...next[idx], scanned: next[idx].scanned + 1 }
+        return next
+      }
+      return [{ key: 'id:' + tire.id, sku: tire.sku ?? '', tireId: tire.id, label: tireLabel(tire), scanned: 1 }, ...prev]
+    })
+    setPicker(null)
+  }
+
+  // An unrecognised barcode is really an existing tire (misread / second barcode) → count it there
+  function linkUnknown(key: string, tire: TireRow, saveSku: boolean) {
+    setEntries(prev => {
+      const src = prev.find(e => e.key === key)
+      if (!src) return prev
+      const target = prev.find(e => e.tireId === tire.id)
+      if (target) {
+        return prev.filter(e => e.key !== key).map(e => e.key === target.key
+          ? { ...e, scanned: e.scanned + src.scanned, ...(saveSku ? { sku: src.sku, saveSku: true } : {}) } : e)
+      }
+      return prev.map(e => e.key === key
+        ? { ...e, tireId: tire.id, label: tireLabel(tire), saveSku, sku: saveSku ? src.sku : (tire.sku ?? '') } : e)
+    })
+    setPicker(null)
+    setLinkSaveSku(false)
+  }
+
+  function addNewTire() {
+    const size  = parseTireSize(newTireForm.size)
+    const brand = newTireForm.brand.trim() || null
+    const qty   = Math.max(1, parseInt(newTireForm.qty) || 1)
+    if (!size && !brand) { showToast('יש להזין מידה או מותג', 'error'); return }
+    const label = `🆕 ${[brand, size ? `${size.width}/${size.profile}R${size.rim}` : 'ללא מידה'].filter(Boolean).join(' ')}`
+    setEntries(prev => [{ key: 'new:' + Date.now(), sku: '', tireId: null, label, scanned: qty,
+      newTire: { width: size?.width ?? null, profile: size?.profile ?? null, rim: size?.rim ?? null, brand } }, ...prev])
+    setNewTireOpen(false)
+    setNewTireForm({ size: '', brand: '', qty: '1' })
+  }
+
+  const setQty = (key: string, qty: number) =>
+    setEntries(p => p.map(x => x.key === key ? { ...x, scanned: Math.max(0, qty) } : x))
 
   function getExpected(tireId: string): { lastQty: number | null; ordersSince: number; salesSince: number; expectedQty: number | null } {
     if (!lastSession) return { lastQty: null, ordersSince: 0, salesSince: 0, expectedQty: null }
@@ -182,21 +238,23 @@ export default function InventoryCountClient() {
 
     // Unknown barcodes are saved as new tires (sku + counted qty only) so they stay in stock;
     // their size/brand/price are filled in later from /tires → "חסרי נתונים".
-    const unknownEntries = entries.filter(e => e.tireId === null)
-    let created: ScanEntry[] = []
-    if (unknownEntries.length > 0) {
-      const { data: newTires, error: newErr } = await sb
-        .from('tires')
-        .insert(unknownEntries.map(e => ({ tenant_id: tenantId.current, sku: e.sku, qty: e.scanned })))
-        .select('id, sku')
-      if (newErr || !newTires) {
-        console.error('[inventory-count] create unknown tires', newErr)
-        showToast('שגיאה בשמירת צמיגים לא מזוהים', 'error'); setSaving(false); return
+    // Rows with 0 were zeroed on purpose — they still count (stock = 0) for known tires
+    const unknownEntries = entries.filter(e => e.tireId === null && e.scanned > 0)
+    const created: ScanEntry[] = []
+    for (const e of unknownEntries) {
+      const { data: t, error: newErr } = await sb.from('tires').insert({
+        tenant_id: tenantId.current, qty: e.scanned, sku: e.sku || null,
+        width: e.newTire?.width ?? null, profile: e.newTire?.profile ?? null, rim: e.newTire?.rim ?? null, brand: e.newTire?.brand ?? null,
+      }).select('id').single()
+      if (newErr || !t) {
+        console.error('[inventory-count] create new tire', newErr)
+        showToast('שגיאה בשמירת צמיגים חדשים', 'error'); setSaving(false); return
       }
-      const idBySku = new Map(newTires.map(t => [String(t.sku).toLowerCase(), t.id as string]))
-      created = unknownEntries.map(e => ({ ...e, tireId: idBySku.get(e.sku.toLowerCase()) ?? null, label: `${e.sku} (ממתין לפרטים)` }))
+      created.push({ ...e, tireId: t.id, label: `${e.newTire ? e.label.replace('🆕 ', '') : e.sku} (ממתין לפרטים)` })
     }
     const known = entries.filter(e => e.tireId !== null)
+    // Linked unknown barcodes the user chose to keep become the tire's SKU
+    const skuUpdates = known.filter(e => e.saveSku && e.sku).map(e => sb.from('tires').update({ sku: e.sku }).eq('id', e.tireId!))
 
     const isFirst = !lastSession
 
@@ -214,7 +272,7 @@ export default function InventoryCountClient() {
       return {
         session_id:   session.id,
         tire_id:      e.tireId,
-        sku:          e.sku,
+        sku:          e.sku || null,
         label:        e.label,
         counted_qty:  e.scanned,
         expected_qty: expectedQty,
@@ -225,6 +283,7 @@ export default function InventoryCountClient() {
     const results = await Promise.all([
       sb.from('tire_inventory_count_entries').insert(sessEntries),
       ...known.map(e => sb.from('tires').update({ qty: e.scanned }).eq('id', e.tireId!)),
+      ...skuUpdates,
     ])
     const failed = results.find(r => r.error)
     if (failed) console.error('[inventory-count] save', failed.error)
@@ -343,6 +402,11 @@ export default function InventoryCountClient() {
             </button>
           </div>
 
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '-6px', marginBottom: '16px' }}>
+            <button onClick={() => setPicker({ mode: 'add' })} style={addBtn}>📋 בחר צמיג מהרשימה</button>
+            <button onClick={() => setNewTireOpen(true)} style={addBtn}>🆕 צמיג חדש בלי מקט</button>
+          </div>
+
           <input ref={scanRef} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
             value={scanBuffer} onChange={e => setScanBuffer(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && scanBuffer) { addScan(scanBuffer); setScanBuffer('') } }} />
@@ -367,23 +431,34 @@ export default function InventoryCountClient() {
                   <span>פריטים שנסרקו ({entries.length})</span>
                   <button onClick={() => setEntries([])} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>נקה הכל</button>
                 </div>
-                {entries.map(e => (
-                  <div key={e.sku} style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid var(--border)', background: e.tireId ? 'var(--bg-card)' : '#fff7ed' }}>
-                    <div style={{ flex: 1 }}>
+                {entries.map(e => {
+                  const isUnknown = !e.tireId && !e.newTire
+                  return (
+                  <div key={e.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', padding: '10px 16px', borderBottom: '1px solid var(--border)', background: e.tireId ? 'var(--bg-card)' : '#fff7ed' }}>
+                    <div style={{ flex: 1, minWidth: 160 }}>
                       <div style={{ fontWeight: 700, fontSize: '14px', color: e.tireId ? 'var(--text)' : '#92400e' }}>{e.label}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'monospace' }}>{e.sku}</div>
+                      {e.sku && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'monospace' }}>{e.sku}{e.saveSku ? ' — יישמר כמקט של הצמיג' : ''}</div>}
+                      {isUnknown && (
+                        <button onClick={() => { setLinkSaveSku(false); setPicker({ mode: 'link', key: e.key }) }}
+                          style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, color: 'var(--accent)', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>
+                          🔗 שייך לצמיג קיים
+                        </button>
+                      )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button onClick={() => setEntries(p => p.map(x => x.sku === e.sku ? { ...x, scanned: Math.max(0, x.scanned - 1) } : x).filter(x => x.scanned > 0))}
+                      <button onClick={() => setQty(e.key, e.scanned - 1)}
                         style={{ width: '30px', height: '30px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontWeight: 700, fontSize: '16px', fontFamily: 'inherit' }}>−</button>
-                      <span style={{ fontWeight: 900, fontSize: '18px', minWidth: '32px', textAlign: 'center' }}>{e.scanned}</span>
-                      <button onClick={() => setEntries(p => p.map(x => x.sku === e.sku ? { ...x, scanned: x.scanned + 1 } : x))}
+                      <input type="number" min={0} value={e.scanned} onChange={ev => setQty(e.key, parseInt(ev.target.value) || 0)}
+                        onFocus={ev => ev.target.select()} aria-label="כמות"
+                        style={{ width: '56px', textAlign: 'center', fontWeight: 900, fontSize: '17px', padding: '3px', border: '1px solid var(--border)', borderRadius: '6px', fontFamily: 'inherit' }} />
+                      <button onClick={() => setQty(e.key, e.scanned + 1)}
                         style={{ width: '30px', height: '30px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontWeight: 700, fontSize: '16px', fontFamily: 'inherit' }}>+</button>
-                      <button onClick={() => setEntries(p => p.filter(x => x.sku !== e.sku))}
+                      <button onClick={() => setEntries(p => p.filter(x => x.key !== e.key))}
                         style={{ marginRight: '4px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '16px' }}>🗑</button>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <Button variant="secondary" onClick={() => setEntries([])}>נקה הכל</Button>
@@ -440,7 +515,7 @@ export default function InventoryCountClient() {
                       ? [ordersSince > 0 ? `+${ordersSince}` : null, salesSince > 0 ? `−${salesSince}` : null].filter(Boolean).join(' / ')
                       : '—'
                     return (
-                      <tr key={e.sku} style={{ borderBottom: '1px solid var(--border)', background: rowBg }}>
+                      <tr key={e.key} style={{ borderBottom: '1px solid var(--border)', background: rowBg }}>
                         <td style={{ padding: '10px 14px', fontWeight: 700 }}>
                           {hasDiscrepancy && <span style={{ marginLeft: 5, fontSize: 12 }}>⚠️</span>}
                           {e.label}
@@ -486,12 +561,18 @@ export default function InventoryCountClient() {
 
                   {/* Unidentified */}
                   {unknown.map(e => (
-                    <tr key={e.sku} style={{ borderBottom: '1px solid var(--border)', background: '#fff7ed' }}>
-                      <td style={{ padding: '10px 14px', color: '#92400e', fontWeight: 600 }}>⚠ לא מזוהה</td>
+                    <tr key={e.key} style={{ borderBottom: '1px solid var(--border)', background: '#fff7ed' }}>
+                      <td style={{ padding: '10px 14px', color: '#92400e', fontWeight: 600 }}>{e.newTire ? e.label : '⚠ לא מזוהה'}</td>
                       <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontSize: '12px', color: '#92400e' }}>{e.sku}</td>
                       {!isFirst && <td colSpan={3} />}
                       <td colSpan={3} style={{ padding: '10px 14px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
                         ייקלט למלאי ({e.scanned} יח׳) כצמיג חדש — להשלמת פרטים בדף הצמיגים
+                        {!e.newTire && (
+                          <button onClick={() => { setLinkSaveSku(false); setPicker({ mode: 'link', key: e.key }) }}
+                            style={{ display: 'block', margin: '4px auto 0', background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>
+                            🔗 זה צמיג קיים? שייך אליו
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -529,6 +610,49 @@ export default function InventoryCountClient() {
           </div>
         </>
       )}
+
+      {picker && (
+        <TirePickerModal
+          tires={tires}
+          title={picker.mode === 'add' ? '📋 בחר צמיג מהרשימה' : '🔗 שייך לצמיג קיים'}
+          subtitle={picker.mode === 'add'
+            ? 'לצמיג בלי ברקוד — כל בחירה מוסיפה יחידה אחת (אפשר לשנות כמות ברשימה)'
+            : `הכמות שנסרקה עם הברקוד ${entries.find(e => picker.mode === 'link' && e.key === picker.key)?.sku ?? ''} תיספר בצמיג שתבחר`}
+          onPick={t => picker.mode === 'add' ? addExisting(t) : linkUnknown(picker.key, t, linkSaveSku)}
+          onClose={() => setPicker(null)}>
+          {picker.mode === 'link' && (
+            <label style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 12.5, marginBottom: 8, cursor: 'pointer', lineHeight: 1.4 }}>
+              <input type="checkbox" checked={linkSaveSku} onChange={e => setLinkSaveSku(e.target.checked)} style={{ marginTop: 2 }} />
+              <span>שמור את הברקוד הזה כמקט של הצמיג <span style={{ color: 'var(--text-muted)' }}>(רק אם זה הברקוד האמיתי שלו — לא אם הסורק קרא לא נכון)</span></span>
+            </label>
+          )}
+        </TirePickerModal>
+      )}
+
+      {newTireOpen && (
+        <div onClick={() => setNewTireOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} role="dialog" aria-label="צמיג חדש בלי מקט" style={{ background: 'var(--bg-card)', borderRadius: 14, padding: 18, width: 'min(400px, 100%)', boxShadow: '0 10px 40px rgba(0,0,0,.25)', direction: 'rtl' }}>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>🆕 צמיג חדש בלי מקט</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 12 }}>יישמר במלאי וישאר ב&quot;חסרי נתונים&quot; עד שתשלים פרטים בדף הצמיגים.</div>
+            <label className="form-label">מידה</label>
+            <input className="form-input" autoFocus placeholder="205/55R16" value={newTireForm.size} onChange={e => setNewTireForm(f => ({ ...f, size: e.target.value }))} />
+            <label className="form-label" style={{ marginTop: 8 }}>מותג (אופציונלי)</label>
+            <input className="form-input" value={newTireForm.brand} onChange={e => setNewTireForm(f => ({ ...f, brand: e.target.value }))} />
+            <label className="form-label" style={{ marginTop: 8 }}>כמות</label>
+            <input className="form-input" type="number" min={1} value={newTireForm.qty} onChange={e => setNewTireForm(f => ({ ...f, qty: e.target.value }))}
+              onKeyDown={e => { if (e.key === 'Enter') addNewTire() }} />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
+              <Button variant="secondary" onClick={() => setNewTireOpen(false)}>ביטול</Button>
+              <Button onClick={addNewTire}>הוסף לספירה</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
+}
+
+const addBtn: React.CSSProperties = {
+  padding: '7px 14px', border: '1px solid var(--border)', borderRadius: '10px', background: 'var(--bg-card)',
+  cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'inherit', color: 'var(--text)',
 }
