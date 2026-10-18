@@ -1076,5 +1076,57 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-18T16:00:00Z"
+  },
+  {
+    "id": "bug-055",
+    "timestamp": "2026-10-18T19:00:00Z",
+    "error_message": "צמיגים שנוספו מחיפוש נתקעים על 'מסתנכרן...' ולא ניתן לשנות להם מחיר",
+    "file": "components/yard/WorkCardClient.tsx",
+    "root_cause": "Search pages fired the POST while navigating away; the work card never saved/confirmed the items itself and waited for a realtime event to router.refresh. Realtime is a websocket straight to supabase.co (not via /api/store) — blocked/flaky on Netfree/mobile — so temp rows stayed forever, locked (isSyncing disabled edits).",
+    "fix": "Search pages only hand off via sessionStorage (lib/yard/handoff.ts); WorkCardClient.addItems saves every add itself (one POST), swaps temp rows for returned rows, queues price/qty/delete made meanwhile and replays them; 4s safety-net refresh; reconcile only against server rows new to the card.",
+    "tags": [
+      "yard",
+      "sync",
+      "realtime",
+      "netfree",
+      "optimistic"
+    ],
+    "related_bugs": [
+      "bug-050"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T19:00:00Z"
+  },
+  {
+    "id": "bug-056",
+    "timestamp": "2026-10-18T19:00:00Z",
+    "error_message": "שני צמיגים באותו מיקום (קדמי שמאל) בכרטיס",
+    "file": "components/yard/TirePositionPicker.tsx",
+    "root_cause": "Picker had no knowledge of positions already used on the card.",
+    "fix": "occupied prop (orange wheels) + ask dialog: replace (deletes old) / keep both / cancel.",
+    "tags": [
+      "yard",
+      "tires",
+      "positions"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T19:00:00Z"
+  },
+  {
+    "id": "bug-057",
+    "timestamp": "2026-10-18T19:00:00Z",
+    "error_message": "בטאב חובות החיפוש יוצא מהתיבה אחרי כל אות",
+    "file": "components/debts/DebtsClient.tsx",
+    "root_cause": "`const Toolbar = (...) => (...)` declared inside the component and rendered as <Toolbar/> — a new component type every render, so the input remounted on each keystroke and lost focus.",
+    "fix": "Render it as a function call {renderToolbar(...)}.",
+    "tags": [
+      "react",
+      "focus",
+      "inner-component"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T19:00:00Z"
   }
 ]

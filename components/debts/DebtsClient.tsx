@@ -324,7 +324,10 @@ export default function DebtsClient() {
     </div>
   )
 
-  const Toolbar = ({ onAdd }: { onAdd?: () => void }) => (
+  // A plain render function, NOT a component: defined inside this component, <Toolbar/>
+  // would be a new component type every render — the search input remounted on each
+  // keystroke and lost focus after every letter.
+  const renderToolbar = (onAdd?: () => void) => (
     <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
       {onAdd && <Button onClick={onAdd}>+ הוסף חוב</Button>}
       <div style={{ display: 'flex', gap: '6px' }}>
@@ -384,7 +387,7 @@ export default function DebtsClient() {
       {/* ── CUSTOMERS TAB ── */}
       {tab === 'customers' && (
         <div>
-          <Toolbar onAdd={() => openCustModal()} />
+          {renderToolbar(() => openCustModal())}
           {filteredCust.length === 0 ? (
             <EmptyState icon="💳" text={`אין חובות לקוחות ${filter === 'open' ? 'פתוחים' : filter === 'closed' ? 'סגורים' : ''}`} />
           ) : (

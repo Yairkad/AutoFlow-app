@@ -25,6 +25,10 @@ export async function GET(req: NextRequest) {
   const q    = req.nextUrl.searchParams.get('q')?.trim() ?? ''
   const type = req.nextUrl.searchParams.get('type') ?? 'all'
   const includeEmpty = req.nextUrl.searchParams.get('include_empty') === '1'
+  // Segmented tire size (TireSizeInput): filter by each part that was filled in
+  const sizeParts = (['width', 'profile', 'rim'] as const)
+    .map(k => [k, Number(req.nextUrl.searchParams.get(k))] as const)
+    .filter(([, v]) => v > 0)
 
   const supabase = createServiceClient()
   const results: SearchResult[] = []
@@ -39,7 +43,9 @@ export async function GET(req: NextRequest) {
       .eq('tenant_id', profile.tenant_id)
     if (!includeEmpty) tireQuery = tireQuery.gt('qty', 0)
 
-    if (q) {
+    if (sizeParts.length > 0) {
+      for (const [col, v] of sizeParts) tireQuery = tireQuery.eq(col, v)
+    } else if (q) {
       // Extract all digit groups — handles 195/55/16, 195/55R16, 195-55-16, etc.
       const nums = q.match(/\d+/g) ?? []
       if (nums.length >= 3) {

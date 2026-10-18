@@ -2,25 +2,17 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import type { YardSession, YardSessionItem, SearchResult, TirePosition } from '@/lib/yard/types'
+import type { YardSession, SearchResult, TirePosition } from '@/lib/yard/types'
 import { formatPlate } from '@/lib/yard/types'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
+import { handOffToCard, occupiedPositions, tireIdsAt } from '@/lib/yard/handoff'
 import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
-import { tireQueryFromDigits } from '@/lib/tires/size'
+import { tireSizeSearchParams } from '@/lib/tires/size'
 
 type TireResult = SearchResult & { size: string; brand: string }
 
 interface Props { session: YardSession }
 
-// Accepts 165/65/15 → 165/65R15 so users don't need to type R
-function normalizeTireSize(raw: string): string {
-  const q = tireQueryFromDigits(raw)   // phone number pad: "2055516" → "205/55/16"
-  const full = q.trim().match(/^(\d+)\/(\d+)\/(\d+)$/)
-  if (full) return `${full[1]}/${full[2]}R${full[3]}`
-  const partial = q.trim().match(/^(\d+\/\d+)\/$/)
-  if (partial) return `${partial[1]}R`
-  return q
-}
 
 export default function TireSearchClient({ session }: Props) {
   const router       = useRouter()
@@ -45,9 +37,9 @@ export default function TireSearchClient({ session }: Props) {
       .catch(() => {})
   }, []) // eslint-disable-line
 
+  // q = "width/profile/rim" from the 3-box size field; each filled part filters
   const search = useCallback(async (q: string): Promise<TireResult[]> => {
-    const normalized = normalizeTireSize(q)
-    const cacheKey = `yard-tires-${normalized}`
+    const cacheKey = `yard-tires-${q}`
     try {
       const raw = sessionStorage.getItem(cacheKey)
       if (raw) {
@@ -55,7 +47,7 @@ export default function TireSearchClient({ session }: Props) {
         if (Date.now() - ts < CACHE_TTL) return data
       }
     } catch {}
-    const res  = await fetch(`/api/yard/search?q=${encodeURIComponent(normalized)}&type=tire`)
+    const res  = await fetch(`/api/yard/search?type=tire&${tireSizeSearchParams(q)}`)
     const data = res.ok ? await res.json() : []
     try { sessionStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() })) } catch {}
     return data
@@ -90,45 +82,25 @@ export default function TireSearchClient({ session }: Props) {
     setShowPicker(true)
   }
 
-  function submitWithPosition(positions: TirePosition[]) {
+  function submitWithPosition(positions: TirePosition[], replace: TirePosition[]) {
     const item = selectedRef.current
     if (!item) return
     setShowPicker(false)
     setSaving(true)
-    const finalPrice = item.price
     const posArr = positions.length > 0 ? positions : [null]
-    const now = Date.now()
-
-    // One item per position, all inserted in a single batched request — sending
-    // one POST per position multiplied round-trips and made adding several
-    // positions feel slow. All pending items are stashed together so the work
-    // card can show every position instantly instead of only the first one.
-    const pendingItems: YardSessionItem[] = posArr.map((pos, i) => ({
-      id: `pending-${now}-${i}`, session_id: session.id, tenant_id: '',
+    handOffToCard(session.id, posArr.map(pos => ({
       item_type: 'tire', ref_id: item.id, name: item.name, sku: item.sku,
-      quantity: 1, unit_price: finalPrice, original_price: item.price,
-      price_modified: finalPrice !== item.price, tire_position: pos,
-      created_at: new Date().toISOString(),
-    }))
-    try {
-      sessionStorage.setItem(`yard-pending-${session.id}`, JSON.stringify(pendingItems))
-    } catch {}
+      quantity: 1, unit_price: item.price, original_price: item.price,
+      price_modified: false, tire_position: pos,
+    })), tireIdsAt(session, replace))
     router.push(`/yard/${session.id}`)
-    fetch(`/api/yard/sessions/${session.id}/items`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(posArr.map(pos => ({
-        item_type: 'tire', ref_id: item.id, name: item.name, sku: item.sku,
-        quantity: 1, unit_price: finalPrice, original_price: item.price,
-        price_modified: finalPrice !== item.price, tire_position: pos,
-      }))),
-    })
   }
 
   return (
     <div className="flex h-full" style={{ background: '#f0f4f8' }}>
       {showPicker && (
         <TirePositionPicker
+          occupied={occupiedPositions(session)}
           onConfirm={submitWithPosition}
           onBack={() => setShowPicker(false)}
         />
@@ -137,8 +109,8 @@ export default function TireSearchClient({ session }: Props) {
       {sheetQuery !== null && (
         <SearchSheet<TireResult>
           title="חיפוש צמיג לפי מידה"
-          placeholder="מידה, למשל 2055516 או 205/55/16"
-          inputMode="numeric"
+          placeholder="מידה"
+          sizeMode="only"
           initialQuery={sheetQuery}
           search={search}
           getKey={r => r.id}

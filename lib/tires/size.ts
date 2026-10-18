@@ -28,12 +28,13 @@ export function parseTireSize(text: string): { width: number; profile: number; r
   return { width: Number(m[1]), profile: Number(m[2]), rim: Number(m[3]) }
 }
 
-/**
- * Search text for a tire size typed on a phone number pad, where "/" and "R" aren't
- * available: "2055516" → "205/55/16", "20555" → "205/55". Anything else is returned as is.
- */
-export function tireQueryFromDigits(text: string): string {
-  const t = text.trim()
-  if (!/^\d{3,7}$/.test(t)) return t
-  return [t.slice(0, 3), t.slice(3, 5), t.slice(5, 7)].filter(Boolean).join('/')
+
+/** "205/55/16" from the segmented size search (empty parts allowed) → API query params */
+export function tireSizeSearchParams(q: string): string {
+  const [width = '', profile = '', rim = ''] = q.split('/')
+  const p = new URLSearchParams()
+  if (width) p.set('width', width)
+  if (profile) p.set('profile', profile)
+  if (rim) p.set('rim', rim)
+  return p.toString()
 }

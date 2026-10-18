@@ -2396,3 +2396,24 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 14:40 | Created components/yard/SearchSheet.tsx | — | ~1753 |
 | 14:41 | Created components/yard/TireLookupClient.tsx | — | ~1660 |
 | 18:00 | Yard: removed built-in keyboards, full-screen SearchSheet with device keyboard; camera scan hidden; supplier 'צלם' | components/yard/*, lib/tires/size.ts | playwright ok, build ok | ~25k |
+
+## Session: 2026-10-18 14:56
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-18 15:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:12 | Created ../../../root/.claude/plans/reactive-giggling-petal.md | — | ~759 |
+| 15:13 | Edited ../../../root/.claude/plans/reactive-giggling-petal.md | 1→4 lines | ~69 |
+
+## Session: 2026-10-18 15:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:51 | Edited ../../../root/.claude/plans/reactive-giggling-petal.md | expanded (+7 lines) | ~147 |
+| 15:55 | Edited ../../../root/.claude/plans/reactive-giggling-petal.md | expanded (+10 lines) | ~232 |
+| 15:57 | Edited ../../../root/.claude/plans/reactive-giggling-petal.md | expanded (+13 lines) | ~315 |
+| 19:00 | Yard: card saves items itself (no realtime dependency), edits while saving, occupied-position ask, 3-box tire size search; debts search focus fix | WorkCardClient, TirePositionPicker, TireSizeInput, SearchSheet, handoff.ts, search API, DebtsClient | playwright ok, build ok | ~40k |
