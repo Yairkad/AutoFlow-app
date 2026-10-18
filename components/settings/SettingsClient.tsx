@@ -1736,13 +1736,14 @@ export default function SettingsClient() {
       {/* Google Drive status — admins only */}
       {isAdmin && driveConnected !== null && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px',
+          // wraps on phones: the buttons drop below the text instead of squeezing it to one word per line
+          display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', marginBottom: '20px',
           background: driveConnected ? '#f0fdf6' : '#fffbeb',
           border: `1px solid ${driveConnected ? '#bbf7d0' : '#fcd34d'}`,
           borderRadius: '10px', padding: '12px 16px',
         }}>
           <span style={{ fontSize: '22px' }}>📂</span>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: '1 1 200px', minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: '13px' }}>
               Google Drive — {driveConnected ? '✓ מחובר' : 'לא מחובר'}
             </div>
@@ -1751,7 +1752,7 @@ export default function SettingsClient() {
             </div>
           </div>
           {tenantId && (
-            <div style={{ display: 'flex', gap: '8px', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', marginInlineStart: 'auto' }}>
               {driveConnected && (
                 <button
                   onClick={handleDriveMerge}
@@ -1759,7 +1760,7 @@ export default function SettingsClient() {
                   style={{
                     padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
                     cursor: driveMerging ? 'wait' : 'pointer', border: '1px solid var(--border)',
-                    background: 'transparent', color: 'var(--text-muted)',
+                    background: 'transparent', color: 'var(--text-muted)', whiteSpace: 'nowrap',
                   }}
                 >
                   {driveMerging ? '⏳ ממזג...' : '🗂️ מזג תיקיות כפולות'}
@@ -1773,6 +1774,7 @@ export default function SettingsClient() {
                   background: driveConnected ? 'transparent' : 'var(--primary)',
                   color: driveConnected ? 'var(--text-muted)' : '#fff',
                   border: driveConnected ? '1px solid var(--border)' : 'none',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {driveConnected ? '🔄 חבר מחדש' : 'חבר Drive →'}

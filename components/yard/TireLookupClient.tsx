@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import type { SearchResult } from '@/lib/yard/types'
 import TireKeyboard from '@/components/yard/TireKeyboard'
 import { useOnScreenKeyboardPref } from '@/lib/hooks/useOnScreenKeyboardPref'
 
-type TireResult = SearchResult & { size: string; brand: string }
+type TireResult = SearchResult & { size?: string; brand?: string }
+type Mode = 'tire' | 'product'
 
 // Accepts 165/65/15 → 165/65R15 so users don't need to type R
 function normalizeTireSize(q: string): string {
@@ -17,12 +17,12 @@ function normalizeTireSize(q: string): string {
   return q
 }
 
-// Standalone stock check — not tied to any open vehicle session. Type a size,
-// see if it's in stock, and if so at what price and where (shelf location).
+// Standalone price/stock check — not tied to any open vehicle session. Tires by size,
+// products by name / SKU / barcode; out-of-stock items are shown too (marked "אזל").
 // No add-to-cart / position picker here, on purpose — this is a lookup, not
 // a way to add tires to a car.
 export default function TireLookupClient() {
-  const router = useRouter()
+  const [mode, setMode] = useState<Mode>('tire')
   const { enabled: kbEnabled } = useOnScreenKeyboardPref()
   const [query,   setQuery]   = useState('')
   const [results, setResults] = useState<TireResult[]>([])
@@ -34,29 +34,34 @@ export default function TireLookupClient() {
   // side-panel keyboard to match, wherever it currently is
   useEffect(() => { setShowKeyboard(kbEnabled) }, [kbEnabled])
 
-  const search = useCallback(async (q: string) => {
+  const search = useCallback(async (q: string, m: Mode) => {
     if (!q.trim()) { setResults([]); setSearched(false); return }
-    const normalized = normalizeTireSize(q)
-    const res  = await fetch(`/api/yard/search?q=${encodeURIComponent(normalized)}&type=tire`)
-    const data = await res.json()
+    const term = m === 'tire' ? normalizeTireSize(q) : q.trim()
+    const res  = await fetch(`/api/yard/search?q=${encodeURIComponent(term)}&type=${m}&include_empty=1`)
+    const data = res.ok ? await res.json() : []
     setResults(data)
     setSelected(null)
     setSearched(true)
   }, [])
 
   useEffect(() => {
-    const t = setTimeout(() => { search(query) }, 300)
+    const t = setTimeout(() => { search(query, mode) }, 300)
     return () => clearTimeout(t)
-  }, [query, search])
+  }, [query, mode, search])
+
+  function switchMode(m: Mode) {
+    if (m === mode) return
+    setMode(m); setQuery(''); setResults([]); setSelected(null); setSearched(false)
+  }
 
   function confirmSearch() {
-    search(query)
+    search(query, mode)
     setShowKeyboard(false)
   }
 
   return (
     <div className="flex h-full" style={{ background: '#f0f4f8' }}>
-      {showKeyboard && (
+      {mode === 'tire' && showKeyboard && (
         <TireKeyboard
           side
           value={query}
@@ -67,21 +72,21 @@ export default function TireLookupClient() {
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
 
-        {/* Header */}
-        <div className="bg-white border-[3px] border-blue-600 rounded-xl flex-shrink-0" style={{ margin: '14px 14px 0', padding: '14px 18px' }}>
+        {/* Header + tires / products tabs */}
+        <div className="bg-white border-[3px] border-blue-600 rounded-xl flex-shrink-0" style={{ margin: '14px 14px 0', padding: '12px 16px' }}>
           <div className="font-black text-slate-900 leading-tight" style={{ fontSize: '20px' }}>
-            🔍 בדיקת מלאי צמיגים
+            🔍 בדיקת מחיר / מלאי
           </div>
           <div className="text-sm font-semibold text-slate-400 mt-0.5">בדיקה בלבד — לא מוסיף לכרטיס רכב</div>
-        </div>
-
-        {/* Nav */}
-        <div className="flex gap-2 flex-shrink-0" style={{ margin: '10px 14px 0' }}>
-          <button onClick={() => router.push('/yard')}
-            className="flex-1 bg-slate-800 text-white rounded-xl font-bold active:scale-[.97] transition-all"
-            style={{ minHeight: '48px', fontSize: '15px' }}>
-            🏠 חזור לרחבה הראשית
-          </button>
+          <div className="flex gap-2" style={{ marginTop: '10px' }}>
+            {([['tire', '🔘 צמיגים'], ['product', '📦 מוצרים']] as const).map(([m, label]) => (
+              <button key={m} onClick={() => switchMode(m)}
+                className={`flex-1 rounded-xl font-bold border-2 transition-colors ${mode === m ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-600'}`}
+                style={{ minHeight: '46px', fontSize: '16px' }}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Search row */}
@@ -89,14 +94,14 @@ export default function TireLookupClient() {
           <div className="flex-1 relative">
             <input
               type="text"
-              inputMode="none"
+              inputMode={mode === 'tire' ? 'none' : 'search'}
               value={query}
               onChange={e => setQuery(e.target.value)}
-              onFocus={() => { if (kbEnabled) setShowKeyboard(true) }}
+              onFocus={() => { if (kbEnabled && mode === 'tire') setShowKeyboard(true) }}
               onKeyDown={e => { if (e.key === 'Enter') confirmSearch() }}
-              placeholder="165/65/15 או 165/65R15"
+              placeholder={mode === 'tire' ? '165/65/15 או 165/65R15' : 'שם מוצר, מק״ט או סריקת ברקוד'}
               className="w-full border-2 border-blue-500 rounded-xl text-base font-bold bg-white outline-none"
-              style={{ padding: '10px 14px', letterSpacing: '1px', direction: 'ltr' }}
+              style={{ padding: '10px 14px', letterSpacing: mode === 'tire' ? '1px' : undefined, direction: mode === 'tire' ? 'ltr' : 'rtl' }}
             />
           </div>
         </div>
@@ -105,7 +110,9 @@ export default function TireLookupClient() {
         <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-slate-200" style={{ margin: '10px 14px 0' }}>
           {results.length === 0 ? (
             <div className="p-6 text-center text-slate-400">
-              {searched ? 'אין מלאי במידה הזו' : 'הקלד מידת צמיג לבדיקה'}
+              {searched
+                ? (mode === 'tire' ? 'אין צמיג במידה הזו במערכת' : 'לא נמצא מוצר')
+                : (mode === 'tire' ? 'הקלד מידת צמיג לבדיקה' : 'הקלד שם מוצר או סרוק ברקוד')}
             </div>
           ) : (
             results.map((r, i) => (
@@ -118,7 +125,9 @@ export default function TireLookupClient() {
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-slate-800" style={{ fontSize: '15px' }}>{r.name}</div>
                   <div className="text-slate-400 font-medium flex items-center" style={{ fontSize: '13px', marginTop: '2px', gap: '8px' }}>
-                    {r.stock != null && <span>מלאי: {r.stock} יח׳</span>}
+                    {r.stock != null && (r.stock > 0
+                      ? <span>מלאי: {r.stock} יח׳</span>
+                      : <span className="bg-red-100 text-red-700 font-bold rounded-full" style={{ padding: '1px 8px' }}>אזל</span>)}
                     {r.location && <span>📍 {r.location}</span>}
                   </div>
                 </div>

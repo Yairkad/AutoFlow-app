@@ -15,7 +15,8 @@ export interface SearchResult {
   location?:  string   // tires only — warehouse shelf location
 }
 
-// GET /api/yard/search?q=TEXT&type=all|tire|product|service
+// GET /api/yard/search?q=TEXT&type=all|tire|product|service[&include_empty=1]
+// include_empty=1 (price/stock lookup screen) also returns tires/products with no stock
 export async function GET(req: NextRequest) {
   const tenantId = getYardTenantId()
   if (!tenantId) return new Response('Unauthorized', { status: 401 })
@@ -23,6 +24,7 @@ export async function GET(req: NextRequest) {
 
   const q    = req.nextUrl.searchParams.get('q')?.trim() ?? ''
   const type = req.nextUrl.searchParams.get('type') ?? 'all'
+  const includeEmpty = req.nextUrl.searchParams.get('include_empty') === '1'
 
   const supabase = createServiceClient()
   const results: SearchResult[] = []
@@ -35,7 +37,7 @@ export async function GET(req: NextRequest) {
       .from('tires')
       .select('id, brand, width, profile, rim, speed_idx, load_idx, sell_price, qty, sku, location')
       .eq('tenant_id', profile.tenant_id)
-      .gt('qty', 0)
+    if (!includeEmpty) tireQuery = tireQuery.gt('qty', 0)
 
     if (q) {
       // Extract all digit groups — handles 195/55/16, 195/55R16, 195-55-16, etc.
@@ -80,7 +82,7 @@ export async function GET(req: NextRequest) {
       .from('products')
       .select('id, name, sku, barcode, sell_price, qty')
       .eq('tenant_id', profile.tenant_id)
-      .gt('qty', 0)
+    if (!includeEmpty) prodQuery = prodQuery.gt('qty', 0)
 
     if (q) {
       prodQuery = prodQuery.or(`name.ilike.${search},sku.ilike.${search},barcode.ilike.${search}`)

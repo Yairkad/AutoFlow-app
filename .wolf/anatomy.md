@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T13:46:34.815Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T14:04:51.504Z
 > Files: 71 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -29,7 +29,7 @@
 
 ## ../../../root/.claude/plans/
 
-- `reactive-giggling-petal.md` — תיקון: תפריט המסוף בטלפון נפתח "ריק" (~481 tok)
+- `reactive-giggling-petal.md` — תיקון: בכרטיס עבודה במסוף לא מגיעים לכפתור "סיים ושלח לתשלום" כשהמסך לאורך (~816 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
 

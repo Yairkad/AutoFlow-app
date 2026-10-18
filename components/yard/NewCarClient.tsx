@@ -101,7 +101,7 @@ export default function NewCarClient() {
   }
 
   return (
-    <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
+    <div className="flex flex-col h-full" style={{ background: '#f0f4f8', overflowY: 'auto' }}>
       {showHistory && (
         <VehicleHistoryModal
           plate={plate}
