@@ -2340,3 +2340,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:49 | Created components/yard-hub/StockSummaryCards.tsx | — | ~874 |
 | 11:49 | Created components/yard-hub/YardTrackingClient.tsx | — | ~384 |
 | 12:00 | Yard worker hub: sidebar (YardShell) + per-section permissions, loans, customer requests, quick reports, stock value/freshness, /yard-tracking office page; save-latency fixes; migration 093 | components/yard-hub/*, lib/yard/{access,hub,reports}.ts, app/api/yard/{loans,requests,reports,counts,stock-summary}, proxy.ts, 093_yard_worker_hub.sql | build ok, tsc ok | ~60k |
+
+## Session: 2026-10-18 12:01
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
