@@ -29,6 +29,7 @@
 
 ## Key Learnings
 
+- [2026-10-18] Brother WIA reports DOCUMENT_HANDLING_STATUS feed-ready even with an empty feeder — never trust it alone; fall back between feeder/flatbed on PAPER_EMPTY (0x80210003). When changing the agent, bump its version AND MIN_AGENT_VERSION in lib/scannerAgent.ts so users get the install prompt.
 - [2026-10-18] Scanner agent (tools/scanner-agent, Go, windows-only main.go + portable pdf.go): rebuild the exe into public/downloads after any change (command in its README). Website must NOT probe 127.0.0.1 automatically (Chrome local-network-access prompt for every visitor) — only on user click.
 - [2026-10-18] Google Drive OAuth scope is drive.file — the app can't see files it didn't create (e.g. printer scans in Drive) without Picker or a restricted scope.
 - [2026-10-15] proxy.ts PUBLIC_PREFIXES: new public pages must be added there (e.g. '/guide'). Note '/' is in the list and matched with startsWith.

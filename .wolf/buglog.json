@@ -950,5 +950,23 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-10-18T08:00:00Z"
+  },
+  {
+    "id": "bug-048",
+    "timestamp": "2026-10-18T08:40:00Z",
+    "error_message": "'אין דף לסריקה' while a page is on the glass (Brother)",
+    "file": "tools/scanner-agent/scan.ps1",
+    "root_cause": "auto mode trusted WIA DOCUMENT_HANDLING_STATUS feed-ready; Brother reports it with an empty feeder, so it scanned the empty feeder and stopped",
+    "fix": "agent 1.1.1: try sources in order (feeder→glass or glass→feeder); PAPER_EMPTY on the first page falls through to the next source; INFO lines in log.txt; site requires agent >= 1.1.1 (shows install link)",
+    "tags": [
+      "scanner-agent",
+      "wia",
+      "brother",
+      "feeder",
+      "flatbed"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T08:40:00Z"
   }
 ]
