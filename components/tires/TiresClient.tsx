@@ -12,6 +12,7 @@ import StatCard from '@/components/ui/StatCard'
 import * as XLSX from 'xlsx'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
+import TirePickerModal from '@/components/tires/TirePickerModal'
 import { tireSizeText, hasTireSize, isTireMissingDetails, isTireMissingPrice, parseTireSize } from '@/lib/tires/size'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -141,6 +142,9 @@ export default function TiresClient() {
   // Selection + per-row inline edit
   const [editingTireId,  setEditingTireId]  = useState<string | null>(null)
   const [editMap,        setEditMap]        = useState<Record<string, Partial<Tire>>>({})
+
+  // Merge a duplicate (e.g. a misread barcode saved as a new tire) into the right tire
+  const [mergeSource, setMergeSource] = useState<Tire | null>(null)
 
   // Quick SKU inline edit (click directly on SKU cell)
   const [editingSkuId,    setEditingSkuId]    = useState<string | null>(null)
@@ -472,6 +476,29 @@ export default function TiresClient() {
     if (!ok) return
     await sb.from('tires').delete().eq('id', t.id)
     showToast('נמחק ✓', 'success')
+    await load()
+  }
+
+  async function mergeInto(src: Tire, target: Tire) {
+    const ok = await confirm({
+      msg: `למזג את ${src.brand ? src.brand + ' ' : ''}${tireSize(src)}${src.sku ? ` (${src.sku})` : ''} לתוך ${target.brand ? target.brand + ' ' : ''}${tireSize(target)}?\n` +
+        `הכמות (${src.qty}) והתנועות יעברו לצמיג הנבחר, והרשומה הכפולה תימחק.`,
+    })
+    if (!ok) return
+    setMergeSource(null)
+    // Movements and count history first (tire_sales would be deleted with the source otherwise)
+    const [mv, cnt] = await Promise.all([
+      sb.from('tire_sales').update({ tire_id: target.id }).eq('tire_id', src.id),
+      sb.from('tire_inventory_count_entries').update({ tire_id: target.id }).eq('tire_id', src.id),
+    ])
+    const { error: upErr } = await sb.from('tires').update({ qty: target.qty + src.qty }).eq('id', target.id)
+    if (mv.error || cnt.error || upErr) {
+      console.error('[tires] merge', mv.error, cnt.error, upErr)
+      showToast('שגיאה במיזוג — לא נמחק דבר', 'error'); await load(); return
+    }
+    const { error: delErr } = await sb.from('tires').delete().eq('id', src.id)
+    if (delErr) console.error('[tires] merge delete', delErr)
+    showToast(delErr ? 'הכמות הועברה, אך מחיקת הכפילות נכשלה — מחק אותה ידנית' : 'מוזג ✓', delErr ? 'error' : 'success')
     await load()
   }
 
@@ -890,6 +917,7 @@ export default function TiresClient() {
                             <RowActionsMenu actions={[
                               { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openEdit(t) },
                               { key: 'dup', label: 'שכפל', icon: '📋', onClick: () => openDuplicate(t) },
+                              { key: 'merge', label: 'מזג לצמיג קיים', icon: '🔗', onClick: () => setMergeSource(t) },
                               { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteTire(t) },
                             ]} />
                           )}
@@ -1180,6 +1208,14 @@ export default function TiresClient() {
           </div>
         </div>
       </Modal>
+
+      {mergeSource && (
+        <TirePickerModal tires={tires} excludeId={mergeSource.id}
+          title="🔗 מזג לצמיג קיים"
+          subtitle={`${mergeSource.brand ? mergeSource.brand + ' ' : ''}${tireSize(mergeSource)}${mergeSource.sku ? ` · ${mergeSource.sku}` : ''} · מלאי ${mergeSource.qty} — בחר את הצמיג הנכון. הכמות תעבור אליו והכפילות תימחק.`}
+          onPick={t => mergeInto(mergeSource, t)}
+          onClose={() => setMergeSource(null)} />
+      )}
 
       {/* ── Receiving Order Modal ── */}
       <Modal open={recvOpen} onClose={() => setRecvOpen(false)}

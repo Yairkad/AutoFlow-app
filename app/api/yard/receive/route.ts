@@ -27,14 +27,15 @@ async function waitingFor(sb: Sb, tenantId: string, t: { width: number | null; p
 }
 
 // POST /api/yard/receive
-// { type: 'tire'|'product', id: string, qty_add: number }
-// Increments stock and returns new qty
+// { type: 'tire'|'product', id: string, qty_add: number, set_sku?: string }
+// Increments stock and returns new qty. set_sku: an unknown barcode the user linked to this item
+// and chose to keep as its SKU.
 export async function POST(req: NextRequest) {
   const tenantId = getYardTenantId()
   if (!tenantId) return new Response('Unauthorized', { status: 401 })
 
   const body = await req.json()
-  const { type, id, qty_add } = body as { type: 'tire' | 'product'; id: string; qty_add: number }
+  const { type, id, qty_add, set_sku } = body as { type: 'tire' | 'product'; id: string; qty_add: number; set_sku?: string }
 
   if (!type || !id || !qty_add || qty_add <= 0) {
     return new Response('Bad Request', { status: 400 })
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
 
   const { error } = await sb
     .from(tbl)
-    .update({ qty: newQty })
+    .update({ qty: newQty, ...(typeof set_sku === 'string' && set_sku.trim() ? { sku: set_sku.trim() } : {}) })
     .eq('id', id)
     .eq('tenant_id', tenantId)
 
