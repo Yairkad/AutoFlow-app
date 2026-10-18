@@ -6,6 +6,7 @@
 
 ## User Preferences
 
+- [2026-10-18] **Do-Not-Repeat:** for any new feature/build, present the plan in Hebrew and WAIT for explicit approval before writing any code. Never write progress/status lines in English to the user — everything user-facing in Hebrew.
 - [2026-10-15] Guide page: no call/WhatsApp buttons. User wants full control over images: many per section, choose position (before/after text) and whether they replace or sit alongside built-in diagrams.
 - [2026-10-15] Public tire guide: user wants all content editable from business settings (text + image upload), Hebrew first; translation to English will be done later in one batch when user sends a link (don't build an auto-translate integration). Topics: כיוון פרונט, מידע על הצמיגים (accordion headings, not tiles), תיקון פנצ'ר; no rotation.
 - [2026-10-15] Scanned items that aren't in the system must NEVER be dropped — keep them (in stock) and let the user complete details later. User wants quick filters for incomplete records (missing price / missing data).
