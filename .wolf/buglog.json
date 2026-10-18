@@ -1041,5 +1041,40 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-18T15:00:00Z"
+  },
+  {
+    "id": "bug-053",
+    "timestamp": "2026-10-18T16:00:00Z",
+    "error_message": "במסוף רחבה כשהמסך לאורך לא מגיעים לכפתור סיים ושלח למשרד — המסך לא נגלל",
+    "file": "components/yard/WorkCardClient.tsx",
+    "root_cause": "Yard frame is overflow:hidden; WorkCardClient root had no scroll and on phones (<700px, column layout) the body was flex-1 min-h-0 so the cart (incl. finish button) was squeezed/cut off. New 52px phone top bar made it worse.",
+    "fix": "Root overflowY:auto; phone body flex 0 0 auto; total+finish bar position:sticky bottom:0 on phones (cart overflow-hidden removed on phones so sticky works). NewCarClient root also scrollable. Playwright: reachable at 390x844/390x640/768x1024/1280x800.",
+    "tags": [
+      "yard",
+      "mobile",
+      "scroll",
+      "sticky"
+    ],
+    "related_bugs": [
+      "bug-052"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T16:00:00Z"
+  },
+  {
+    "id": "bug-054",
+    "timestamp": "2026-10-18T16:00:00Z",
+    "error_message": "בדיקת מלאי/מחיר מציג רק צמיגים ולא מוצרים",
+    "file": "components/yard/TireLookupClient.tsx",
+    "root_cause": "Lookup always queried /api/yard/search?type=tire; search also hid qty<=0 so out-of-stock looked like 'not in system'.",
+    "fix": "Tires/products tabs (user chose tabs over one combined search); product mode uses name/SKU/barcode with normal keyboard; include_empty=1 param shows out-of-stock items with 'אזל' (lookup only).",
+    "tags": [
+      "yard",
+      "lookup",
+      "products"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T16:00:00Z"
   }
 ]

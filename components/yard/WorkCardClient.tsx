@@ -501,7 +501,9 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   ]
 
   return (
-    <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
+    // The yard frame is overflow:hidden, so this screen scrolls itself — on a portrait phone the
+    // actions + cart are taller than the screen and the finish button was cut off.
+    <div className="flex flex-col h-full" style={{ background: '#f0f4f8', overflowY: 'auto' }}>
 
       {showHistory && (
         <VehicleHistoryModal plate={session.plate} onClose={() => setShowHistory(false)} />
@@ -582,7 +584,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       )}
 
       {/* ── Work body ── */}
-      <div className="flex flex-1 min-h-0" style={{ flexDirection: isMobile ? 'column' : 'row', gap: '14px', margin: '12px 14px 14px' }}>
+      <div className={isMobile ? 'flex' : 'flex flex-1 min-h-0'} style={{ flexDirection: isMobile ? 'column' : 'row', gap: '14px', margin: '12px 14px 14px', flex: isMobile ? '0 0 auto' : undefined }}>
 
         {/* Action buttons — 2 columns */}
         <div className="grid grid-cols-2" style={{ gap: '12px', alignContent: 'start', flex: isMobile ? '0 0 auto' : '1' }}>
@@ -620,10 +622,11 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
 
         {/* ── Cart panel ── */}
         <div
-          className="flex flex-col bg-white rounded-2xl overflow-hidden"
+          // no overflow-hidden on phones: it would stop the finish bar below from sticking
+          className={`flex flex-col bg-white rounded-2xl ${isMobile ? '' : 'overflow-hidden'}`}
           style={{ width: isMobile ? '100%' : '310px', flexShrink: 0, boxShadow: '0 2px 10px rgba(0,0,0,.12)', minHeight: isMobile ? '220px' : undefined }}
         >
-          <div className="bg-blue-700 text-white font-bold text-center flex-shrink-0" style={{ padding: '14px 16px', fontSize: '15px' }}>
+          <div className="bg-blue-700 text-white font-bold text-center flex-shrink-0 rounded-t-2xl" style={{ padding: '14px 16px', fontSize: '15px' }}>
             שירותים שהתקבלו
           </div>
 
@@ -687,6 +690,9 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
             )}
           </div>
 
+          {/* Total + finish — on phones it sticks to the bottom of the screen while scrolling */}
+          <div className="flex flex-col flex-shrink-0 bg-white overflow-hidden rounded-b-2xl"
+            style={isMobile ? { position: 'sticky', bottom: 0, zIndex: 5, boxShadow: '0 -4px 12px rgba(0,0,0,.10)' } : undefined}>
           <div className="border-t-2 border-slate-200 flex justify-between items-center font-black flex-shrink-0" style={{ padding: '12px 16px', fontSize: '16px' }}>
             <span>סה״כ</span>
             <span>{total.toLocaleString()}₪</span>
@@ -700,6 +706,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
           >
             {sending ? '⏳ שולח...' : items.length === 0 ? 'סגור כרטיס' : 'סיים ושלח לתשלום'}
           </button>
+          </div>
         </div>
       </div>
 

@@ -2375,3 +2375,11 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 13:46 | Created ../../../root/.claude/plans/reactive-giggling-petal.md | — | ~514 |
 | 15:00 | Fix yard phone drawer hidden by global aside CSS; phone top bar menu; link colours inline | components/yard/YardShell.tsx, ReceiveClient.tsx | playwright ok 390/820/1280, build ok | ~8k |
+
+## Session: 2026-10-18 14:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:03 | Created ../../../root/.claude/plans/reactive-giggling-petal.md | — | ~550 |
+| 14:04 | Edited ../../../root/.claude/plans/reactive-giggling-petal.md | expanded (+22 lines) | ~326 |
+| 16:00 | Work card scroll + sticky finish on phones; lookup tabs tires/products + out-of-stock | WorkCardClient, NewCarClient, TireLookupClient, api/yard/search | playwright ok, build ok | ~10k |
