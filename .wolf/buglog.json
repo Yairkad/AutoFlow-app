@@ -968,5 +968,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-18T08:40:00Z"
+  },
+  {
+    "id": "bug-049",
+    "timestamp": "2026-10-18T09:00:00Z",
+    "error_message": "scan from feeder succeeded but /scan returned 500: 'Specified cast is not valid' at scan.ps1 $ip.Filters.Item(1).Properties.Item('FormatID').Value = $JPEG",
+    "file": "tools/scanner-agent/scan.ps1",
+    "root_cause": "Brother returns BMP even when JPEG is requested; converting with WIA.ImageProcess from PowerShell throws InvalidCastException",
+    "fix": "agent 1.1.2: save native format, convert to JPEG with System.Drawing; trap → ERR:SCRIPT line; unexpected output included in error; MIN_AGENT_VERSION 1.1.2",
+    "tags": [
+      "scanner-agent",
+      "wia",
+      "brother",
+      "bmp",
+      "powershell"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T09:00:00Z"
   }
 ]
