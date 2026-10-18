@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T06:39:38.489Z
-> Files: 53 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T10:04:45.805Z
+> Files: 57 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -476,7 +476,9 @@
 
 
 ## components/tires/
+- `TirePickerModal.tsx` — shared picker: search existing tires by size/brand/SKU (inventory count add/link, tires merge) (~900 tok)
 
+- `TirePickerModal.tsx` — TirePickerModal (~1047 tok)
 
 ## components/ui/
 
@@ -530,16 +532,11 @@
 - `buildForecast.ts` — Exports ForecastEvent, ForecastResult, buildForecast (~1802 tok)
 - `buildUnifiedReport.ts` — Exports MonthlyReportRow, UnifiedReportResult, buildUnifiedReport (~1993 tok)
 
+## lib/scannerAgent.ts
+
+
 ## lib/supabase/
 
-
-## tools/scanner-agent/
-- `main.go` — Windows agent: self-install (HKCU Run), HTTP 127.0.0.1:47321 /status /scan, origin approval MessageBox, runs scan.ps1 (~2800 tok)
-- `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
-- `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-
-## lib/scannerAgent.ts
-- scanWithAgent() → File (PDF); ScannerAgentMissingError; SCANNER_DOWNLOAD_URL (~250 tok)
 
 ## lib/tires/
 
@@ -578,4 +575,7 @@
 
 ## tools/scanner-agent/
 
+- `main.go` — Windows agent: self-install (HKCU Run), HTTP 127.0.0.1:47321 /status /scan, origin approval MessageBox, runs scan.ps1 (~2800 tok)
 - `main.go` — go:build windows (~3100 tok)
+- `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
+- `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
