@@ -1,5 +1,7 @@
 # anatomy.md
 
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T11:49:49.267Z
+> Files: 69 tracked | Anatomy hits: 0 | Misses: 0
 > Auto-maintained by OpenWolf. Last scanned: 2026-10-18T10:04:45.805Z
 > Files: 57 tracked | Anatomy hits: 0 | Misses: 0
 
@@ -29,6 +31,7 @@
 
 ## ../../../root/.claude/plans/
 
+- `reactive-giggling-petal.md` — תכנון: מסך עובד חדש (במקום מסוף הרחבה) + תיקון האיטיות בשמירה (~1759 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
 
@@ -358,6 +361,7 @@
 
 ## app/yard/
 
+- `layout.tsx` — metadata (~426 tok)
 
 ## app/yard/[id]/
 
@@ -483,8 +487,18 @@
 ## components/ui/
 
 
+## components/yard-hub/
+
+- `LoansPanel.tsx` — emptyForm (~3552 tok)
+- `QuickReportsPanel.tsx` — ils (~1502 tok)
+- `RequestsPanel.tsx` — emptyForm (~3389 tok)
+- `StockSummaryCards.tsx` — Office: tire stock value + how up to date the stock data is. (~874 tok)
+- `ui.tsx` — Page frame: dark top bar on the yard terminal, plain block on the office page. (~1642 tok)
+- `YardTrackingClient.tsx` — YardTrackingClient (~384 tok)
+
 ## components/yard/
 
+- `YardShell.tsx` — YardShell (~1321 tok)
 
 ## docs/
 
@@ -495,6 +509,7 @@
 
 ## lib/auth/
 
+- `yard-token.ts` — The logged-in user of the worker terminal, or null when not signed in / inactive. (~471 tok)
 
 ## lib/bank-sync/
 
@@ -551,6 +566,8 @@
 
 ## lib/yard/
 
+- `access.ts` — Sees money amounts in the quick reports (worker side). (~697 tok)
+- `hub.ts` — Still waiting for the tire itself — these get the "it just arrived" alert on receive. (~921 tok)
 
 ## public/
 
@@ -566,6 +583,7 @@
 - `087_cars_deposit_refund.sql` — cars.deposit_refund_requested bool + date (refund request filed for deposited license) (~90 tok)
 - `088_cars_hand_ownership.sql` — cars.hand smallint + original_ownership + car_code text (~80 tok)
 - `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
+- `093_yard_worker_hub.sql` — ════════════════════════════════════════════ (~1248 tok)
 
 ## tests/
 

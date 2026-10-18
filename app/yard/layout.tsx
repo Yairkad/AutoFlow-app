@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from 'next'
+import { redirect } from 'next/navigation'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import KeyboardDismiss from '@/components/yard/KeyboardDismiss'
 import KeyboardModeToggle from '@/components/yard/KeyboardModeToggle'
+import YardShell from '@/components/yard/YardShell'
+import { getYardUser } from '@/lib/auth/yard-token'
 
 export const metadata: Metadata = {
   title: 'מסוף רחבה',
@@ -20,12 +23,17 @@ export const viewport: Viewport = {
   userScalable: false,
 }
 
-export default function YardLayout({ children }: { children: React.ReactNode }) {
+export default async function YardLayout({ children }: { children: React.ReactNode }) {
+  const user = await getYardUser()
+  if (!user) redirect('/login')
+
   return (
     <ToastProvider>
       <ConfirmProvider>
         <div style={{ width: '100vw', height: '100dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          {children}
+          <YardShell isAdmin={user.isAdmin} modules={user.modules} userName={user.name}>
+            {children}
+          </YardShell>
           <KeyboardDismiss />
           <KeyboardModeToggle />
         </div>

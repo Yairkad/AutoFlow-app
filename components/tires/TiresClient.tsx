@@ -122,6 +122,7 @@ export default function TiresClient() {
   const [recvSupplier, setRecvSupplier] = useState('')
   const [recvItems,   setRecvItems]   = useState<RecvItem[]>([emptyRecvItem])
   const [recvSaving,  setRecvSaving]  = useState(false)
+  const [formSaving,  setFormSaving]  = useState(false)
 
   // Filters
   const [search,           setSearch]           = useState('')
@@ -344,18 +345,24 @@ export default function TiresClient() {
       tire_type:   form.tire_type,
     }
 
+    // Merge the saved row into local state instead of reloading the whole table —
+    // every request goes through the /api/store proxy, so a full reload doubled the wait.
+    setFormSaving(true)
     if (editId) {
-      const { error } = await sb.from('tires').update(payload).eq('id', editId)
-      if (error) return showToast('שגיאה בעדכון', 'error')
+      const { data, error } = await sb.from('tires').update(payload).eq('id', editId).select().single()
+      setFormSaving(false)
+      if (error || !data) return showToast('שגיאה בעדכון', 'error')
+      setTires(prev => prev.map(t => t.id === editId ? data as Tire : t))
       showToast('הצמיג עודכן ✓', 'success')
     } else {
-      const { error } = await sb.from('tires').insert({ tenant_id: tenantId.current, ...payload })
-      if (error) return showToast('שגיאה בשמירה', 'error')
+      const { data, error } = await sb.from('tires').insert({ tenant_id: tenantId.current, ...payload }).select().single()
+      setFormSaving(false)
+      if (error || !data) return showToast('שגיאה בשמירה', 'error')
+      setTires(prev => [data as Tire, ...prev])
       showToast('הצמיג נשמר ✓', 'success')
     }
     setFormOpen(false)
     setEditId(null)
-    await load()
   }
 
   // ── Receiving order ───────────────────────────────────────────────────────────
@@ -434,7 +441,7 @@ export default function TiresClient() {
     const t = tires.find(x => x.id === id)
     const e = editMap[id]
     if (!t || !e) { setEditingTireId(null); return }
-    await sb.from('tires').update({
+    const patch = {
       brand:      e.brand || null,
       width:      Number(e.width) || t.width || null,
       profile:    Number(e.profile) || t.profile || null,
@@ -449,11 +456,17 @@ export default function TiresClient() {
       sku:        e.sku || null,
       condition:  e.condition ?? 'new',
       tire_type:  e.tire_type ?? 'regular',
-    }).eq('id', id)
-    showToast('הצמיג עודכן ✓', 'success')
+    }
+    // Optimistic: show the new values immediately, roll back if the write fails
+    setTires(prev => prev.map(x => x.id === id ? { ...x, ...patch } as Tire : x))
     setEditingTireId(null)
     setEditMap({})
-    await load()
+    const { error } = await sb.from('tires').update(patch).eq('id', id)
+    if (error) {
+      setTires(prev => prev.map(x => x.id === id ? t : x))
+      return showToast('שגיאה בעדכון — השינוי בוטל', 'error')
+    }
+    showToast('הצמיג עודכן ✓', 'success')
   }
 
   // ── Delete ────────────────────────────────────────────────────────────────────
@@ -998,7 +1011,7 @@ export default function TiresClient() {
             }}>🗑 מחק</Button>
           )}
           <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
-          <Button onClick={saveForm}>💾 {editId ? 'שמור שינויים' : 'שמור צמיג'}</Button>
+          <Button onClick={saveForm} loading={formSaving}>💾 {editId ? 'שמור שינויים' : 'שמור צמיג'}</Button>
         </>}>
 
         <div style={{ direction: 'rtl', display: 'flex', flexDirection: 'column', gap: '14px' }}>

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import SidebarLayoutEditor, { SectionConfig, SIDEBAR_LAYOUT_KEY, SIDEBAR_HIDDEN_KEY } from './SidebarLayoutEditor'
 import { useProfile } from '@/lib/contexts/ProfileContext'
+import { ALL_YARD_KEYS } from '@/lib/yard/access'
 
 // ─── צבע הבועה לכל פריט ───────────────────────────────────────────────────────
 const NAV_ITEMS = [
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { href: '/products',    label: 'מוצרים',                  color: '#f97316,#fb923c', module: ['products', 'products_view'] },
   { href: '/tires',       label: 'צמיגים',                  color: '#6b7280,#9ca3af', module: ['tires', 'tires_view'] },
   { href: '/scan',        label: 'סריקת ברקוד',             color: '#0f172a,#334155', module: ['products', 'tires'] },
+  { href: '/yard-tracking', label: 'מעקב רחבה',             color: '#475569,#94a3b8', module: 'yard_tracking' },
   { href: '/cars',        label: 'רכבים',                   color: '#10b981,#34d399', module: 'cars' },
   { href: '/quotes',      label: 'הצעות מחיר',              color: '#ec4899,#f472b6', module: 'quotes' },
   { href: '/suppliers',   label: 'ספקים',                   color: '#64748b,#94a3b8', module: 'suppliers' },
@@ -36,7 +38,7 @@ const SECTIONS: { label: string | null; hrefs: string[] }[] = [
   { label: null,       hrefs: ['/dashboard'] },
   { label: 'כספים',   hrefs: ['/expenses', '/checks', '/bank-sync', '/reports', '/debts', '/suppliers', '/customers'] },
   { label: 'אנשים',   hrefs: ['/employees'] },
-  { label: 'מלאי',    hrefs: ['/products', '/tires', '/scan', '/cars'] },
+  { label: 'מלאי',    hrefs: ['/products', '/tires', '/scan', '/yard-tracking', '/cars'] },
   { label: 'עסקאות',  hrefs: ['/quotes', '/alignment', '/inspections', '/test-transfer'] },
   { label: 'כללי',    hrefs: ['/reminders', '/documents'] },
   { label: 'מערכת',   hrefs: ['/settings', '/my-profile'] },
@@ -53,6 +55,7 @@ const ICONS: Record<string, React.ReactNode> = {
   '/employees':   <><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></>,
   '/products':    <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></>,
   '/tires':       <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></>,
+  '/yard-tracking': <><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></>,
   '/cars':        <><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v4h-7V8Z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>,
   '/quotes':      <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>,
   '/suppliers':   <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><rect x="9" y="14" width="6" height="7"/></>,
@@ -343,12 +346,13 @@ export default function Sidebar({
         )}
 
         {/* Yard terminal quick-launch */}
-        {loaded && (isAdmin || modules.includes('yard')) && (
+        {loaded && (isAdmin || modules.some(m => ALL_YARD_KEYS.includes(m))) && (
           <div style={{ display: 'flex', gap: '6px', padding: '8px 10px 4px', borderTop: '1px solid var(--border)' }}>
             {([
               { href: '/yard',        icon: '🔧', label: 'רחבה', title: 'מסוף רחבה' },
-              { href: '/yard-office', icon: '🖥',  label: 'משרד', title: 'מסוף משרד' },
-            ] as const).map(({ href, icon, label, title }) => (
+              // מסוף משרד is admin-only (proxy.ts) — don't show a link that bounces
+              ...(isAdmin ? [{ href: '/yard-office', icon: '🖥', label: 'משרד', title: 'מסוף משרד' }] : []),
+            ]).map(({ href, icon, label, title }) => (
               <a key={href} href={href} target="_blank" rel="noopener noreferrer" title={title} style={{
                 flex: 1, textAlign: 'center', padding: '5px 4px',
                 fontSize: '11px', fontWeight: 600,

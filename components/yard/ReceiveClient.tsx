@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { SearchResult } from '@/app/api/yard/search/route'
+import { whatsappLink } from '@/lib/yard/hub'
+
+interface WaitingCustomer { id: string; customer_name: string; phone: string | null; item_desc: string; qty: number }
 
 type Stage = 'scan' | 'found' | 'notfound' | 'saving'
 
@@ -42,6 +45,22 @@ export default function ReceiveClient() {
   const [savingQuick,     setSavingQuick]     = useState(false)
 
   const [toast, setToast] = useState<string | null>(null)
+  // Customers waiting for a tire that was just received
+  const [waiting, setWaiting] = useState<WaitingCustomer[]>([])
+
+  function addWaiting(list: WaitingCustomer[] | undefined) {
+    if (!list?.length) return
+    setWaiting(prev => [...prev, ...list.filter(w => !prev.some(p => p.id === w.id))])
+  }
+
+  async function markArrived(w: WaitingCustomer) {
+    setWaiting(prev => prev.filter(p => p.id !== w.id))
+    const res = await fetch(`/api/yard/requests/${w.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'arrived' }),
+    })
+    showToast(res.ok ? `✓ ${w.customer_name} סומן "הגיע"` : 'שגיאה בעדכון — נסה מהרשימה')
+  }
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2500) }
   const refocus   = () => setTimeout(() => scanRef.current?.focus(), 80)
@@ -89,8 +108,9 @@ export default function ReceiveClient() {
       body: JSON.stringify({ type: found.type, id: found.id, qty_add: qty }),
     })
     if (res.ok) {
-      const { qty: newQty } = await res.json()
+      const { qty: newQty, waiting: w } = await res.json()
       showToast(`✓ ${found.name} — מלאי עודכן ל-${newQty}`)
+      addWaiting(w)
       setFound(null); setStage('scan')
     } else { showToast('שגיאה — נסה שוב'); setStage('found') }
   }
@@ -104,12 +124,15 @@ export default function ReceiveClient() {
           rim: Number(tireForm.rim) || null, sell_price: Number(tireForm.sell_price) || null,
           cost_price: Number(tireForm.cost_price) || null }
       : { type: 'product', sku: lastCode, qty, name: prodForm.name.trim() || 'פריט חדש',
-          sell_price: Number(prodForm.sell_price) || null, cost_price: Number(prodForm.cost_price) || null,
+          sell_price: Number(prodForm.sell_price) || null,
           buy_price: Number(prodForm.cost_price) || null }
     const res = await fetch('/api/yard/receive', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
     })
-    if (res.ok) { showToast(`✓ נוצר ונוסף למלאי (${qty} יח׳)`); setStage('scan') }
+    if (res.ok) {
+      showToast(`✓ נוצר ונוסף למלאי (${qty} יח׳)`); setStage('scan')
+      addWaiting((await res.json()).waiting)
+    }
     else { showToast('שגיאה — נסה שוב'); setStage('notfound') }
   }
 
@@ -178,6 +201,7 @@ export default function ReceiveClient() {
         body: JSON.stringify({ type: e.item.type, id: e.item.id, qty_add: e.count, set_sku: quickSkuRef.current[e.item.id] }),
       })
       if (!res.ok) failed++
+      else addWaiting((await res.json()).waiting)
     }
     // Unknown barcodes are kept: saved as new tires (barcode + qty) waiting for details on /tires
     for (const [code, count] of Object.entries(unknownQuick)) {
@@ -240,6 +264,45 @@ export default function ReceiveClient() {
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-700 text-white font-bold rounded-xl shadow-xl"
           style={{ padding: '12px 24px', fontSize: '15px', maxWidth: '90vw', textAlign: 'center' }}>
           {toast}
+        </div>
+      )}
+
+      {/* Waiting customers for what was just received */}
+      {waiting.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
+          <div className="bg-white rounded-2xl shadow-2xl" style={{ width: 440, maxWidth: '95vw', maxHeight: '85vh', overflow: 'auto', padding: '22px 24px' }}>
+            <p className="font-black text-slate-800 text-xl mb-1">⏳ יש לקוחות שמחכים לצמיג הזה</p>
+            <p className="text-slate-500 text-sm mb-4">לעדכן אותם שהצמיג הגיע?</p>
+            <div className="flex flex-col gap-3">
+              {waiting.map(w => (
+                <div key={w.id} className="border-2 border-amber-300 bg-amber-50 rounded-xl" style={{ padding: '12px 14px' }}>
+                  <div className="font-bold text-slate-900">{w.customer_name}{w.qty > 1 ? ` · ${w.qty} יח׳` : ''}</div>
+                  <div className="text-sm text-slate-600 mb-2" style={{ direction: 'ltr', textAlign: 'right' }}>{w.item_desc}</div>
+                  <div className="flex gap-2 flex-wrap">
+                    {w.phone && (
+                      <a href={whatsappLink(w.phone, `שלום ${w.customer_name}, הצמיג שהזמנת (${w.item_desc}) הגיע אלינו 🙂`)}
+                        target="_blank" rel="noreferrer"
+                        className="bg-green-600 text-white rounded-lg font-bold" style={{ padding: '8px 12px', fontSize: '14px' }}>
+                        💬 וואטסאפ
+                      </a>
+                    )}
+                    {w.phone && (
+                      <a href={`tel:${w.phone}`} className="bg-slate-700 text-white rounded-lg font-bold" style={{ padding: '8px 12px', fontSize: '14px' }}>
+                        📞 חיוג
+                      </a>
+                    )}
+                    <button onClick={() => markArrived(w)} className="bg-blue-600 text-white rounded-lg font-bold" style={{ padding: '8px 12px', fontSize: '14px' }}>
+                      ✓ סמן &quot;הגיע&quot;
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => { setWaiting([]); refocus() }}
+              className="w-full mt-4 bg-slate-100 text-slate-700 rounded-xl font-bold" style={{ padding: '12px' }}>
+              סגור — אטפל אחר כך
+            </button>
+          </div>
         </div>
       )}
 

@@ -90,8 +90,11 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     } catch {}
   }
 
-  // Realtime subscription for instant updates
+  // Realtime subscription for instant updates. Bursts of events (e.g. one per item
+  // when a price is applied to several tires) are collapsed into one refetch.
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const refetchSoon = () => { clearTimeout(timer); timer = setTimeout(fetchSessions, 400) }
     const ch = supabase
       .channel('office-yard')
       .on('postgres_changes',
@@ -103,13 +106,13 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
             playBell()
             setUnread(c => c + 1)
           }
-          fetchSessions()
+          refetchSoon()
         }
       )
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'yard_sessions' }, fetchSessions)
-      .on('postgres_changes', { event: '*',    schema: 'public', table: 'yard_session_items' }, fetchSessions)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'yard_sessions' }, refetchSoon)
+      .on('postgres_changes', { event: '*',    schema: 'public', table: 'yard_session_items' }, refetchSoon)
       .subscribe()
-    return () => { supabase.removeChannel(ch) }
+    return () => { clearTimeout(timer); supabase.removeChannel(ch) }
   }, []) // eslint-disable-line
 
   // Tab title badge — clears when user switches to pending tab
