@@ -1437,7 +1437,7 @@ export default function SupplierTrackingTab({
                           <button type="button" onClick={() => setScannerForLine(i)} disabled={uploadingLineIdx === i} style={{
                             padding: '5px 10px', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: '6px',
                             fontSize: '11px', fontWeight: 600, cursor: uploadingLineIdx === i ? 'default' : 'pointer', color: 'var(--text)',
-                          }}>📷 סרוק במצלמה</button>
+                          }}>📷 צלם</button>
                           <span className="hide-mobile" style={{ display: 'contents' }}>
                             <button type="button" onClick={() => scanLineWithAgent(i)} disabled={agentScanningIdx !== null || uploadingLineIdx === i} style={{
                               padding: '5px 10px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px',

@@ -5,15 +5,16 @@ import { useRouter } from 'next/navigation'
 import type { YardSession, YardSessionItem, SearchResult, TirePosition } from '@/lib/yard/types'
 import { formatPlate } from '@/lib/yard/types'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
-import TireKeyboard from '@/components/yard/TireKeyboard'
-import { useOnScreenKeyboardPref } from '@/lib/hooks/useOnScreenKeyboardPref'
+import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
+import { tireQueryFromDigits } from '@/lib/tires/size'
 
 type TireResult = SearchResult & { size: string; brand: string }
 
 interface Props { session: YardSession }
 
 // Accepts 165/65/15 → 165/65R15 so users don't need to type R
-function normalizeTireSize(q: string): string {
+function normalizeTireSize(raw: string): string {
+  const q = tireQueryFromDigits(raw)   // phone number pad: "2055516" → "205/55/16"
   const full = q.trim().match(/^(\d+)\/(\d+)\/(\d+)$/)
   if (full) return `${full[1]}/${full[2]}R${full[3]}`
   const partial = q.trim().match(/^(\d+\/\d+)\/$/)
@@ -23,23 +24,14 @@ function normalizeTireSize(q: string): string {
 
 export default function TireSearchClient({ session }: Props) {
   const router       = useRouter()
-  const { enabled: kbEnabled } = useOnScreenKeyboardPref()
   const scanRef      = useRef<HTMLInputElement>(null)
   const [scanMode,   setScanMode]    = useState(false)
   const [barcodeInput, setBarcodeInput] = useState('')
-  const [query,         setQuery]         = useState('')
-  const [results,       setResults]       = useState<TireResult[]>([])
-  const [selected,      setSelected]      = useState<TireResult | null>(null)
-  const [price,         setPrice]         = useState<number | null>(null)
+  const [sheetQuery,    setSheetQuery]    = useState<string | null>(null)   // null = search closed
   const [saving,        setSaving]        = useState(false)
   const selectedRef = useRef<TireResult | null>(null)
   const [detectedSize,  setDetectedSize]  = useState<string | null>(null)
   const [showPicker,    setShowPicker]    = useState(false)
-  const [showKeyboard,  setShowKeyboard]  = useState(true)
-
-  // Global "מקלדת חיצונית" switch (KeyboardModeToggle) closes/reopens this
-  // side-panel keyboard to match, wherever it currently is
-  useEffect(() => { setShowKeyboard(kbEnabled) }, [kbEnabled])
 
   const CACHE_TTL = 5 * 60 * 1000
 
@@ -53,28 +45,21 @@ export default function TireSearchClient({ session }: Props) {
       .catch(() => {})
   }, []) // eslint-disable-line
 
-  const search = useCallback(async (q: string) => {
-    if (!q.trim()) { setResults([]); return }
+  const search = useCallback(async (q: string): Promise<TireResult[]> => {
     const normalized = normalizeTireSize(q)
     const cacheKey = `yard-tires-${normalized}`
     try {
       const raw = sessionStorage.getItem(cacheKey)
       if (raw) {
         const { data, ts } = JSON.parse(raw)
-        if (Date.now() - ts < CACHE_TTL) { setResults(data); setSelected(null) }
+        if (Date.now() - ts < CACHE_TTL) return data
       }
     } catch {}
     const res  = await fetch(`/api/yard/search?q=${encodeURIComponent(normalized)}&type=tire`)
-    const data = await res.json()
-    setResults(data)
-    setSelected(null)
+    const data = res.ok ? await res.json() : []
     try { sessionStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() })) } catch {}
+    return data
   }, []) // eslint-disable-line
-
-  useEffect(() => {
-    const t = setTimeout(() => { search(query) }, 300)
-    return () => clearTimeout(t)
-  }, [query, search])
 
   useEffect(() => {
     if (!scanMode) return
@@ -90,41 +75,27 @@ export default function TireSearchClient({ session }: Props) {
 
   async function handleBarcode(code: string) {
     setScanMode(false)
-    setQuery(code)
     const res = await fetch(`/api/yard/barcode?code=${encodeURIComponent(code)}`)
-    const match = await res.json()
+    const match = res.ok ? await res.json() : null
     if (match?.type === 'tire') {
       selectAndAdd(match as TireResult)
       return
     }
-    await search(code)
+    setSheetQuery(code)
   }
 
-  function confirmSearch() {
-    search(query)
-    setShowKeyboard(false)
-  }
-
+  // Picking a tire goes straight to the position picker, then into the card
   function selectAndAdd(r: TireResult) {
     selectedRef.current = r
-    setSelected(r)
-    setPrice(r.price)
-    setShowKeyboard(false)
-    setShowPicker(true)
-  }
-
-  function addToCart() {
-    if (!selected || saving) return
-    selectedRef.current = selected
     setShowPicker(true)
   }
 
   function submitWithPosition(positions: TirePosition[]) {
-    const item = selectedRef.current ?? selected
+    const item = selectedRef.current
     if (!item) return
     setShowPicker(false)
     setSaving(true)
-    const finalPrice = price ?? item.price
+    const finalPrice = item.price
     const posArr = positions.length > 0 ? positions : [null]
     const now = Date.now()
 
@@ -159,17 +130,22 @@ export default function TireSearchClient({ session }: Props) {
       {showPicker && (
         <TirePositionPicker
           onConfirm={submitWithPosition}
-          onBack={() => { setShowPicker(false); setShowKeyboard(true) }}
+          onBack={() => setShowPicker(false)}
         />
       )}
 
-      {/* Keyboard — left side panel, opens/closes horizontally */}
-      {showKeyboard && !scanMode && (
-        <TireKeyboard
-          side
-          value={query}
-          onChange={v => { setQuery(v) }}
-          onConfirm={confirmSearch}
+      {sheetQuery !== null && (
+        <SearchSheet<TireResult>
+          title="חיפוש צמיג לפי מידה"
+          placeholder="מידה, למשל 2055516 או 205/55/16"
+          inputMode="numeric"
+          initialQuery={sheetQuery}
+          search={search}
+          getKey={r => r.id}
+          renderItem={r => <ResultRow r={r} />}
+          emptyText={() => 'אין צמיג במידה הזו במלאי'}
+          onPick={r => selectAndAdd(r)}
+          onClose={() => setSheetQuery(null)}
         />
       )}
 
@@ -230,24 +206,16 @@ export default function TireSearchClient({ session }: Props) {
               </button>
             </>
           ) : (
-            /* Size input + scan button */
+            /* Size search (opens the full-screen search) + scan button */
             <>
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  inputMode="none"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  onFocus={() => { if (kbEnabled) setShowKeyboard(true) }}
-                  onKeyDown={e => { if (e.key === 'Enter') confirmSearch() }}
-                  placeholder="165/65/15 או 165/65R15"
-                  className="w-full border-2 border-blue-500 rounded-xl text-base font-bold bg-white outline-none"
-                  style={{ padding: '10px 14px', letterSpacing: '1px', direction: 'ltr' }}
-                />
-              </div>
+              <button onClick={() => setSheetQuery('')}
+                className="flex-1 border-2 border-blue-500 rounded-xl bg-white text-right text-slate-400 font-bold flex items-center gap-2"
+                style={{ padding: '12px 14px', fontSize: '16px' }}>
+                🔍 חפש מידת צמיג...
+              </button>
               <button onClick={() => setScanMode(true)}
                 className="rounded-xl flex items-center justify-center flex-shrink-0 bg-slate-800 transition-colors"
-                style={{ width: '44px', height: '44px' }}>
+                style={{ width: '48px', height: '48px' }} aria-label="סורק ברקוד">
                 <svg viewBox="0 0 28 22" width="22" height="17" fill="white">
                   <rect x="0"  y="0" width="2" height="22"/><rect x="4"  y="0" width="1" height="22"/>
                   <rect x="7"  y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/>
@@ -260,58 +228,22 @@ export default function TireSearchClient({ session }: Props) {
         </div>
 
         {/* Detected size suggestion */}
-        {detectedSize && !query && (
+        {detectedSize && (
           <div className="flex-shrink-0" style={{ margin: '8px 14px 0' }}>
             <div className="bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between" style={{ padding: '10px 14px' }}>
               <span className="text-blue-800 text-sm font-semibold">זיהינו מידות מתאימות: <span className="font-black">{detectedSize}</span></span>
-              <button onClick={() => { setQuery(detectedSize); setShowKeyboard(false) }}
+              <button onClick={() => setSheetQuery(detectedSize)}
                 className="bg-blue-600 text-white text-sm font-bold rounded-lg active:scale-95 transition-all"
                 style={{ padding: '5px 12px' }}>חפש</button>
             </div>
           </div>
         )}
 
-        {/* Results */}
-        <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-slate-200" style={{ margin: '10px 14px 0' }}>
-          {results.length === 0 ? (
-            <div className="p-6 text-center text-slate-400">
-              {query ? 'לא נמצאו תוצאות' : 'הקלד מידת צמיג לחיפוש'}
-            </div>
-          ) : (
-            <>
-              {results.map((r, i) => (
-                <div key={r.id} onClick={() => selectAndAdd(r)}
-                  className="flex items-center cursor-pointer transition-colors active:bg-blue-100"
-                  style={{
-                    minHeight: '62px', padding: '10px 16px', borderBottom: '1px solid #e2e8f0',
-                    background: selected?.id === r.id ? '#dbeafe' : i % 2 === 0 ? '#ffffff' : '#f8fafc',
-                  }}>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-slate-800" style={{ fontSize: '15px' }}>{r.name}</div>
-                    <div className="text-slate-400 font-medium flex items-center" style={{ fontSize: '13px', marginTop: '2px', gap: '8px' }}>
-                      {r.stock != null && <span>מלאי: {r.stock} יח׳</span>}
-                      {r.location && <span>📍 {r.location}</span>}
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <div className="font-black text-blue-600" style={{ fontSize: '16px' }}>{r.price.toLocaleString()}₪</div>
-                    <div className="text-xs font-semibold text-green-700 bg-green-50 rounded px-2 py-0.5">הוסף ←</div>
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
+        <div className="text-center text-slate-400" style={{ padding: '24px 16px', fontSize: '14px' }}>
+          לוחצים על החיפוש ומקלידים מידה — בטלפון אפשר רק ספרות (2055516)
         </div>
 
-        {/* Confirm */}
-        <div className="flex-shrink-0" style={{ padding: '10px 14px 14px' }}>
-          <button onClick={addToCart} disabled={!selected || saving}
-            className="w-full bg-green-700 hover:bg-green-800 disabled:opacity-40 text-white rounded-xl text-lg font-bold transition-colors"
-            style={{ padding: '14px' }}>
-            {saving ? '...' : selected ? `הוסף לסל — ${(price ?? selected.price).toLocaleString()}₪` : 'בחר צמיג'}
-          </button>
-        </div>
-
+        {saving && <div className="text-center text-slate-500 font-bold">מוסיף לכרטיס...</div>}
       </div>
     </div>
   )

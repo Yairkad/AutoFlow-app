@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { SearchResult } from '@/app/api/yard/search/route'
 import { whatsappLink } from '@/lib/yard/hub'
+import { tireQueryFromDigits } from '@/lib/tires/size'
+import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
 
 interface WaitingCustomer { id: string; customer_name: string; phone: string | null; item_desc: string; qty: number }
 
@@ -34,8 +36,6 @@ export default function ReceiveClient() {
   const quickMapRef = useRef<Record<string, QuickEntry>>({})
   // Unknown barcode that is really an existing tire (misread / second barcode) → link it
   const [linkCode,    setLinkCode]    = useState<string | null>(null)
-  const [linkQuery,   setLinkQuery]   = useState('')
-  const [linkResults, setLinkResults] = useState<SearchResult[]>([])
   const [linkSaveSku, setLinkSaveSku] = useState(false)
   const quickSkuRef = useRef<Record<string, string>>({})   // item id → barcode to store as its SKU
   const [quickEntries,    setQuickEntries]    = useState<QuickEntry[]>([])
@@ -153,15 +153,8 @@ export default function ReceiveClient() {
     refocus()
   }
 
-  async function searchLink(q: string) {
-    setLinkQuery(q)
-    if (q.trim().length < 2) { setLinkResults([]); return }
-    const res = await fetch(`/api/yard/search?q=${encodeURIComponent(q.trim())}&type=tire`)
-    setLinkResults(res.ok ? await res.json() : [])
-  }
-
   function openLink(code: string) {
-    setLinkCode(code); setLinkQuery(''); setLinkResults([]); setLinkSaveSku(false)
+    setLinkCode(code); setLinkSaveSku(false)
   }
 
   function linkTo(item: SearchResult) {
@@ -233,30 +226,26 @@ export default function ReceiveClient() {
 
       {/* Link an unknown barcode to an existing tire */}
       {linkCode && (
-        <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 60, background: 'rgba(0,0,0,0.6)', padding: 16 }} onClick={() => setLinkCode(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}
-            style={{ width: 440, maxWidth: '95vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: '20px 22px', direction: 'rtl' }}>
-            <p className="font-black text-slate-800 text-lg">🔗 שייך לצמיג קיים</p>
-            <p className="text-slate-500 text-sm mb-3">הכמות שנסרקה עם <span style={{ fontFamily: 'monospace' }}>{linkCode}</span> (+{unknownQuick[linkCode] ?? 0}) תיקלט בצמיג שתבחר</p>
-            <input autoFocus value={linkQuery} onChange={e => searchLink(e.target.value)} placeholder="חיפוש לפי מידה, מותג או מקט..."
-              className="border-2 border-slate-200 rounded-xl" style={{ padding: '10px 14px', fontSize: 16 }} />
-            <label className="flex items-start text-sm text-slate-700" style={{ gap: 6, margin: '10px 0', lineHeight: 1.4 }}>
+        <SearchSheet<SearchResult>
+          title={`🔗 שייך לצמיג קיים — ${linkCode} (+${unknownQuick[linkCode] ?? 0})`}
+          extra={
+            <label className="flex items-start text-sm text-slate-700" style={{ gap: 6, lineHeight: 1.4 }}>
               <input type="checkbox" checked={linkSaveSku} onChange={e => setLinkSaveSku(e.target.checked)} style={{ marginTop: 3 }} />
               <span>שמור את הברקוד הזה כמקט של הצמיג <span className="text-slate-400">(רק אם זה הברקוד האמיתי שלו)</span></span>
             </label>
-            <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 60 }}>
-              {linkQuery.trim().length >= 2 && linkResults.length === 0 && <p className="text-center text-slate-400 text-sm" style={{ padding: 16 }}>לא נמצאו צמיגים</p>}
-              {linkResults.map(r => (
-                <button key={r.id} onClick={() => linkTo(r)} className="flex justify-between items-center border border-slate-200 rounded-xl active:bg-slate-50 text-right"
-                  style={{ padding: '10px 12px', gap: 10 }}>
-                  <span><span className="font-bold text-slate-800">{r.name}</span>{r.sku && <span className="block text-xs text-slate-400" style={{ fontFamily: 'monospace' }}>{r.sku}</span>}</span>
-                  <span className="text-xs text-slate-500" style={{ whiteSpace: 'nowrap' }}>מלאי: {r.stock ?? 0}</span>
-                </button>
-              ))}
-            </div>
-            <button onClick={() => setLinkCode(null)} className="text-slate-500 font-semibold" style={{ marginTop: 12, alignSelf: 'flex-start' }}>ביטול</button>
-          </div>
-        </div>
+          }
+          placeholder="מידה, מותג או מקט..."
+          minChars={2}
+          search={async q => {
+            const res = await fetch(`/api/yard/search?q=${encodeURIComponent(tireQueryFromDigits(q))}&type=tire`)
+            return res.ok ? res.json() : []
+          }}
+          getKey={r => r.id}
+          renderItem={r => <ResultRow r={r} />}
+          emptyText={() => 'לא נמצאו צמיגים'}
+          onPick={r => linkTo(r)}
+          onClose={() => { setLinkCode(null); refocus() }}
+        />
       )}
 
       {/* Toast */}

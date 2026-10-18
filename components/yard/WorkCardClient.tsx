@@ -7,7 +7,6 @@ import type { YardSession, YardSessionItem, YardService, TirePosition } from '@/
 import { sessionTotal, formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
-import { useOnScreenKeyboardPref } from '@/lib/hooks/useOnScreenKeyboardPref'
 import type { SearchResult } from '@/app/api/yard/search/route'
 
 interface Props {
@@ -23,7 +22,6 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const [confirmBusy,  setConfirmBusy]  = useState(false)
   const [editItem,    setEditItem]     = useState<YardSessionItem | null>(null)
   const [priceDigits, setPriceDigits]  = useState('')
-  const { enabled: kbEnabled }         = useOnScreenKeyboardPref()
   const [error,       setError]        = useState<string | null>(null)
   const [sending,      setSending]      = useState(false)
   const [isMobile,      setIsMobile]      = useState(false)
@@ -426,11 +424,6 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   // Price edit
   function openEditItem(item: YardSessionItem) { setEditItem(item); setPriceDigits('') }
 
-  function pressPriceKey(k: string) {
-    if (k === 'del') { setPriceDigits(d => d.slice(0, -1)); return }
-    if (priceDigits.length >= 5) return
-    setPriceDigits(d => d + k)
-  }
 
   function applyDiscount(amount: number) {
     if (!editItem) return
@@ -754,7 +747,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
                 </div>
                 <button onClick={() => setEditItem(null)} className="text-slate-400 hover:text-slate-700 font-bold text-lg">✕</button>
               </div>
-              {/* Real input behind the numpad so a physical keyboard can type the price too */}
+              {/* Typed with the device's number keyboard (or a physical keyboard) */}
               <div className="flex items-center justify-center font-black text-blue-600" dir="ltr" style={{ padding: '14px 20px 8px', fontSize: '36px' }}>
                 <input
                   autoFocus
@@ -765,7 +758,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
                     if (e.key === 'Enter') { e.preventDefault(); confirmPrice() }
                     if (e.key === 'Escape') setEditItem(null)
                   }}
-                  inputMode={kbEnabled ? 'none' : 'numeric'}
+                  inputMode="numeric"
                   aria-label="מחיר חדש"
                   className="text-center font-black text-blue-600 bg-transparent outline-none placeholder:text-blue-600"
                   style={{ width: `${Math.max(String(displayPrice).length, 1) + 1}ch`, fontSize: '36px' }}
@@ -781,22 +774,10 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
                   </button>
                 ))}
               </div>
-              {/* mousedown preventDefault keeps focus in the price input, so mixing taps and typing works */}
-              <div className="grid grid-cols-3" dir="ltr" style={{ gap: '8px', padding: '0 20px 16px' }} onMouseDown={e => e.preventDefault()}>
-                {['1','2','3','4','5','6','7','8','9'].map(k => (
-                  <button key={k} onClick={() => pressPriceKey(k)}
-                    className="bg-slate-100 rounded-xl font-bold text-slate-800 active:bg-slate-200"
-                    style={{ fontSize: '22px', padding: '12px' }}>{k}</button>
-                ))}
-                <button onClick={confirmPrice}
-                  className="bg-blue-600 rounded-xl font-bold text-white active:bg-blue-700"
-                  style={{ fontSize: '16px', padding: '12px' }}>✓ אישור</button>
-                <button onClick={() => pressPriceKey('0')}
-                  className="bg-slate-100 rounded-xl font-bold text-slate-800 active:bg-slate-200"
-                  style={{ fontSize: '22px', padding: '12px' }}>0</button>
-                <button onClick={() => pressPriceKey('del')}
-                  className="bg-slate-100 rounded-xl font-bold text-red-500 active:bg-slate-200"
-                  style={{ fontSize: '20px', padding: '12px' }}>⌫</button>
+              <div style={{ padding: '0 20px 16px' }}>
+                <button onMouseDown={e => e.preventDefault()} onClick={confirmPrice}
+                  className="w-full bg-blue-600 rounded-xl font-bold text-white active:bg-blue-700"
+                  style={{ fontSize: '18px', padding: '14px' }}>✓ אישור</button>
               </div>
             </div>
           </div>
