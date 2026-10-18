@@ -2363,3 +2363,15 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-10-18 13:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-18 13:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:46 | Created ../../../root/.claude/plans/reactive-giggling-petal.md | — | ~514 |
+| 15:00 | Fix yard phone drawer hidden by global aside CSS; phone top bar menu; link colours inline | components/yard/YardShell.tsx, ReceiveClient.tsx | playwright ok 390/820/1280, build ok | ~8k |

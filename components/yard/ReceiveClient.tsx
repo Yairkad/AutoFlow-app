@@ -282,12 +282,12 @@ export default function ReceiveClient() {
                     {w.phone && (
                       <a href={whatsappLink(w.phone, `שלום ${w.customer_name}, הצמיג שהזמנת (${w.item_desc}) הגיע אלינו 🙂`)}
                         target="_blank" rel="noreferrer"
-                        className="bg-green-600 text-white rounded-lg font-bold" style={{ padding: '8px 12px', fontSize: '14px' }}>
+                        className="bg-green-600 text-white rounded-lg font-bold" style={{ padding: '8px 12px', fontSize: '14px', color: '#fff' }}>
                         💬 וואטסאפ
                       </a>
                     )}
                     {w.phone && (
-                      <a href={`tel:${w.phone}`} className="bg-slate-700 text-white rounded-lg font-bold" style={{ padding: '8px 12px', fontSize: '14px' }}>
+                      <a href={`tel:${w.phone}`} className="bg-slate-700 text-white rounded-lg font-bold" style={{ padding: '8px 12px', fontSize: '14px', color: '#fff' }}>
                         📞 חיוג
                       </a>
                     )}

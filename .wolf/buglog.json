@@ -1023,5 +1023,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-18T12:00:00Z"
+  },
+  {
+    "id": "bug-052",
+    "timestamp": "2026-10-18T15:00:00Z",
+    "error_message": "בטלפון לחיצה על תפריט המסוף מחשיכה את המסך אבל התפריט לא נראה",
+    "file": "components/yard/YardShell.tsx",
+    "root_cause": "globals.css @media(max-width:900px) applies `aside { width:240px !important; transform: translateX(240px) }` to EVERY <aside> (meant for the main app sidebar). The yard drawer and rail were <aside>, so the drawer slid off-screen leaving only the backdrop. Also global unlayered `a { color: inherit }` beats Tailwind text-* classes on links.",
+    "fix": "Rail/drawer are <div>s; phone top bar with big ☰ + current section; drawer rows 270px; link colours set inline. Verified with Playwright at 390/820/1280.",
+    "tags": [
+      "yard",
+      "mobile",
+      "css",
+      "aside",
+      "tailwind-layers"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-18T15:00:00Z"
   }
 ]
