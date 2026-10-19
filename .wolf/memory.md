@@ -2485,3 +2485,14 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:40 | Car sale contract in-app: inline-edit editor, history (Documents tab + car view), my-details quick-fill (seller/buyer), default clauses, 1-page print | lib/cars/saleContract.ts, components/cars/CarContract*.tsx, CarsClient, DocumentsClient, migration 094 | tsc/eslint/build ok, playwright screenshots ok | ~60k |
 | 11:20 | Car contract: mixed payment (multiple cash/transfer lines + checks), sum check, split remainder to checks, legacy normalize | lib/cars/saleContract.ts, CarContractEditor.tsx | tsc/eslint ok, screenshots + 1-page PDF ok | ~25k |
 | 13:00 | Merged claude/cool-albattani-lkxivv (car sale contracts, migration 094); renumbered mine to 095_yard_pin_login + 096_storage_map_zone_count | migrations | merge ok | ~5k |
+## Session: 2026-10-13 11:37
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:40 | Merged PR #37 after user ran migrations 086-089 | - | merged f2b9519 | ~1k |
+
+## Session: 2026-10-13 11:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:10 | Cars: auto test sync from data.gov.il, doc name chips on cards + Drive scan button, docs upload in new-car form, photos|docs 2-col layout (migration 090) | CarsClient.tsx, api/public/plate/test-status, 090 | tsc clean | ~30k |

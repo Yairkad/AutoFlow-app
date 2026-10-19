@@ -66,6 +66,8 @@ interface Car {
   test_fee_paid_date: string | null
   test_passed: boolean
   test_passed_date: string | null
+  gov_last_test_date: string | null
+  doc_names: string[]
   license_deposited: boolean
   license_deposit_date: string | null
   deposit_refund_requested: boolean
@@ -218,6 +220,39 @@ function dateChipStyle(dateStr: string | null): { bg: string; color: string; lab
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+/** Document name as shown on the card: drop the "<plate> - " prefix and the extension. */
+function docLabel(fileName: string, plate: string) {
+  const noExt = fileName.replace(/\.[a-z0-9]{2,5}$/i, '')
+  return plate && noExt.startsWith(`${plate} - `) ? noExt.slice(plate.length + 3) : noExt
+}
+function sameList(a: string[], b: string[]) {
+  return a.length === b.length && [...a].sort().join('\u0000') === [...b].sort().join('\u0000')
+}
+function addDaysISO(iso: string, days: number) {
+  const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10)
+}
+
+/**
+ * Changes to apply from the Ministry of Transport registry: tokef = license valid until,
+ * lastTest = last track test. A later tokef means the renewal completed (fee + test) →
+ * this cycle's checkboxes reset. A track test within 120 days of the current tokef (or after
+ * it) counts as "passed this cycle". The registry has no fee-paid field — that stays manual.
+ */
+function govTestPatch(c: Car, g: { tokef: string | null; lastTest: string | null }): Partial<Car> {
+  const p: Partial<Car> = {}
+  if (g.lastTest && g.lastTest !== c.gov_last_test_date) p.gov_last_test_date = g.lastTest
+  if (g.tokef && g.tokef !== c.test_date) {
+    p.test_date = g.tokef
+    if (c.test_date && g.tokef > c.test_date) {
+      Object.assign(p, { test_fee_paid: false, test_fee_paid_date: null, test_passed: false, test_passed_date: null })
+    }
+  }
+  const tokef = g.tokef ?? c.test_date
+  const passedThisCycle = !!(g.lastTest && tokef && g.lastTest >= addDaysISO(tokef, -120))
+  if (passedThisCycle && !(p.test_passed ?? c.test_passed)) { p.test_passed = true; p.test_passed_date = g.lastTest }
+  return p
+}
+
 export default function CarsClient() {
   const sb          = useRef(createClient()).current
   const { profile } = useProfile()
@@ -249,6 +284,9 @@ export default function CarsClient() {
   const [carDrivePlate,    setCarDrivePlate]    = useState('')
   const [pendingDoc,       setPendingDoc]       = useState<File | null>(null)
   const [docName,          setDocName]          = useState('')
+  const [photoLink,        setPhotoLink]        = useState('')
+  const [docScan,          setDocScan]          = useState<{ done: number; total: number } | null>(null)
+  const govSynced = useRef(false)
 
   // Car detail view + list filters
   const [viewCarId,  setViewCarId]  = useState<string | null>(null)
@@ -314,6 +352,7 @@ export default function CarsClient() {
       deposit_refund_requested: !!x.deposit_refund_requested,
       test_fee_paid: !!x.test_fee_paid,
       test_passed:   !!x.test_passed,
+      doc_names:     Array.isArray(x.doc_names) ? x.doc_names : [],
     })))
     setRequests(r || [])
     setSaleRequests(sr || [])
@@ -474,15 +513,17 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
         deposit_refund_requested:      !!car.deposit_refund_requested,
         deposit_refund_requested_date: car.deposit_refund_requested_date || '',
       })
-      setPhotoUrls(car.photos.length ? [...car.photos] : [''])
+      setPhotoUrls([...car.photos])
       if (driveConnected) loadCarDriveFiles(car.plate || '')
       else { setCarDriveFiles([]); setCarDriveFolderId(null) }
     } else {
       setEditCarId(null)
       setCarForm({ ...emptyCarForm })
-      setPhotoUrls([''])
+      setPhotoUrls([])
       setCarDriveFiles([])
       setCarDriveFolderId(null)
+      setCarDrivePlate('')
+      setPendingDoc(null)
     }
     setCarModal(true)
   }
@@ -618,6 +659,102 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
     }
   }
 
+  // ── Ministry of Transport test sync (once per page load) ──────────
+
+  async function syncGovTests(list: Car[]) {
+    const targets = list.filter(c => c.plate && !c.license_deposited && c.status !== 'sold' && c.status !== 'declined')
+    if (!targets.length) return
+    let gov: Record<string, { tokef: string | null; lastTest: string | null }>
+    try {
+      const res = await fetch('/api/public/plate/test-status', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plates: targets.map(c => c.plate) }),
+      })
+      if (!res.ok) return
+      gov = await res.json()
+    } catch { return }
+    const updates = targets
+      .map(c => ({ id: c.id, patch: gov[c.plate!.replace(/[-\s]/g, '')] ? govTestPatch(c, gov[c.plate!.replace(/[-\s]/g, '')]) : {} }))
+      .filter(u => Object.keys(u.patch).length)
+    if (!updates.length) return
+    const results = await Promise.all(updates.map(u => sb.from('cars').update(u.patch).eq('id', u.id)))
+    const ok = updates.filter((_, i) => !results[i].error)
+    results.forEach(r => { if (r.error) console.error('gov test sync update failed', r.error) })
+    if (!ok.length) return
+    setCars(cs => cs.map(c => { const u = ok.find(x => x.id === c.id); return u ? { ...c, ...u.patch } : c }))
+    const renewed = ok.filter(u => 'test_date' in u.patch).length
+    toast(`🚦 עודכנו נתוני טסט ממשרד התחבורה ל-${ok.length} רכבים${renewed ? ` (${renewed} עם תוקף חדש)` : ''}`, 'success')
+  }
+
+  useEffect(() => {
+    if (loading || govSynced.current) return
+    govSynced.current = true
+    syncGovTests(cars)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading])
+
+  // ── Document names on the card ────────────────────────────────────
+
+  // Whenever a car's Drive folder is listed (detail view / edit form) or changed, keep cars.doc_names in sync.
+  useEffect(() => {
+    if (carDriveLoading || !carDriveFolderId) return
+    const id = viewCarId ?? editCarId
+    const car = id ? cars.find(c => c.id === id) : null
+    if (!car || car.plate !== carDrivePlate) return
+    const names = carDriveFiles.map(f => docLabel(f.name, carDrivePlate))
+    if (sameList(names, car.doc_names)) return
+    sb.from('cars').update({ doc_names: names }).eq('id', car.id).then(({ error }) => {
+      if (error) { console.error('doc_names update failed', error); return }
+      setCars(cs => cs.map(c => c.id === car.id ? { ...c, doc_names: names } : c))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carDriveFiles, carDriveLoading, carDriveFolderId])
+
+  // New car / changed plate in the form: open that plate's Drive folder so documents can be added right away.
+  useEffect(() => {
+    if (!carModal || !isAdmin || !driveConnected) return
+    const plate = carForm.plate.trim()
+    if (plate.replace(/\D/g, '').length < 7 || plate === carDrivePlate) return
+    const t = setTimeout(() => loadCarDriveFiles(plate), 700)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carModal, carForm.plate, isAdmin, driveConnected])
+
+  // One-off: read every car's Drive folder and record its document names.
+  async function scanAllDocs() {
+    const list = cars.filter(c => c.plate)
+    if (!list.length) return
+    setDocScan({ done: 0, total: list.length })
+    let changed = 0, failed = 0, i = 0
+    const worker = async () => {
+      while (i < list.length) {
+        const c = list[i++]
+        try {
+          const res  = await fetch(`/api/drive/files?tenant_id=${tenantId.current}&sub_folder=${encodeURIComponent('רכבים')}&item_name=${encodeURIComponent(c.plate!)}`)
+          const data = await res.json()
+          if (data.error) throw new Error(data.error)
+          const names = ((data.files || []) as { name: string }[]).map(f => docLabel(f.name, c.plate!))
+          if (!sameList(names, c.doc_names)) {
+            const { error } = await sb.from('cars').update({ doc_names: names }).eq('id', c.id)
+            if (error) throw error
+            setCars(cs => cs.map(x => x.id === c.id ? { ...x, doc_names: names } : x))
+            changed++
+          }
+        } catch { failed++ }
+        setDocScan(d => d && { ...d, done: d.done + 1 })
+      }
+    }
+    await Promise.all([worker(), worker(), worker(), worker()])
+    setDocScan(null)
+    toast(`סריקה הסתיימה — ${changed} רכבים עודכנו${failed ? `, ${failed} נכשלו` : ''}`, failed ? 'error' : 'success')
+  }
+
+  async function addPhotos(files: File[]) {
+    const base = photoUrls.length
+    setPhotoUrls(p => [...p, ...files.map(() => '')])
+    for (let k = 0; k < files.length; k++) await uploadPhoto(base + k, files[k])
+  }
+
   async function saveCar() {
     const errors: Partial<Record<keyof typeof emptyCarForm, boolean>> = {}
     if (!carForm.make.trim() && !carForm.plate.trim()) {
@@ -651,6 +788,9 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       fuel_type:  carForm.fuel_type  || null,
       seats:      carForm.seats      ? Number(carForm.seats) : null,
       photos,
+      // Documents uploaded from this form (also before the car existed) — keep the card's list in sync.
+      ...(carDriveFolderId && carDrivePlate && carDrivePlate === carForm.plate
+        ? { doc_names: carDriveFiles.map(f => docLabel(f.name, carDrivePlate)) } : {}),
       notes:            carForm.notes            || null,
       reserved_for:     carForm.status === 'reserved' ? (carForm.reserved_for || null) : null,
       current_location: carForm.current_location || null,
@@ -988,6 +1128,11 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             <button key={f.v} onClick={() => setFlagFilter(f.v)} style={chip(flagFilter === f.v)}>{f.l}</button>
           ))}
         </div>
+        {isAdmin && driveConnected && (
+          <button onClick={scanAllDocs} disabled={!!docScan} style={{ ...chip(false), marginInlineStart: 'auto', cursor: docScan ? 'wait' : 'pointer' }}>
+            {docScan ? `⏳ סורק מסמכים ${docScan.done}/${docScan.total}` : '📂 סרוק מסמכים מ-Drive'}
+          </button>
+        )}
       </div>
     )
   }
@@ -1173,6 +1318,14 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             {!car.license_deposited && insur && <span style={{ ...tag, background: insur.bg, color: insur.color }}>🛡️ {insur.label}</span>}
             {car.interested_buyers.length > 0 && <span style={{ ...tag, background: '#fef9c3', color: '#92400e' }}>👥 {car.interested_buyers.length}</span>}
           </div>
+          {car.doc_names.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+              {car.doc_names.slice(0, 4).map((n, i) => (
+                <span key={i} title={n} style={{ ...tag, fontWeight: 600, background: '#eef2ff', color: '#3730a3', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>📄 {n}</span>
+              ))}
+              {car.doc_names.length > 4 && <span style={{ ...tag, background: '#eef2ff', color: '#3730a3' }}>+{car.doc_names.length - 4}</span>}
+            </div>
+          )}
         </div>
       </div>
     )
@@ -1571,6 +1724,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             ['אגרת טסט', c.license_deposited ? null : c.test_fee_paid
               ? <span style={{ color: '#166534' }}>✅ שולמה{c.test_fee_paid_date ? ` (${c.test_fee_paid_date})` : ''}</span>
               : <span style={{ color: '#dc2626' }}>❌ לא שולמה</span>],
+            ['מבחן אחרון (משרד התחבורה)', c.gov_last_test_date],
             ['מבחן במסלול', c.license_deposited ? null : c.test_passed
               ? <span style={{ color: '#166534' }}>✅ עבר{c.test_passed_date ? ` (${c.test_passed_date})` : ''}</span>
               : <span style={{ color: '#dc2626' }}>❌ לא עבר</span>],
@@ -1803,53 +1957,49 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           </Section>
 
           {/* Photos */}
-          <Section title="📷 תמונות (Google Drive)">
-            {isAdmin && !driveConnected && (
-              <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span>⚠️ Drive לא מחובר</span>
-                <a href={`/api/drive/auth?tenant_id=${tenantId.current}`} style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'none' }}>חבר עכשיו →</a>
-              </div>
-            )}
-            {photoUrls.map((url, i) => (
-              <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
-                <input
-                  value={url}
-                  onChange={e => setPhotoUrls(p => p.map((u,j) => j===i ? e.target.value : u))}
-                  placeholder="https://drive.google.com/file/d/..."
-                  style={{ ...inp(), flex: 1, direction: 'ltr', fontSize: 12 }}
-                />
-                {url && driveThumb(url) && (
-                  <img src={driveThumb(url)} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }} />
-                )}
-                {/* Upload button — admins + Drive connected */}
+          {isAdmin && !driveConnected && (
+            <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span>⚠️ Drive לא מחובר — אי אפשר להעלות תמונות ומסמכים</span>
+              <a href={`/api/drive/auth?tenant_id=${tenantId.current}`} style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'none' }}>חבר עכשיו →</a>
+            </div>
+          )}
+
+          {/* Photos | Documents — side by side, stacked on narrow screens */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 12, alignItems: 'start' }}>
+            <Section title="📷 תמונות">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {photoUrls.map((url, i) => url ? (
+                  <div key={i} style={{ position: 'relative', width: 64, height: 64 }}>
+                    <img src={driveThumb(url)} alt="" onClick={() => setLightbox({ photos: photoUrls.filter(Boolean), idx: photoUrls.filter(Boolean).indexOf(url) })}
+                      style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', cursor: 'pointer', background: '#fff' }} />
+                    <button onClick={() => setPhotoUrls(p => p.filter((_, j) => j !== i))} aria-label="הסר תמונה" style={{
+                      position: 'absolute', top: -6, left: -6, width: 20, height: 20, borderRadius: 10, border: 'none',
+                      background: 'var(--danger)', color: '#fff', fontSize: 11, cursor: 'pointer', lineHeight: '20px', padding: 0,
+                    }}>✕</button>
+                  </div>
+                ) : uploadingIdx === i ? (
+                  <div key={i} style={{ width: 64, height: 64, borderRadius: 8, border: '1px dashed var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>⏳</div>
+                ) : null)}
                 {isAdmin && driveConnected && (
-                  <label style={{ cursor: 'pointer', flexShrink: 0 }} title="העלה תמונה">
-                    <input
-                      type="file" accept="image/*,application/pdf" style={{ display: 'none' }}
-                      onChange={e => { const f = e.target.files?.[0]; if (f) uploadPhoto(i, f); e.target.value = '' }}
-                    />
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      width: 32, height: 32, borderRadius: 7, border: '1px solid var(--border)',
-                      background: uploadingIdx === i ? '#f0fdf6' : '#f8fafc',
-                      fontSize: 15, cursor: 'pointer',
-                    }}>
-                      {uploadingIdx === i ? '⏳' : '📤'}
-                    </span>
+                  <label title="העלה תמונות" style={{ width: 64, height: 64, borderRadius: 8, border: '1.5px dashed var(--primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: '#fff', color: 'var(--primary)', fontSize: 11, fontWeight: 700 }}>
+                    <input type="file" accept="image/*" multiple style={{ display: 'none' }}
+                      onChange={e => { const fs = Array.from(e.target.files || []); if (fs.length) addPhotos(fs); e.target.value = '' }} />
+                    <span style={{ fontSize: 20, lineHeight: 1 }}>+</span>הוסף
                   </label>
                 )}
-                <button onClick={() => setPhotoUrls(p => p.filter((_,j) => j!==i))} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: 16 }}>✕</button>
               </div>
-            ))}
-            <button onClick={() => setPhotoUrls(p => [...p, ''])} style={{ fontSize: 12, padding: '5px 14px', border: '1.5px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
-              + הוסף תמונה
-            </button>
-          </Section>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input value={photoLink} onChange={e => setPhotoLink(e.target.value)} placeholder="או הדבק קישור Drive לתמונה"
+                  style={{ ...inp(), flex: 1, direction: 'ltr', fontSize: 12, padding: '5px 8px' }} />
+                <button disabled={!photoLink.trim()} onClick={() => { setPhotoUrls(p => [...p, photoLink.trim()]); setPhotoLink('') }}
+                  style={{ fontSize: 12, padding: '5px 10px', border: '1.5px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>הוסף</button>
+              </div>
+            </Section>
 
-          {/* Car Drive Files */}
-          {isAdmin && driveConnected && editCarId && (
-            <Section title="📁 מסמכי רכב ב-Drive">{renderCarDocs()}</Section>
-          )}
+            {isAdmin && driveConnected && (
+              <Section title="📁 מסמכים">{renderCarDocs()}</Section>
+            )}
+          </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
