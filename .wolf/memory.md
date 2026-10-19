@@ -2422,3 +2422,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 10:13 | Created supabase/migrations/094_car_sale_contracts.sql | — | ~671 |
+| 10:14 | Created lib/cars/saleContract.ts | — | ~3682 |
+| 10:17 | Created components/cars/CarContractEditor.tsx | — | ~7962 |
+| 10:17 | Created components/cars/CarContractsPanel.tsx | — | ~2023 |
+| 10:40 | Car sale contract in-app: inline-edit editor, history (Documents tab + car view), my-details quick-fill (seller/buyer), default clauses, 1-page print | lib/cars/saleContract.ts, components/cars/CarContract*.tsx, CarsClient, DocumentsClient, migration 094 | tsc/eslint/build ok, playwright screenshots ok | ~60k |

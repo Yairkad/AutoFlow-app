@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T15:57:19.932Z
-> Files: 73 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-19T10:17:35.507Z
+> Files: 77 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -396,6 +396,8 @@
 
 ## components/cars/
 
+- `CarContractEditor.tsx` — Full-screen car sale contract editor, edited inline on the document (fields, clauses add/move/delete, checks table + split). "הפרטים שלי" quick-fill into seller OR buyer; default clause wording; print via contractHtml (~8000 tok)
+- `CarContractsPanel.tsx` — Contract history list (Documents tab 'חוזי מכירת רכב', or per car via carId + onOpen): search, open, duplicate, delete (~2100 tok)
 - `CarsClient.tsx` — Cars tab: compact card grid (5/row desktop, 2 mobile) → click opens detail modal (all fields + actions + Drive docs). Docs saved to Drive רכבים/<plate>/ named "<plate> - <doc name>". Filters: search, בהפקדה (license_deposited), ללא טסט, expiring ≤30d (~22000 tok)
 
 ## components/checks/
@@ -515,6 +517,10 @@
 
 - `parseStatementFile.ts` — Exports AmountMode, AmountSign, ColumnMapping, ParsedLine + 4 more (~1756 tok)
 
+## lib/cars/
+
+- `saleContract.ts` — Car sale contract data model, DEFAULT_CLAUSES, newContract, numberToHebrewWords/priceToWords, contractHtml (one A4 page; >5 checks → two tables) (~3900 tok)
+
 ## lib/contexts/
 
 
@@ -584,6 +590,7 @@
 - `088_cars_hand_ownership.sql` — cars.hand smallint + original_ownership + car_code text (~80 tok)
 - `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
 - `093_yard_worker_hub.sql` — ════════════════════════════════════════════ (~1248 tok)
+- `094_car_sale_contracts.sql` — ════════════════════════════════════════════ (~671 tok)
 
 ## tests/
 
