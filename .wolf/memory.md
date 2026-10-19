@@ -2514,3 +2514,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 14:15 | User asked for Hebrew; repeated merge question in Hebrew (reply in Hebrew always) | - | awaiting answer | ~1k |
+| 13:30 | Rebuilt closed PR #11 on current main: scan result shows buy/sell price; tire edit has width/profile/rim | components/scan/ScanClient.tsx | tsc ok, lint unchanged (3 pre-existing) | ~10k |
