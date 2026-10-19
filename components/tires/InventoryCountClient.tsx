@@ -101,6 +101,7 @@ export default function InventoryCountClient() {
         sb.from('tire_inventory_count_sessions')
           .select('id, counted_at, notes, is_first')
           .eq('tenant_id', tid)
+          .is('zone', null)          // full counts only — zone counts cover part of the stock
           .order('counted_at', { ascending: false })
           .limit(1),
       ])

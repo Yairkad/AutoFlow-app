@@ -2455,3 +2455,13 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 09:21 | Created components/yard/YardLogin.tsx | — | ~1416 |
 | 09:22 | Edited components/yard/YardDashboard.tsx | CSS: refetch | ~54 |
 | 10:00 | Yard PIN login: migration 094, yard-session/yard-pin libs, /api/yard-auth/*, /api/employees/yard-pin, YardLogin + switch button + 30min idle logout, employees modal PIN+sections, proxy 401 guard for /api/yard/*, removed big tire-lookup button | many | tsc ok, build ok, playwright login screen ok | ~60k |
+| 09:33 | Created lib/stock/storage.ts | — | ~1559 |
+| 09:33 | Created supabase/migrations/095_storage_map_zone_count.sql | — | ~296 |
+| 09:34 | Created lib/stock/zoneCount.ts | — | ~1709 |
+| 09:34 | Created components/stock/StorageMap.tsx | — | ~1390 |
+| 09:35 | Created components/stock/LocationBadge.tsx | — | ~944 |
+| 09:37 | Created components/stock/ZoneCountPanel.tsx | — | ~6881 |
+| 09:37 | Created components/stock/StorageMapEditor.tsx | — | ~1814 |
+| 09:38 | Created components/stock/StorageClient.tsx | — | ~3122 |
+| 09:45 | Created components/stock/PlacementSheet.tsx | — | ~1232 |
+| 11:30 | Zone count + storage map: migration 095, lib/stock/*, components/stock/*, /tires/storage, /yard/count, location ⓘ badge (yard search/lookup, tires table), receive placement suggestion | many | tsc ok, build ok, playwright flows ok (mocked API) | ~90k |

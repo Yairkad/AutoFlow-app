@@ -4,7 +4,7 @@
 
 export type YardKey =
   | 'yard_terminal' | 'yard_receive' | 'yard_lookup'
-  | 'yard_loans' | 'yard_requests' | 'yard_reports'
+  | 'yard_loans' | 'yard_requests' | 'yard_reports' | 'yard_count'
 
 export interface YardSection { key: YardKey; href: string; icon: string; label: string }
 
@@ -12,6 +12,7 @@ export const YARD_SECTIONS: YardSection[] = [
   { key: 'yard_terminal', href: '/yard',             icon: '🔧', label: 'מסוף רחבה' },
   { key: 'yard_receive',  href: '/yard/receive',     icon: '📦', label: 'קליטת מלאי' },
   { key: 'yard_lookup',   href: '/yard/tire-lookup', icon: '🔍', label: 'מחיר / מלאי' },
+  { key: 'yard_count',    href: '/yard/count',       icon: '🔢', label: 'ספירת מלאי' },
   { key: 'yard_loans',    href: '/yard/loans',       icon: '🔁', label: 'השאלות' },
   { key: 'yard_requests', href: '/yard/requests',    icon: '⏳', label: 'לקוחות ממתינים' },
   { key: 'yard_reports',  href: '/yard/reports',     icon: '📊', label: 'דוחות מהירים' },

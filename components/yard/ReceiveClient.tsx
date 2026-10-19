@@ -6,6 +6,7 @@ import type { SearchResult } from '@/app/api/yard/search/route'
 import { whatsappLink } from '@/lib/yard/hub'
 import { tireSizeSearchParams } from '@/lib/tires/size'
 import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
+import PlacementSheet, { type Placement } from '@/components/stock/PlacementSheet'
 
 interface WaitingCustomer { id: string; customer_name: string; phone: string | null; item_desc: string; qty: number }
 
@@ -47,6 +48,8 @@ export default function ReceiveClient() {
   const [toast, setToast] = useState<string | null>(null)
   // Customers waiting for a tire that was just received
   const [waiting, setWaiting] = useState<WaitingCustomer[]>([])
+  // Tire just received → suggest a shelf, saved once the worker confirms where it went
+  const [place, setPlace] = useState<Placement | null>(null)
 
   function addWaiting(list: WaitingCustomer[] | undefined) {
     if (!list?.length) return
@@ -108,9 +111,10 @@ export default function ReceiveClient() {
       body: JSON.stringify({ type: found.type, id: found.id, qty_add: qty }),
     })
     if (res.ok) {
-      const { qty: newQty, waiting: w } = await res.json()
+      const { qty: newQty, waiting: w, suggest } = await res.json()
       showToast(`✓ ${found.name} — מלאי עודכן ל-${newQty}`)
       addWaiting(w)
+      if (found.type === 'tire') setPlace({ id: found.id, name: found.name, suggest: suggest ?? null })
       setFound(null); setStage('scan')
     } else { showToast('שגיאה — נסה שוב'); setStage('found') }
   }
@@ -131,7 +135,12 @@ export default function ReceiveClient() {
     })
     if (res.ok) {
       showToast(`✓ נוצר ונוסף למלאי (${qty} יח׳)`); setStage('scan')
-      addWaiting((await res.json()).waiting)
+      const created = await res.json()
+      addWaiting(created.waiting)
+      if (isNewTire && created.id) {
+        const size = created.width && created.profile && created.rim ? `${created.width}/${created.profile}R${created.rim}` : ''
+        setPlace({ id: created.id, name: [created.brand, size].filter(Boolean).join(' ') || lastCode, suggest: created.suggest ?? null })
+      }
     }
     else { showToast('שגיאה — נסה שוב'); setStage('notfound') }
   }
@@ -258,8 +267,10 @@ export default function ReceiveClient() {
         </div>
       )}
 
-      {/* Waiting customers for what was just received */}
-      {waiting.length > 0 && (
+      {place && <PlacementSheet p={place} onDone={msg => { setPlace(null); if (msg) showToast(msg); refocus() }} />}
+
+      {/* Waiting customers for what was just received (after the placement question) */}
+      {!place && waiting.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
           <div className="bg-white rounded-2xl shadow-2xl" style={{ width: 440, maxWidth: '95vw', maxHeight: '85vh', overflow: 'auto', padding: '22px 24px' }}>
             <p className="font-black text-slate-800 text-xl mb-1">⏳ יש לקוחות שמחכים לצמיג הזה</p>

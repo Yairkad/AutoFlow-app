@@ -14,6 +14,7 @@ import ExcelMenu from '@/components/ui/ExcelMenu'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import TirePickerModal from '@/components/tires/TirePickerModal'
 import { tireSizeText, hasTireSize, isTireMissingDetails, isTireMissingPrice, parseTireSize } from '@/lib/tires/size'
+import LocationBadge from '@/components/stock/LocationBadge'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -710,6 +711,9 @@ export default function TiresClient() {
               <a href="/tires/inventory-count" style={{ textDecoration: 'none' }}>
                 <Button variant="outline" style={{ fontSize: '13px' }}>📦 ספירת מלאי</Button>
               </a>
+              <a href="/tires/storage" style={{ textDecoration: 'none' }}>
+                <Button variant="outline" style={{ fontSize: '13px' }}>🗄 ארונות וספירה לפי אזור</Button>
+              </a>
               <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
             </div>
           )}
@@ -897,7 +901,7 @@ export default function TiresClient() {
                         <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: '12px', minWidth: isEditing ? '100px' : undefined }}>
                           {isEditing
                             ? <input style={cellInp} value={String(e.location ?? '')} onChange={ev => setCell(t.id, 'location', ev.target.value)} />
-                            : t.location || '—'}
+                            : t.location ? <LocationBadge location={t.location} size={12} /> : '—'}
                         </td>
 
                         {/* הערות */}

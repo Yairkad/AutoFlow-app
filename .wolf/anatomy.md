@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-19T09:22:29.148Z
-> Files: 78 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-19T09:45:17.053Z
+> Files: 87 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -192,6 +192,9 @@
 ## app/api/employees/invite/
 
 
+## app/api/employees/yard-pin/
+
+
 ## app/api/guide/public-link/
 
 - `route.ts` — GET/POST guide_public_token (same pattern as inspection-intake public-link) (~450 tok)
@@ -222,6 +225,9 @@
 
 
 ## app/api/store/
+
+
+## app/api/yard-auth/
 
 
 ## app/api/yard/barcode/
@@ -468,6 +474,15 @@
 
 - `GuideEditor.tsx` — Settings → דף נחיתה → מדריך צמיגים: QR/print, edit texts (HE, optional EN), images (compressed data URL) + credit, add/move/delete sections, reset (~4200 tok)
 
+## components/stock/
+
+- `LocationBadge.tsx` — fetchLayout (~944 tok)
+- `PlacementSheet.tsx` — PlacementSheet (~1232 tok)
+- `StorageClient.tsx` — StorageClient (~3122 tok)
+- `StorageMap.tsx` — CAB_W (~1390 tok)
+- `StorageMapEditor.tsx` — inp (~1814 tok)
+- `ZoneCountPanel.tsx` — DRAFT_KEY (~6881 tok)
+
 ## components/suppliers/
 
 - `SupplierDetailsTab.tsx` — "פרטים" tab: flat supplier record CRUD (name/contact/etc), no expand state (~9300 tok)
@@ -502,6 +517,9 @@
 - `YardLogin.tsx` — Shown as a switch-employee overlay (with a cancel button) instead of the full login screen (~1416 tok)
 - `YardShell.tsx` — YardShell (~1321 tok)
 
+## components/yard/YardLogin.tsx
+
+
 ## docs/
 
 - `public-guide-content.md` — תוכן הדף הציבורי — "מדריך הצמיגים והגלגלים" (~2044 tok)
@@ -514,6 +532,9 @@
 - `yard-pin.ts` — Yard login PIN: 4–8 digits. (~264 tok)
 - `yard-session.ts` — Hard cap; the terminal also returns to the picker after YARD_IDLE_MS without use. (~717 tok)
 - `yard-token.ts` — Employee signed in on the terminal with name + PIN, or null. (~876 tok)
+
+## lib/auth/ (yard login)
+
 
 ## lib/bank-sync/
 
@@ -554,6 +575,11 @@
 ## lib/scannerAgent.ts
 
 
+## lib/stock/
+
+- `storage.ts` — "a3, B2 / c10" → ['A3', 'B2', 'C10'] (unique, in order). Free text that isn't a shelf is ignored. (~1559 tok)
+- `zoneCount.ts` — For a tire that was recorded outside the counted shelves: it moved here, or it's in both places. (~1709 tok)
+
 ## lib/supabase/
 
 
@@ -589,6 +615,7 @@
 - `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
 - `093_yard_worker_hub.sql` — ════════════════════════════════════════════ (~1248 tok)
 - `094_yard_pin_login.sql` — ════════════════════════════════════════════ (~293 tok)
+- `095_storage_map_zone_count.sql` — ════════════════════════════════════════════ (~296 tok)
 
 ## tests/
 
@@ -603,18 +630,24 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
 
-## app/api/yard-auth/
-- `employees/route.ts` — GET public: names of active employees with a yard PIN (terminal login picker)
-- `login/route.ts` — POST {employeeId,pin} → signed yard_emp cookie; 5 wrong → 60s lock
-- `logout/route.ts` — POST clears yard_emp cookie
+## lib/stock/
+- `storage.ts` — cabinets map types, DEFAULT_LAYOUT, parseLocation/formatLocation ("a3, b2" → A3, B2), zoneOf/isSplit (contiguous rows), lastCountByCabinet, countFreshness
+- `zoneCount.ts` — zone count logic: expandScope (split tires pull their other shelves in), buildReview (per-tire decisions), toSave
+- `server.ts` — loadLayout (storage_maps or default), suggestLocation (existing shelf / most used shelf for same size)
 
-## app/api/employees/yard-pin/
-- `route.ts` — admin: GET ids with PIN; POST set/remove PIN (scrypt hash in yard_pins)
+## components/stock/
+- `StorageMap.tsx` — draws cabinets (shelf 1 on top), select/highlight shelves, cabinet tint
+- `StorageMapEditor.tsx` — admin editor: rows, position arrows, contiguous flag, cabinets (letter + shelves)
+- `StorageClient.tsx` — office /tires/storage: map w/ last-count colours, zone count, fix unrecognised locations
+- `ZoneCountPanel.tsx` — count by zone (yard + office): pick on map → scan per shelf → review → save; draft in localStorage
+- `LocationBadge.tsx` — "📍 B3 ⓘ" opens map with shelf marked (portal); fetchLayout cache
+- `PlacementSheet.tsx` — after receiving a tire: suggested shelf, confirm / pick other
 
-## lib/auth/ (yard login)
-- `yard-session.ts` — HMAC-signed yard_emp cookie (Web Crypto; used by proxy.ts too), YARD_IDLE_MS
-- `yard-pin.ts` — scrypt hash/check PIN, PIN_RE, lockout constants
-- `yard-token.ts` — getYardEmployee (PIN cookie) / getYardUser (PIN first, else office session) / requireYard
+## app/api/yard/ (stock)
+- `storage-map/route.ts` — GET map + last count per cabinet; PUT (office admin) save map
+- `zone-count/route.ts` — GET map + tires; POST apply zone count (session zone + counted_by_name)
+- `tire-location/route.ts` — PATCH confirm where a received tire was put
 
-## components/yard/YardLogin.tsx
-- terminal login + switch-employee overlay: pick name → PIN
+## pages
+- `app/(app)/tires/storage/page.tsx` — StorageClient
+- `app/yard/count/page.tsx` — ZoneCountPanel variant yard
