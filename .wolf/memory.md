@@ -2508,3 +2508,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 14:10 | User saw old main deployed (button still there, email login); PR #51 not merged yet — asked whether to merge | - | awaiting answer | ~2k |
+
+## Session: 2026-10-19 11:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:15 | User asked for Hebrew; repeated merge question in Hebrew (reply in Hebrew always) | - | awaiting answer | ~1k |
