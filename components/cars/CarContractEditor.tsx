@@ -13,9 +13,9 @@ import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import {
-  type ContractData, type ContractParty, type ContractClause, type MyDetails, type PaymentMethod,
-  DEFAULT_CLAUSES, newContract, cloneClauses, visibleClauses, itemLetter, priceToWords,
-  parseAmount, fmtAmount, contractHtml,
+  type ContractData, type ContractParty, type ContractClause, type MyDetails, type PayLine,
+  DEFAULT_CLAUSES, newContract, normalizeContract, cloneClauses, visibleClauses, itemLetter, priceToWords,
+  parseAmount, fmtAmount, contractHtml, newId, payLinesTotal, checksTotal,
 } from '@/lib/cars/saleContract'
 
 export interface ContractPrefill {
@@ -110,7 +110,7 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
         if (cancelled) return
         if (error || !row) { showToast('שגיאה בטעינת החוזה', 'error'); onClose(); return }
         setId(row.id); setLinkedCar(row.car_id); setStatus(row.status)
-        setD({ ...newContract(), ...(row.data as ContractData) })
+        setD(normalizeContract({ ...newContract(), ...(row.data as ContractData) }))
       } else {
         setId(null); setLinkedCar(carId ?? null); setStatus('draft')
         setD(newContract({ myDetails: mine, clauses, ...prefill }))
@@ -196,8 +196,9 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
 
   function splitChecks() {
     if (!d) return
-    const total = parseAmount(d.price)
-    if (!total) { showToast('יש למלא סכום כולל קודם', 'error'); return }
+    // checks cover what's left after the cash / transfer lines
+    const total = parseAmount(d.price) - payLinesTotal(d)
+    if (total <= 0) { showToast(parseAmount(d.price) ? 'אין יתרה לחלוקה לשיקים' : 'יש למלא סכום כולל קודם', 'error'); return }
     const n = d.checks.length
     const base = Math.floor(total / n)
     const first = d.checks[0]?.date ? new Date(d.checks[0].date) : new Date()
@@ -327,9 +328,15 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
     )
   }
 
+  const paidParts = d ? payLinesTotal(d) + checksTotal(d) : 0
+  const priceNum  = d ? parseAmount(d.price) : 0
+  const addLine = (kind: PayLine['kind']) => patch(x => ({ ...x, payLines: [...x.payLines, { id: newId(), kind, amount: '', date: '', note: '' }] }))
+  const setLine = (lid: string, k: 'amount' | 'date' | 'note', v: string) =>
+    patch(x => ({ ...x, payLines: x.payLines.map(l => l.id === lid ? { ...l, [k]: v } : l) }))
+
   const paymentBlock = d && (
     <div className="csc-clause" key="payment">
-      <div className="csc-clause-h"><span className="csc-num">3.</span><b style={{ fontSize: 15 }}>התמורה ואופן התשלום</b></div>
+      <div className="csc-clause-h"><span className="csc-num">3.</span><b style={{ fontSize: 14 }}>התמורה ואופן התשלום</b></div>
       <p className="csc-p">
         תמורת הרכב ישלם הקונה למוכר סך כולל של <F value={d.price} onChange={setPrice} placeholder="סכום" min={9} bold /> ש&quot;ח
         {' '}(במילים: <F value={d.priceWords} onChange={v => patch(x => ({ ...x, priceWords: v, priceWordsManual: true }))} placeholder="הסכום במילים" min={28} /> שקלים חדשים)
@@ -337,14 +344,42 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
           <button type="button" style={iconBtn} title="חשב מחדש מהסכום" onClick={() => patch(x => ({ ...x, priceWords: priceToWords(x.price), priceWordsManual: false }))}>↻</button>
         )}
       </p>
-      <div className="csc-seg">
-        {([['checks', 'שיקים'], ['cash', 'מזומן'], ['transfer', 'העברה בנקאית']] as [PaymentMethod, string][]).map(([k, l]) => (
-          <button key={k} type="button" className={d.payment === k ? 'on' : ''} onClick={() => patch(x => ({ ...x, payment: k }))}>{l}</button>
-        ))}
+
+      <div className="csc-paybar">
+        <span style={{ fontSize: 12.5, color: '#475569' }}>אמצעי תשלום:</span>
+        <button type="button" className="csc-chip" onClick={() => addLine('cash')}>+ מזומן</button>
+        <button type="button" className="csc-chip" onClick={() => addLine('transfer')}>+ העברה</button>
+        <button type="button" className={`csc-chip${d.checksOn ? ' on' : ''}`} onClick={() => patch(x => ({ ...x, checksOn: !x.checksOn }))}>
+          {d.checksOn ? '✓ ' : '+ '}שיקים
+        </button>
+        {(d.payLines.length > 0 || d.checksOn) && priceNum > 0 && (
+          <span className={`csc-sum${Math.abs(paidParts - priceNum) < 0.01 ? ' ok' : ''}`}>
+            סה״כ חלקים: {fmtAmount(paidParts)} מתוך {fmtAmount(priceNum)} ₪
+            {Math.abs(paidParts - priceNum) >= 0.01 && ` (${paidParts < priceNum ? 'חסר' : 'עודף'} ${fmtAmount(Math.abs(priceNum - paidParts))})`}
+          </span>
+        )}
       </div>
-      {d.payment === 'checks' ? (
-        <div className="csc-p">
-          <div style={{ marginBottom: 6 }}>התשלום יבוצע באמצעות {d.checks.length} {d.checks.length === 1 ? 'שיק' : 'שיקים'} מעותדים המשוכים מחשבונו של הקונה, כדלקמן:</div>
+
+      {d.payLines.length === 0 && !d.checksOn && <div className="csc-p" style={{ color: '#94a3b8' }}>בחר אמצעי תשלום אחד או יותר</div>}
+
+      {d.payLines.map(l => (
+        <div key={l.id} className="csc-payline">
+          <span className="csc-paykind">{l.kind === 'cash' ? '💵 מזומן' : '🏦 העברה'}</span>
+          סך <F value={l.amount} onChange={v => setLine(l.id, 'amount', v)} placeholder="סכום" min={8} bold /> ש&quot;ח
+          {l.kind === 'transfer' ? ' עד ' : ' בתאריך '}<F value={l.date} onChange={v => setLine(l.id, 'date', v)} type="date" />
+          {!l.date && <span className="csc-hint-s">(ריק = במעמד החתימה)</span>}
+          <F value={l.note} onChange={v => setLine(l.id, 'note', v)} placeholder={l.kind === 'cash' ? 'הערה (מקדמה, במסירה...)' : 'אסמכתא / בנק / חשבון'} min={18} />
+          <button type="button" style={{ ...iconBtn, color: 'var(--danger)' }} aria-label="הסר תשלום"
+            onClick={() => patch(x => ({ ...x, payLines: x.payLines.filter(y => y.id !== l.id) }))}>✕</button>
+        </div>
+      ))}
+
+      {d.checksOn && (
+        <div className="csc-payline" style={{ display: 'block' }}>
+          <div style={{ marginBottom: 4 }}>
+            <span className="csc-paykind">🧾 שיקים</span>
+            {checksTotal(d) > 0 && <>סך <b>{fmtAmount(checksTotal(d))}</b> ש&quot;ח </>}ב-{d.checks.length} {d.checks.length === 1 ? 'שיק' : 'שיקים'} מעותדים המשוכים מחשבונו של הקונה, כדלקמן:
+          </div>
           <div style={{ overflowX: 'auto' }}>
             <table className="csc-checks">
               <thead><tr><th>#</th><th>מס&apos; שיק</th><th>סכום (ש&quot;ח)</th><th>תאריך פירעון</th><th /></tr></thead>
@@ -365,17 +400,11 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
               </tbody>
             </table>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
             <button type="button" className="csc-add" onClick={() => patch(x => ({ ...x, checks: [...x.checks, { num: '', amount: '', date: '' }] }))}>+ הוסף שיק</button>
-            <button type="button" className="csc-add" onClick={splitChecks} title="מחלק את הסכום הכולל שווה בשווה, שיק בכל חודש מתאריך השיק הראשון">⚖️ חלק סכום שווה + תאריכים חודשיים</button>
+            <button type="button" className="csc-add" onClick={splitChecks} title="מחלק את היתרה (סכום כולל פחות מזומן והעברות) שווה בשווה, שיק בכל חודש מתאריך השיק הראשון">⚖️ חלק את היתרה שווה + תאריכים חודשיים</button>
           </div>
-          <div style={{ fontSize: 12, color: '#475569', marginTop: 6 }}>הקונה ימציא למוכר בעת החתימה צילום תעודת זהות וצילום השיקים.</div>
-        </div>
-      ) : (
-        <div className="csc-p">
-          <b>אמצעי תשלום: {d.payment === 'cash' ? 'תשלום במזומן במעמד החתימה' : 'העברה בנקאית לחשבון המוכר'}</b>
-          <AutoText value={d.paymentDetails} onChange={v => patch(x => ({ ...x, paymentDetails: v }))}
-            placeholder={d.payment === 'cash' ? 'הערות, מועד מסירת הכסף וכו׳ (אופציונלי)' : 'מספר אסמכתא, בנק, סניף וחשבון (אופציונלי)'} />
+          <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>הקונה ימציא למוכר בעת החתימה צילום תעודת זהות וצילום השיקים.</div>
         </div>
       )}
     </div>
@@ -492,9 +521,13 @@ const CSS = `
 .csc-item { display: flex; align-items: flex-start; gap: 4px; padding-right: 12px; }
 .csc-letter { padding-top: 2px; color: #334155; min-width: 16px; }
 .csc-add { font: inherit; font-size: 12px; color: var(--primary); background: none; border: 1px dashed #c7d2fe; border-radius: 8px; padding: 3px 10px; cursor: pointer; margin: 4px 16px 0 0; }
-.csc-seg { display: inline-flex; gap: 4px; padding: 3px; background: #f1f5f9; border-radius: 10px; margin: 4px 0; }
-.csc-seg button { font: inherit; font-size: 13px; border: none; background: transparent; padding: 5px 14px; border-radius: 8px; cursor: pointer; color: #64748b; }
-.csc-seg button.on { background: #fff; color: #0f172a; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+.csc-chip.on { background: var(--primary); color: #fff; }
+.csc-paybar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 4px 0; }
+.csc-sum { font-size: 12px; font-weight: 700; color: #b91c1c; background: #fef2f2; padding: 2px 10px; border-radius: 10px; }
+.csc-sum.ok { color: #166534; background: #dcfce7; }
+.csc-payline { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; padding: 4px 8px; margin: 3px 12px 0 0; border-right: 3px solid #e2e8f0; }
+.csc-paykind { font-weight: 700; font-size: 12.5px; margin-left: 4px; white-space: nowrap; }
+.csc-hint-s { font-size: 11px; color: #94a3b8; }
 .csc-checks { border-collapse: collapse; font-size: 13px; }
 .csc-checks th, .csc-checks td { border: 1px solid #e2e8f0; padding: 3px 6px; text-align: center; }
 .csc-checks th { background: #f8fafc; font-weight: 700; }

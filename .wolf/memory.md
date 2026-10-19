@@ -2427,3 +2427,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:17 | Created components/cars/CarContractEditor.tsx | — | ~7962 |
 | 10:17 | Created components/cars/CarContractsPanel.tsx | — | ~2023 |
 | 10:40 | Car sale contract in-app: inline-edit editor, history (Documents tab + car view), my-details quick-fill (seller/buyer), default clauses, 1-page print | lib/cars/saleContract.ts, components/cars/CarContract*.tsx, CarsClient, DocumentsClient, migration 094 | tsc/eslint/build ok, playwright screenshots ok | ~60k |
+| 11:20 | Car contract: mixed payment (multiple cash/transfer lines + checks), sum check, split remainder to checks, legacy normalize | lib/cars/saleContract.ts, CarContractEditor.tsx | tsc/eslint ok, screenshots + 1-page PDF ok | ~25k |

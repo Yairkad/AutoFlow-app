@@ -14,7 +14,17 @@ export interface ContractCheck {
   date: string   // yyyy-mm-dd
 }
 
+// legacy single-method field (contracts saved before mixed payments)
 export type PaymentMethod = 'checks' | 'cash' | 'transfer'
+
+// One cash / bank-transfer installment; checks have their own table
+export interface PayLine {
+  id: string
+  kind: 'cash' | 'transfer'
+  amount: string
+  date: string   // yyyy-mm-dd, empty = at signing
+  note: string
+}
 
 // kind 'checks' = shown only when paying by checks
 export interface ContractClause {
@@ -35,9 +45,12 @@ export interface ContractData {
   priceWords: string
   // true once the user typed the words himself — stop auto-filling from the price
   priceWordsManual?: boolean
-  payment: PaymentMethod
+  // mixed payment: any number of cash/transfer lines + optional checks
+  payLines: PayLine[]
+  checksOn: boolean
   checks: ContractCheck[]
-  paymentDetails: string
+  payment?: PaymentMethod
+  paymentDetails?: string
   clauses: ContractClause[]
 }
 
@@ -119,16 +132,33 @@ export function newContract(opts: {
     car: { plate: '', model: '', year: '', vin: '', ...car },
     price: price ?? '',
     priceWords: price ? priceToWords(price) : '',
-    payment: 'checks',
+    payLines: [],
+    checksOn: true,
     checks: [{ num: '', amount: '', date: '' }],
-    paymentDetails: '',
     clauses: cloneClauses(clauses?.length ? clauses : DEFAULT_CLAUSES),
   }
 }
 
-// Clauses that actually appear for the chosen payment method (numbering follows this list)
+// Contracts saved with the old single payment method → mixed-payment shape
+export function normalizeContract(d: ContractData): ContractData {
+  if (Array.isArray(d.payLines)) return d
+  const legacy = d.payment ?? 'checks'
+  return {
+    ...d,
+    checksOn: legacy === 'checks',
+    payLines: legacy === 'checks' ? [] : [{ id: newId(), kind: legacy, amount: d.price, date: '', note: d.paymentDetails ?? '' }],
+    checks: d.checks?.length ? d.checks : [{ num: '', amount: '', date: '' }],
+  }
+}
+
+export const newId = () => Math.random().toString(36).slice(2, 10)
+
+export const payLinesTotal = (d: ContractData) => d.payLines.reduce((s, l) => s + parseAmount(l.amount), 0)
+export const checksTotal   = (d: ContractData) => d.checksOn ? d.checks.reduce((s, c) => s + parseAmount(c.amount), 0) : 0
+
+// Clauses that actually appear for the chosen payment methods (numbering follows this list)
 export function visibleClauses(d: ContractData) {
-  return d.clauses.filter(c => c.kind !== 'checks' || d.payment === 'checks')
+  return d.clauses.filter(c => c.kind !== 'checks' || d.checksOn)
 }
 
 const HEB_LETTERS = 'אבגדהוזחטיכלמנסעפצקרשת'
@@ -192,18 +222,27 @@ export function priceToWords(price: string): string {
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const val = (s: string, blank = '______________') => s.trim() ? esc(s) : `<span class="blank">${blank}</span>`
 
-// More than 5 checks → two side-by-side tables so the contract stays on one page
+// More than 3 checks → two side-by-side tables so the contract stays on one page
 function checkTables(checks: ContractCheck[]) {
   const row = (c: ContractCheck, i: number) =>
     `<tr><td>${i + 1}</td><td>${val(c.num, '________')}</td><td>${val(c.amount, '________')}</td><td>${c.date ? fmtDate(c.date) : '<span class="blank">___/___/____</span>'}</td></tr>`
   const table = (list: ContractCheck[], offset: number) =>
     `<table class="checks"><thead><tr><th>#</th><th>מס' שיק</th><th>סכום (ש"ח)</th><th>תאריך פירעון</th></tr></thead><tbody>${list.map((c, i) => row(c, i + offset)).join('')}</tbody></table>`
-  if (checks.length <= 5) return table(checks, 0)
+  if (checks.length <= 3) return table(checks, 0)
   const half = Math.ceil(checks.length / 2)
   return table(checks.slice(0, half), 0) + table(checks.slice(half), half)
 }
 
-export function contractHtml(d: ContractData): string {
+export function payLineText(l: PayLine, html = true): string {
+  const amount = l.amount.trim() ? (html ? `<b>${esc(l.amount)}</b>` : l.amount) : '________'
+  const note = l.note.trim() ? ` – ${html ? esc(l.note) : l.note}` : ''
+  return l.kind === 'cash'
+    ? `סך ${amount} ש"ח במזומן${l.date ? ` בתאריך ${fmtDate(l.date)}` : ' במעמד החתימה'}${note}`
+    : `סך ${amount} ש"ח בהעברה בנקאית לחשבון המוכר${l.date ? ` עד לתאריך ${fmtDate(l.date)}` : ' במעמד החתימה'}${note}`
+}
+
+export function contractHtml(raw: ContractData): string {
+  const d = normalizeContract(raw)
   const party = (label: string, p: ContractParty) => `
     <div class="party">
       <div class="party-h">${label}</div>
@@ -215,15 +254,16 @@ export function contractHtml(d: ContractData): string {
       </div>
     </div>`
 
-  let payment: string
-  if (d.payment === 'checks') {
-    payment = `<p style="margin:3px 0">התשלום יבוצע באמצעות ${d.checks.length} ${d.checks.length === 1 ? 'שיק' : 'שיקים'} מעותדים המשוכים מחשבונו של הקונה, כדלקמן:</p>
+  const parts = d.payLines.map(l => `<li>${payLineText(l)}</li>`)
+  if (d.checksOn) {
+    const sum = checksTotal(d)
+    parts.push(`<li>${sum ? `סך <b>${fmtAmount(sum)}</b> ש"ח ` : ''}ב-${d.checks.length} ${d.checks.length === 1 ? 'שיק' : 'שיקים'} מעותדים המשוכים מחשבונו של הקונה, כדלקמן:
       <div class="checks-wrap">${checkTables(d.checks)}</div>
-      <p class="small">הקונה ימציא למוכר בעת החתימה צילום תעודת זהות וצילום השיקים.</p>`
-  } else {
-    const title = d.payment === 'cash' ? 'תשלום במזומן במעמד החתימה' : 'העברה בנקאית לחשבון המוכר'
-    payment = `<div class="box"><b>אמצעי תשלום: ${title}</b>${d.paymentDetails.trim() ? `<p>${esc(d.paymentDetails).replace(/\n/g, '<br>')}</p>` : ''}</div>`
+      <span class="small">הקונה ימציא למוכר בעת החתימה צילום תעודת זהות וצילום השיקים.</span></li>`)
   }
+  const payment = parts.length
+    ? `<p style="margin:3px 0">התמורה תשולם כדלקמן:</p><ul class="pay">${parts.join('')}</ul>`
+    : `<p style="margin:3px 0">אופן התשלום: <span class="blank">______________________</span></p>`
 
   const clauses = visibleClauses(d)
   // the payment clause is always #3, right after the first two
@@ -255,6 +295,7 @@ export function contractHtml(d: ContractData): string {
   .center { text-align: center; font-weight: 700; text-decoration: underline; margin: 8px 0 4px; }
   h4 { margin: 5px 0 0; font-size: 13px; }
   .it { margin: 1px 12px 1px 0; }
+  .pay { margin: 2px 0; padding-right: 18px; } .pay li { margin: 1px 0; }
   .checks-wrap { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0; }
   .checks { border-collapse: collapse; flex: 1; font-size: 11.5px; }
   .checks th, .checks td { border: 1px solid #999; padding: 1px 5px; text-align: center; }

@@ -5,6 +5,7 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+- [2026-10-19] Car contract payments are mixed: any number of cash / transfer lines (amount, date, note) + optional checks table; checks split covers the remainder. Old contracts (data.payment single method) go through normalizeContract().
 - [2026-10-19] Car sale contract: user wants editing directly on the document (no side form), compact spacing / no redundant fields, "הפרטים שלי" saved once and quick-filled into seller OR buyer by choice (not auto-filled — dealer is sometimes the buyer). Print must fit one A4 page.
 - [2026-10-18] Tire size input = three boxes like a date field (width 3 / profile 2 / rim 2) with auto-advance, search by fields (width/profile/rim params), not as free text. Occupied wheel position → ask each time (replace / keep both / cancel).
 - [2026-10-18] Yard terminal: NO built-in on-screen keyboards anymore (removed HebrewNumKeyboard/TireKeyboard/KeyboardModeToggle/useOnScreenKeyboardPref) — device keyboard only. Every search opens components/yard/SearchSheet.tsx (search box at the very top, results down to the keyboard, ✕ ביטול + clear, Android back closes it). Picking in a work card adds qty 1 directly (tires still ask position). Tire sizes on a phone number pad: tireQueryFromDigits ("2055516"). Camera scanning hidden in the yard (CameraScanner kept). Supplier tab button renamed "📷 צלם". inputMode="none" stays only on hidden external-scanner inputs.
