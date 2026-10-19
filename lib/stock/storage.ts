@@ -16,17 +16,18 @@ export interface StorageRow {
 
 export interface StorageLayout { rows: StorageRow[] }
 
-// First guess from the user's description — edited on /tires/storage to match the real room
+// From the user's sketch of the room: cabinets along the two side walls (exact count on the long
+// wall unsure). Edited on /tires/storage to match reality.
 export const DEFAULT_LAYOUT: StorageLayout = {
   rows: [
-    { id: 'r1', name: 'קיר ראשי', x: 0, y: 0, dir: 'h', contiguous: true,
-      cabinets: ['A', 'B', 'C', 'D', 'E', 'F'].map(code => ({ code, shelves: 5 })) },
-    { id: 'r2', name: 'נמוכים', x: 0, y: 1, dir: 'h', contiguous: false,
-      cabinets: ['G', 'H'].map(code => ({ code, shelves: 3 })) },
-    { id: 'r3', name: 'מקבילים', x: 3, y: 1, dir: 'h', contiguous: true,
-      cabinets: ['I', 'J'].map(code => ({ code, shelves: 5 })) },
-    { id: 'r4', name: 'נפרד', x: 6, y: 1, dir: 'h', contiguous: false,
-      cabinets: [{ code: 'K', shelves: 5 }] },
+    { id: 'r1', name: 'קיר ימין — ארוך', x: 0, y: 0, dir: 'v', contiguous: true,
+      cabinets: ['A', 'B', 'C', 'D', 'E', 'F', 'G'].map(code => ({ code, shelves: 5 })) },
+    { id: 'r2', name: 'נמוכים', x: 0, y: 1, dir: 'v', contiguous: false,
+      cabinets: ['H', 'I'].map(code => ({ code, shelves: 3 })) },
+    { id: 'r3', name: 'קיר שמאל', x: 3, y: 0, dir: 'v', contiguous: true,
+      cabinets: ['K', 'J'].map(code => ({ code, shelves: 5 })) },
+    { id: 'r4', name: 'נפרד', x: 3, y: 1, dir: 'v', contiguous: false,
+      cabinets: [{ code: 'L', shelves: 5 }] },
   ],
 }
 
