@@ -575,8 +575,10 @@ const CSS = `
 .csc-status { font-size: 11.5px; font-weight: 700; padding: 2px 10px; border-radius: 10px; background: #f1f5f9; color: #475569; }
 .csc-status.signed { background: #dcfce7; color: #166534; }
 .csc-scroll { flex: 1; overflow-y: auto; padding: 12px 8px 40px; }
-.csc-paper { max-width: 820px; margin: 0 auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 14px rgba(0,0,0,.08); padding: 24px 32px; font-size: 13.5px; line-height: 1.55; color: #0f172a; }
-@media (max-width: 640px) { .csc-paper { padding: 14px 10px; } .csc-grid { grid-template-columns: 1fr !important; } .csc-car { grid-template-columns: 1fr 1fr !important; } .csc-car > div:first-child { grid-column: 1 / -1; border-left: none; border-bottom: 1px solid #e2e8f0; } }
+/* fixed A4 sheet with the print margins (16mm/17mm) and font, so the editor looks like the printout */
+.csc-paper { width: 210mm; min-height: 297mm; box-sizing: border-box; margin: 0 auto; background: #fff; box-shadow: 0 2px 14px rgba(0,0,0,.12); padding: 16mm 17mm 18mm; font-size: 14px; line-height: 1.6; color: #0f172a; }
+@media (max-width: 840px) { .csc-paper { width: 100%; min-height: 0; padding: 18px 14px; border-radius: 8px; } }
+@media (max-width: 640px) { .csc-grid { grid-template-columns: 1fr !important; } .csc-car { grid-template-columns: 1fr 1fr !important; } .csc-car > div:first-child { grid-column: 1 / -1; border-left: none; border-bottom: 1px solid #e2e8f0; } }
 .csc-f { font: inherit; color: inherit; background: #f8fafc; border: none; border-bottom: 1.5px dashed #94a3b8; border-radius: 3px 3px 0 0; padding: 0 4px; outline: none; min-width: 0; }
 .csc-f:focus { background: #eef2ff; border-bottom: 1.5px solid var(--primary); }
 .csc-f::placeholder { color: #94a3b8; font-weight: 400; }
@@ -584,7 +586,7 @@ const CSS = `
 .csc-t:hover { background: #f8fafc; border-color: #e2e8f0; }
 .csc-t:focus { background: #eef2ff; border-color: var(--primary); }
 .csc-title { text-align: center; padding-bottom: 8px; border-bottom: 2px solid #0f172a; margin-bottom: 10px; }
-.csc-title-in { font-size: 20px; font-weight: 800; text-align: center; width: 100%; background: transparent; border-bottom-color: transparent; }
+.csc-title-in { font-size: 21px; font-weight: 800; text-align: center; width: 100%; background: transparent; border-bottom-color: transparent; }
 .csc-title-in:hover { border-bottom-color: #cbd5e1; }
 .csc-sub { color: #475569; margin-top: 2px; }
 .csc-party { border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; margin-bottom: 6px; }
@@ -601,7 +603,7 @@ const CSS = `
 .csc-p { margin: 2px 0; }
 .csc-center { text-align: center; font-weight: 800; text-decoration: underline; text-underline-offset: 4px; margin: 10px 0 2px; }
 .csc-clause { margin-top: 8px; }
-.csc-clause-h { display: flex; align-items: flex-start; gap: 6px; font-size: 14px; }
+.csc-clause-h { display: flex; align-items: flex-start; gap: 6px; font-size: 14.5px; }
 .csc-num { font-weight: 800; padding-top: 2px; }
 .csc-hint { font-size: 11px; color: #b45309; background: #fef3c7; padding: 1px 8px; border-radius: 8px; }
 .csc-item { display: flex; align-items: flex-start; gap: 4px; padding-right: 12px; }

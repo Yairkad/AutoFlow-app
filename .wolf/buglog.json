@@ -1145,5 +1145,38 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-19T10:40:00Z"
+  },
+  {
+    "id": "bug-059",
+    "timestamp": "2026-10-19T12:20:00Z",
+    "error_message": "Menu opened from ⋮ goes off-screen to the left and can't be seen",
+    "file": "components/ui/RowActionsMenu.tsx",
+    "root_cause": "align='end' anchors the menu's right edge to the button; a ⋮ at the far left of an RTL toolbar pushes the menu past the viewport",
+    "fix": "useLayoutEffect measures the rendered menu and nudges it inside the viewport (left/right 8px, flips above when it overflows the bottom)",
+    "tags": [
+      "menu",
+      "rtl",
+      "viewport",
+      "RowActionsMenu"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19T12:20:00Z"
+  },
+  {
+    "id": "bug-060",
+    "timestamp": "2026-10-19T12:20:00Z",
+    "error_message": "Contract print: only the signatures spill onto a second page",
+    "file": "lib/cars/saleContract.ts",
+    "root_cause": "Signatures had break-inside:avoid on their own, so when space ran out they moved alone",
+    "fix": "Last clause + 'ולראיה' + signatures wrapped in one .end block (break-inside: avoid); clauses are unbreakable blocks; page numbers added",
+    "tags": [
+      "print",
+      "contract",
+      "pagination"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19T12:20:00Z"
   }
 ]

@@ -234,15 +234,10 @@ export function priceToWords(price: string): string {
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const val = (s: string, blank = '______________') => s.trim() ? esc(s) : `<span class="blank">${blank}</span>`
 
-// More than 3 checks → two side-by-side tables so the contract stays on one page
-function checkTables(checks: ContractCheck[]) {
+function checkTable(checks: ContractCheck[]) {
   const row = (c: ContractCheck, i: number) =>
     `<tr><td>${i + 1}</td><td>${val(c.num, '________')}</td><td>${val(c.amount, '________')}</td><td>${c.date ? fmtDate(c.date) : '<span class="blank">___/___/____</span>'}</td></tr>`
-  const table = (list: ContractCheck[], offset: number) =>
-    `<table class="checks"><thead><tr><th>#</th><th>מס' שיק</th><th>סכום (ש"ח)</th><th>תאריך פירעון</th></tr></thead><tbody>${list.map((c, i) => row(c, i + offset)).join('')}</tbody></table>`
-  if (checks.length <= 3) return table(checks, 0)
-  const half = Math.ceil(checks.length / 2)
-  return table(checks.slice(0, half), 0) + table(checks.slice(half), half)
+  return `<table class="checks"><thead><tr><th>#</th><th>מס' שיק</th><th>סכום (ש"ח)</th><th>תאריך פירעון</th></tr></thead><tbody>${checks.map(row).join('')}</tbody></table>`
 }
 
 export function payLineText(l: PayLine, html = true): string {
@@ -270,7 +265,7 @@ export function contractHtml(raw: ContractData): string {
   if (d.checksOn) {
     const sum = checksTotal(d)
     parts.push(`<li>${sum ? `סך <b>${fmtAmount(sum)}</b> ש"ח ` : ''}ב-${d.checks.length} ${d.checks.length === 1 ? 'שיק' : 'שיקים'} מעותדים המשוכים מחשבונו של הקונה, כדלקמן:
-      <div class="checks-wrap">${checkTables(d.checks)}</div>
+      ${checkTable(d.checks)}
       <span class="small">הקונה ימציא למוכר בעת החתימה צילום תעודת זהות וצילום השיקים.</span></li>`)
   }
   const payment = parts.length
@@ -286,37 +281,45 @@ export function contractHtml(raw: ContractData): string {
       <div class="it">${payment}</div>` },
     ...clauses.slice(2).map(c => ({ c, html: '' })),
   ]
-  const clausesHtml = numbered.map(({ c, html }, i) => c
-    ? `<h4>${i + 1}. ${esc(c.title)}</h4>${c.items.filter(t => t.trim()).map((t, j) => `<p class="it">${itemLetter(j)}. ${esc(t)}</p>`).join('')}`
-    : html).join('')
+  const blocks = numbered.map(({ c, html }, i) => c
+    ? `<div class="clause"><h4>${i + 1}. ${esc(c.title)}</h4>${c.items.filter(t => t.trim()).map((t, j) => `<p class="it">${itemLetter(j)}. ${esc(t)}</p>`).join('')}</div>`
+    : `<div class="clause pay-clause">${html}</div>`)
+  const last = blocks.pop() ?? ''
+  const clausesHtml = blocks.join('')
 
   return `<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8"><title>${esc(d.title)}${d.car.plate ? ' - ' + esc(d.car.plate) : ''}</title>
 <style>
-  @page { size: A4; margin: 9mm 12mm; }
-  body { font-family: Arial, 'Heebo', sans-serif; color: #111; font-size: 12px; line-height: 1.38; margin: 0; }
-  h1 { text-align: center; font-size: 19px; margin: 0 0 2px; }
-  .sub { text-align: center; color: #444; padding-bottom: 6px; border-bottom: 2px solid #111; margin-bottom: 8px; }
-  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
-  .party { border: 1px solid #bbb; border-radius: 6px; padding: 3px 8px; }
-  .party-h { font-weight: 700; border-bottom: 1px solid #ddd; margin-bottom: 2px; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 10px; }
+  @page {
+    size: A4; margin: 16mm 17mm 18mm;
+    @bottom-center { content: "עמוד " counter(page) " מתוך " counter(pages); font-family: Arial, sans-serif; font-size: 10px; color: #666; direction: rtl; }
+  }
+  body { font-family: Arial, 'Heebo', sans-serif; color: #111; font-size: 13.5px; line-height: 1.55; margin: 0; }
+  h1 { text-align: center; font-size: 21px; margin: 0 0 3px; }
+  .sub { text-align: center; color: #444; padding-bottom: 8px; border-bottom: 2px solid #111; margin-bottom: 12px; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+  .party { border: 1px solid #bbb; border-radius: 6px; padding: 5px 10px; }
+  .party-h { font-weight: 700; border-bottom: 1px solid #ddd; margin-bottom: 3px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; }
   .grid > div:first-child, .grid .full { grid-column: 1 / -1; }
-  .car { display: grid; grid-template-columns: 2fr 1fr 1fr; border: 1px solid #999; border-radius: 6px; text-align: center; margin: 4px 0; }
-  .car div { padding: 3px 6px; border-left: 1px solid #ddd; } .car div:last-child { border-left: none; }
-  .car small { display: block; color: #666; }
-  .center { text-align: center; font-weight: 700; text-decoration: underline; margin: 8px 0 4px; }
-  h4 { margin: 5px 0 0; font-size: 13px; }
-  .it { margin: 1px 12px 1px 0; }
-  .pay { margin: 2px 0; padding-right: 18px; } .pay li { margin: 1px 0; }
-  .checks-wrap { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0; }
-  .checks { border-collapse: collapse; flex: 1; font-size: 11.5px; }
-  .checks th, .checks td { border: 1px solid #999; padding: 1px 5px; text-align: center; }
+  p { margin: 4px 0; }
+  .car { display: grid; grid-template-columns: 2fr 1fr 1fr; border: 1px solid #999; border-radius: 6px; text-align: center; margin: 6px 0; }
+  .car div { padding: 5px 6px; border-left: 1px solid #ddd; } .car div:last-child { border-left: none; }
+  .car small { display: block; color: #666; font-size: 11.5px; }
+  .center { text-align: center; font-weight: 700; text-decoration: underline; margin: 12px 0 6px; }
+  .clause { break-inside: avoid; page-break-inside: avoid; margin-top: 9px; }
+  .pay-clause { break-inside: auto; page-break-inside: auto; }
+  h4 { margin: 0 0 2px; font-size: 14.5px; break-after: avoid; page-break-after: avoid; }
+  .it { margin: 2px 14px 2px 0; }
+  .pay { margin: 3px 0; padding-right: 20px; } .pay li { margin: 2px 0; }
+  .checks { border-collapse: collapse; width: 100%; margin: 5px 0; font-size: 12.5px; }
+  .checks th, .checks td { border: 1px solid #999; padding: 3px 6px; text-align: center; }
   .checks th { background: #f1f1f1; }
-  .box { border: 1px solid #bbb; border-radius: 6px; padding: 6px 10px; }
-  .small { font-size: 11.5px; color: #444; }
+  .checks tr { break-inside: avoid; page-break-inside: avoid; }
+  .small { font-size: 12px; color: #444; }
   .blank { color: #777; }
-  .sigs { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 14px; page-break-inside: avoid; }
-  .sig-line { margin-top: 26px; border-bottom: 1px dashed #555; }
+  .end { break-inside: avoid; page-break-inside: avoid; }
+  .sigs { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 10px; }
+  .sig-line { margin-top: 38px; border-bottom: 1px dashed #555; }
 </style></head><body>
   <h1>${esc(d.title)}</h1>
   <div class="sub">שנערך ונחתם ב${val(d.location, '__________')} בתאריך ${d.date ? fmtDate(d.date) : '<span class="blank">___/___/____</span>'}</div>
@@ -330,10 +333,13 @@ export function contractHtml(raw: ContractData): string {
   <p><b>והואיל:</b> והקונה מעוניין לרכוש את הרכב מהמוכר, והמוכר מעוניין למכור את הרכב לקונה, בתנאים המפורטים בהסכם זה;</p>
   <div class="center">לפיכך הוסכם והותנה בין הצדדים כדלקמן:</div>
   ${clausesHtml}
-  <div class="center" style="margin-top:14px">ולראיה באו הצדדים על החתום:</div>
-  <div class="sigs">
-    <div><b>המוכר:</b> ${val(d.seller.name)}<div class="sig-line">חתימה:</div></div>
-    <div><b>הקונה:</b> ${val(d.buyer.name)}<div class="sig-line">חתימה:</div></div>
+  <div class="end">
+    ${last}
+    <div class="center" style="margin-top:22px">ולראיה באו הצדדים על החתום:</div>
+    <div class="sigs">
+      <div><b>המוכר:</b> ${val(d.seller.name)}<div class="sig-line">חתימה:</div></div>
+      <div><b>הקונה:</b> ${val(d.buyer.name)}<div class="sig-line">חתימה:</div></div>
+    </div>
   </div>
   <script>window.onload = () => { window.print() }</script>
 </body></html>`
