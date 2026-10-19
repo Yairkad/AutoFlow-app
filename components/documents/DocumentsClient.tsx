@@ -11,6 +11,7 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import PageHeader from '@/components/ui/PageHeader'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
+import CarContractsPanel from '@/components/cars/CarContractsPanel'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -743,7 +744,7 @@ export default function DocumentsClient() {
   const [saving,   setSaving]   = useState(false)
 
   // ── Tabs ──────────────────────────────────────────────────────────────────────
-  const [docTab, setDocTab] = useState<'templates' | 'drive'>('templates')
+  const [docTab, setDocTab] = useState<'templates' | 'contracts' | 'drive'>('templates')
 
   // ── Built-in checklist card state ─────────────────────────────────────────────
   const [clCopies, setClCopies] = useState(1)
@@ -1101,7 +1102,7 @@ export default function DocumentsClient() {
               <Button variant="secondary" onClick={() => setHtmlPasteOpen(true)}>📋 הדבק קוד HTML</Button>
               <Button variant="primary" onClick={openAdd}>➕ תבנית חדשה</Button>
             </div>
-          : driveConnected
+          : docTab === 'drive' && driveConnected
             ? <>
                 <input type="file" id="doc-drive-upload" style={{ display: 'none' }} multiple
                   onChange={e => { if (e.target.files?.length) uploadDriveFiles(e.target.files); e.target.value = '' }}
@@ -1144,6 +1145,7 @@ export default function DocumentsClient() {
       <div className="scroll-x" style={{ marginBottom: 20 }}><div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
         {([
           ['templates', '📄 תבניות הדפסה'],
+          ['contracts', '📝 חוזי מכירת רכב'],
           ['drive',     '📂 קבצים בדרייב'],
         ] as const).map(([key, label]) => (
           <button key={key} onClick={() => { setDocTab(key); if (key === 'drive') { setFolderStack([]); loadDriveFiles('') } }}
@@ -1159,6 +1161,9 @@ export default function DocumentsClient() {
           >{label}</button>
         ))}
       </div></div>
+
+      {/* ── Car sale contracts tab ── */}
+      {docTab === 'contracts' && <CarContractsPanel />}
 
       {/* ── Drive files tab ── */}
       {docTab === 'drive' && (

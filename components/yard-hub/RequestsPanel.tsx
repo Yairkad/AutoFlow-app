@@ -7,7 +7,7 @@ import {
   REQUEST_KIND_LABEL, REQUEST_NEXT, REQUEST_STATUS_LABEL, daysSince, whatsappLink,
   type CustomerRequest, type RequestKind, type RequestStatus,
 } from '@/lib/yard/hub'
-import { Chips, Empty, Field, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle } from './ui'
+import { AddButton, Chips, Empty, Field, HubFrame, IconBtn, cardGrid, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle } from './ui'
 
 type View = 'order' | 'inquiry' | 'closed'
 
@@ -124,21 +124,31 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
   const f = (k: keyof typeof emptyForm, v: string | number) => setForm(p => p ? { ...p, [k]: v } : p)
 
   return (
-    <HubFrame variant={variant} title="⏳ לקוחות ממתינים ובירורים" action={
-      <button onClick={startNew} className="bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold" style={{ padding: '10px 18px', fontSize: '16px' }}>
-        + לקוח חדש
-      </button>
-    }>
+    <HubFrame variant={variant} title="⏳ לקוחות ממתינים"
+      subtitle="לקוח שמחכה לצמיג שהזמנו בשבילו, או שצריך לברר בשבילו משהו ולחזור אליו"
+      action={<AddButton onClick={startNew}>+ לקוח חדש</AddButton>}>
       <Chips value={view} onChange={setView} options={[
-        { value: 'order',   label: `📦 מחכים לצמיג (${countOf('order')})` },
-        { value: 'inquiry', label: `❓ לברר (${countOf('inquiry')})` },
+        { value: 'order',   label: '📦 מחכים לצמיג', count: countOf('order') },
+        { value: 'inquiry', label: '❓ לברר וחזור', count: countOf('inquiry') },
         { value: 'closed',  label: '✓ סגורים' },
       ]} />
+      {view === 'order' && (
+        <div className="flex items-center flex-wrap gap-1 text-slate-500" style={{ fontSize: 12.5 }}>
+          <span className="font-bold">שלבים:</span>
+          {['חדש', 'הוזמן מספק', 'הגיע', 'עודכן הלקוח', 'סגור'].map((s, i) => (
+            <span key={s} className="flex items-center gap-1">{i > 0 && <span className="text-slate-300">←</span>}<span className="bg-slate-100 rounded-md" style={{ padding: '1px 7px' }}>{s}</span></span>
+          ))}
+        </div>
+      )}
 
       {loading ? <Empty icon="⏳" text="טוען..." /> : list.length === 0 ? (
-        <Empty icon="✅" text={view === 'closed' ? 'אין בקשות סגורות' : 'אין לקוחות ממתינים'} />
+        view === 'closed' ? <Empty icon="🗂" text="אין בקשות סגורות" /> : (
+          <Empty icon="✅" text={view === 'order' ? 'אין לקוחות שמחכים לצמיג' : 'אין בירורים פתוחים'}
+            hint={view === 'order' ? 'כשלקוח מזמין צמיג שאין במלאי — רושמים אותו כאן, ומעדכנים אותו כשהצמיג מגיע' : 'שאלה של לקוח שצריך לבדוק ולחזור אליו'}
+            action={<AddButton onClick={startNew}>+ לקוח חדש</AddButton>} />
+        )
       ) : (
-        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+        <div style={cardGrid}>
           {list.map(r => {
             const days = daysSince(r.created_at)
             // An inquiry is done once checked; an order walks ordered → arrived → notified → closed
@@ -166,27 +176,26 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                 {r.notes && <div className="text-sm text-slate-500">📝 {r.notes}</div>}
                 {r.created_by_name && <div className="text-xs text-slate-400">נרשם ע״י {r.created_by_name}</div>}
 
-                <div className="flex gap-2 flex-wrap mt-1">
+                {/* Next step = one clear button; everything else = small icons below it */}
+                <div className="flex flex-col gap-2 mt-auto" style={{ paddingTop: 6 }}>
                   {next && (
-                    <button onClick={() => setStatus(r, next)} className="flex-1 bg-blue-600 text-white rounded-lg font-bold" style={{ padding: '9px 8px' }}>
+                    <button onClick={() => setStatus(r, next)} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold" style={{ padding: '10px 8px', fontSize: 15 }}>
                       {r.kind === 'inquiry' && r.status === 'new' ? '✓ בירור בוצע' : NEXT_LABEL[r.status]}
                     </button>
                   )}
                   {!isOpen && (
-                    <button onClick={() => setStatus(r, 'new')} className="flex-1 bg-slate-100 text-slate-700 rounded-lg font-bold" style={{ padding: '9px 8px' }}>פתח מחדש</button>
+                    <button onClick={() => setStatus(r, 'new')} className="w-full bg-slate-100 text-slate-700 rounded-lg font-bold" style={{ padding: '10px 8px' }}>פתח מחדש</button>
                   )}
-                  {r.phone && (<>
-                    <a href={whatsappLink(r.phone, r.status === 'arrived' ? `שלום ${r.customer_name}, הצמיג שהזמנת (${r.item_desc}) הגיע אלינו 🙂` : undefined)}
-                      target="_blank" rel="noreferrer" className="bg-green-600 text-white rounded-lg font-bold text-center" style={{ padding: '9px 12px' }} title="וואטסאפ">💬</a>
-                    <a href={`tel:${r.phone}`} className="bg-slate-100 text-slate-700 rounded-lg font-bold text-center" style={{ padding: '9px 12px' }} title="חיוג">📞</a>
-                  </>)}
-                  <button onClick={() => startEdit(r)} className="bg-slate-100 text-slate-700 rounded-lg font-bold" style={{ padding: '9px 12px' }} title="עריכה">✏️</button>
-                  {isOpen && (
-                    <button onClick={() => setStatus(r, 'cancelled')} className="bg-slate-100 text-slate-500 rounded-lg font-bold" style={{ padding: '9px 12px' }} title="ביטול">✕</button>
-                  )}
-                  {variant === 'office' && (
-                    <button onClick={() => remove(r)} className="bg-red-50 text-red-600 rounded-lg font-bold" style={{ padding: '9px 12px' }} title="מחיקה">🗑</button>
-                  )}
+                  <div className="flex gap-1.5">
+                    {r.phone && (<>
+                      <IconBtn tone="green" title="וואטסאפ" href={whatsappLink(r.phone, r.status === 'arrived' ? `שלום ${r.customer_name}, הצמיג שהזמנת (${r.item_desc}) הגיע אלינו 🙂` : undefined)}>💬</IconBtn>
+                      <IconBtn title="חיוג" href={`tel:${r.phone}`}>📞</IconBtn>
+                    </>)}
+                    <IconBtn title="עריכה" onClick={() => startEdit(r)}>✏️</IconBtn>
+                    <span className="flex-1" />
+                    {isOpen && <IconBtn title="ביטול הבקשה" onClick={() => setStatus(r, 'cancelled')}>✕</IconBtn>}
+                    {variant === 'office' && <IconBtn tone="danger" title="מחיקה" onClick={() => remove(r)}>🗑</IconBtn>}
+                  </div>
                 </div>
               </div>
             )

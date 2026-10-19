@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import Footer from './Footer'
+import BackupReminder from './BackupReminder'
 import { ProfileProvider } from '@/lib/contexts/ProfileContext'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -32,6 +33,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         overflowY: 'auto',
         overflowX: 'hidden',
       }}>
+        <BackupReminder />
         {children}
       </main>
       {pathname !== '/dashboard' && <Footer />}

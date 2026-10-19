@@ -1,7 +1,9 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T15:57:19.932Z
-> Files: 73 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-19T10:15:13.061Z
+> Files: 87 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-19T10:17:35.507Z
+> Files: 77 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -192,6 +194,9 @@
 ## app/api/employees/invite/
 
 
+## app/api/employees/yard-pin/
+
+
 ## app/api/guide/public-link/
 
 - `route.ts` — GET/POST guide_public_token (same pattern as inspection-intake public-link) (~450 tok)
@@ -222,6 +227,12 @@
 
 
 ## app/api/store/
+
+
+## app/api/yard-auth/
+
+
+## app/api/yard/ (stock)
 
 
 ## app/api/yard/barcode/
@@ -396,6 +407,8 @@
 
 ## components/cars/
 
+- `CarContractEditor.tsx` — Full-screen car sale contract editor, edited inline on the document (fields, clauses add/move/delete, checks table + split). "הפרטים שלי" quick-fill into seller OR buyer; default clause wording; print via contractHtml (~8000 tok)
+- `CarContractsPanel.tsx` — Contract history list (Documents tab 'חוזי מכירת רכב', or per car via carId + onOpen): search, open, duplicate, delete (~2100 tok)
 - `CarsClient.tsx` — Cars tab: compact card grid (5/row desktop, 2 mobile) → click opens detail modal (all fields + actions + Drive docs). Docs saved to Drive רכבים/<plate>/ named "<plate> - <doc name>". Filters: search, בהפקדה (license_deposited), ללא טסט, expiring ≤30d (~22000 tok)
 
 ## components/checks/
@@ -468,6 +481,15 @@
 
 - `GuideEditor.tsx` — Settings → דף נחיתה → מדריך צמיגים: QR/print, edit texts (HE, optional EN), images (compressed data URL) + credit, add/move/delete sections, reset (~4200 tok)
 
+## components/stock/
+
+- `LocationBadge.tsx` — fetchLayout (~944 tok)
+- `PlacementSheet.tsx` — PlacementSheet (~1232 tok)
+- `StorageClient.tsx` — StorageClient (~3122 tok)
+- `StorageMap.tsx` — CAB_W (~1390 tok)
+- `StorageMapEditor.tsx` — inp (~1814 tok)
+- `ZoneCountPanel.tsx` — DRAFT_KEY (~6881 tok)
+
 ## components/suppliers/
 
 - `SupplierDetailsTab.tsx` — "פרטים" tab: flat supplier record CRUD (name/contact/etc), no expand state (~9300 tok)
@@ -492,13 +514,18 @@
 - `RequestsPanel.tsx` — emptyForm (~3389 tok)
 - `StockSummaryCards.tsx` — Office: tire stock value + how up to date the stock data is. (~874 tok)
 - `ui.tsx` — Page frame: dark top bar on the yard terminal, plain block on the office page. (~1642 tok)
-- `YardTrackingClient.tsx` — YardTrackingClient (~384 tok)
+- `YardTrackingClient.tsx` — TABS (~794 tok)
 
 ## components/yard/
 
 - `SearchSheet.tsx` — 'numeric' opens the phone's number pad (tire sizes); 'search' the normal keyboard (~1753 tok)
 - `TireLookupClient.tsx` — normalizeTireSize (~1660 tok)
+- `YardDashboard.tsx` — YardDashboard (~1826 tok)
+- `YardLogin.tsx` — Shown as a switch-employee overlay (with a cancel button) instead of the full login screen (~1416 tok)
 - `YardShell.tsx` — YardShell (~1321 tok)
+
+## components/yard/YardLogin.tsx
+
 
 ## docs/
 
@@ -509,11 +536,20 @@
 
 ## lib/auth/
 
-- `yard-token.ts` — The logged-in user of the worker terminal, or null when not signed in / inactive. (~471 tok)
+- `yard-pin.ts` — Yard login PIN: 4–8 digits. (~264 tok)
+- `yard-session.ts` — Hard cap; the terminal also returns to the picker after YARD_IDLE_MS without use. (~717 tok)
+- `yard-token.ts` — Employee signed in on the terminal with name + PIN, or null. (~876 tok)
+
+## lib/auth/ (yard login)
+
 
 ## lib/bank-sync/
 
 - `parseStatementFile.ts` — Exports AmountMode, AmountSign, ColumnMapping, ParsedLine + 4 more (~1756 tok)
+
+## lib/cars/
+
+- `saleContract.ts` — Car sale contract data model, DEFAULT_CLAUSES, newContract, numberToHebrewWords/priceToWords, contractHtml (one A4 page; >5 checks → two tables) (~3900 tok)
 
 ## lib/contexts/
 
@@ -550,6 +586,11 @@
 ## lib/scannerAgent.ts
 
 
+## lib/stock/
+
+- `storage.ts` — "a3, B2 / c10" → ['A3', 'B2', 'C10'] (unique, in order). Free text that isn't a shelf is ignored. (~1559 tok)
+- `zoneCount.ts` — For a tire that was recorded outside the counted shelves: it moved here, or it's in both places. (~1709 tok)
+
 ## lib/supabase/
 
 
@@ -566,8 +607,11 @@
 
 ## lib/yard/
 
-- `access.ts` — Sees money amounts in the quick reports (worker side). (~697 tok)
+- `access.ts` — Sees money amounts in the quick reports (worker side). (~779 tok)
 - `hub.ts` — Still waiting for the tire itself — these get the "it just arrived" alert on receive. (~921 tok)
+
+## pages
+
 
 ## public/
 
@@ -577,6 +621,11 @@
 
 ## supabase/migrations/
 
+- `090_cars_docs_gov_test.sql` — cars.doc_names text[] (card doc chips) + gov_last_test_date (~100 tok)
+- `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
+- `088_cars_hand_ownership.sql` — cars.hand smallint + original_ownership + car_code text (~80 tok)
+- `087_cars_deposit_refund.sql` — cars.deposit_refund_requested bool + date (refund request filed for deposited license) (~90 tok)
+- `086_cars_license_deposit.sql` — cars.license_deposited bool + license_deposit_date (car off the road, license deposited) (~120 tok)
 - `082_bank_statement_charge_date_card.sql` — Credit-card statements commonly carry two distinct dates per transaction -- (~172 tok)
 - `083_inspection_intake.sql` — Purchase-inspection pre-fill ("טופס מילוי מראש"): the office sends the customer a personal (~352 tok)
 - `086_cars_license_deposit.sql` — cars.license_deposited bool + license_deposit_date (car off the road, license deposited) (~120 tok)
@@ -584,6 +633,9 @@
 - `088_cars_hand_ownership.sql` — cars.hand smallint + original_ownership + car_code text (~80 tok)
 - `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
 - `093_yard_worker_hub.sql` — ════════════════════════════════════════════ (~1248 tok)
+- `095_yard_pin_login.sql` — yard PIN login: employees.yard_modules + yard_pins (service-only)
+- `096_storage_map_zone_count.sql` — storage_maps + zone/counted_by_name on count sessions, location on entries
+- `094_car_sale_contracts.sql` — ════════════════════════════════════════════ (~671 tok)
 
 ## tests/
 
@@ -597,3 +649,20 @@
 - `main.go` — go:build windows (~3100 tok)
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
+- `intakeImage.tsx` — renderIntakeOgImage(name, logoBase64): branded 1200x630 link preview (logo card + inspection badge, colours from logo) via next/og ImageResponse (~1100 tok)
+- `logoColors.ts` — logoPalette(buf): dominant dark colour → bg, bright saturated → accent (sharp) (~700 tok)
+- `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
+- `intakeTenant.ts` — getIntakeTenant(token): tenant name+logo for personal/fixed intake link (~250 tok)
+- `fonts/` — Assistant hebrew+latin 400/800 woff (OFL) for OG rendering
+
+## app/api/public/og/intake/
+
+- `route.tsx` — GET ?t=<token>&v=<logo hash>: branded OG image; redirects to static /og/inspection-intake.png when no logo (~250 tok)
+
+## lib/utils/ (addition)
+
+- `uploadCompress.ts` — MAX_UPLOAD_BYTES (4MB), compressImageIfNeeded, compressPdfIfNeeded, shrinkForUpload — client-side shrink to clear Vercel's 4.5MB limit (shared by suppliers + cars) (~900 tok)
+
+## app/api/public/plate/test-status/
+
+- `route.ts` — POST {plates[]} → {plate: {tokef, lastTest}} from data.gov.il (local+imported, chunks of 100, filters array). Used by CarsClient auto-sync on load (~400 tok)

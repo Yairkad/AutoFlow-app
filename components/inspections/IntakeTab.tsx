@@ -65,10 +65,15 @@ export default function IntakeTab({ rows, tenantId, businessName, onChanged, onA
     if (!tenantId) return
     setCreating(true)
     const token = newIntakeToken()
-    const { error } = await supabase.from('car_inspections').insert({
+    const row = {
       tenant_id: tenantId, plate: '', owner_name: '', owner_phone: phone.trim() || null,
-      status: 'draft', intake_status: 'link_sent', intake_token: token, intake_source: 'link',
-    })
+      status: 'draft', intake_status: 'link_sent', intake_token: token,
+    }
+    let { error } = await supabase.from('car_inspections').insert({ ...row, intake_source: 'link' })
+    // Before migration 085 there's no intake_source column — still send the link without it.
+    if (error && (error.code === 'PGRST204' || error.code === '42703')) {
+      ({ error } = await supabase.from('car_inspections').insert(row))
+    }
     setCreating(false)
     if (error) { console.error('create intake link failed:', error); showToast('שגיאה ביצירת הלינק', 'error'); return }
     if (send === 'whatsapp') sendIntakeWhatsApp(token, phone, businessName)
