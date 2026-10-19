@@ -1,9 +1,10 @@
 // Worker-terminal (/yard) sections and per-employee permission keys.
-// Keys live in profiles.allowed_modules, edited in Settings → Users.
+// Office users: keys live in profiles.allowed_modules (Settings → Users).
+// PIN-login employees: employees.yard_modules (Employees screen), NULL = DEFAULT_YARD_MODULES.
 
 export type YardKey =
   | 'yard_terminal' | 'yard_receive' | 'yard_lookup'
-  | 'yard_loans' | 'yard_requests' | 'yard_reports'
+  | 'yard_loans' | 'yard_requests' | 'yard_reports' | 'yard_count'
 
 export interface YardSection { key: YardKey; href: string; icon: string; label: string }
 
@@ -11,6 +12,7 @@ export const YARD_SECTIONS: YardSection[] = [
   { key: 'yard_terminal', href: '/yard',             icon: '🔧', label: 'מסוף רחבה' },
   { key: 'yard_receive',  href: '/yard/receive',     icon: '📦', label: 'קליטת מלאי' },
   { key: 'yard_lookup',   href: '/yard/tire-lookup', icon: '🔍', label: 'מחיר / מלאי' },
+  { key: 'yard_count',    href: '/yard/count',       icon: '🔢', label: 'ספירת מלאי' },
   { key: 'yard_loans',    href: '/yard/loans',       icon: '🔁', label: 'השאלות' },
   { key: 'yard_requests', href: '/yard/requests',    icon: '⏳', label: 'לקוחות ממתינים' },
   { key: 'yard_reports',  href: '/yard/reports',     icon: '📊', label: 'דוחות מהירים' },
@@ -20,6 +22,9 @@ export const YARD_SECTIONS: YardSection[] = [
 export const YARD_MONEY_KEY = 'yard_reports_money'
 /** Office management page "מעקב רחבה" — sees and edits everything the yard records. */
 export const YARD_TRACKING_KEY = 'yard_tracking'
+
+/** A PIN-login employee with no explicit choice (employees.yard_modules NULL): every section, no money. */
+export const DEFAULT_YARD_MODULES: string[] = YARD_SECTIONS.map(s => s.key)
 
 export const ALL_YARD_KEYS: string[] = [
   'yard', ...YARD_SECTIONS.map(s => s.key), YARD_MONEY_KEY, YARD_TRACKING_KEY,

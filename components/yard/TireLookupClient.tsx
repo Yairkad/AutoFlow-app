@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import type { SearchResult } from '@/lib/yard/types'
 import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
 import { tireSizeSearchParams } from '@/lib/tires/size'
+import LocationBadge from '@/components/stock/LocationBadge'
 
 type Mode = 'tire' | 'product'
 
@@ -81,7 +82,7 @@ export default function TireLookupClient() {
           <div className="flex items-center justify-between" style={{ marginTop: '8px' }}>
             <div className="text-slate-600 font-semibold" style={{ fontSize: '14px' }}>
               {(selected.stock ?? 0) > 0 ? `מלאי: ${selected.stock} יח׳` : 'אזל מהמלאי'}
-              {selected.location && <span> · מיקום: {selected.location}</span>}
+              {selected.location && <> · <LocationBadge location={selected.location} size={14} /></>}
             </div>
             <div className="font-black text-blue-600" style={{ fontSize: '24px' }}>
               {selected.price.toLocaleString()}₪

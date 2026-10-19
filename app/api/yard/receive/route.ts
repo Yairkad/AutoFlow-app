@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createServiceClient } from '@/lib/supabase/service'
 import { WAITING_STATUSES } from '@/lib/yard/hub'
+import { suggestLocation } from '@/lib/stock/server'
 
 type Sb = ReturnType<typeof createServiceClient>
 
@@ -63,11 +64,12 @@ export async function POST(req: NextRequest) {
 
   if (error) return new Response('DB Error', { status: 500 })
 
-  const [, waiting] = await Promise.all([
+  const [, waiting, suggest] = await Promise.all([
     logReceipt(sb, tenantId, type, id, qty_add),
     type === 'tire' ? waitingFor(sb, tenantId, current) : [],
+    type === 'tire' ? suggestLocation(sb, tenantId, current) : null,
   ])
-  return NextResponse.json({ qty: newQty, waiting })
+  return NextResponse.json({ qty: newQty, waiting, suggest })
 }
 
 // POST /api/yard/receive/tire — create a new tire and set initial stock
@@ -97,11 +99,12 @@ export async function PUT(req: NextRequest) {
       .select('id,brand,width,profile,rim,sell_price,qty,sku')
       .single()
     if (error) return new Response(error.message, { status: 500 })
-    const [, waiting] = await Promise.all([
+    const [, waiting, suggest] = await Promise.all([
       logReceipt(sb, tenantId, 'tire', data.id, data.qty),
       waitingFor(sb, tenantId, data),
+      suggestLocation(sb, tenantId, data),
     ])
-    return NextResponse.json({ ...data, waiting })
+    return NextResponse.json({ ...data, waiting, suggest })
   } else {
     const { data, error } = await sb
       .from('products')

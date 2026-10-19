@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import TireSizeInput, { parseTireSizeText, type TireSize } from '@/components/yard/TireSizeInput'
+import LocationBadge from '@/components/stock/LocationBadge'
 
 // Full-screen search for the yard terminal. The search box sits at the very top and
 // the results fill the space down to the device keyboard, so on a phone you always
@@ -203,7 +204,7 @@ export function ResultRow({ r, showType }: {
           {r.stock != null && (r.stock > 0
             ? <span>מלאי: {r.stock}</span>
             : <span className="bg-red-100 text-red-700 font-bold rounded-full" style={{ padding: '0 8px' }}>אזל</span>)}
-          {r.location && <span>📍 {r.location}</span>}
+          {r.location && <LocationBadge location={r.location} />}
           {r.sku && <span style={{ direction: 'ltr' }}>{r.sku}</span>}
         </div>
       </div>

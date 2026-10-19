@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
+import { DEFAULT_YARD_MODULES, YARD_MONEY_KEY, YARD_SECTIONS } from '@/lib/yard/access'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -40,6 +41,7 @@ interface Employee {
   start_date: string | null
   end_date: string | null
   notes: string | null
+  yard_modules: string[] | null
   created_at: string
 }
 
@@ -165,6 +167,7 @@ const EMPTY_FORM = {
   start_date: '', end_date: '',
   id_number: '', birth_date: '', address: '',
   shirt_size: '', pants_size: '', shoe_size: '', payment_day: '', notes: '',
+  yard_pin: '', yard_pin_remove: false, yard_modules: null as string[] | null,
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -179,6 +182,7 @@ export default function EmployeesClient() {
   const [myRole,    setMyRole]    = useState('')
   const [roleReady, setRoleReady] = useState(false)
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [yardPinIds, setYardPinIds] = useState<Set<string>>(new Set())
   const [salaries, setSalaries] = useState<Salary[]>([])
   const [tab, setTab] = useState<'employees' | 'salaries'>('employees')
   const [period, setPeriod] = useState(currentPeriod())
@@ -235,6 +239,8 @@ export default function EmployeesClient() {
     const { data } = await sb.from('employees')
       .select('*').eq('tenant_id', tenantId.current).order('full_name')
     if (data) setEmployees(data as Employee[])
+    const r = await fetch('/api/employees/yard-pin')
+    if (r.ok) setYardPinIds(new Set(await r.json() as string[]))
   }, [sb])
 
   const loadSalaries = useCallback(async () => {
@@ -370,6 +376,7 @@ export default function EmployeesClient() {
       start_date: e.start_date || '',
       end_date: e.end_date || '',
       notes: e.notes || '',
+      yard_pin: '', yard_pin_remove: false, yard_modules: e.yard_modules ?? null,
     })
     setEmpModal(true)
   }
@@ -377,6 +384,7 @@ export default function EmployeesClient() {
   async function saveEmp() {
     if (!form.full_name.trim()) { showToast('נא להזין שם עובד', 'error'); return }
     if (!form.email.trim()) { showToast('נא להזין כתובת מייל', 'error'); return }
+    if (form.yard_pin && !/^\d{4,8}$/.test(form.yard_pin)) { showToast('קוד כניסה לרחבה: 4–8 ספרות', 'error'); return }
     const rec = {
       tenant_id: tenantId.current,
       full_name: form.full_name.trim(),
@@ -402,14 +410,24 @@ export default function EmployeesClient() {
       start_date: form.start_date || null,
       end_date: form.end_date || null,
       notes: form.notes.trim() || null,
+      yard_modules: form.yard_modules,
     }
+    let empId = editEmp?.id ?? null
     if (editEmp) {
       await sb.from('employees').update(rec).eq('id', editEmp.id)
-      showToast('עובד עודכן ✓', 'success')
     } else {
-      await sb.from('employees').insert(rec)
-      showToast('עובד נוסף ✓', 'success')
+      const { data } = await sb.from('employees').insert(rec).select('id').single()
+      empId = data?.id ?? null
     }
+    // Yard PIN goes through the server (hashed, never stored readable)
+    if (empId && (form.yard_pin || form.yard_pin_remove)) {
+      const r = await fetch('/api/employees/yard-pin', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId: empId, pin: form.yard_pin || null }),
+      })
+      if (!r.ok) showToast((await r.json().catch(() => null))?.error ?? 'שגיאה בשמירת קוד הרחבה', 'error')
+    }
+    showToast(editEmp ? 'עובד עודכן ✓' : 'עובד נוסף ✓', 'success')
     setEmpModal(false)
     loadEmployees()
   }
@@ -1070,6 +1088,51 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
             <textarea className="form-input" style={{ resize: 'vertical' }} rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
           </div>
         </div>
+
+        {/* Yard terminal login */}
+        {(() => {
+          const hasPin = !!editEmp && yardPinIds.has(editEmp.id) && !form.yard_pin_remove
+          const mods = form.yard_modules ?? DEFAULT_YARD_MODULES
+          const toggleMod = (k: string) => setForm(f => {
+            const cur = f.yard_modules ?? DEFAULT_YARD_MODULES
+            return { ...f, yard_modules: cur.includes(k) ? cur.filter(x => x !== k) : [...cur, k] }
+          })
+          return (
+            <details open style={{ marginTop: '14px', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+              <summary style={{ cursor: 'pointer', padding: '10px 14px', fontWeight: 700, fontSize: '13px', background: '#f8fafc', userSelect: 'none' }}>
+                🔧 כניסה למסוף רחבה {hasPin || form.yard_pin ? '· ✓ יש קוד' : '· אין קוד'}
+              </summary>
+              <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
+                  ברחבה העובד בוחר את השם שלו ומקליד את הקוד. עובד בלי קוד לא מופיע ברשימה.
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div style={{ ...field, flex: '1 1 180px' }}>
+                    <label className="form-label">{hasPin ? 'קוד חדש (ריק = להשאיר את הקיים)' : 'קוד כניסה (4–8 ספרות)'}</label>
+                    <input className="form-input" inputMode="numeric" autoComplete="off" maxLength={8} placeholder="למשל 1234"
+                      value={form.yard_pin}
+                      onChange={e => setForm(f => ({ ...f, yard_pin: e.target.value.replace(/\D/g, ''), yard_pin_remove: false }))} />
+                  </div>
+                  {hasPin && (
+                    <Button variant="secondary" onClick={() => setForm(f => ({ ...f, yard_pin: '', yard_pin_remove: true }))}>🚫 בטל קוד</Button>
+                  )}
+                  {form.yard_pin_remove && <span style={{ fontSize: '12.5px', color: 'var(--danger)' }}>הקוד יבוטל בשמירה</span>}
+                </div>
+                <div>
+                  <div className="form-label" style={{ marginBottom: '6px' }}>מה העובד רואה ברחבה</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>
+                    {[...YARD_SECTIONS.map(x => ({ key: x.key as string, label: `${x.icon} ${x.label}` })), { key: YARD_MONEY_KEY, label: '💰 סכומים בדוחות' }].map(o => (
+                      <label key={o.key} style={{ display: 'flex', gap: '5px', alignItems: 'center', fontSize: '13px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={mods.includes(o.key)} onChange={() => toggleMod(o.key)} />
+                        {o.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </details>
+          )
+        })()}
 
         {/* Bank details */}
         <details style={{ marginTop: '14px', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>

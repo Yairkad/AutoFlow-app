@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from 'next'
-import { redirect } from 'next/navigation'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import KeyboardDismiss from '@/components/yard/KeyboardDismiss'
 import YardShell from '@/components/yard/YardShell'
-import { getYardUser } from '@/lib/auth/yard-token'
+import YardLogin from '@/components/yard/YardLogin'
+import { getYardEmployee } from '@/lib/auth/yard-token'
 
 export const metadata: Metadata = {
   title: 'מסוף רחבה',
@@ -23,8 +23,10 @@ export const viewport: Viewport = {
 }
 
 export default async function YardLayout({ children }: { children: React.ReactNode }) {
-  const user = await getYardUser()
-  if (!user) redirect('/login')
+  // The terminal is open to anyone at the counter: everyone picks their name + types their PIN.
+  // Office (Gmail) sessions don't count here — only the PIN cookie does.
+  const user = await getYardEmployee()
+  if (!user) return <YardLogin />
 
   return (
     <ToastProvider>

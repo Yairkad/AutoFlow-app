@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 import { ALL_YARD_KEYS, YARD_TRACKING_KEY } from '@/lib/yard/access'
+import { YARD_COOKIE, verifyYardSession } from '@/lib/auth/yard-session'
 
 // ── Public paths – no auth needed ──────────────────────────────────────────
 const PUBLIC_PREFIXES = [
@@ -18,6 +19,7 @@ const PUBLIC_PREFIXES = [
   '/terms',
   '/accessibility',
   '/api/auth',         // send-reset, register-employee
+  '/api/yard-auth',    // yard terminal: employee picker + PIN login
   '/api/public',       // customer-search
   '/api/store',        // Supabase proxy (RLS protects data)
   '/_next',
@@ -64,6 +66,22 @@ function requiredModulesFor(pathname: string): string[] | null | undefined {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Yard API: the terminal's signed PIN cookie, or an office session (office panels call it too).
+  // Checked before the public list because '/' there matches every path.
+  if (pathname.startsWith('/api/yard/')) {
+    if (await verifyYardSession(request.cookies.get(YARD_COOKIE)?.value)) return NextResponse.next({ request })
+    const res = NextResponse.next({ request: { headers: request.headers } })
+    const sb = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: (cookies) => cookies.forEach(({ name, value, options }) => res.cookies.set(name, value, options)),
+      },
+    })
+    const { data: { user } } = await sb.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return res
+  }
 
   // Allow public routes without any check
   if (PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) {
