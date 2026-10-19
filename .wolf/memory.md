@@ -2423,3 +2423,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 07:30 | Discussed zone-based inventory count idea (cabinets/shelves map); awaiting user answers | - | questions asked | ~3k |
+
+## Session: 2026-10-19 08:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:30 | Zone count design: contiguous-shelf approach approved; yard terminal must get count/map/receive-suggestion; layout 6+2+2+1 cabinets; awaiting letters/permission answers | - | questions asked | ~4k |
