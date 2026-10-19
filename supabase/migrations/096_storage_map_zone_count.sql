@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════
--- AutoFlow – Migration 095: Storage map + inventory count by zone
+-- AutoFlow – Migration 096: Storage map + inventory count by zone
 --   • storage_maps — the cabinets/shelves map (one JSON layout per tenant).
 --     RLS on with no policies: read/written only through /api/yard/storage-map (service role).
 --   • tire_inventory_count_sessions.zone — shelves covered by a zone count (NULL = full count)

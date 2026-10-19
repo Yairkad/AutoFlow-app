@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════
--- AutoFlow – Migration 094: Yard terminal login by employee + PIN
+-- AutoFlow – Migration 095: Yard terminal login by employee + PIN
 --   • employees.yard_modules — which yard sections the employee sees
 --     (NULL = default: every section except money in reports)
 --   • yard_pins — hashed PIN per employee + lockout counters.

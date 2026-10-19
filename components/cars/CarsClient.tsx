@@ -16,6 +16,8 @@ import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
 import { VehicleData } from '@/lib/utils/plateApi'
 import { MAX_UPLOAD_BYTES, shrinkForUpload } from '@/lib/utils/uploadCompress'
+import CarContractsPanel from './CarContractsPanel'
+import CarContractEditor, { type ContractPrefill } from './CarContractEditor'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -250,6 +252,8 @@ export default function CarsClient() {
 
   // Car detail view + list filters
   const [viewCarId,  setViewCarId]  = useState<string | null>(null)
+  // sale contract editor (opened from the car's actions / its contracts list)
+  const [contractEd, setContractEd] = useState<{ carId: string; id: string | null } | null>(null)
   const [flagFilter, setFlagFilter] = useState<'all' | 'deposited' | 'no_refund' | 'no_test' | 'expiring'>('all')
   const [search,     setSearch]     = useState('')
   const isMobile = useIsMobile()
@@ -990,21 +994,34 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
 
   // ── Render helpers ────────────────────────────────────────────────
 
+  function contractPrefill(c: Car): ContractPrefill {
+    const price = c.sold_price ?? c.ask_price
+    return {
+      car:   { plate: c.plate ?? '', model: [c.make, c.model].filter(Boolean).join(' '), year: c.year ? String(c.year) : '' },
+      buyer: { name: c.buyer_name ?? '', phone: c.buyer_phone ?? '' },
+      price: price ? price.toLocaleString('he-IL') : '',
+    }
+  }
+
   function getCarActions(car: Car): RowMenuAction[] {
+    const contract: RowMenuAction = { key: 'contract', label: 'חוזה מכירה', icon: '📝', onClick: () => setContractEd({ carId: car.id, id: null }) }
     if (car.status === 'checking') return [
       { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openCarForm(car) },
       { key: 'buy', label: 'קונה!', icon: '✅', onClick: () => changeCarStatus(car.id, 'available') },
       { key: 'decline', label: 'לא קונה', icon: '❌', onClick: () => openDeclineModal(car.id) },
+      contract,
       { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteCar(car.id) },
     ]
     if (car.status === 'sold') return [
       { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openCarForm(car) },
+      contract,
       { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteCar(car.id) },
     ]
     return [
       { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openCarForm(car) },
       { key: 'buyer', label: 'מתעניין', icon: '🟡', onClick: () => openBuyerModal(car.id) },
       { key: 'sell', label: 'מכור', icon: '✅', onClick: () => openSellModal(car.id) },
+      contract,
       { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteCar(car.id) },
     ]
   }
@@ -1620,6 +1637,12 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
                 </div>
               )}
 
+              {/* Sale contracts */}
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 8 }}>📝 חוזי מכירה</div>
+                <CarContractsPanel carId={c.id} onOpen={id => { setViewCarId(null); setContractEd({ carId: c.id, id }) }} />
+              </div>
+
               {/* Documents */}
               <div>
                 <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 8 }}>📁 מסמכי רכב</div>
@@ -1633,6 +1656,13 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           )
         })()}
       </Modal>
+
+      {/* back to the car's view when the contract closes */}
+      <CarContractEditor
+        open={!!contractEd} contractId={contractEd?.id ?? null} carId={contractEd?.carId ?? null}
+        prefill={(() => { const car = contractEd && cars.find(x => x.id === contractEd.carId); return car ? contractPrefill(car) : undefined })()}
+        onClose={() => { const cid = contractEd?.carId ?? null; setContractEd(null); setViewCarId(cid) }}
+      />
 
       {lightbox && (
         <div

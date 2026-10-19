@@ -2478,3 +2478,10 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 10:13 | Created supabase/migrations/094_car_sale_contracts.sql | — | ~671 |
+| 10:14 | Created lib/cars/saleContract.ts | — | ~3682 |
+| 10:17 | Created components/cars/CarContractEditor.tsx | — | ~7962 |
+| 10:17 | Created components/cars/CarContractsPanel.tsx | — | ~2023 |
+| 10:40 | Car sale contract in-app: inline-edit editor, history (Documents tab + car view), my-details quick-fill (seller/buyer), default clauses, 1-page print | lib/cars/saleContract.ts, components/cars/CarContract*.tsx, CarsClient, DocumentsClient, migration 094 | tsc/eslint/build ok, playwright screenshots ok | ~60k |
+| 11:20 | Car contract: mixed payment (multiple cash/transfer lines + checks), sum check, split remainder to checks, legacy normalize | lib/cars/saleContract.ts, CarContractEditor.tsx | tsc/eslint ok, screenshots + 1-page PDF ok | ~25k |
+| 13:00 | Merged claude/cool-albattani-lkxivv (car sale contracts, migration 094); renumbered mine to 095_yard_pin_login + 096_storage_map_zone_count | migrations | merge ok | ~5k |

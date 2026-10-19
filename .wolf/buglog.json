@@ -1145,5 +1145,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-19T10:00:00Z"
+  },
+  {
+    "id": "bug-059",
+    "timestamp": "2026-10-19T10:40:00Z",
+    "error_message": "Standalone vehicle_sales_contract_app.html always opens with the first (hard-coded) party details and has no way to save previous forms",
+    "file": "components/cars/CarContractEditor.tsx",
+    "root_cause": "Seller/buyer/car values were hard-coded as input value= attributes and nothing was persisted",
+    "fix": "Rebuilt inside AutoFlow: new contracts open empty, saved to car_sale_contracts (history), own details stored in car_contract_settings and quick-filled on demand",
+    "tags": [
+      "contract",
+      "cars",
+      "persistence",
+      "prefill"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19T10:40:00Z"
   }
 ]
