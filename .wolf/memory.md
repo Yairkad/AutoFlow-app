@@ -2502,3 +2502,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 10:00 | Full backup rewrite + nightly private Drive backup (cron) + stale-backup reminder | lib/backup/*, api/backup/*, api/cron/backup, vercel.json, SettingsClient BackupTab, BackupReminder, lib/drive.ts | build ok | ~30k |
 | 13:20 | Merged ccr-3f521553-alze21 (mig → 097) and ccr-21217daa-475srg (backup, mig → 098) into PR #51 branch | migrations | tsc+build ok | ~10k |
+
+## Session: 2026-10-19 11:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:10 | User saw old main deployed (button still there, email login); PR #51 not merged yet — asked whether to merge | - | awaiting answer | ~2k |
