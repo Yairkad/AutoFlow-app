@@ -2484,6 +2484,19 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:17 | Created components/cars/CarContractsPanel.tsx | — | ~2023 |
 | 10:40 | Car sale contract in-app: inline-edit editor, history (Documents tab + car view), my-details quick-fill (seller/buyer), default clauses, 1-page print | lib/cars/saleContract.ts, components/cars/CarContract*.tsx, CarsClient, DocumentsClient, migration 094 | tsc/eslint/build ok, playwright screenshots ok | ~60k |
 | 11:20 | Car contract: mixed payment (multiple cash/transfer lines + checks), sum check, split remainder to checks, legacy normalize | lib/cars/saleContract.ts, CarContractEditor.tsx | tsc/eslint ok, screenshots + 1-page PDF ok | ~25k |
+| 11:50 | Car contract: mark signed → scan/upload signed copy to Drive (רכבים/<plate>/ or חוזי מכירה/), 📎 link in editor + history, replace/delete | CarContractEditor.tsx, CarContractsPanel.tsx, saleContract.ts | tsc/eslint ok; modal not screenshotted (mock save failed) | ~30k |
+
+## Session: 2026-10-19 11:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:20 | Contract print: bigger font/margins, 'עמוד Y מתוך X' (@page @bottom-center), single checks table, last clause+signatures kept together; editor = fixed A4 sheet; RowActionsMenu clamps to viewport | saleContract.ts, CarContractEditor.tsx, RowActionsMenu.tsx | tsc/eslint ok, PDF + screenshots ok | ~25k |
+| 12:40 | Contract checks shown as one line per check (שיק מס' X, ע"ס Y ש"ח, לתאריך: Z) like the original, in editor + print | saleContract.ts, CarContractEditor.tsx | tsc/eslint ok, PDF ok | ~8k |
+
+## Session: 2026-10-19 12:10
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
 | 13:00 | Merged claude/cool-albattani-lkxivv (car sale contracts, migration 094); renumbered mine to 095_yard_pin_login + 096_storage_map_zone_count | migrations | merge ok | ~5k |
 ## Session: 2026-10-13 11:37
 
@@ -2515,3 +2528,14 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 14:15 | User asked for Hebrew; repeated merge question in Hebrew (reply in Hebrew always) | - | awaiting answer | ~1k |
 | 13:30 | Rebuilt closed PR #11 on current main: scan result shows buy/sell price; tire edit has width/profile/rim | components/scan/ScanClient.tsx | tsc ok, lint unchanged (3 pre-existing) | ~10k |
+
+## Session: 2026-10-19 12:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-19 12:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:40 | Storage map default from user's room sketch: right wall A–G contiguous, H–I low separate, left wall K/J contiguous, L separate; 'v' rows drawn as one line per cabinet (letter + shelves), room outline | StorageMap.tsx, storage.ts | playwright phone ok | ~8k |

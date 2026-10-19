@@ -10,7 +10,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import CarContractEditor, { type ContractPrefill } from './CarContractEditor'
-import { type ContractRow, fmtDate, todayIso } from '@/lib/cars/saleContract'
+import { type ContractRow, fmtDate, todayIso, signedFileUrl } from '@/lib/cars/saleContract'
 
 interface Props {
   // limit to one car (compact mode inside the car view) + prefill for a new contract
@@ -38,7 +38,7 @@ export default function CarContractsPanel({ carId, prefill, onOpen }: Props) {
 
   const fetchRows = useCallback(() => {
     let q = sb.from('car_sale_contracts')
-      .select('id, car_id, plate, car_desc, seller_name, buyer_name, contract_date, total_price, status, created_by_name, created_at, updated_at')
+      .select('id, car_id, plate, car_desc, seller_name, buyer_name, contract_date, total_price, status, created_by_name, created_at, updated_at, signed_file:data->signedFile')
       .eq('tenant_id', tenantId ?? '')
       .order('updated_at', { ascending: false })
       .limit(500)
@@ -63,7 +63,7 @@ export default function CarContractsPanel({ carId, prefill, onOpen }: Props) {
     const { id: _id, created_at: _c, updated_at: _u, ...rest } = full
     const { data: ins, error } = await sb.from('car_sale_contracts').insert({
       ...rest, status: 'draft', contract_date: todayIso(),
-      data: { ...full.data, date: todayIso() },
+      data: { ...full.data, date: todayIso(), signedFile: null },
       created_by: profile.userId, created_by_name: profile.fullName,
     }).select('id').single()
     if (error || !ins) { showToast('שגיאה בשכפול', 'error'); return }
@@ -127,6 +127,10 @@ export default function CarContractsPanel({ carId, prefill, onOpen }: Props) {
                   <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 8, background: r.status === 'signed' ? '#dcfce7' : '#f1f5f9', color: r.status === 'signed' ? '#166534' : '#64748b' }}>
                     {r.status === 'signed' ? 'נחתם' : 'טיוטה'}
                   </span>
+                  {r.signed_file && (
+                    <a href={signedFileUrl(r.signed_file)} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
+                      style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>📎 חוזה חתום</a>
+                  )}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                   {[r.seller_name && `מוכר: ${r.seller_name}`, r.buyer_name && `קונה: ${r.buyer_name}`, r.total_price && `₪${r.total_price}`, r.contract_date && fmtDate(r.contract_date)].filter(Boolean).join(' · ')}

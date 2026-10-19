@@ -11,9 +11,12 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
+import Modal from '@/components/ui/Modal'
+import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
+import { shrinkForUpload } from '@/lib/utils/uploadCompress'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import {
-  type ContractData, type ContractParty, type ContractClause, type MyDetails, type PayLine,
+  type ContractData, type ContractParty, type ContractClause, type MyDetails, type PayLine, type SignedFile, signedFileUrl,
   DEFAULT_CLAUSES, newContract, normalizeContract, cloneClauses, visibleClauses, itemLetter, priceToWords,
   parseAmount, fmtAmount, contractHtml, newId, payLinesTotal, checksTotal,
 } from '@/lib/cars/saleContract'
@@ -83,6 +86,7 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
   const { confirm } = useConfirm()
 
   const [d, setD]               = useState<ContractData | null>(null)
+  const current = d
   const [id, setId]             = useState<string | null>(null)
   const [linkedCar, setLinkedCar] = useState<string | null>(null)
   const [status, setStatus]     = useState<'draft' | 'signed'>('draft')
@@ -91,6 +95,12 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
   const [dirty, setDirty]       = useState(false)
   const [saving, setSaving]     = useState(false)
   const [plateBusy, setPlateBusy] = useState(false)
+  // signed copy → Drive (admin + Drive connected, same rule as car documents)
+  const [driveOk, setDriveOk]   = useState(false)
+  const [signAsk, setSignAsk]   = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   // Load settings + the contract (or a fresh one) whenever the editor opens
   useEffect(() => {
@@ -104,6 +114,10 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
       const clauses = (s?.clauses as ContractClause[] | null) ?? null
       if (cancelled) return
       setMyDetails(mine); setDefClauses(clauses)
+      if (profile.isAdmin) {
+        fetch(`/api/drive/status?tenant_id=${profile.tenantId}`)
+          .then(r => r.json()).then(j => { if (!cancelled) setDriveOk(!!j.connected) }).catch(() => {})
+      }
 
       if (contractId) {
         const { data: row, error } = await sb.from('car_sale_contracts').select('*').eq('id', contractId).single()
@@ -212,7 +226,8 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
   }
 
   // ── Save / print / close ──
-  async function save(nextStatus = status): Promise<boolean> {
+  async function save(nextStatus = status, override?: ContractData): Promise<boolean> {
+    const d = override ?? current
     if (!d || !profile) return false
     setSaving(true)
     const row = {
@@ -234,6 +249,7 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
     setSaving(false)
     if (res.error || !res.data) { showToast('שגיאה בשמירת החוזה', 'error'); return false }
     setId(res.data.id); setStatus(nextStatus); setDirty(false)
+    if (override) setD(override)
     onSaved?.()
     return true
   }
@@ -244,7 +260,57 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
 
   async function toggleSigned() {
     const next = status === 'signed' ? 'draft' : 'signed'
-    if (await save(next)) showToast(next === 'signed' ? 'החוזה סומן כנחתם' : 'החוזה הוחזר לטיוטה', 'success')
+    if (!await save(next)) return
+    showToast(next === 'signed' ? 'החוזה סומן כנחתם' : 'החוזה הוחזר לטיוטה', 'success')
+    if (next === 'signed' && driveOk && !d?.signedFile) setSignAsk(true)
+  }
+
+  // ── Signed copy ──
+  async function uploadSigned(file: File) {
+    if (!d || !profile) return
+    setSignAsk(false); setScanning(false); setUploading(true)
+    try {
+      const plate = d.car.plate.trim()
+      const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : ''
+      const base = plate ? `${plate} - הסכם מכירה חתום` : `הסכם מכירה חתום - ${d.buyer.name.trim() || 'ללא שם'} ${d.date}`
+      const small = await shrinkForUpload(file)
+      const fd = new FormData()
+      fd.append('file', new File([small], base + ext, { type: small.type }))
+      fd.append('tenant_id', profile.tenantId)
+      // same folder as the car's documents; contracts without a plate go to חוזי מכירה/
+      fd.append('sub_folder', plate ? 'רכבים' : 'חוזי מכירה')
+      if (plate) fd.append('item_name', plate)
+      const res = await fetch('/api/drive/upload', { method: 'POST', body: fd })
+      if (res.status === 413) { showToast('הקובץ גדול מדי להעלאה (מקסימום כ-4MB)', 'error'); return }
+      const j = await res.json().catch(() => ({ error: `שגיאת שרת (${res.status})` }))
+      if (!j.id) { showToast(j.error || 'שגיאה בהעלאה', 'error'); return }
+      const old = d.signedFile
+      const signedFile: SignedFile = { id: j.id, name: j.name || base + ext, link: j.webViewLink }
+      if (await save('signed', { ...d, signedFile })) {
+        showToast('החוזה החתום נשמר בדרייב', 'success')
+        if (old) removeDriveFile(old.id)
+      }
+    } catch {
+      showToast('שגיאת רשת', 'error')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function removeDriveFile(fileId: string) {
+    if (!profile) return
+    fetch('/api/drive/delete', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant_id: profile.tenantId, file_id: fileId }) }).catch(() => {})
+  }
+
+  async function removeSigned() {
+    if (!d?.signedFile) return
+    const ok = await confirm({ msg: 'למחוק את העותק החתום מהדרייב?', variant: 'danger' })
+    if (!ok) return
+    const fid = d.signedFile.id
+    if (await save(status, { ...d, signedFile: null })) {
+      removeDriveFile(fid)
+      showToast('העותק החתום נמחק', 'success')
+    }
   }
 
   async function handlePrint() {
@@ -380,26 +446,21 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
             <span className="csc-paykind">🧾 שיקים</span>
             {checksTotal(d) > 0 && <>סך <b>{fmtAmount(checksTotal(d))}</b> ש&quot;ח </>}ב-{d.checks.length} {d.checks.length === 1 ? 'שיק' : 'שיקים'} מעותדים המשוכים מחשבונו של הקונה, כדלקמן:
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="csc-checks">
-              <thead><tr><th>#</th><th>מס&apos; שיק</th><th>סכום (ש&quot;ח)</th><th>תאריך פירעון</th><th /></tr></thead>
-              <tbody>
-                {d.checks.map((c, i) => {
-                  const setC = (k: 'num' | 'amount' | 'date', v: string) => patch(x => ({ ...x, checks: x.checks.map((cc, j) => j === i ? { ...cc, [k]: v } : cc) }))
-                  return (
-                    <tr key={i}>
-                      <td>{i + 1}</td>
-                      <td><F value={c.num} onChange={v => setC('num', v)} min={9} ltr /></td>
-                      <td><F value={c.amount} onChange={v => setC('amount', v)} min={9} /></td>
-                      <td><F value={c.date} onChange={v => setC('date', v)} type="date" /></td>
-                      <td><button type="button" style={{ ...iconBtn, color: 'var(--danger)' }} aria-label="מחק שיק" disabled={d.checks.length === 1}
-                        onClick={() => patch(x => ({ ...x, checks: x.checks.filter((_, j) => j !== i) }))}>✕</button></td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          {/* one line per check, like the original contract */}
+          <ul className="csc-checklist">
+            {d.checks.map((c, i) => {
+              const setC = (k: 'num' | 'amount' | 'date', v: string) => patch(x => ({ ...x, checks: x.checks.map((cc, j) => j === i ? { ...cc, [k]: v } : cc) }))
+              return (
+                <li key={i}>
+                  שיק מס&apos; <F value={c.num} onChange={v => setC('num', v)} min={8} bold ltr />,
+                  {' '}ע&quot;ס <F value={c.amount} onChange={v => setC('amount', v)} min={8} bold /> ש&quot;ח,
+                  {' '}לתאריך: <F value={c.date} onChange={v => setC('date', v)} type="date" />
+                  <button type="button" style={{ ...iconBtn, color: 'var(--danger)' }} aria-label="מחק שיק" disabled={d.checks.length === 1}
+                    onClick={() => patch(x => ({ ...x, checks: x.checks.filter((_, j) => j !== i) }))}>✕</button>
+                </li>
+              )
+            })}
+          </ul>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
             <button type="button" className="csc-add" onClick={() => patch(x => ({ ...x, checks: [...x.checks, { num: '', amount: '', date: '' }] }))}>+ הוסף שיק</button>
             <button type="button" className="csc-add" onClick={splitChecks} title="מחלק את היתרה (סכום כולל פחות מזומן והעברות) שווה בשווה, שיק בכל חודש מתאריך השיק הראשון">⚖️ חלק את היתרה שווה + תאריכים חודשיים</button>
@@ -414,17 +475,37 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
     <div className="csc-root" dir="rtl">
       <style>{CSS}</style>
 
+      <Modal open={signAsk} onClose={() => setSignAsk(false)} title="שמירת עותק חתום" maxWidth={420}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            העותק יישמר בדרייב{d?.car.plate.trim() ? ` בתיקיית הרכב (רכבים/${d.car.plate.trim()})` : ' בתיקיית "חוזי מכירה"'} ויופיע גם כאן.
+          </div>
+          <Button onClick={() => { setSignAsk(false); setScanning(true) }}>📷 סרוק</Button>
+          <Button variant="secondary" onClick={() => fileRef.current?.click()}>📤 העלה קובץ (PDF / תמונה)</Button>
+          <Button variant="ghost" onClick={() => setSignAsk(false)}>דלג</Button>
+        </div>
+      </Modal>
+      <input ref={fileRef} type="file" accept="application/pdf,image/*" style={{ display: 'none' }}
+        onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) uploadSigned(f) }} />
+      {scanning && <DocumentScannerModal onComplete={uploadSigned} onClose={() => setScanning(false)} />}
+
       {/* Toolbar */}
       <div className="csc-bar">
         <button type="button" onClick={handleClose} style={{ ...iconBtn, fontSize: 20, color: 'var(--text)' }} aria-label="סגור">✕</button>
         <div style={{ fontWeight: 800, fontSize: 15, whiteSpace: 'nowrap' }}>📝 חוזה מכירת רכב</div>
         <span className={`csc-status ${status}`}>{status === 'signed' ? '✅ נחתם' : 'טיוטה'}</span>
         {dirty && <span style={{ fontSize: 12, color: '#b45309' }}>● לא נשמר</span>}
+        {d?.signedFile && <a href={signedFileUrl(d.signedFile)} target="_blank" rel="noreferrer" className="csc-chip" style={{ textDecoration: 'none' }}>📎 חוזה חתום</a>}
+        {uploading && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>⏳ מעלה לדרייב...</span>}
         <div style={{ flex: 1 }} />
         <Button size="sm" variant="secondary" onClick={toggleSigned} disabled={!d || saving}>{status === 'signed' ? 'החזר לטיוטה' : '✅ סמן כנחתם'}</Button>
         <Button size="sm" variant="secondary" onClick={handlePrint} disabled={!d || saving}>🖨️ הדפס / PDF</Button>
         <Button size="sm" onClick={handleSave} loading={saving} disabled={!d}>💾 שמור</Button>
         <RowActionsMenu align="end" actions={[
+          ...(driveOk ? [
+            { key: 'scan', label: d?.signedFile ? 'החלף עותק חתום (סריקה / קובץ)' : 'שמור עותק חתום (סריקה / קובץ)', icon: '📷', onClick: () => setSignAsk(true), disabled: !d || uploading },
+            ...(d?.signedFile ? [{ key: 'unsign', label: 'מחק עותק חתום', icon: '🗑', danger: true, onClick: removeSigned }] : []),
+          ] : []),
           { key: 'def',  label: 'שמור נוסח סעיפים כברירת מחדל', icon: '📌', onClick: saveDefaultClauses },
           { key: 'rdef', label: 'טען נוסח ברירת המחדל שלי', icon: '↺', onClick: () => resetClauses('default'), disabled: !defClauses?.length },
           { key: 'rorg', label: 'החזר לנוסח המקורי', icon: '⟲', onClick: () => resetClauses('original') },
@@ -489,8 +570,10 @@ const CSS = `
 .csc-status { font-size: 11.5px; font-weight: 700; padding: 2px 10px; border-radius: 10px; background: #f1f5f9; color: #475569; }
 .csc-status.signed { background: #dcfce7; color: #166534; }
 .csc-scroll { flex: 1; overflow-y: auto; padding: 12px 8px 40px; }
-.csc-paper { max-width: 820px; margin: 0 auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 14px rgba(0,0,0,.08); padding: 24px 32px; font-size: 13.5px; line-height: 1.55; color: #0f172a; }
-@media (max-width: 640px) { .csc-paper { padding: 14px 10px; } .csc-grid { grid-template-columns: 1fr !important; } .csc-car { grid-template-columns: 1fr 1fr !important; } .csc-car > div:first-child { grid-column: 1 / -1; border-left: none; border-bottom: 1px solid #e2e8f0; } }
+/* fixed A4 sheet with the print margins (16mm/17mm) and font, so the editor looks like the printout */
+.csc-paper { width: 210mm; min-height: 297mm; box-sizing: border-box; margin: 0 auto; background: #fff; box-shadow: 0 2px 14px rgba(0,0,0,.12); padding: 16mm 17mm 18mm; font-size: 14px; line-height: 1.6; color: #0f172a; }
+@media (max-width: 840px) { .csc-paper { width: 100%; min-height: 0; padding: 18px 14px; border-radius: 8px; } }
+@media (max-width: 640px) { .csc-grid { grid-template-columns: 1fr !important; } .csc-car { grid-template-columns: 1fr 1fr !important; } .csc-car > div:first-child { grid-column: 1 / -1; border-left: none; border-bottom: 1px solid #e2e8f0; } }
 .csc-f { font: inherit; color: inherit; background: #f8fafc; border: none; border-bottom: 1.5px dashed #94a3b8; border-radius: 3px 3px 0 0; padding: 0 4px; outline: none; min-width: 0; }
 .csc-f:focus { background: #eef2ff; border-bottom: 1.5px solid var(--primary); }
 .csc-f::placeholder { color: #94a3b8; font-weight: 400; }
@@ -498,7 +581,7 @@ const CSS = `
 .csc-t:hover { background: #f8fafc; border-color: #e2e8f0; }
 .csc-t:focus { background: #eef2ff; border-color: var(--primary); }
 .csc-title { text-align: center; padding-bottom: 8px; border-bottom: 2px solid #0f172a; margin-bottom: 10px; }
-.csc-title-in { font-size: 20px; font-weight: 800; text-align: center; width: 100%; background: transparent; border-bottom-color: transparent; }
+.csc-title-in { font-size: 21px; font-weight: 800; text-align: center; width: 100%; background: transparent; border-bottom-color: transparent; }
 .csc-title-in:hover { border-bottom-color: #cbd5e1; }
 .csc-sub { color: #475569; margin-top: 2px; }
 .csc-party { border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; margin-bottom: 6px; }
@@ -515,7 +598,7 @@ const CSS = `
 .csc-p { margin: 2px 0; }
 .csc-center { text-align: center; font-weight: 800; text-decoration: underline; text-underline-offset: 4px; margin: 10px 0 2px; }
 .csc-clause { margin-top: 8px; }
-.csc-clause-h { display: flex; align-items: flex-start; gap: 6px; font-size: 14px; }
+.csc-clause-h { display: flex; align-items: flex-start; gap: 6px; font-size: 14.5px; }
 .csc-num { font-weight: 800; padding-top: 2px; }
 .csc-hint { font-size: 11px; color: #b45309; background: #fef3c7; padding: 1px 8px; border-radius: 8px; }
 .csc-item { display: flex; align-items: flex-start; gap: 4px; padding-right: 12px; }
@@ -528,9 +611,8 @@ const CSS = `
 .csc-payline { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; padding: 4px 8px; margin: 3px 12px 0 0; border-right: 3px solid #e2e8f0; }
 .csc-paykind { font-weight: 700; font-size: 12.5px; margin-left: 4px; white-space: nowrap; }
 .csc-hint-s { font-size: 11px; color: #94a3b8; }
-.csc-checks { border-collapse: collapse; font-size: 13px; }
-.csc-checks th, .csc-checks td { border: 1px solid #e2e8f0; padding: 3px 6px; text-align: center; }
-.csc-checks th { background: #f8fafc; font-weight: 700; }
+.csc-checklist { margin: 2px 0; padding-right: 22px; list-style: disc; }
+.csc-checklist li { margin: 2px 0; }
 .csc-sigs { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 10px; }
 .csc-sig { margin-top: 26px; border-bottom: 1px dashed #64748b; color: #475569; }
 @media (hover: hover) { .csc-clause .csc-tools { opacity: .35; transition: opacity .15s; } .csc-clause:hover .csc-tools, .csc-clause:focus-within .csc-tools { opacity: 1; } .csc-add-sub { display: none; } .csc-clause:hover .csc-add-sub, .csc-clause:focus-within .csc-add-sub { display: inline-block; } }

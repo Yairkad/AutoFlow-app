@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 export interface RowMenuAction {
@@ -48,6 +48,21 @@ export default function RowActionsMenu({ actions, variant = 'button', align = 's
       window.removeEventListener('resize', reposition)
     }
   }, [open, align])
+
+  // keep the menu inside the viewport (e.g. a ⋮ at the far left of an RTL toolbar with align 'end') —
+  // nudges the rendered menu directly, no extra render
+  useLayoutEffect(() => {
+    const m = menuRef.current
+    if (!open || !pos || !m) return
+    const r = m.getBoundingClientRect()
+    const vw = window.innerWidth, vh = window.innerHeight
+    if (r.left < 8) { m.style.right = 'auto'; m.style.left = '8px' }
+    else if (r.right > vw - 8) { m.style.left = 'auto'; m.style.right = '8px' }
+    if (r.bottom > vh - 8 && btnRef.current) {
+      const b = btnRef.current.getBoundingClientRect()
+      m.style.top = `${Math.max(8, b.top - r.height - 4)}px`
+    }
+  }, [open, pos])
 
   if (actions.length === 0) return null
 
