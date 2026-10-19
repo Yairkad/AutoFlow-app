@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-19T09:45:17.053Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-19T10:15:13.061Z
 > Files: 87 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -228,6 +228,9 @@
 
 
 ## app/api/yard-auth/
+
+
+## app/api/yard/ (stock)
 
 
 ## app/api/yard/barcode/
@@ -507,7 +510,7 @@
 - `RequestsPanel.tsx` — emptyForm (~3389 tok)
 - `StockSummaryCards.tsx` — Office: tire stock value + how up to date the stock data is. (~874 tok)
 - `ui.tsx` — Page frame: dark top bar on the yard terminal, plain block on the office page. (~1642 tok)
-- `YardTrackingClient.tsx` — YardTrackingClient (~384 tok)
+- `YardTrackingClient.tsx` — TABS (~794 tok)
 
 ## components/yard/
 
@@ -599,6 +602,9 @@
 - `access.ts` — Sees money amounts in the quick reports (worker side). (~779 tok)
 - `hub.ts` — Still waiting for the tire itself — these get the "it just arrived" alert on receive. (~921 tok)
 
+## pages
+
+
 ## public/
 
 
@@ -629,25 +635,3 @@
 - `main.go` — go:build windows (~3100 tok)
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-
-## lib/stock/
-- `storage.ts` — cabinets map types, DEFAULT_LAYOUT, parseLocation/formatLocation ("a3, b2" → A3, B2), zoneOf/isSplit (contiguous rows), lastCountByCabinet, countFreshness
-- `zoneCount.ts` — zone count logic: expandScope (split tires pull their other shelves in), buildReview (per-tire decisions), toSave
-- `server.ts` — loadLayout (storage_maps or default), suggestLocation (existing shelf / most used shelf for same size)
-
-## components/stock/
-- `StorageMap.tsx` — draws cabinets (shelf 1 on top), select/highlight shelves, cabinet tint
-- `StorageMapEditor.tsx` — admin editor: rows, position arrows, contiguous flag, cabinets (letter + shelves)
-- `StorageClient.tsx` — office /tires/storage: map w/ last-count colours, zone count, fix unrecognised locations
-- `ZoneCountPanel.tsx` — count by zone (yard + office): pick on map → scan per shelf → review → save; draft in localStorage
-- `LocationBadge.tsx` — "📍 B3 ⓘ" opens map with shelf marked (portal); fetchLayout cache
-- `PlacementSheet.tsx` — after receiving a tire: suggested shelf, confirm / pick other
-
-## app/api/yard/ (stock)
-- `storage-map/route.ts` — GET map + last count per cabinet; PUT (office admin) save map
-- `zone-count/route.ts` — GET map + tires; POST apply zone count (session zone + counted_by_name)
-- `tire-location/route.ts` — PATCH confirm where a received tire was put
-
-## pages
-- `app/(app)/tires/storage/page.tsx` — StorageClient
-- `app/yard/count/page.tsx` — ZoneCountPanel variant yard

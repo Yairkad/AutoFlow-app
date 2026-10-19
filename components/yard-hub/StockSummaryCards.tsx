@@ -39,7 +39,7 @@ export default function StockSummaryCards() {
   const count = daysAgoLabel(s.lastCountDate)
 
   return (
-    <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+    <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
       <Card title="💰 שווי מלאי צמיגים (עלות)" color="#0f172a">
         <span className="font-black text-slate-900" style={{ fontSize: '26px' }}>{ils(s.costValue)}</span>
         <span className="text-xs text-slate-500">{s.tireCount.toLocaleString('he-IL')} צמיגים · {s.tireModels} דגמים</span>

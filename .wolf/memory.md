@@ -2471,3 +2471,5 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 12:00 | User asked to start yard/office UI redesign; asked which screens confuse + device + style, requested screenshots | - | awaiting answers | ~2k |
+| 10:15 | Created components/yard-hub/YardTrackingClient.tsx | — | ~794 |
+| 12:40 | Office yard-tracking redesign: underlined main tabs w/ counts, segmented filters, section cards w/ subtitle, card actions (primary + icon row), explanatory empty states, steps legend | yard-hub/* | tsc ok, playwright desktop+phone ok | ~25k |

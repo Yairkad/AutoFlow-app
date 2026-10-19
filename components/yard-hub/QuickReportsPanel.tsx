@@ -64,7 +64,7 @@ export default function QuickReportsPanel({ variant }: { variant: 'yard' | 'offi
   const s = data?.sold
 
   return (
-    <HubFrame variant={variant} title="📊 דוחות מהירים">
+    <HubFrame variant={variant} title="📊 דוחות מהירים" subtitle="מה נמכר ומה נקלט למלאי בתקופה שבוחרים">
       <Chips value={range} onChange={setRange} options={[
         { value: 'today', label: 'היום' },
         { value: 'week',  label: 'השבוע' },

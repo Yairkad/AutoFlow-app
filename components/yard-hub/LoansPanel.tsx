@@ -7,7 +7,7 @@ import {
   LOAN_DIRECTION_LABEL, LOAN_STATUS_LABEL, LOAN_STALE_DAYS, daysSince,
   type LoanDirection, type TireLoan,
 } from '@/lib/yard/hub'
-import { Chips, Empty, Field, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle, todayISO } from './ui'
+import { AddButton, Chips, Empty, Field, HubFrame, IconBtn, cardGrid, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle, todayISO } from './ui'
 
 type View = 'borrowed' | 'lent' | 'closed'
 
@@ -118,21 +118,22 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
   const f = (k: keyof typeof emptyForm, v: string | number) => setForm(p => p ? { ...p, [k]: v } : p)
 
   return (
-    <HubFrame variant={variant} title="🔁 השאלות בין פנצ׳ריות" action={
-      <button onClick={startNew} className="bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold" style={{ padding: '10px 18px', fontSize: '16px' }}>
-        + רישום חדש
-      </button>
-    }>
+    <HubFrame variant={variant} title="🔁 השאלות בין פנצ׳ריות"
+      subtitle="צמיגים שלקחנו מפנצ׳ריה אחרת או נתנו לה — פתוח עד שמחזירים או משלמים"
+      action={<AddButton onClick={startNew}>+ השאלה חדשה</AddButton>}>
       <Chips value={view} onChange={setView} options={[
-        { value: 'borrowed', label: `📥 קיבלנו מהם (${countOf('borrowed')})` },
-        { value: 'lent',     label: `📤 נתנו להם (${countOf('lent')})` },
+        { value: 'borrowed', label: '📥 לקחנו מהם', count: countOf('borrowed') },
+        { value: 'lent',     label: '📤 נתנו להם', count: countOf('lent') },
         { value: 'closed',   label: '✓ סגורים' },
       ]} />
 
       {loading ? <Empty icon="⏳" text="טוען..." /> : list.length === 0 ? (
-        <Empty icon="✅" text={view === 'closed' ? 'אין רישומים סגורים' : 'אין השאלות פתוחות'} />
+        view === 'closed' ? <Empty icon="🗂" text="אין רישומים סגורים" /> : (
+          <Empty icon="✅" text={view === 'borrowed' ? 'אין צמיגים שאנחנו חייבים' : 'אין צמיגים שחייבים לנו'}
+            action={<AddButton onClick={startNew}>+ השאלה חדשה</AddButton>} />
+        )
       ) : (
-        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+        <div style={cardGrid}>
           {list.map(l => {
             const days = daysSince(l.loan_date)
             const stale = l.status === 'open' && days >= LOAN_STALE_DAYS
@@ -162,20 +163,21 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
                 {l.notes && <div className="text-sm text-slate-500">📝 {l.notes}</div>}
                 {l.created_by_name && <div className="text-xs text-slate-400">נרשם ע״י {l.created_by_name}</div>}
 
-                <div className="flex gap-2 flex-wrap mt-1">
-                  {l.status === 'open' ? (<>
-                    <button onClick={() => setStatus(l, 'returned')} className="flex-1 bg-blue-600 text-white rounded-lg font-bold" style={{ padding: '9px 8px' }}>↩ הוחזר</button>
-                    <button onClick={() => { setPayFor(l); setPayAmount('') }} className="flex-1 bg-green-600 text-white rounded-lg font-bold" style={{ padding: '9px 8px' }}>₪ שולם</button>
-                  </>) : (
-                    <button onClick={() => setStatus(l, 'open')} className="flex-1 bg-slate-100 text-slate-700 rounded-lg font-bold" style={{ padding: '9px 8px' }}>פתח מחדש</button>
+                <div className="flex flex-col gap-2 mt-auto" style={{ paddingTop: 6 }}>
+                  {l.status === 'open' ? (
+                    <div className="flex gap-2">
+                      <button onClick={() => setStatus(l, 'returned')} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold" style={{ padding: '10px 8px', fontSize: 15 }}>↩ הוחזר</button>
+                      <button onClick={() => { setPayFor(l); setPayAmount('') }} className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold" style={{ padding: '10px 8px', fontSize: 15 }}>₪ שולם</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setStatus(l, 'open')} className="w-full bg-slate-100 text-slate-700 rounded-lg font-bold" style={{ padding: '10px 8px' }}>פתח מחדש</button>
                   )}
-                  {l.shop_phone && (
-                    <a href={`tel:${l.shop_phone}`} className="bg-slate-100 text-slate-700 rounded-lg font-bold text-center" style={{ padding: '9px 12px' }}>📞</a>
-                  )}
-                  <button onClick={() => startEdit(l)} className="bg-slate-100 text-slate-700 rounded-lg font-bold" style={{ padding: '9px 12px' }} title="עריכה">✏️</button>
-                  {variant === 'office' && (
-                    <button onClick={() => remove(l)} className="bg-red-50 text-red-600 rounded-lg font-bold" style={{ padding: '9px 12px' }} title="מחיקה">🗑</button>
-                  )}
+                  <div className="flex gap-1.5">
+                    {l.shop_phone && <IconBtn title="חיוג לפנצ׳ריה" href={`tel:${l.shop_phone}`}>📞</IconBtn>}
+                    <IconBtn title="עריכה" onClick={() => startEdit(l)}>✏️</IconBtn>
+                    <span className="flex-1" />
+                    {variant === 'office' && <IconBtn tone="danger" title="מחיקה" onClick={() => remove(l)}>🗑</IconBtn>}
+                  </div>
                 </div>
               </div>
             )
