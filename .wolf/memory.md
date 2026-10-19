@@ -2527,3 +2527,14 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 14:15 | User asked for Hebrew; repeated merge question in Hebrew (reply in Hebrew always) | - | awaiting answer | ~1k |
+
+## Session: 2026-10-19 12:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-19 12:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:40 | Storage map default from user's room sketch: right wall A–G contiguous, H–I low separate, left wall K/J contiguous, L separate; 'v' rows drawn as one line per cabinet (letter + shelves), room outline | StorageMap.tsx, storage.ts | playwright phone ok | ~8k |
