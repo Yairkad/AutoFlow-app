@@ -2527,6 +2527,7 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 14:15 | User asked for Hebrew; repeated merge question in Hebrew (reply in Hebrew always) | - | awaiting answer | ~1k |
+| 13:30 | Rebuilt closed PR #11 on current main: scan result shows buy/sell price; tire edit has width/profile/rim | components/scan/ScanClient.tsx | tsc ok, lint unchanged (3 pre-existing) | ~10k |
 
 ## Session: 2026-10-19 12:09
 
@@ -2538,3 +2539,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 14:40 | Storage map default from user's room sketch: right wall A–G contiguous, H–I low separate, left wall K/J contiguous, L separate; 'v' rows drawn as one line per cabinet (letter + shelves), room outline | StorageMap.tsx, storage.ts | playwright phone ok | ~8k |
+
+## Session: 2026-10-19 13:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:45 | PR #53 merged; resolved .wolf/memory.md conflict on PR #54 (merged origin/main) | .wolf/memory.md | pushed | ~3k |
