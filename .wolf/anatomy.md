@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-18T15:57:19.932Z
-> Files: 73 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-19T09:22:29.148Z
+> Files: 78 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -498,6 +498,8 @@
 
 - `SearchSheet.tsx` — 'numeric' opens the phone's number pad (tire sizes); 'search' the normal keyboard (~1753 tok)
 - `TireLookupClient.tsx` — normalizeTireSize (~1660 tok)
+- `YardDashboard.tsx` — YardDashboard (~1826 tok)
+- `YardLogin.tsx` — Shown as a switch-employee overlay (with a cancel button) instead of the full login screen (~1416 tok)
 - `YardShell.tsx` — YardShell (~1321 tok)
 
 ## docs/
@@ -509,7 +511,9 @@
 
 ## lib/auth/
 
-- `yard-token.ts` — The logged-in user of the worker terminal, or null when not signed in / inactive. (~471 tok)
+- `yard-pin.ts` — Yard login PIN: 4–8 digits. (~264 tok)
+- `yard-session.ts` — Hard cap; the terminal also returns to the picker after YARD_IDLE_MS without use. (~717 tok)
+- `yard-token.ts` — Employee signed in on the terminal with name + PIN, or null. (~876 tok)
 
 ## lib/bank-sync/
 
@@ -566,7 +570,7 @@
 
 ## lib/yard/
 
-- `access.ts` — Sees money amounts in the quick reports (worker side). (~697 tok)
+- `access.ts` — Sees money amounts in the quick reports (worker side). (~779 tok)
 - `hub.ts` — Still waiting for the tire itself — these get the "it just arrived" alert on receive. (~921 tok)
 
 ## public/
@@ -584,6 +588,7 @@
 - `088_cars_hand_ownership.sql` — cars.hand smallint + original_ownership + car_code text (~80 tok)
 - `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
 - `093_yard_worker_hub.sql` — ════════════════════════════════════════════ (~1248 tok)
+- `094_yard_pin_login.sql` — ════════════════════════════════════════════ (~293 tok)
 
 ## tests/
 
@@ -597,3 +602,19 @@
 - `main.go` — go:build windows (~3100 tok)
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
+
+## app/api/yard-auth/
+- `employees/route.ts` — GET public: names of active employees with a yard PIN (terminal login picker)
+- `login/route.ts` — POST {employeeId,pin} → signed yard_emp cookie; 5 wrong → 60s lock
+- `logout/route.ts` — POST clears yard_emp cookie
+
+## app/api/employees/yard-pin/
+- `route.ts` — admin: GET ids with PIN; POST set/remove PIN (scrypt hash in yard_pins)
+
+## lib/auth/ (yard login)
+- `yard-session.ts` — HMAC-signed yard_emp cookie (Web Crypto; used by proxy.ts too), YARD_IDLE_MS
+- `yard-pin.ts` — scrypt hash/check PIN, PIN_RE, lockout constants
+- `yard-token.ts` — getYardEmployee (PIN cookie) / getYardUser (PIN first, else office session) / requireYard
+
+## components/yard/YardLogin.tsx
+- terminal login + switch-employee overlay: pick name → PIN

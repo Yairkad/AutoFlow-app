@@ -1,5 +1,6 @@
 // Worker-terminal (/yard) sections and per-employee permission keys.
-// Keys live in profiles.allowed_modules, edited in Settings → Users.
+// Office users: keys live in profiles.allowed_modules (Settings → Users).
+// PIN-login employees: employees.yard_modules (Employees screen), NULL = DEFAULT_YARD_MODULES.
 
 export type YardKey =
   | 'yard_terminal' | 'yard_receive' | 'yard_lookup'
@@ -20,6 +21,9 @@ export const YARD_SECTIONS: YardSection[] = [
 export const YARD_MONEY_KEY = 'yard_reports_money'
 /** Office management page "מעקב רחבה" — sees and edits everything the yard records. */
 export const YARD_TRACKING_KEY = 'yard_tracking'
+
+/** A PIN-login employee with no explicit choice (employees.yard_modules NULL): every section, no money. */
+export const DEFAULT_YARD_MODULES: string[] = YARD_SECTIONS.map(s => s.key)
 
 export const ALL_YARD_KEYS: string[] = [
   'yard', ...YARD_SECTIONS.map(s => s.key), YARD_MONEY_KEY, YARD_TRACKING_KEY,

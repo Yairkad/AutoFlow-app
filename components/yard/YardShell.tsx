@@ -1,10 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { YARD_SECTIONS, canYard, sectionForPath, type YardKey } from '@/lib/yard/access'
 import { createClient } from '@/lib/supabase/client'
+import { YARD_IDLE_MS } from '@/lib/auth/yard-session'
+import YardLogin from './YardLogin'
 
 interface Props {
   isAdmin: boolean
@@ -17,7 +19,9 @@ type Counts = Partial<Record<YardKey, number>>
 
 export default function YardShell({ isAdmin, modules, userName, children }: Props) {
   const pathname = usePathname()
+  const router   = useRouter()
   const [open, setOpen] = useState(false)
+  const [switching, setSwitching] = useState(false)
   const [counts, setCounts] = useState<Counts>({})
 
   const subject  = { isAdmin, modules }
@@ -47,6 +51,34 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
     const id = setInterval(soon, 120_000)
     return () => { clearTimeout(timer); clearInterval(id); sb.removeChannel(ch) }
   }, [])
+
+  // Idle terminal → sign the employee out so the next person has to pick their own name
+  useEffect(() => {
+    let last = Date.now()
+    const touch = () => { last = Date.now() }
+    const evs = ['pointerdown', 'keydown', 'touchstart'] as const
+    evs.forEach(e => window.addEventListener(e, touch, { passive: true }))
+    const id = setInterval(() => {
+      if (Date.now() - last < YARD_IDLE_MS) return
+      clearInterval(id)
+      fetch('/api/yard-auth/logout', { method: 'POST' }).finally(() => router.refresh())
+    }, 30_000)
+    return () => { clearInterval(id); evs.forEach(e => window.removeEventListener(e, touch)) }
+  }, [router])
+
+  const userButton = (compact: boolean) => (
+    <button
+      onClick={() => { setOpen(false); setSwitching(true) }}
+      className="flex items-center gap-1.5 bg-slate-700 active:bg-slate-600 text-white font-bold rounded-xl"
+      style={compact
+        ? { padding: '6px 10px', fontSize: '14px', maxWidth: '45vw', minHeight: 40 }
+        : { padding: '8px 4px', fontSize: '11px', flexDirection: 'column', width: '100%' }}
+      aria-label="החלפת עובד"
+    >
+      <span className="truncate" style={{ maxWidth: '100%' }}>👤 {userName ?? 'עובד'}</span>
+      <span className="text-slate-300" style={{ fontSize: compact ? '12px' : '10px' }}>🔄 החלף</span>
+    </button>
+  )
 
   // NOTE: no <aside> here — globals.css pushes every <aside> off-screen below 900px
   // (rule written for the main app sidebar), which made this drawer open empty.
@@ -113,12 +145,8 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
     <div className="flex h-full w-full" style={{ minHeight: 0 }}>
       {/* Rail — tablets and desktop */}
       <div className="hidden md:flex flex-col bg-slate-900 flex-shrink-0 overflow-y-auto" style={{ width: '96px' }}>
+        <div style={{ padding: '8px 8px 0' }}>{userButton(false)}</div>
         {rail}
-        {userName && (
-          <div className="mt-auto text-center text-slate-400" style={{ fontSize: '11px', padding: '8px 4px' }}>
-            👤 {userName}
-          </div>
-        )}
       </div>
 
       {/* Drawer — phones */}
@@ -130,9 +158,7 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
               <button onClick={() => setOpen(false)} className="text-slate-300 font-black" style={{ fontSize: '24px', width: 44, height: 44 }} aria-label="סגור">✕</button>
             </div>
             {drawerNav}
-            {userName && (
-              <div className="mt-auto text-slate-400" style={{ fontSize: '13px', padding: '12px 16px' }}>👤 {userName}</div>
-            )}
+            <div className="mt-auto" style={{ padding: '12px' }}>{userButton(true)}</div>
           </div>
         </div>
       )}
@@ -151,10 +177,11 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
               <span className="absolute bg-red-500 rounded-full" style={{ top: -3, left: -3, width: 12, height: 12 }} />
             )}
           </button>
-          <span className="font-bold truncate" style={{ fontSize: '17px' }}>
+          <span className="font-bold truncate flex-1" style={{ fontSize: '17px' }}>
             {current ? `${current.icon} ${current.label}` : 'מסוף רחבה'}
             {currentCount > 0 ? ` (${currentCount})` : ''}
           </span>
+          {userButton(true)}
         </div>
 
         <div className="flex-1 flex flex-col" style={{ minHeight: 0 }}>
@@ -167,6 +194,7 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
           )}
         </div>
       </div>
+      {switching && <YardLogin onCancel={() => setSwitching(false)} currentName={userName} />}
     </div>
   )
 }

@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
-import { canYard, canYardMoney, type YardKey } from '@/lib/yard/access'
+import { createServiceClient } from '@/lib/supabase/service'
+import { canYard, canYardMoney, DEFAULT_YARD_MODULES, type YardKey } from '@/lib/yard/access'
+import { YARD_COOKIE, verifyYardSession } from '@/lib/auth/yard-session'
 
 export function getYardTenantId(): string | null {
   return process.env.YARD_TENANT_ID ?? null
 }
 
 export interface YardUser {
-  userId: string
+  userId: string | null      // auth user (office login); null for a PIN-login employee
+  employeeId: string | null  // employees.id for a PIN-login employee
   name: string | null
   tenantId: string
   isAdmin: boolean
@@ -15,8 +19,32 @@ export interface YardUser {
   canMoney: boolean
 }
 
-/** The logged-in user of the worker terminal, or null when not signed in / inactive. */
-export async function getYardUser(): Promise<YardUser | null> {
+/** Employee signed in on the terminal with name + PIN, or null. */
+export async function getYardEmployee(): Promise<YardUser | null> {
+  const jar = await cookies()
+  const s = await verifyYardSession(jar.get(YARD_COOKIE)?.value)
+  if (!s) return null
+  const { data: e } = await createServiceClient()
+    .from('employees')
+    .select('id, full_name, tenant_id, is_active, end_date, yard_modules')
+    .eq('id', s.e)
+    .eq('tenant_id', s.t)
+    .maybeSingle()
+  if (!e || e.is_active === false || (e.end_date && e.end_date < new Date().toISOString().slice(0, 10))) return null
+  const modules: string[] = e.yard_modules ?? DEFAULT_YARD_MODULES
+  return {
+    userId: null,
+    employeeId: e.id,
+    name: e.full_name,
+    tenantId: e.tenant_id,
+    isAdmin: false,
+    modules,
+    canMoney: canYardMoney({ isAdmin: false, modules }),
+  }
+}
+
+/** Office user (Gmail login) — used by the office pages that call /api/yard. */
+async function getOfficeYardUser(): Promise<YardUser | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -30,12 +58,18 @@ export async function getYardUser(): Promise<YardUser | null> {
   const modules: string[] = p.allowed_modules ?? []
   return {
     userId: user.id,
+    employeeId: null,
     name: p.full_name ?? user.email ?? null,
     tenantId: p.tenant_id,
     isAdmin,
     modules,
     canMoney: canYardMoney({ isAdmin, modules }),
   }
+}
+
+/** Who is calling a yard route: the terminal employee first, else the office user. */
+export async function getYardUser(): Promise<YardUser | null> {
+  return (await getYardEmployee()) ?? (await getOfficeYardUser())
 }
 
 /** API guard for the worker-hub routes: signed in + allowed for this section. */

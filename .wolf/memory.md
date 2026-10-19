@@ -2440,3 +2440,18 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:00 | Yard PIN login (employee list + code, yard-only, quick switch) + zone count plan proposed; awaiting go | - | plan proposed | ~6k |
+
+## Session: 2026-10-19 09:16
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:18 | Edited components/yard/YardDashboard.tsx | — | ~0 |
+| 09:20 | Created supabase/migrations/094_yard_pin_login.sql | — | ~293 |
+| 09:20 | Created lib/auth/yard-session.ts | — | ~717 |
+| 09:20 | Created lib/auth/yard-pin.ts | — | ~264 |
+| 09:20 | Created lib/auth/yard-token.ts | — | ~876 |
+| 09:20 | Edited lib/yard/access.ts | modified choice() | ~65 |
+| 09:20 | Edited lib/yard/access.ts | 1→2 lines | ~49 |
+| 09:21 | Created components/yard/YardLogin.tsx | — | ~1416 |
+| 09:22 | Edited components/yard/YardDashboard.tsx | CSS: refetch | ~54 |
+| 10:00 | Yard PIN login: migration 094, yard-session/yard-pin libs, /api/yard-auth/*, /api/employees/yard-pin, YardLogin + switch button + 30min idle logout, employees modal PIN+sections, proxy 401 guard for /api/yard/*, removed big tire-lookup button | many | tsc ok, build ok, playwright login screen ok | ~60k |

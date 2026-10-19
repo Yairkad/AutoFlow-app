@@ -1128,5 +1128,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-18T19:00:00Z"
+  },
+  {
+    "id": "bug-058",
+    "timestamp": "2026-10-19T10:00:00Z",
+    "error_message": "/api/yard/* routes that only use getYardTenantId() (sessions, receive, search, barcode, services...) answered without any login",
+    "file": "proxy.ts",
+    "root_cause": "PUBLIC_PREFIXES contains '/' matched with startsWith, so proxy.ts treats every path as public; those routes never checked a user themselves",
+    "fix": "proxy.ts checks /api/yard/ before the public list: valid yard_emp PIN cookie or a Supabase session, else 401. The '/' issue itself is left for the rest of the app (flagged to user)",
+    "tags": [
+      "security",
+      "proxy",
+      "yard",
+      "auth"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-19T10:00:00Z"
   }
 ]
