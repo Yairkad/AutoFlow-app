@@ -5,6 +5,7 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+- [2026-10-19] **Do-Not-Repeat (user angry):** EVERY message to the user in Hebrew — including progress lines between tool calls and final summaries. Wrote several English status lines/summary this session; user shouted "בעברית תמיד!!!".
 - [2026-10-19] Contract print prefs: larger font (13.5px) and margins, 'עמוד Y מתוך X' footer, checks as a bullet line per check "שיק מס' X, ע"ס Y ש"ח, לתאריך: Z" exactly like the original HTML (NOT a table), never leave only the signatures on a new page. Editor should look like a fixed A4 sheet.
 - [2026-10-19] Signed car contracts: "סמן כנחתם" offers scan (DocumentScannerModal) / file upload → Drive רכבים/<plate>/"<plate> - הסכם מכירה חתום" (no plate → חוזי מכירה/). Stored in contract data.signedFile (no DB column). Admin + Drive connected only, like car docs.
 - [2026-10-19] User found the office 'מעקב רחבה' clunky/unclear (main tabs and sub-filters looked identical, lone '+ לקוח חדש' button far left, no explanation). Pattern now: main tabs = underlined tab bar with red count badges; filters inside a section = gray segmented control (yard-hub/ui Chips); every section = card with title + one-line explanation + action on the same row (HubFrame office); card = one full-width next-step button + small IconBtn row; empty states explain what goes there + offer the action.
