@@ -2423,3 +2423,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:16 | Checked availability of israeli-bank-connector skill (Q&A only) | - | visible; no bank MCP server connected | ~1k |
+
+## Session: 2026-10-19 09:29
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:30 | Analyzed bank-sync matching: only expenses/income by exact amount; checks (scheduled_payments.check_number) & debts not considered. Proposed check-number matching, wider pool, learned rules, bulk approve | lib/bank-sync/matchSuggestions.ts | awaiting user answer | ~6k |
