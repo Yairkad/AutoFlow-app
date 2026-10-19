@@ -5,6 +5,7 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+- [2026-10-19] Signed car contracts: "סמן כנחתם" offers scan (DocumentScannerModal) / file upload → Drive רכבים/<plate>/"<plate> - הסכם מכירה חתום" (no plate → חוזי מכירה/). Stored in contract data.signedFile (no DB column). Admin + Drive connected only, like car docs.
 - [2026-10-19] Car contract payments are mixed: any number of cash / transfer lines (amount, date, note) + optional checks table; checks split covers the remainder. Old contracts (data.payment single method) go through normalizeContract().
 - [2026-10-19] Car sale contract: user wants editing directly on the document (no side form), compact spacing / no redundant fields, "הפרטים שלי" saved once and quick-filled into seller OR buyer by choice (not auto-filled — dealer is sometimes the buyer). Print must fit one A4 page.
 - [2026-10-18] Tire size input = three boxes like a date field (width 3 / profile 2 / rim 2) with auto-advance, search by fields (width/profile/rim params), not as free text. Occupied wheel position → ask each time (replace / keep both / cancel).

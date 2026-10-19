@@ -11,9 +11,12 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
+import Modal from '@/components/ui/Modal'
+import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
+import { shrinkForUpload } from '@/lib/utils/uploadCompress'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import {
-  type ContractData, type ContractParty, type ContractClause, type MyDetails, type PayLine,
+  type ContractData, type ContractParty, type ContractClause, type MyDetails, type PayLine, type SignedFile, signedFileUrl,
   DEFAULT_CLAUSES, newContract, normalizeContract, cloneClauses, visibleClauses, itemLetter, priceToWords,
   parseAmount, fmtAmount, contractHtml, newId, payLinesTotal, checksTotal,
 } from '@/lib/cars/saleContract'
@@ -83,6 +86,7 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
   const { confirm } = useConfirm()
 
   const [d, setD]               = useState<ContractData | null>(null)
+  const current = d
   const [id, setId]             = useState<string | null>(null)
   const [linkedCar, setLinkedCar] = useState<string | null>(null)
   const [status, setStatus]     = useState<'draft' | 'signed'>('draft')
@@ -91,6 +95,12 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
   const [dirty, setDirty]       = useState(false)
   const [saving, setSaving]     = useState(false)
   const [plateBusy, setPlateBusy] = useState(false)
+  // signed copy → Drive (admin + Drive connected, same rule as car documents)
+  const [driveOk, setDriveOk]   = useState(false)
+  const [signAsk, setSignAsk]   = useState(false)
+  const [scanning, setScanning] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   // Load settings + the contract (or a fresh one) whenever the editor opens
   useEffect(() => {
@@ -104,6 +114,10 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
       const clauses = (s?.clauses as ContractClause[] | null) ?? null
       if (cancelled) return
       setMyDetails(mine); setDefClauses(clauses)
+      if (profile.isAdmin) {
+        fetch(`/api/drive/status?tenant_id=${profile.tenantId}`)
+          .then(r => r.json()).then(j => { if (!cancelled) setDriveOk(!!j.connected) }).catch(() => {})
+      }
 
       if (contractId) {
         const { data: row, error } = await sb.from('car_sale_contracts').select('*').eq('id', contractId).single()
@@ -212,7 +226,8 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
   }
 
   // ── Save / print / close ──
-  async function save(nextStatus = status): Promise<boolean> {
+  async function save(nextStatus = status, override?: ContractData): Promise<boolean> {
+    const d = override ?? current
     if (!d || !profile) return false
     setSaving(true)
     const row = {
@@ -234,6 +249,7 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
     setSaving(false)
     if (res.error || !res.data) { showToast('שגיאה בשמירת החוזה', 'error'); return false }
     setId(res.data.id); setStatus(nextStatus); setDirty(false)
+    if (override) setD(override)
     onSaved?.()
     return true
   }
@@ -244,7 +260,57 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
 
   async function toggleSigned() {
     const next = status === 'signed' ? 'draft' : 'signed'
-    if (await save(next)) showToast(next === 'signed' ? 'החוזה סומן כנחתם' : 'החוזה הוחזר לטיוטה', 'success')
+    if (!await save(next)) return
+    showToast(next === 'signed' ? 'החוזה סומן כנחתם' : 'החוזה הוחזר לטיוטה', 'success')
+    if (next === 'signed' && driveOk && !d?.signedFile) setSignAsk(true)
+  }
+
+  // ── Signed copy ──
+  async function uploadSigned(file: File) {
+    if (!d || !profile) return
+    setSignAsk(false); setScanning(false); setUploading(true)
+    try {
+      const plate = d.car.plate.trim()
+      const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : ''
+      const base = plate ? `${plate} - הסכם מכירה חתום` : `הסכם מכירה חתום - ${d.buyer.name.trim() || 'ללא שם'} ${d.date}`
+      const small = await shrinkForUpload(file)
+      const fd = new FormData()
+      fd.append('file', new File([small], base + ext, { type: small.type }))
+      fd.append('tenant_id', profile.tenantId)
+      // same folder as the car's documents; contracts without a plate go to חוזי מכירה/
+      fd.append('sub_folder', plate ? 'רכבים' : 'חוזי מכירה')
+      if (plate) fd.append('item_name', plate)
+      const res = await fetch('/api/drive/upload', { method: 'POST', body: fd })
+      if (res.status === 413) { showToast('הקובץ גדול מדי להעלאה (מקסימום כ-4MB)', 'error'); return }
+      const j = await res.json().catch(() => ({ error: `שגיאת שרת (${res.status})` }))
+      if (!j.id) { showToast(j.error || 'שגיאה בהעלאה', 'error'); return }
+      const old = d.signedFile
+      const signedFile: SignedFile = { id: j.id, name: j.name || base + ext, link: j.webViewLink }
+      if (await save('signed', { ...d, signedFile })) {
+        showToast('החוזה החתום נשמר בדרייב', 'success')
+        if (old) removeDriveFile(old.id)
+      }
+    } catch {
+      showToast('שגיאת רשת', 'error')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function removeDriveFile(fileId: string) {
+    if (!profile) return
+    fetch('/api/drive/delete', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant_id: profile.tenantId, file_id: fileId }) }).catch(() => {})
+  }
+
+  async function removeSigned() {
+    if (!d?.signedFile) return
+    const ok = await confirm({ msg: 'למחוק את העותק החתום מהדרייב?', variant: 'danger' })
+    if (!ok) return
+    const fid = d.signedFile.id
+    if (await save(status, { ...d, signedFile: null })) {
+      removeDriveFile(fid)
+      showToast('העותק החתום נמחק', 'success')
+    }
   }
 
   async function handlePrint() {
@@ -414,17 +480,37 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
     <div className="csc-root" dir="rtl">
       <style>{CSS}</style>
 
+      <Modal open={signAsk} onClose={() => setSignAsk(false)} title="שמירת עותק חתום" maxWidth={420}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            העותק יישמר בדרייב{d?.car.plate.trim() ? ` בתיקיית הרכב (רכבים/${d.car.plate.trim()})` : ' בתיקיית "חוזי מכירה"'} ויופיע גם כאן.
+          </div>
+          <Button onClick={() => { setSignAsk(false); setScanning(true) }}>📷 סרוק</Button>
+          <Button variant="secondary" onClick={() => fileRef.current?.click()}>📤 העלה קובץ (PDF / תמונה)</Button>
+          <Button variant="ghost" onClick={() => setSignAsk(false)}>דלג</Button>
+        </div>
+      </Modal>
+      <input ref={fileRef} type="file" accept="application/pdf,image/*" style={{ display: 'none' }}
+        onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) uploadSigned(f) }} />
+      {scanning && <DocumentScannerModal onComplete={uploadSigned} onClose={() => setScanning(false)} />}
+
       {/* Toolbar */}
       <div className="csc-bar">
         <button type="button" onClick={handleClose} style={{ ...iconBtn, fontSize: 20, color: 'var(--text)' }} aria-label="סגור">✕</button>
         <div style={{ fontWeight: 800, fontSize: 15, whiteSpace: 'nowrap' }}>📝 חוזה מכירת רכב</div>
         <span className={`csc-status ${status}`}>{status === 'signed' ? '✅ נחתם' : 'טיוטה'}</span>
         {dirty && <span style={{ fontSize: 12, color: '#b45309' }}>● לא נשמר</span>}
+        {d?.signedFile && <a href={signedFileUrl(d.signedFile)} target="_blank" rel="noreferrer" className="csc-chip" style={{ textDecoration: 'none' }}>📎 חוזה חתום</a>}
+        {uploading && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>⏳ מעלה לדרייב...</span>}
         <div style={{ flex: 1 }} />
         <Button size="sm" variant="secondary" onClick={toggleSigned} disabled={!d || saving}>{status === 'signed' ? 'החזר לטיוטה' : '✅ סמן כנחתם'}</Button>
         <Button size="sm" variant="secondary" onClick={handlePrint} disabled={!d || saving}>🖨️ הדפס / PDF</Button>
         <Button size="sm" onClick={handleSave} loading={saving} disabled={!d}>💾 שמור</Button>
         <RowActionsMenu align="end" actions={[
+          ...(driveOk ? [
+            { key: 'scan', label: d?.signedFile ? 'החלף עותק חתום (סריקה / קובץ)' : 'שמור עותק חתום (סריקה / קובץ)', icon: '📷', onClick: () => setSignAsk(true), disabled: !d || uploading },
+            ...(d?.signedFile ? [{ key: 'unsign', label: 'מחק עותק חתום', icon: '🗑', danger: true, onClick: removeSigned }] : []),
+          ] : []),
           { key: 'def',  label: 'שמור נוסח סעיפים כברירת מחדל', icon: '📌', onClick: saveDefaultClauses },
           { key: 'rdef', label: 'טען נוסח ברירת המחדל שלי', icon: '↺', onClick: () => resetClauses('default'), disabled: !defClauses?.length },
           { key: 'rorg', label: 'החזר לנוסח המקורי', icon: '⟲', onClick: () => resetClauses('original') },

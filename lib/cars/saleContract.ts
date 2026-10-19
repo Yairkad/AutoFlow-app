@@ -52,7 +52,17 @@ export interface ContractData {
   payment?: PaymentMethod
   paymentDetails?: string
   clauses: ContractClause[]
+  // scanned / uploaded signed copy in Drive
+  signedFile?: SignedFile | null
 }
+
+export interface SignedFile {
+  id: string
+  name: string
+  link?: string
+}
+
+export const signedFileUrl = (f: SignedFile) => f.link || `https://drive.google.com/file/d/${f.id}/view`
 
 // The user's own saved details (quick-fill into seller or buyer)
 export interface MyDetails extends ContractParty {
@@ -73,6 +83,8 @@ export interface ContractRow {
   created_by_name: string | null
   created_at: string
   updated_at: string
+  // data->signedFile, selected for the list
+  signed_file?: SignedFile | null
 }
 
 export const CONTRACT_TITLE = 'זיכרון דברים / חוזה למכירת רכב'
