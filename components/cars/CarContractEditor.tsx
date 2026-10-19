@@ -446,26 +446,21 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
             <span className="csc-paykind">🧾 שיקים</span>
             {checksTotal(d) > 0 && <>סך <b>{fmtAmount(checksTotal(d))}</b> ש&quot;ח </>}ב-{d.checks.length} {d.checks.length === 1 ? 'שיק' : 'שיקים'} מעותדים המשוכים מחשבונו של הקונה, כדלקמן:
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="csc-checks">
-              <thead><tr><th>#</th><th>מס&apos; שיק</th><th>סכום (ש&quot;ח)</th><th>תאריך פירעון</th><th /></tr></thead>
-              <tbody>
-                {d.checks.map((c, i) => {
-                  const setC = (k: 'num' | 'amount' | 'date', v: string) => patch(x => ({ ...x, checks: x.checks.map((cc, j) => j === i ? { ...cc, [k]: v } : cc) }))
-                  return (
-                    <tr key={i}>
-                      <td>{i + 1}</td>
-                      <td><F value={c.num} onChange={v => setC('num', v)} min={9} ltr /></td>
-                      <td><F value={c.amount} onChange={v => setC('amount', v)} min={9} /></td>
-                      <td><F value={c.date} onChange={v => setC('date', v)} type="date" /></td>
-                      <td><button type="button" style={{ ...iconBtn, color: 'var(--danger)' }} aria-label="מחק שיק" disabled={d.checks.length === 1}
-                        onClick={() => patch(x => ({ ...x, checks: x.checks.filter((_, j) => j !== i) }))}>✕</button></td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          {/* one line per check, like the original contract */}
+          <ul className="csc-checklist">
+            {d.checks.map((c, i) => {
+              const setC = (k: 'num' | 'amount' | 'date', v: string) => patch(x => ({ ...x, checks: x.checks.map((cc, j) => j === i ? { ...cc, [k]: v } : cc) }))
+              return (
+                <li key={i}>
+                  שיק מס&apos; <F value={c.num} onChange={v => setC('num', v)} min={8} bold ltr />,
+                  {' '}ע&quot;ס <F value={c.amount} onChange={v => setC('amount', v)} min={8} bold /> ש&quot;ח,
+                  {' '}לתאריך: <F value={c.date} onChange={v => setC('date', v)} type="date" />
+                  <button type="button" style={{ ...iconBtn, color: 'var(--danger)' }} aria-label="מחק שיק" disabled={d.checks.length === 1}
+                    onClick={() => patch(x => ({ ...x, checks: x.checks.filter((_, j) => j !== i) }))}>✕</button>
+                </li>
+              )
+            })}
+          </ul>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
             <button type="button" className="csc-add" onClick={() => patch(x => ({ ...x, checks: [...x.checks, { num: '', amount: '', date: '' }] }))}>+ הוסף שיק</button>
             <button type="button" className="csc-add" onClick={splitChecks} title="מחלק את היתרה (סכום כולל פחות מזומן והעברות) שווה בשווה, שיק בכל חודש מתאריך השיק הראשון">⚖️ חלק את היתרה שווה + תאריכים חודשיים</button>
@@ -616,9 +611,8 @@ const CSS = `
 .csc-payline { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; padding: 4px 8px; margin: 3px 12px 0 0; border-right: 3px solid #e2e8f0; }
 .csc-paykind { font-weight: 700; font-size: 12.5px; margin-left: 4px; white-space: nowrap; }
 .csc-hint-s { font-size: 11px; color: #94a3b8; }
-.csc-checks { border-collapse: collapse; font-size: 13px; }
-.csc-checks th, .csc-checks td { border: 1px solid #e2e8f0; padding: 3px 6px; text-align: center; }
-.csc-checks th { background: #f8fafc; font-weight: 700; }
+.csc-checklist { margin: 2px 0; padding-right: 22px; list-style: disc; }
+.csc-checklist li { margin: 2px 0; }
 .csc-sigs { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 10px; }
 .csc-sig { margin-top: 26px; border-bottom: 1px dashed #64748b; color: #475569; }
 @media (hover: hover) { .csc-clause .csc-tools { opacity: .35; transition: opacity .15s; } .csc-clause:hover .csc-tools, .csc-clause:focus-within .csc-tools { opacity: 1; } .csc-add-sub { display: none; } .csc-clause:hover .csc-add-sub, .csc-clause:focus-within .csc-add-sub { display: inline-block; } }

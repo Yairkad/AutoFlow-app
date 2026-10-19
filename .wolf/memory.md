@@ -2435,3 +2435,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 12:20 | Contract print: bigger font/margins, 'עמוד Y מתוך X' (@page @bottom-center), single checks table, last clause+signatures kept together; editor = fixed A4 sheet; RowActionsMenu clamps to viewport | saleContract.ts, CarContractEditor.tsx, RowActionsMenu.tsx | tsc/eslint ok, PDF + screenshots ok | ~25k |
+| 12:40 | Contract checks shown as one line per check (שיק מס' X, ע"ס Y ש"ח, לתאריך: Z) like the original, in editor + print | saleContract.ts, CarContractEditor.tsx | tsc/eslint ok, PDF ok | ~8k |

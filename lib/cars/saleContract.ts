@@ -234,10 +234,10 @@ export function priceToWords(price: string): string {
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const val = (s: string, blank = '______________') => s.trim() ? esc(s) : `<span class="blank">${blank}</span>`
 
-function checkTable(checks: ContractCheck[]) {
-  const row = (c: ContractCheck, i: number) =>
-    `<tr><td>${i + 1}</td><td>${val(c.num, '________')}</td><td>${val(c.amount, '________')}</td><td>${c.date ? fmtDate(c.date) : '<span class="blank">___/___/____</span>'}</td></tr>`
-  return `<table class="checks"><thead><tr><th>#</th><th>מס' שיק</th><th>סכום (ש"ח)</th><th>תאריך פירעון</th></tr></thead><tbody>${checks.map(row).join('')}</tbody></table>`
+// One line per check, like the original contract
+function checkList(checks: ContractCheck[]) {
+  return `<ul class="checks">${checks.map(c =>
+    `<li>שיק מס' <b>${val(c.num, '_____')}</b>, ע"ס <b>${val(c.amount, '_____')}</b> ש"ח, לתאריך: <b>${c.date ? fmtDate(c.date) : '<span class="blank">___/___/____</span>'}</b></li>`).join('')}</ul>`
 }
 
 export function payLineText(l: PayLine, html = true): string {
@@ -265,7 +265,7 @@ export function contractHtml(raw: ContractData): string {
   if (d.checksOn) {
     const sum = checksTotal(d)
     parts.push(`<li>${sum ? `סך <b>${fmtAmount(sum)}</b> ש"ח ` : ''}ב-${d.checks.length} ${d.checks.length === 1 ? 'שיק' : 'שיקים'} מעותדים המשוכים מחשבונו של הקונה, כדלקמן:
-      ${checkTable(d.checks)}
+      ${checkList(d.checks)}
       <span class="small">הקונה ימציא למוכר בעת החתימה צילום תעודת זהות וצילום השיקים.</span></li>`)
   }
   const payment = parts.length
@@ -311,10 +311,8 @@ export function contractHtml(raw: ContractData): string {
   h4 { margin: 0 0 2px; font-size: 14.5px; break-after: avoid; page-break-after: avoid; }
   .it { margin: 2px 14px 2px 0; }
   .pay { margin: 3px 0; padding-right: 20px; } .pay li { margin: 2px 0; }
-  .checks { border-collapse: collapse; width: 100%; margin: 5px 0; font-size: 12.5px; }
-  .checks th, .checks td { border: 1px solid #999; padding: 3px 6px; text-align: center; }
-  .checks th { background: #f1f1f1; }
-  .checks tr { break-inside: avoid; page-break-inside: avoid; }
+  .checks { margin: 3px 0; padding-right: 20px; list-style: disc; }
+  .checks li { margin: 2px 0; }
   .small { font-size: 12px; color: #444; }
   .blank { color: #777; }
   .end { break-inside: avoid; page-break-inside: avoid; }
