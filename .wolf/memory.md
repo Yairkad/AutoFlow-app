@@ -2417,3 +2417,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 15:55 | Edited ../../../root/.claude/plans/reactive-giggling-petal.md | expanded (+10 lines) | ~232 |
 | 15:57 | Edited ../../../root/.claude/plans/reactive-giggling-petal.md | expanded (+13 lines) | ~315 |
 | 19:00 | Yard: card saves items itself (no realtime dependency), edits while saving, occupied-position ask, 3-box tire size search; debts search focus fix | WorkCardClient, TirePositionPicker, TireSizeInput, SearchSheet, handoff.ts, search API, DebtsClient | playwright ok, build ok | ~40k |
+
+## Session: 2026-10-19 09:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:16 | Checked availability of israeli-bank-connector skill (Q&A only) | - | visible; no bank MCP server connected | ~1k |
