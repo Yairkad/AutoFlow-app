@@ -1231,5 +1231,43 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-19T12:20:00Z"
+  },
+  {
+    "id": "bug-064",
+    "timestamp": "2026-10-20T10:00:00Z",
+    "error_message": "POST /api/store (customer_debt_payments) 400 — partial payment save fails in /debts",
+    "file": "supabase/migrations/080_customer_debt_payment_receipt.sql",
+    "root_cause": "Migration 080 (receipt_issued/receipt_number) was never applied to the live Supabase DB; insert referenced missing columns",
+    "fix": "User ran migration 080 + NOTIFY pgrst reload schema in SQL Editor. Also PaymentHistoryModal toasts now include the real error text",
+    "tags": [
+      "migration",
+      "supabase",
+      "400",
+      "debts",
+      "receipt"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-20T10:00:00Z"
+  },
+  {
+    "id": "bug-065",
+    "timestamp": "2026-10-20T11:00:00Z",
+    "error_message": "GET scheduled_payments 400: 42703 column scheduled_payments.category does not exist (autoMarkOverdueChecksPaid)",
+    "file": "lib/utils/autoMarkOverdueChecks.ts",
+    "root_cause": "Live DB scheduled_payments table predates the category column in migration 005 (drift between migration file and live schema)",
+    "fix": "User ran ALTER TABLE scheduled_payments ADD COLUMN IF NOT EXISTS category/supplier_id/notes/paid_date/expense_id/check_number/series_id/allocation_ignored + NOTIFY pgrst reload",
+    "tags": [
+      "migration",
+      "schema-drift",
+      "supabase",
+      "400",
+      "checks"
+    ],
+    "related_bugs": [
+      "bug-064"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-10-20T11:00:00Z"
   }
 ]
