@@ -6,6 +6,11 @@ import Button from '@/components/ui/Button'
 import { insertCustomerDebtPayment, updateCustomerDebtPayment, deleteCustomerDebtPayment } from '@/lib/debts/customerDebtPayments'
 
 type PaymentMethod = 'מזומן' | 'אשראי' | "צ'ק" | 'העברה'
+const METHODS: PaymentMethod[] = ['מזומן', 'אשראי', 'העברה', "צ'ק"]
+const methodIcon = (m: string) => m === 'מזומן' ? '💵' : m === 'אשראי' ? '💳' : m === "צ'ק" ? '📝' : '🏦'
+
+// Extra split lines (add mode only) — each one is saved as its own payment row.
+interface SplitLine { amount: string; method: PaymentMethod; reference: string }
 
 export interface CustomerDebtPayment {
   id: string; customer_debt_id: string; amount: number
@@ -40,6 +45,7 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
   const [reference, setReference] = useState('')
   const [receiptIssued, setReceiptIssued] = useState(false)
   const [receiptNumber, setReceiptNumber] = useState('')
+  const [extraLines, setExtraLines] = useState<SplitLine[]>([])
   const [saving, setSaving] = useState(false)
 
   const balance = debt ? Math.max(0, Number(debt.amount) - Number(debt.paid)) : 0
@@ -49,6 +55,7 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
     setAmount(balance > 0 ? balance.toFixed(2) : '')
     setDate(todayISO()); setMethod('מזומן'); setReference('')
     setReceiptIssued(false); setReceiptNumber('')
+    setExtraLines([])
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -66,11 +73,24 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
     setReference(p.reference ?? '')
     setReceiptIssued(p.receipt_issued)
     setReceiptNumber(p.receipt_number ?? '')
+    setExtraLines([])
   }
+
+  const addLine = () => {
+    const used = parseFloat(amount) || 0
+    const usedExtra = extraLines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0)
+    const left = Math.max(0, balance - used - usedExtra)
+    setExtraLines(ls => [...ls, { amount: left > 0 ? left.toFixed(2) : '', method: 'אשראי', reference: '' }])
+  }
+  const updateLine = (i: number, patch: Partial<SplitLine>) =>
+    setExtraLines(ls => ls.map((l, j) => j === i ? { ...l, ...patch } : l))
+  const removeLine = (i: number) => setExtraLines(ls => ls.filter((_, j) => j !== i))
 
   const save = async () => {
     const amt = parseFloat(amount)
     if (isNaN(amt) || amt <= 0) { showToast('סכום לא תקין', 'error'); return }
+    const extras = extraLines.map(l => ({ ...l, amt: parseFloat(l.amount) }))
+    if (extras.some(l => isNaN(l.amt) || l.amt <= 0)) { showToast('סכום לא תקין באחד מאמצעי התשלום', 'error'); return }
     setSaving(true)
     const meta = {
       amount: amt, payment_date: date, payment_method: method,
@@ -80,13 +100,24 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
     if (editingId) {
       const { error } = await updateCustomerDebtPayment(supabase, editingId, debt.id, meta)
       setSaving(false)
-      if (error) { showToast('שגיאה בעדכון התשלום', 'error'); return }
+      if (error) { showToast(`שגיאה בעדכון התשלום: ${error}`, 'error'); return }
       showToast('התשלום עודכן ✓', 'success')
     } else {
-      const { error, isClosed } = await insertCustomerDebtPayment(supabase, tenantId, debt.id, Number(debt.amount), meta)
+      // Sequential so each insert's recompute of customer_debts.paid sees the previous rows.
+      const lines = [meta, ...extras.map(l => ({ ...meta, amount: l.amt, payment_method: l.method, reference: l.reference.trim() || null }))]
+      let isClosed = false
+      for (const [i, line] of lines.entries()) {
+        const res = await insertCustomerDebtPayment(supabase, tenantId, debt.id, Number(debt.amount), line)
+        if (res.error) {
+          setSaving(false)
+          showToast(`שגיאה בשמירת התשלום${i > 0 ? ` (נשמרו ${i} מתוך ${lines.length})` : ''}: ${res.error}`, 'error')
+          if (i > 0) { resetForm(); onSaved() }
+          return
+        }
+        isClosed = res.isClosed
+      }
       setSaving(false)
-      if (error) { showToast('שגיאה בשמירת התשלום', 'error'); return }
-      showToast(isClosed ? 'שולם במלואו ✓' : 'תשלום נרשם ✓', 'success')
+      showToast(isClosed ? 'שולם במלואו ✓' : lines.length > 1 ? `${lines.length} תשלומים נרשמו ✓` : 'תשלום נרשם ✓', 'success')
     }
     resetForm()
     onSaved()
@@ -95,7 +126,7 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
   const remove = async (id: string) => {
     if (!confirm('למחוק תשלום זה?')) return
     const { error } = await deleteCustomerDebtPayment(supabase, id, debt.id)
-    if (error) { showToast('שגיאה במחיקת התשלום', 'error'); return }
+    if (error) { showToast(`שגיאה במחיקת התשלום: ${error}`, 'error'); return }
     showToast('נמחק', 'success')
     if (editingId === id) resetForm()
     onSaved()
@@ -127,14 +158,14 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
           <div>
             <label style={{ fontSize: '13px', fontWeight: 600 }}>אמצעי תשלום</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '4px' }}>
-              {(['מזומן', 'אשראי', 'העברה', "צ'ק"] as PaymentMethod[]).map(m => (
+              {METHODS.map(m => (
                 <button key={m} type="button" onClick={() => setMethod(m)} style={{
                   padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
                   border: `1px solid ${method === m ? 'var(--primary)' : 'var(--border)'}`,
                   background: method === m ? '#f0fdf4' : '#f8fafc',
                   color: method === m ? 'var(--primary)' : 'var(--text-muted)',
                 }}>
-                  {m === 'מזומן' ? '💵' : m === 'אשראי' ? '💳' : m === "צ'ק" ? '📝' : '🏦'} {m}
+                  {methodIcon(m)} {m}
                 </button>
               ))}
             </div>
@@ -145,6 +176,30 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
               </label>
             )}
           </div>
+          {!editingId && extraLines.map((l, i) => (
+            <div key={i} style={{ padding: '8px', border: '1px dashed var(--border)', borderRadius: '8px', display: 'grid', gap: '6px' }}>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <input type="number" min="0.01" step="0.01" value={l.amount} onChange={e => updateLine(i, { amount: e.target.value })} placeholder="סכום" className="form-input" style={{ margin: 0, flex: 1 }} />
+                <select value={l.method} onChange={e => updateLine(i, { method: e.target.value as PaymentMethod })} className="form-input" style={{ margin: 0, width: 'auto' }}>
+                  {METHODS.map(m => <option key={m} value={m}>{methodIcon(m)} {m}</option>)}
+                </select>
+                <button type="button" onClick={() => removeLine(i)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 14 }} title="הסר">✕</button>
+              </div>
+              {(l.method === 'העברה' || l.method === "צ'ק") && (
+                <input value={l.reference} onChange={e => updateLine(i, { reference: e.target.value })} placeholder={l.method === 'העברה' ? 'מספר אסמכתא (אופציונלי)' : 'מספר צ׳ק (אופציונלי)'} className="form-input" style={{ margin: 0 }} />
+              )}
+            </div>
+          ))}
+          {!editingId && (
+            <button type="button" onClick={addLine} style={{ border: '1px dashed var(--primary)', background: 'transparent', color: 'var(--primary)', borderRadius: '8px', padding: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+              + הוסף אמצעי תשלום נוסף (פיצול)
+            </button>
+          )}
+          {!editingId && extraLines.length > 0 && (
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              סה״כ: <strong>{fmt((parseFloat(amount) || 0) + extraLines.reduce((s, l) => s + (parseFloat(l.amount) || 0), 0))}</strong>
+            </div>
+          )}
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
             <input type="checkbox" checked={receiptIssued} onChange={e => setReceiptIssued(e.target.checked)} />
             🧾 הופקה קבלה
