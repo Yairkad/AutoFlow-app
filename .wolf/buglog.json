@@ -1231,5 +1231,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-19T12:20:00Z"
+  },
+  {
+    "id": "bug-064",
+    "timestamp": "2026-10-20T12:00:00Z",
+    "error_message": "ID digits shown reversed on screen in the POA form editor (print was correct)",
+    "file": "components/documents/PowerOfAttorneyPanel.tsx",
+    "root_cause": "flex row of digit spans inside an RTL page lays out right-to-left",
+    "fix": "dir=\"ltr\" on the digit container and on calibration boxes (also fixes flex-end alignment there)",
+    "tags": [
+      "rtl",
+      "flex",
+      "digits",
+      "poa"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-20T12:00:00Z"
   }
 ]

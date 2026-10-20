@@ -12,6 +12,7 @@ import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import PageHeader from '@/components/ui/PageHeader'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
 import CarContractsPanel from '@/components/cars/CarContractsPanel'
+import PowerOfAttorneyPanel from '@/components/documents/PowerOfAttorneyPanel'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -744,7 +745,7 @@ export default function DocumentsClient() {
   const [saving,   setSaving]   = useState(false)
 
   // ── Tabs ──────────────────────────────────────────────────────────────────────
-  const [docTab, setDocTab] = useState<'templates' | 'contracts' | 'drive'>('templates')
+  const [docTab, setDocTab] = useState<'templates' | 'contracts' | 'poa' | 'drive'>('templates')
 
   // ── Built-in checklist card state ─────────────────────────────────────────────
   const [clCopies, setClCopies] = useState(1)
@@ -1146,6 +1147,7 @@ export default function DocumentsClient() {
         {([
           ['templates', '📄 תבניות הדפסה'],
           ['contracts', '📝 חוזי מכירת רכב'],
+          ['poa',       '✍️ ייפוי כוח'],
           ['drive',     '📂 קבצים בדרייב'],
         ] as const).map(([key, label]) => (
           <button key={key} onClick={() => { setDocTab(key); if (key === 'drive') { setFolderStack([]); loadDriveFiles('') } }}
@@ -1164,6 +1166,9 @@ export default function DocumentsClient() {
 
       {/* ── Car sale contracts tab ── */}
       {docTab === 'contracts' && <CarContractsPanel />}
+
+      {/* ── Power of attorney (Ministry of Transport form) ── */}
+      {docTab === 'poa' && <PowerOfAttorneyPanel />}
 
       {/* ── Drive files tab ── */}
       {docTab === 'drive' && (
