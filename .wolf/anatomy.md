@@ -1,9 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-19T10:15:13.061Z
-> Files: 87 tracked | Anatomy hits: 0 | Misses: 0
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-19T10:17:35.507Z
-> Files: 77 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-20T11:06:53.417Z
+> Files: 103 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -222,9 +220,14 @@
 ## app/api/public/og/intake/
 
 - `route.tsx` — GET ?t=<token>&v=<logo hash>: branded OG image; redirects to static /og/inspection-intake.png when no logo (~250 tok)
+- `route.tsx` — GET ?t=<token>&v=<logo hash>: branded OG image; redirects to static /og/inspection-intake.png when no logo (~250 tok)
 
 ## app/api/public/plate/
 
+
+## app/api/public/plate/test-status/
+
+- `route.ts` — POST {plates[]} → {plate: {tokef, lastTest}} from data.gov.il (local+imported, chunks of 100, filters array). Used by CarsClient auto-sync on load (~400 tok)
 
 ## app/api/store/
 
@@ -429,6 +432,7 @@
 
 ## components/documents/
 
+- `PowerOfAttorneyPanel.tsx` — Documents tab 'ייפוי כוח': official MoT PDF (pdfjs → PNG) as background, transparent fields on top; calibration mode (drag / arrows, per-field x,y,w,h,fs + printer offset mm) saved in poa_form_settings.layout; quick-fill lists for proxies + owners; print only (~5500 tok)
 
 ## components/employees/
 
@@ -560,6 +564,14 @@
 ## lib/expenses/
 
 
+## public/forms/
+
+- `yipuy-koah.pdf` — official MoT 'ייפוי כוח לאדם פרטי' (1 page A4), background of the POA form
+
+## lib/forms/
+
+- `poaForm.ts` — Power-of-attorney form model: FIELDS default positions in PDF pt (measured from the PDF's boxes), layout overrides, fieldValue, idDigits (LTR, zero-padded), poaPrintHtml (A4 margin 0, pt units), renderPoaBackground (~2200 tok)
+
 ## lib/guide/
 
 - `content.ts` — cards = every section shown open; accordion = titles that open on tap (~3551 tok)
@@ -604,6 +616,7 @@
 ## lib/utils/ (addition)
 
 - `uploadCompress.ts` — MAX_UPLOAD_BYTES (4MB), compressImageIfNeeded, compressPdfIfNeeded, shrinkForUpload — client-side shrink to clear Vercel's 4.5MB limit (shared by suppliers + cars) (~900 tok)
+- `uploadCompress.ts` — MAX_UPLOAD_BYTES (4MB), compressImageIfNeeded, compressPdfIfNeeded, shrinkForUpload — client-side shrink to clear Vercel's 4.5MB limit (shared by suppliers + cars) (~900 tok)
 
 ## lib/yard/
 
@@ -621,20 +634,19 @@
 
 ## supabase/migrations/
 
-- `090_cars_docs_gov_test.sql` — cars.doc_names text[] (card doc chips) + gov_last_test_date (~100 tok)
-- `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
-- `088_cars_hand_ownership.sql` — cars.hand smallint + original_ownership + car_code text (~80 tok)
-- `087_cars_deposit_refund.sql` — cars.deposit_refund_requested bool + date (refund request filed for deposited license) (~90 tok)
-- `086_cars_license_deposit.sql` — cars.license_deposited bool + license_deposit_date (car off the road, license deposited) (~120 tok)
+- `099_poa_form_settings.sql` — poa_form_settings (tenant PK): layout JSONB (calibration), proxies/owners JSONB quick-fill lists, RLS by tenant (~350 tok)
 - `082_bank_statement_charge_date_card.sql` — Credit-card statements commonly carry two distinct dates per transaction -- (~172 tok)
 - `083_inspection_intake.sql` — Purchase-inspection pre-fill ("טופס מילוי מראש"): the office sends the customer a personal (~352 tok)
 - `086_cars_license_deposit.sql` — cars.license_deposited bool + license_deposit_date (car off the road, license deposited) (~120 tok)
+- `086_cars_license_deposit.sql` — cars.license_deposited bool + license_deposit_date (car off the road, license deposited) (~120 tok)
+- `087_cars_deposit_refund.sql` — cars.deposit_refund_requested bool + date (refund request filed for deposited license) (~90 tok)
 - `087_cars_deposit_refund.sql` — cars.deposit_refund_requested bool + date (refund request filed for deposited license) (~90 tok)
 - `088_cars_hand_ownership.sql` — cars.hand smallint + original_ownership + car_code text (~80 tok)
+- `088_cars_hand_ownership.sql` — cars.hand smallint + original_ownership + car_code text (~80 tok)
 - `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
+- `089_cars_test_steps.sql` — cars.test_fee_paid/test_passed (+dates); app resets both when test_date moves later (~120 tok)
+- `090_cars_docs_gov_test.sql` — cars.doc_names text[] (card doc chips) + gov_last_test_date (~100 tok)
 - `093_yard_worker_hub.sql` — ════════════════════════════════════════════ (~1248 tok)
-- `095_yard_pin_login.sql` — yard PIN login: employees.yard_modules + yard_pins (service-only)
-- `096_storage_map_zone_count.sql` — storage_maps + zone/counted_by_name on count sessions, location on entries
 - `094_car_sale_contracts.sql` — ════════════════════════════════════════════ (~671 tok)
 
 ## tests/
@@ -645,24 +657,11 @@
 
 ## tools/scanner-agent/
 
+- `intakeImage.tsx` — renderIntakeOgImage(name, logoBase64): branded 1200x630 link preview (logo card + inspection badge, colours from logo) via next/og ImageResponse (~1100 tok)
+- `intakeTenant.ts` — getIntakeTenant(token): tenant name+logo for personal/fixed intake link (~250 tok)
+- `logoColors.ts` — logoPalette(buf): dominant dark colour → bg, bright saturated → accent (sharp) (~700 tok)
 - `main.go` — Windows agent: self-install (HKCU Run), HTTP 127.0.0.1:47321 /status /scan, origin approval MessageBox, runs scan.ps1 (~2800 tok)
 - `main.go` — go:build windows (~3100 tok)
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
-- `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-- `intakeImage.tsx` — renderIntakeOgImage(name, logoBase64): branded 1200x630 link preview (logo card + inspection badge, colours from logo) via next/og ImageResponse (~1100 tok)
-- `logoColors.ts` — logoPalette(buf): dominant dark colour → bg, bright saturated → accent (sharp) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
-- `intakeTenant.ts` — getIntakeTenant(token): tenant name+logo for personal/fixed intake link (~250 tok)
-- `fonts/` — Assistant hebrew+latin 400/800 woff (OFL) for OG rendering
-
-## app/api/public/og/intake/
-
-- `route.tsx` — GET ?t=<token>&v=<logo hash>: branded OG image; redirects to static /og/inspection-intake.png when no logo (~250 tok)
-
-## lib/utils/ (addition)
-
-- `uploadCompress.ts` — MAX_UPLOAD_BYTES (4MB), compressImageIfNeeded, compressPdfIfNeeded, shrinkForUpload — client-side shrink to clear Vercel's 4.5MB limit (shared by suppliers + cars) (~900 tok)
-
-## app/api/public/plate/test-status/
-
-- `route.ts` — POST {plates[]} → {plate: {tokef, lastTest}} from data.gov.il (local+imported, chunks of 100, filters array). Used by CarsClient auto-sync on load (~400 tok)
+- `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
