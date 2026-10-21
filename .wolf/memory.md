@@ -2580,3 +2580,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-10-21 09:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| — | Session: fixed /debts 400s (schema drift: migration 080 + scheduled_payments.category, run by user in SQL Editor), built split-payment in PaymentHistoryModal, PR #56; user confirmed working | PaymentHistoryModal.tsx | done | ~40k |
