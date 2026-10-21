@@ -30,6 +30,8 @@
 
 - **No tables in explanations (2026-10-07):** user said he doesn't like looking at tables — explain comparisons in short prose / bullet points instead.
 
+- [2026-10-21] Cards: user wants a FIXED row order on every card (same row = same info across cards), small meta (supplier / created-by) just above a bottom-pinned action button. Phone format XXX-XXXX-XXX (054-9090-911), never wrapped.
+
 <!-- How the user likes things done. Code style, tools, patterns, communication. -->
 - **Salary model (2026-06-03):** Salary tab uses simple monthly net-entry model. No hourly/monthly type distinction. Each month user enters the net payslip amount directly (stored in `salaries.base`). External bonuses/deductions stored in `additions`/`deductions` JSONB. `total = base + additions - deductions`. Employee profile has no salary reference field.
 - **Manual over automatic for money-matching (2026-07-05):** User explicitly rejected automatic FIFO reconciliation for supplier checks vs. debts — he sometimes deliberately pays a newer month's invoices while intentionally leaving an older month open (a dispute or business reason), and does NOT want the system to silently close the older debt first. Any debt/payment matching logic must let the user pick which specific debt(s)/month(s) a payment settles, with the system only suggesting a default (editable), never deciding unilaterally.
