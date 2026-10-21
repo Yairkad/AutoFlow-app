@@ -15,8 +15,20 @@ type View = 'order' | 'inquiry' | 'closed'
 
 const emptyForm = {
   kind: 'order' as RequestKind, customer_name: '', phone: '', plate: '',
-  item_desc: '', qty: 1, quoted_price: '', notes: '', supplier_name: '',
+  item_desc: '', qty: 1, unit_price: '', quoted_price: '', notes: '', supplier_name: '',
 }
+
+const round2 = (n: number) => Math.round(n * 100) / 100
+
+/** "יום ה' 23/10 · 10:00" — time left out when none was set (stored as 00:00) */
+function fmtInstall(iso: string): string {
+  const d = new Date(iso)
+  const day = d.toLocaleDateString('he-IL', { weekday: 'short', day: '2-digit', month: '2-digit' })
+  const hasTime = d.getHours() !== 0 || d.getMinutes() !== 0
+  return hasTime ? `${day} · ${d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}` : day
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0')
 
 const PAY_COLOR: Record<PaymentStatus, string> = {
   unpaid:  'bg-red-50 text-red-700 border-red-200',
@@ -34,6 +46,14 @@ const STATUS_COLOR: Record<RequestStatus, string> = {
   notified:  'bg-blue-100 text-blue-800',
   closed:    'bg-green-100 text-green-800',
   cancelled: 'bg-red-100 text-red-700',
+}
+
+// Next-step button colour per stage, so the stage reads at a glance
+const NEXT_COLOR: Partial<Record<RequestStatus, string>> = {
+  new:      'bg-amber-500 hover:bg-amber-600',
+  ordered:  'bg-green-600 hover:bg-green-700',
+  arrived:  'bg-blue-600 hover:bg-blue-700',
+  notified: 'bg-slate-700 hover:bg-slate-800',
 }
 
 const NEXT_LABEL: Partial<Record<RequestStatus, string>> = {
@@ -59,6 +79,11 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
   const [supplierFor, setSupplierFor] = useState<CustomerRequest | null>(null)
   const [supplierText, setSupplierText] = useState('')
   const [suppliers, setSuppliers] = useState<string[]>([])
+  // "📞 סיכום שיחה": optional install appointment and/or a note; withStatus = also move the request on
+  const [callFor, setCallFor] = useState<{ r: CustomerRequest; withStatus?: RequestStatus } | null>(null)
+  const [callDate, setCallDate] = useState('')
+  const [callTime, setCallTime] = useState('')
+  const [callNote, setCallNote] = useState('')
 
   const loadOpen = useCallback(async () => {
     try { setOpen(await api<CustomerRequest[]>('/api/yard/requests?status=open')) }
@@ -95,7 +120,9 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
     setEditId(r.id)
     setForm({
       kind: r.kind, customer_name: r.customer_name, phone: r.phone ?? '', plate: r.plate ?? '',
-      item_desc: r.item_desc, qty: r.qty, quoted_price: r.quoted_price != null ? String(r.quoted_price) : '', notes: r.notes ?? '',
+      item_desc: r.item_desc, qty: r.qty, notes: r.notes ?? '',
+      quoted_price: r.quoted_price != null ? String(r.quoted_price) : '',
+      unit_price: r.quoted_price != null ? String(round2(r.quoted_price / Math.max(1, r.qty))) : '',
       supplier_name: r.supplier_name ?? '',
     })
   }
@@ -105,7 +132,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
     if (!form.customer_name.trim()) return showToast('צריך שם לקוח', 'error')
     if (!form.item_desc.trim()) return showToast('צריך מידה / מוצר', 'error')
     setSaving(true)
-    const body = { ...form, quoted_price: form.quoted_price === '' ? null : Number(form.quoted_price) }
+    const body = { ...form, unit_price: undefined, quoted_price: form.quoted_price === '' ? null : Number(form.quoted_price) }
     try {
       if (editId) {
         const row = await api<CustomerRequest>(`/api/yard/requests/${editId}`, 'PATCH', body)
@@ -142,10 +169,39 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
     setPayFor(null)
   }
 
-  // "Ordered from supplier": ask which supplier first (can be skipped)
+  // "Ordered from supplier": ask which supplier first (can be skipped).
+  // "Customer updated": the call is where the install time gets agreed — offer to record it.
   function advance(r: CustomerRequest, next: RequestStatus) {
     if (next === 'ordered' && r.kind === 'order' && !r.supplier_name) { setSupplierFor(r); setSupplierText(''); return }
+    if (next === 'notified') { openCall(r, next); return }
     setStatus(r, next)
+  }
+
+  function openCall(r: CustomerRequest, withStatus?: RequestStatus) {
+    const d = r.install_at ? new Date(r.install_at) : null
+    setCallFor({ r, withStatus })
+    setCallDate(d ? `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` : '')
+    setCallTime(d && (d.getHours() || d.getMinutes()) ? `${pad2(d.getHours())}:${pad2(d.getMinutes())}` : '')
+    setCallNote('')
+  }
+
+  function saveCall(skip = false) {
+    if (!callFor) return
+    const { r, withStatus } = callFor
+    setCallFor(null)
+    const changes: Partial<CustomerRequest> = {}
+    if (!skip) {
+      const installAt = callDate ? new Date(`${callDate}T${callTime || '00:00'}`).toISOString() : null
+      if (installAt !== (r.install_at ? new Date(r.install_at).toISOString() : null)) changes.install_at = installAt
+      const note = callNote.trim()
+      if (note) {
+        const now = new Date()
+        const line = `${pad2(now.getDate())}/${pad2(now.getMonth() + 1)}: ${note}`
+        changes.notes = r.notes ? `${r.notes}\n${line}` : line
+      }
+    }
+    if (withStatus) setStatus(r, withStatus, changes)
+    else if (Object.keys(changes).length) patch(r, changes)
   }
 
   async function setStatus(r: CustomerRequest, status: RequestStatus, extra: Partial<CustomerRequest> = {}) {
@@ -172,6 +228,10 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
   }
 
   const f = (k: keyof typeof emptyForm, v: string | number) => setForm(p => p ? { ...p, [k]: v } : p)
+  // Unit price and total stay in sync: either one can be typed; qty changes keep the unit price
+  const setQty = (qty: number) => setForm(p => p ? { ...p, qty, quoted_price: p.unit_price === '' ? p.quoted_price : String(round2(Number(p.unit_price) * qty)) } : p)
+  const setUnit = (v: string) => setForm(p => p ? { ...p, unit_price: v, quoted_price: v === '' ? '' : String(round2(Number(v) * p.qty)) } : p)
+  const setTotal = (v: string) => setForm(p => p ? { ...p, quoted_price: v, unit_price: v === '' ? '' : String(round2(Number(v) / p.qty)) } : p)
 
   return (
     <HubFrame variant={variant} title="⏳ לקוחות ממתינים"
@@ -205,8 +265,9 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
             const next = r.kind === 'inquiry' && r.status === 'new' ? 'closed' : REQUEST_NEXT[r.status]
             const isOpen = r.status !== 'closed' && r.status !== 'cancelled'
             const pay = r.payment_status ?? 'unpaid'
+            const left = pay === 'partial' && r.paid_amount != null && r.quoted_price != null ? round2(r.quoted_price - r.paid_amount) : null
             const payText = pay === 'partial' && r.paid_amount != null
-              ? `שולם ₪${r.paid_amount}${r.quoted_price != null ? ` מתוך ₪${r.quoted_price}` : ''}`
+              ? `שולם ₪${r.paid_amount}${left != null ? ` · נשאר ₪${left}` : ''}`
               : PAYMENT_LABEL[pay]
             return (
               <div key={r.id} className={`bg-white rounded-xl border-2 flex flex-col ${r.status === 'arrived' ? 'border-green-500' : 'border-slate-200'}`} style={{ padding: '10px 12px', gap: 6 }}>
@@ -223,6 +284,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                   </span>
                   <RowActionsMenu align="end" actions={[
                     ...(r.phone ? [{ key: 'wa', icon: '💬', label: 'שליחת וואטסאפ', onClick: () => window.open(whatsappLink(r.phone!, r.status === 'arrived' ? `שלום ${r.customer_name}, הצמיג שהזמנת (${r.item_desc}) הגיע אלינו 🙂` : undefined), '_blank') }] : []),
+                    { key: 'call', icon: '📞', label: 'סיכום שיחה (מועד התקנה / הערה)', onClick: () => openCall(r) },
                     { key: 'edit', icon: '✏️', label: 'עריכת נתונים', onClick: () => startEdit(r) },
                     ...(isOpen ? [{ key: 'cancel', icon: '✕', label: 'ביטול הבקשה', onClick: () => setStatus(r, 'cancelled') }] : []),
                     { key: 'del', icon: '🗑', label: 'מחיקת הפנייה', danger: true, onClick: () => remove(r) },
@@ -232,24 +294,32 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                 {/* Row 2: item · price · payment · age */}
                 <div className="flex items-center flex-wrap gap-x-2 gap-y-1" style={{ fontSize: 13 }}>
                   <span className="font-bold text-slate-800" style={{ direction: 'ltr', fontSize: 15 }}>{r.item_desc}{r.qty > 1 ? ` × ${r.qty}` : ''}</span>
-                  {r.quoted_price != null && <span className="text-slate-600">₪{r.quoted_price}</span>}
+                  {r.quoted_price != null && (
+                    <span className="text-slate-600">₪{r.quoted_price}{r.qty > 1 && <span className="text-slate-400" style={{ fontSize: 12 }}> (₪{round2(r.quoted_price / r.qty)} ליח&apos;)</span>}</span>
+                  )}
                   <button onClick={() => openPayment(r)} className={`rounded-full border font-bold ${PAY_COLOR[pay]}`} style={{ padding: '1px 8px', fontSize: 12 }}>
                     {payText}
                   </button>
                   <span className="text-slate-400" style={{ fontSize: 12 }}>{isOpen && days > 0 ? `${days} ימים` : fmtDate(r.created_at)}</span>
                 </div>
 
+                {r.install_at && (
+                  <button onClick={() => openCall(r)} className="self-start bg-blue-50 text-blue-800 border border-blue-200 rounded-lg font-bold" style={{ padding: '2px 8px', fontSize: 13 }}>
+                    🗓 התקנה: {fmtInstall(r.install_at)}
+                  </button>
+                )}
+
                 {(r.supplier_name || r.plate || r.notes || r.created_by_name) && (
                   <div className="text-slate-500 flex flex-wrap gap-x-2" style={{ fontSize: 12 }}>
                     {r.supplier_name && <span>📦 ספק: {r.supplier_name}</span>}
                     {r.plate && <span>🚗 {r.plate}</span>}
-                    {r.notes && <span>📝 {r.notes}</span>}
+                    {r.notes && <span style={{ whiteSpace: 'pre-line' }}>📝 {r.notes}</span>}
                     {r.created_by_name && <span className="text-slate-400">· {r.created_by_name}</span>}
                   </div>
                 )}
 
                 {next && (
-                  <button onClick={() => advance(r, next)} className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold mt-auto" style={{ padding: '8px', fontSize: 14 }}>
+                  <button onClick={() => advance(r, next)} className={`w-full ${r.kind === 'inquiry' ? 'bg-violet-600 hover:bg-violet-700' : NEXT_COLOR[r.status]} text-white rounded-lg font-bold mt-auto`} style={{ padding: '8px', fontSize: 14 }}>
                     {r.kind === 'inquiry' && r.status === 'new' ? '✓ בירור בוצע' : NEXT_LABEL[r.status]}
                   </button>
                 )}
@@ -274,6 +344,9 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
               <input type="number" inputMode="decimal" autoFocus value={payAmount} onChange={e => setPayAmount(e.target.value)} className={inputCls} style={inputStyle} />
             </Field>
           )}
+          {payStatus === 'partial' && payFor.quoted_price != null && Number(payAmount) > 0 && (
+            <div className="font-bold text-amber-800" style={{ fontSize: 15 }}>נשאר לתשלום: ₪{round2(payFor.quoted_price - Number(payAmount))}</div>
+          )}
           <button onClick={savePayment} className="bg-green-600 text-white rounded-xl font-black" style={{ padding: '14px', fontSize: '18px' }}>💾 שמור</button>
         </Sheet>
       )}
@@ -293,6 +366,32 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
           </button>
         </Sheet>
       )}
+      {callFor && (
+        <Sheet title={`📞 סיכום שיחה — ${callFor.r.customer_name}`} onClose={() => setCallFor(null)}>
+          <Field label="מועד הגעה להתקנה (לא חובה)">
+            <div className="flex gap-2">
+              <input type="date" value={callDate} onChange={e => setCallDate(e.target.value)} className={inputCls} style={inputStyle} />
+              <input type="time" value={callTime} onChange={e => setCallTime(e.target.value)} disabled={!callDate} className={inputCls} style={{ ...inputStyle, width: 120 }} />
+              {callDate && (
+                <button onClick={() => { setCallDate(''); setCallTime('') }} className="text-slate-500 font-bold" style={{ padding: '0 6px' }} title="בלי מועד">✕</button>
+              )}
+            </div>
+          </Field>
+          <Field label="הערה מהשיחה (לא חובה)">
+            <input value={callNote} onChange={e => setCallNote(e.target.value)} placeholder="למשל: יגיע אחרי העבודה, ביקש איזון"
+              className={inputCls} style={inputStyle} />
+          </Field>
+          <button onClick={() => saveCall()} className="bg-green-600 text-white rounded-xl font-black" style={{ padding: '14px', fontSize: '18px' }}>
+            {callFor.withStatus ? '✓ עודכן הלקוח' : '💾 שמור'}
+          </button>
+          {callFor.withStatus && (
+            <button onClick={() => saveCall(true)} className="text-slate-500 font-semibold" style={{ padding: 6 }}>
+              דלג — בלי מועד והערה
+            </button>
+          )}
+        </Sheet>
+      )}
+
       <datalist id="req-suppliers">{suppliers.map(s => <option key={s} value={s} />)}</datalist>
 
       {form && (
@@ -312,9 +411,12 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
               className={inputCls} style={{ ...inputStyle, direction: 'ltr', textAlign: 'right' }} />
           </Field>
           <div className="flex gap-3 flex-wrap">
-            <Field label="כמות"><QtyStepper value={form.qty} onChange={n => f('qty', n)} /></Field>
-            <Field label="מחיר שנאמר (₪)">
-              <input type="number" inputMode="decimal" value={form.quoted_price} onChange={e => f('quoted_price', e.target.value)} className={inputCls} style={{ ...inputStyle, width: 130 }} />
+            <Field label="כמות"><QtyStepper value={form.qty} onChange={setQty} /></Field>
+            <Field label="מחיר ליח' (₪)">
+              <input type="number" inputMode="decimal" value={form.unit_price} onChange={e => setUnit(e.target.value)} className={inputCls} style={{ ...inputStyle, width: 110 }} />
+            </Field>
+            <Field label="סה״כ (₪)">
+              <input type="number" inputMode="decimal" value={form.quoted_price} onChange={e => setTotal(e.target.value)} className={inputCls} style={{ ...inputStyle, width: 110 }} />
             </Field>
           </div>
           <Field label="ספק (מאיפה הזמנו)">

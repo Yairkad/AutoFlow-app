@@ -59,6 +59,9 @@ const emptyForm = {
   footerText: '',
 }
 
+const DOC_TABS = ['templates', 'contracts', 'poa', 'drive'] as const
+type DocTab = typeof DOC_TABS[number]
+
 const emptyCol: FormColumn = { label: '', width: 'medium' }
 
 const WIDTH_LABEL: Record<string, string>  = { narrow: 'צרה', medium: 'בינונית', wide: 'רחבה' }
@@ -745,7 +748,7 @@ export default function DocumentsClient() {
   const [saving,   setSaving]   = useState(false)
 
   // ── Tabs ──────────────────────────────────────────────────────────────────────
-  const [docTab, setDocTab] = useState<'templates' | 'contracts' | 'poa' | 'drive'>('templates')
+  const [docTab, setDocTab] = useState<DocTab>('templates')
 
   // ── Built-in checklist card state ─────────────────────────────────────────────
   const [clCopies, setClCopies] = useState(1)
@@ -843,6 +846,24 @@ export default function DocumentsClient() {
     } catch { /* ignore */ }
     setDriveLoading(false)
   }, [folderStack])
+
+  function openTab(key: DocTab) {
+    setDocTab(key)
+    if (key === 'drive') { setFolderStack([]); loadDriveFiles('') }
+    const url = new URL(window.location.href)
+    if (key === 'templates') url.searchParams.delete('tab'); else url.searchParams.set('tab', key)
+    window.history.replaceState(null, '', url)
+  }
+
+  // Direct link to a tab (/documents?tab=poa) — read once on open
+  const deepDrive = useRef(false)
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab') as DocTab | null
+    if (t && DOC_TABS.includes(t)) { setDocTab(t); deepDrive.current = t === 'drive' }
+  }, [])
+  useEffect(() => {
+    if (profile && deepDrive.current) { deepDrive.current = false; loadDriveFiles('') }
+  }, [profile, loadDriveFiles])
 
   const navigateInto = (item: {id:string;name:string}) => {
     setFolderStack(p => [...p, item])
@@ -1142,7 +1163,7 @@ export default function DocumentsClient() {
         }
       />
 
-      {/* Tab bar */}
+      {/* Tab bar — each tab has its own link (?tab=poa …) for bookmarks */}
       <div className="scroll-x" style={{ marginBottom: 20 }}><div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
         {([
           ['templates', '📄 תבניות הדפסה'],
@@ -1150,7 +1171,7 @@ export default function DocumentsClient() {
           ['poa',       '✍️ ייפוי כוח'],
           ['drive',     '📂 קבצים בדרייב'],
         ] as const).map(([key, label]) => (
-          <button key={key} onClick={() => { setDocTab(key); if (key === 'drive') { setFolderStack([]); loadDriveFiles('') } }}
+          <button key={key} onClick={() => openTab(key)}
             style={{
               padding: '7px 18px', border: 'none', cursor: 'pointer',
               fontFamily: 'inherit', fontSize: 13, fontWeight: docTab === key ? 600 : 400,

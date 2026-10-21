@@ -2616,3 +2616,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 12:40 | Requests: unit price ↔ total linked, remaining balance on partial pay, "📞 סיכום שיחה" (install_at + dated note, also on arrived→notified), next-step button colour per stage; contracts: signed copy via scanner agent + separate camera; documents tabs deep-link ?tab= | RequestsPanel.tsx, requests/[id]/route.ts, hub.ts, migration 102, CarContractEditor.tsx, DocumentsClient.tsx | tsc+eslint clean | ~30k |

@@ -3,7 +3,7 @@ import { requireYard } from '@/lib/auth/yard-token'
 import { createServiceClient } from '@/lib/supabase/service'
 import { parseTireSize } from '@/lib/tires/size'
 
-const EDITABLE = ['kind', 'customer_name', 'phone', 'plate', 'item_desc', 'qty', 'quoted_price', 'notes', 'supplier_name'] as const
+const EDITABLE = ['kind', 'customer_name', 'phone', 'plate', 'item_desc', 'qty', 'quoted_price', 'notes', 'supplier_name', 'install_at'] as const
 const PAYMENT = ['unpaid', 'partial', 'paid']
 const STATUSES = ['new', 'ordered', 'arrived', 'notified', 'closed', 'cancelled']
 

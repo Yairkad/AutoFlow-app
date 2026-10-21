@@ -14,6 +14,7 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import { shrinkForUpload } from '@/lib/utils/uploadCompress'
+import { scanWithAgent, listScanners, getSavedScanner, saveScanner, ScannerAgentMissingError, ScannerAgentOutdatedError, ScannerDeviceNotFoundError, SCANNER_DOWNLOAD_URL, type ScannerDevice } from '@/lib/scannerAgent'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import {
   type ContractData, type ContractParty, type ContractClause, type MyDetails, type PayLine, type SignedFile, signedFileUrl,
@@ -101,6 +102,11 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
   const [scanning, setScanning] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  // "📠 סרוק" → the "סורק AutoFlow" agent on this PC, like supplier invoices. Not probed in advance
+  // (Chrome would ask for local-network permission); the install link shows only after a failed try.
+  const [agentBusy, setAgentBusy] = useState(false)
+  const [agentMissing, setAgentMissing] = useState(false)
+  const [scanDevices, setScanDevices] = useState<ScannerDevice[] | null>(null)
 
   // Load settings + the contract (or a fresh one) whenever the editor opens
   useEffect(() => {
@@ -297,6 +303,35 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
     }
   }
 
+  function agentError(e: unknown) {
+    if (e instanceof ScannerAgentMissingError || e instanceof ScannerAgentOutdatedError) setAgentMissing(true)
+    if (e instanceof ScannerDeviceNotFoundError) saveScanner(null)
+    showToast(e instanceof Error ? e.message : 'שגיאת סריקה', 'error')
+  }
+
+  async function scanWithDevice(deviceId: string) {
+    setScanDevices(null); setAgentBusy(true)
+    let file: File | null = null
+    try { file = await scanWithAgent(deviceId, 'contract.pdf') }
+    catch (e) { agentError(e) }
+    finally { setAgentBusy(false) }
+    if (file) uploadSigned(file)
+  }
+
+  // pick = always show the scanner list (switch scanner), even when one is saved
+  async function scanSigned(pick = false) {
+    const saved = getSavedScanner()
+    if (saved && !pick) return scanWithDevice(saved)
+    setAgentBusy(true)
+    try {
+      const devices = await listScanners()
+      if (devices.length === 0) { showToast('לא נמצא סורק מחובר למחשב. ודאו שהמדפסת דולקת ומחוברת', 'error'); return }
+      if (devices.length === 1) { saveScanner(devices[0].id); setAgentBusy(false); return scanWithDevice(devices[0].id) }
+      setScanDevices(devices)
+    } catch (e) { agentError(e) }
+    finally { setAgentBusy(false) }
+  }
+
   function removeDriveFile(fileId: string) {
     if (!profile) return
     fetch('/api/drive/delete', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant_id: profile.tenantId, file_id: fileId }) }).catch(() => {})
@@ -475,14 +510,38 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
     <div className="csc-root" dir="rtl">
       <style>{CSS}</style>
 
-      <Modal open={signAsk} onClose={() => setSignAsk(false)} title="שמירת עותק חתום" maxWidth={420}>
+      <Modal open={signAsk} onClose={() => { setSignAsk(false); setScanDevices(null) }} title="שמירת עותק חתום" maxWidth={420}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
             העותק יישמר בדרייב{d?.car.plate.trim() ? ` בתיקיית הרכב (רכבים/${d.car.plate.trim()})` : ' בתיקיית "חוזי מכירה"'} ויופיע גם כאן.
           </div>
-          <Button onClick={() => { setSignAsk(false); setScanning(true) }}>📷 סרוק</Button>
+          {scanDevices ? (
+            <>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>📠 מאיזה סורק לסרוק? <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--text-muted)' }}>(הבחירה תישמר במחשב הזה)</span></div>
+              {scanDevices.map(dev => (
+                <Button key={dev.id} variant="secondary" onClick={() => { saveScanner(dev.id); scanWithDevice(dev.id) }}>
+                  {dev.name}{getSavedScanner() === dev.id ? ' ✓' : ''}
+                </Button>
+              ))}
+              <Button variant="ghost" onClick={() => setScanDevices(null)}>חזרה</Button>
+            </>
+          ) : (<>
+          <Button onClick={() => scanSigned()} disabled={agentBusy}>{agentBusy ? 'סורק...' : '📠 סרוק מהסורק'}</Button>
+          {!agentMissing && getSavedScanner() && (
+            <button type="button" onClick={() => scanSigned(true)} disabled={agentBusy}
+              style={{ alignSelf: 'center', marginTop: -6, background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit' }}>
+              החלף סורק
+            </button>
+          )}
+          {agentMissing && (
+            <a href={SCANNER_DOWNLOAD_URL} download style={{ alignSelf: 'center', marginTop: -6, fontSize: 12, color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline' }}>
+              ⬇ התקנת סורק AutoFlow למחשב
+            </a>
+          )}
+          <Button variant="secondary" onClick={() => { setSignAsk(false); setScanning(true) }}>📷 צלם במצלמה</Button>
           <Button variant="secondary" onClick={() => fileRef.current?.click()}>📤 העלה קובץ (PDF / תמונה)</Button>
           <Button variant="ghost" onClick={() => setSignAsk(false)}>דלג</Button>
+          </>)}
         </div>
       </Modal>
       <input ref={fileRef} type="file" accept="application/pdf,image/*" style={{ display: 'none' }}
