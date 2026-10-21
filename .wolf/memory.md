@@ -2587,3 +2587,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:04 | Created lib/forms/poaForm.ts | — | ~2189 |
 | 11:06 | Created components/documents/PowerOfAttorneyPanel.tsx | — | ~5510 |
 | 12:00 | POA form (ייפוי כוח) overlay on official MoT PDF: calibration, saved proxies/owners, print; migration 099 | lib/forms/poaForm.ts, components/documents/PowerOfAttorneyPanel.tsx, DocumentsClient.tsx, public/forms/yipuy-koah.pdf | verified print alignment + UI via Playwright | ~40k |
+
+## Session: 2026-10-21 08:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
