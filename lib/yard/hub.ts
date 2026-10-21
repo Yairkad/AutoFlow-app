@@ -56,6 +56,7 @@ export interface CustomerRequest {
   payment_status:  PaymentStatus
   paid_amount:     number | null
   supplier_name:   string | null
+  install_at:      string | null
   updated_at:      string
 }
 
