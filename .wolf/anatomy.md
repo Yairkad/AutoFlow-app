@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-21T09:15:23.677Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-21T09:35:23.468Z
 > Files: 104 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -29,7 +29,7 @@
 
 ## ../../../root/.claude/plans/
 
-- `reactive-giggling-petal.md` — חיוב צמיג או מוצר כשאין מלאי במערכת, ורשימת "נמכר ללא מלאי" לסידור (~886 tok)
+- `reactive-giggling-petal.md` — תיקון: ברקוד שמוקלד ידנית נחתך באמצע (~313 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
 
