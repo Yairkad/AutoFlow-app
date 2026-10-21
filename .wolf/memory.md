@@ -2429,3 +2429,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:30 | Analyzed bank-sync matching: only expenses/income by exact amount; checks (scheduled_payments.check_number) & debts not considered. Proposed check-number matching, wider pool, learned rules, bulk approve | lib/bank-sync/matchSuggestions.ts | awaiting user answer | ~6k |
+
+## Session: 2026-10-21 09:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:50 | User deferred bank-sync check-matching work (no action now) | - | parked | ~0.5k |
