@@ -130,6 +130,14 @@ export default function TiresClient() {
   const [filterWidth,      setFilterWidth]      = useState('')
   const [filterProf,       setFilterProf]       = useState('')
   const [filterRim,        setFilterRim]        = useState('')
+
+  // Deep link from "מעקב רחבה → נמכר ללא מלאי": /tires?q=205/55R16 pre-fills the size filters
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q')
+    const m = q?.match(/(\d{3})\D+(\d{2})\D+(\d{2})/)
+    if (!m) return
+    setFilterWidth(m[1]); setFilterProf(m[2]); setFilterRim(m[3]) // eslint-disable-line react-hooks/set-state-in-effect
+  }, [])
   const [filterStock,      setFilterStock]      = useState('')
   const [filterCondition,  setFilterCondition]  = useState('')
   const [filterMissing,    setFilterMissing]    = useState<'' | 'any' | 'details' | 'price'>('')

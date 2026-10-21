@@ -2598,3 +2598,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 08:57 | Edited ../../../root/.claude/plans/reactive-giggling-petal.md | expanded (+9 lines) | ~201 |
 | 20:00 | Waiting-customer cards: phone, payment status, supplier, ⋮ menu, compact; live refresh across screens | RequestsPanel, useLiveRefresh, 100 migration, many clients | playwright ok, build ok | ~20k |
 | 09:15 | Created ../../../root/.claude/plans/reactive-giggling-petal.md | — | ~946 |
+| 21:00 | Charge without stock (tires/products/barcode) + office 'נמכר ללא מלאי'; yard session no idle logout + explicit exit | yard search/card, NoStock*, sessions route, yard-auth | playwright ok, build ok | ~30k |

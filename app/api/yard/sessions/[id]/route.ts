@@ -64,26 +64,40 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     update.closed_at = new Date().toISOString()
     update.closed_by = null
 
-    // Deduct inventory for all items with ref_id
+    // Deduct inventory for all items with ref_id, and record per item how many units were
+    // sold beyond what was in stock (no_stock_qty) — the office sorts those out later in
+    // "מעקב רחבה → נמכר ללא מלאי". Items with no ref_id (charged freely) are all "no stock".
     const { data: session } = await supabase
       .from('yard_sessions')
-      .select('yard_session_items(item_type, ref_id, quantity)')
+      .select('yard_session_items(id, item_type, ref_id, quantity)')
       .eq('id', id)
       .eq('tenant_id', profile.tenant_id)
       .single()
 
-    if (session?.yard_session_items) {
-      for (const item of session.yard_session_items as { item_type: string; ref_id: string | null; quantity: number }[]) {
-        if (!item.ref_id) continue
+    type Item = { id: string; item_type: string; ref_id: string | null; quantity: number }
+    const items = ((session?.yard_session_items ?? []) as Item[]).filter(i => i.item_type === 'tire' || i.item_type === 'product')
+    const tireIds = [...new Set(items.filter(i => i.item_type === 'tire' && i.ref_id).map(i => i.ref_id!))]
+    const prodIds = [...new Set(items.filter(i => i.item_type === 'product' && i.ref_id).map(i => i.ref_id!))]
+    const [tq, pq] = await Promise.all([
+      tireIds.length ? supabase.from('tires').select('id, qty').in('id', tireIds) : Promise.resolve({ data: [] as { id: string; qty: number }[] }),
+      prodIds.length ? supabase.from('products').select('id, qty').in('id', prodIds) : Promise.resolve({ data: [] as { id: string; qty: number }[] }),
+    ])
+    const left = new Map<string, number>()
+    for (const r of [...(tq.data ?? []), ...(pq.data ?? [])]) left.set(r.id, Math.max(0, Number(r.qty) || 0))
 
-        if (item.item_type === 'tire') {
-          const { error: decErr } = await supabase.rpc('decrement_tire_qty', { p_id: item.ref_id, p_qty: item.quantity })
-          if (decErr) console.error('decrement_tire_qty failed', item.ref_id, decErr.message)
-        } else if (item.item_type === 'product') {
-          const { error: decErr } = await supabase.rpc('decrement_product_qty', { p_id: item.ref_id, p_qty: item.quantity })
-          if (decErr) console.error('decrement_product_qty failed', item.ref_id, decErr.message)
-        }
+    for (const item of items) {
+      let short = item.quantity
+      if (item.ref_id) {
+        const have = left.get(item.ref_id) ?? 0
+        short = Math.max(0, item.quantity - have)
+        left.set(item.ref_id, Math.max(0, have - item.quantity))
+        const fn = item.item_type === 'tire' ? 'decrement_tire_qty' : 'decrement_product_qty'
+        const { error: decErr } = await supabase.rpc(fn, { p_id: item.ref_id, p_qty: item.quantity })
+        if (decErr) console.error(`${fn} failed`, item.ref_id, decErr.message)
       }
+      const { error: nsErr } = await supabase.from('yard_session_items')
+        .update({ no_stock_qty: short > 0 ? short : null }).eq('id', item.id)
+      if (nsErr) console.error('no_stock_qty update failed', item.id, nsErr.message)
     }
   }
 

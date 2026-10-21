@@ -7,6 +7,7 @@ import { formatPlate } from '@/lib/yard/types'
 import type { SearchResult } from '@/lib/yard/types'
 import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
+import NoStockChargeDialog, { type NoStockCharge } from '@/components/yard/NoStockChargeDialog'
 import { handOffToCard, occupiedPositions, tireIdsAt } from '@/lib/yard/handoff'
 import type { TirePosition } from '@/lib/yard/types'
 
@@ -19,6 +20,7 @@ export default function FreeSearchClient({ session, filterType }: Props) {
   const router   = useRouter()
   const [results,  setResults]  = useState<SearchResult[]>([])
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [noStockFor, setNoStockFor] = useState<{ kind: 'tire' | 'product' | 'choose'; text: string; barcode: string | null } | null>(null)
   const [confirm,      setConfirm]      = useState<{ item: SearchResult; onYes: () => void } | null>(null)
   const [saving,       setSaving]       = useState(false)
   const [confirmBusy,  setConfirmBusy]  = useState(false)
@@ -35,7 +37,8 @@ export default function FreeSearchClient({ session, filterType }: Props) {
   const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
   const fetchResults = useCallback(async (q: string): Promise<SearchResult[]> => {
-    const res = await fetch(`/api/yard/search?q=${encodeURIComponent(q)}&type=${filterType}`)
+    // include_empty: out-of-stock items still show — they're charged "ללא מלאי"
+    const res = await fetch(`/api/yard/search?q=${encodeURIComponent(q)}&type=${filterType}&include_empty=1`)
     return res.ok ? res.json() : []
   }, [filterType])
 
@@ -67,12 +70,18 @@ export default function FreeSearchClient({ session, filterType }: Props) {
   async function handleBarcode(code: string) {
     setScanMode(false)
     const res = await fetch(`/api/yard/barcode?code=${encodeURIComponent(code)}`)
-    if (!res.ok) { alert('לא נמצא פריט עם ברקוד זה'); return }
-    const item: SearchResult | null = await res.json()
-    if (!item) { alert('לא נמצא פריט עם ברקוד זה'); return }
-    if (item.stock !== null && item.stock <= 0) { alert(`פריט אזל מהמלאי: ${item.name}`); return }
+    const item: SearchResult | null = res.ok ? await res.json() : null
+    // Not in the system → charge it anyway; out of stock → pickItem flags it "ללא מלאי"
+    if (!item) { setNoStockFor({ kind: 'choose', text: '', barcode: code }); return }
     pickItem(item)
   }
+
+  // Free charge (not in the system): id '' = no ref_id, stock 0 = flagged "ללא מלאי"
+  function chargeWithoutStock(c: NoStockCharge) {
+    setNoStockFor(null)
+    pickItem({ id: '', type: c.type, name: c.name, sku: c.sku, price: c.price, stock: 0 })
+  }
+  const isNoStock = (i: SearchResult) => i.type !== 'service' && (!i.id || (i.stock ?? 0) <= 0)
 
   // Picking from the search sheet / list adds straight to the card (qty 1; change it on the card).
   // Tires still ask for the position on the car.
@@ -92,9 +101,9 @@ export default function FreeSearchClient({ session, filterType }: Props) {
     setSaving(true)
     const posArr = positions.length > 0 ? positions : [null]
     handOffToCard(session.id, posArr.map(pos => ({
-      item_type: 'tire', ref_id: pickerItem.id, name: pickerItem.name, sku: pickerItem.sku,
+      item_type: 'tire', ref_id: pickerItem.id || null, name: pickerItem.name, sku: pickerItem.sku,
       quantity: 1, unit_price: pickerItem.price, original_price: pickerItem.price,
-      price_modified: false, tire_position: pos,
+      price_modified: false, tire_position: pos, no_stock: isNoStock(pickerItem),
     })), tireIdsAt(session, replace))
     router.push(`/yard/${session.id}`)
   }
@@ -103,9 +112,9 @@ export default function FreeSearchClient({ session, filterType }: Props) {
     setConfirm(null)
     setSaving(true)
     handOffToCard(session.id, [{
-      item_type: item.type, ref_id: item.id, name: item.name, sku: item.sku,
+      item_type: item.type, ref_id: item.id || null, name: item.name, sku: item.sku,
       quantity: 1, unit_price: item.price, original_price: item.price,
-      price_modified: false, tire_position: null,
+      price_modified: false, tire_position: null, no_stock: isNoStock(item),
     }])
     router.push(`/yard/${session.id}`)
   }
@@ -121,7 +130,17 @@ export default function FreeSearchClient({ session, filterType }: Props) {
           renderItem={r => <ResultRow r={r} showType={filterType === 'all'} />}
           onPick={pickItem}
           onClose={() => setSheetOpen(false)}
+          footer={({ q, closeThen }) => q.trim().length >= 2 && (
+            <button onClick={() => closeThen(() => setNoStockFor({ kind: filterType === 'tire' ? 'tire' : filterType === 'product' ? 'product' : 'choose', text: q.trim(), barcode: null }))}
+              className="w-full bg-orange-600 text-white rounded-xl font-bold" style={{ padding: '12px', fontSize: 15 }}>
+              ➕ חייב פריט ללא מלאי: {q.trim()}
+            </button>
+          )}
         />
+      )}
+      {noStockFor && (
+        <NoStockChargeDialog kind={noStockFor.kind} initialText={noStockFor.text} barcode={noStockFor.barcode}
+          onClose={() => setNoStockFor(null)} onConfirm={chargeWithoutStock} />
       )}
       {pickerItem && <TirePositionPicker occupied={occupiedPositions(session)} onConfirm={submitTireWithPosition} />}
 

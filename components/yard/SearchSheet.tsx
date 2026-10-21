@@ -27,12 +27,14 @@ interface Props<T> {
   emptyText?:    (q: string) => string
   /** Runs after the sheet has closed (so it may navigate) */
   onPick:        (item: T, query: string) => void
+  /** Fixed action under the results (e.g. "charge without stock"); closeThen closes the sheet first */
+  footer?:       (ctx: { q: string; kind: 'text' | 'size'; closeThen: (fn: () => void) => void }) => React.ReactNode
   onClose:       () => void
 }
 
 export default function SearchSheet<T>({
   title, extra, placeholder, inputMode = 'search', sizeMode = 'off', initialQuery = '', minChars = 1,
-  search, getKey, renderItem, emptyText, onPick, onClose,
+  search, getKey, renderItem, emptyText, onPick, onClose, footer,
 }: Props<T>) {
   const [useSize, setUseSize] = useState(sizeMode !== 'off')
   const [size, setSize]       = useState<TireSize>(() => parseTireSizeText(sizeMode !== 'off' ? initialQuery : ''))
@@ -183,6 +185,11 @@ export default function SearchSheet<T>({
           </button>
         ))}
       </div>
+      {footer && (
+        <div className="flex-shrink-0 border-t border-slate-200 bg-slate-50" style={{ padding: '8px 10px' }}>
+          {footer({ q, kind, closeThen: fn => close(fn) })}
+        </div>
+      )}
     </div>
   )
 }

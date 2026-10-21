@@ -11,7 +11,7 @@ export async function GET() {
   const sb = createServiceClient()
   const out: Record<string, number> = {}
 
-  const [loans, requests] = await Promise.all([
+  const [loans, requests, noStock] = await Promise.all([
     canYard(user, 'yard_loans')
       ? sb.from('tire_loans').select('id', { count: 'exact', head: true })
           .eq('tenant_id', user.tenantId).eq('status', 'open')
@@ -20,8 +20,14 @@ export async function GET() {
       ? sb.from('customer_requests').select('id', { count: 'exact', head: true })
           .eq('tenant_id', user.tenantId).in('status', OPEN_REQUEST_STATUSES)
       : null,
+    // Sold without stock, not yet sorted out (office tab "נמכר ללא מלאי"); set only on closed cards
+    canYard(user, 'yard_reports')
+      ? sb.from('yard_session_items').select('id', { count: 'exact', head: true })
+          .eq('tenant_id', user.tenantId).gt('no_stock_qty', 0).is('stock_resolved_at', null)
+      : null,
   ])
   if (loans?.count)    out.yard_loans    = loans.count
   if (requests?.count) out.yard_requests = requests.count
+  if (noStock?.count)  out.no_stock      = noStock.count
   return NextResponse.json(out)
 }

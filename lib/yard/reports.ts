@@ -7,6 +7,8 @@ export interface QuickReport {
     total: number
     byType: Record<'tire' | 'product' | 'service', { qty: number; amount: number }>
     topTires: { label: string; qty: number }[]
+    /** units sold beyond stock ("נמכר ללא מלאי") */
+    noStockUnits: number
   }
   received: {
     tires: number

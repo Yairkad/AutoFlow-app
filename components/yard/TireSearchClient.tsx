@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { YardSession, SearchResult, TirePosition } from '@/lib/yard/types'
 import { formatPlate } from '@/lib/yard/types'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
+import NoStockChargeDialog, { type NoStockCharge } from '@/components/yard/NoStockChargeDialog'
 import { handOffToCard, occupiedPositions, tireIdsAt } from '@/lib/yard/handoff'
 import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
 import { tireSizeSearchParams } from '@/lib/tires/size'
@@ -21,7 +22,9 @@ export default function TireSearchClient({ session }: Props) {
   const [barcodeInput, setBarcodeInput] = useState('')
   const [sheetQuery,    setSheetQuery]    = useState<string | null>(null)   // null = search closed
   const [saving,        setSaving]        = useState(false)
-  const selectedRef = useRef<TireResult | null>(null)
+  // What gets added once the position is picked (ref_id null = charged freely, not in the system)
+  const selectedRef = useRef<{ ref_id: string | null; name: string; sku: string | null; price: number; noStock: boolean } | null>(null)
+  const [noStockFor, setNoStockFor] = useState<{ text: string; barcode: string | null } | null>(null)
   const [detectedSize,  setDetectedSize]  = useState<string | null>(null)
   const [showPicker,    setShowPicker]    = useState(false)
 
@@ -47,7 +50,8 @@ export default function TireSearchClient({ session }: Props) {
         if (Date.now() - ts < CACHE_TTL) return data
       }
     } catch {}
-    const res  = await fetch(`/api/yard/search?type=tire&${tireSizeSearchParams(q)}`)
+    // include_empty: tires recorded with 0 stock still show (and are charged "ללא מלאי")
+    const res  = await fetch(`/api/yard/search?type=tire&include_empty=1&${tireSizeSearchParams(q)}`)
     const data = res.ok ? await res.json() : []
     try { sessionStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() })) } catch {}
     return data
@@ -73,12 +77,20 @@ export default function TireSearchClient({ session }: Props) {
       selectAndAdd(match as TireResult)
       return
     }
-    setSheetQuery(code)
+    // Unknown barcode: charge it anyway (the office sorts out the stock later)
+    if (!match) { setNoStockFor({ text: '', barcode: code }); return }
+    setSheetQuery('')
   }
 
   // Picking a tire goes straight to the position picker, then into the card
   function selectAndAdd(r: TireResult) {
-    selectedRef.current = r
+    selectedRef.current = { ref_id: r.id, name: r.name, sku: r.sku, price: r.price, noStock: (r.stock ?? 0) <= 0 }
+    setShowPicker(true)
+  }
+
+  function chargeWithoutStock(c: NoStockCharge) {
+    setNoStockFor(null)
+    selectedRef.current = { ref_id: null, name: c.name, sku: c.sku, price: c.price, noStock: true }
     setShowPicker(true)
   }
 
@@ -89,10 +101,21 @@ export default function TireSearchClient({ session }: Props) {
     setSaving(true)
     const posArr = positions.length > 0 ? positions : [null]
     handOffToCard(session.id, posArr.map(pos => ({
-      item_type: 'tire', ref_id: item.id, name: item.name, sku: item.sku,
+      item_type: 'tire', ref_id: item.ref_id, name: item.name, sku: item.sku,
       quantity: 1, unit_price: item.price, original_price: item.price,
-      price_modified: false, tire_position: pos,
+      price_modified: false, tire_position: pos, no_stock: item.noStock,
     })), tireIdsAt(session, replace))
+    router.push(`/yard/${session.id}`)
+  }
+
+  // Barcode turned out to be a product: straight into the card, qty 1
+  function addProductNoStock(c: NoStockCharge) {
+    setNoStockFor(null)
+    setSaving(true)
+    handOffToCard(session.id, [{
+      item_type: 'product', ref_id: null, name: c.name, sku: c.sku, quantity: 1,
+      unit_price: c.price, original_price: c.price, price_modified: false, tire_position: null, no_stock: true,
+    }])
     router.push(`/yard/${session.id}`)
   }
 
@@ -115,10 +138,26 @@ export default function TireSearchClient({ session }: Props) {
           search={search}
           getKey={r => r.id}
           renderItem={r => <ResultRow r={r} />}
-          emptyText={() => 'אין צמיג במידה הזו במלאי'}
+          emptyText={() => 'אין צמיג במידה הזו במערכת — אפשר לחייב ללא מלאי למטה'}
           onPick={r => selectAndAdd(r)}
           onClose={() => setSheetQuery(null)}
+          footer={({ q, closeThen }) => {
+            const [w, p, r] = q.split('/')
+            if (!(w?.length === 3 && p?.length === 2 && r?.length === 2)) return null
+            return (
+              <button onClick={() => closeThen(() => setNoStockFor({ text: `${w}/${p}/${r}`, barcode: null }))}
+                className="w-full bg-orange-600 text-white rounded-xl font-bold" style={{ padding: '12px', fontSize: 15 }}>
+                ➕ חייב צמיג {w}/{p}R{r} ללא מלאי
+              </button>
+            )
+          }}
         />
+      )}
+
+      {noStockFor && (
+        <NoStockChargeDialog kind={noStockFor.barcode ? 'choose' : 'tire'} initialText={noStockFor.text} barcode={noStockFor.barcode}
+          onClose={() => setNoStockFor(null)}
+          onConfirm={c => c.type === 'tire' ? chargeWithoutStock(c) : addProductNoStock(c)} />
       )}
 
       {/* Main content — shrinks when keyboard is open */}

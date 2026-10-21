@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { YARD_SECTIONS, canYard, sectionForPath, type YardKey } from '@/lib/yard/access'
 import { createClient } from '@/lib/supabase/client'
-import { YARD_IDLE_MS } from '@/lib/auth/yard-session'
 import YardLogin from './YardLogin'
 import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
@@ -53,19 +52,13 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
     return () => { clearTimeout(timer); stopLive(); sb.removeChannel(ch) }
   }, [])
 
-  // Idle terminal → sign the employee out so the next person has to pick their own name
+  // No idle logout — the employee stays signed in until "יציאה". Renew the 30-day
+  // terminal cookie when the terminal is opened and every few hours while in use.
   useEffect(() => {
-    let last = Date.now()
-    const touch = () => { last = Date.now() }
-    const evs = ['pointerdown', 'keydown', 'touchstart'] as const
-    evs.forEach(e => window.addEventListener(e, touch, { passive: true }))
-    const id = setInterval(() => {
-      if (Date.now() - last < YARD_IDLE_MS) return
-      clearInterval(id)
-      fetch('/api/yard-auth/logout', { method: 'POST' }).finally(() => router.refresh())
-    }, 30_000)
-    return () => { clearInterval(id); evs.forEach(e => window.removeEventListener(e, touch)) }
-  }, [router])
+    const renew = () => { fetch('/api/yard-auth/renew', { method: 'POST' }).catch(() => {}) }
+    renew()
+    return startLiveRefresh(renew, 6 * 60 * 60 * 1000)
+  }, [])
 
   const userButton = (compact: boolean) => (
     <button
