@@ -12,6 +12,7 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import CallLogModal, { CustomerDebtCall } from './CallLogModal'
 import PaymentHistoryModal, { CustomerDebtPayment } from './PaymentHistoryModal'
 import { insertCustomerDebtPayment } from '@/lib/debts/customerDebtPayments'
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -116,6 +117,7 @@ export default function DebtsClient() {
 
   // ── Load ──────────────────────────────────────────────────────────────────
 
+  const loadedRef = useRef(false)
   const loadAll = useCallback(async () => {
     const tid = await resolveTenant()
     if (!tid) {
@@ -123,7 +125,8 @@ export default function DebtsClient() {
       if (!profileLoading) setLoading(false)
       return
     }
-    setLoading(true)
+    // Only the first load shows "טוען..." — background refreshes must not unmount the screen
+    if (!loadedRef.current) setLoading(true)
     const [custRes, callsRes, paymentsRes] = await Promise.all([
       supabase.from('customer_debts').select('*').eq('tenant_id', tid).order('date', { ascending: false }),
       supabase.from('customer_debt_calls').select('*').eq('tenant_id', tid),
@@ -133,10 +136,13 @@ export default function DebtsClient() {
     if (callsRes.data)    setCalls(callsRes.data)
     if (paymentsRes.data) setPayments(paymentsRes.data)
     if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
+    loadedRef.current = true
     setLoading(false)
   }, [supabase, resolveTenant, profile, profileLoading])
 
   useEffect(() => { loadAll() }, [loadAll])
+  // Other devices' changes show up without a page refresh (realtime alone is unreliable on Netfree)
+  useLiveRefresh(loadAll)
 
   // Reset filter on tab change
   useEffect(() => { setFilter('open'); setSearch('') }, [tab])

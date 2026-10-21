@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { YardSession, YardSessionItem, YardService } from '@/lib/yard/types'
 import { sessionTotal, minutesSince, formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
+import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 const VAT = 1.18
 
@@ -126,11 +127,8 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     return () => { document.title = base }
   }, [unread])
 
-  // Polling fallback every 60s — real-time handles most updates; this is a safety net only
-  useEffect(() => {
-    const id = setInterval(fetchSessions, 60_000)
-    return () => clearInterval(id)
-  }, []) // eslint-disable-line
+  // Fallback for realtime (unreliable on Netfree): refresh on focus and every 20s
+  useEffect(() => startLiveRefresh(fetchSessions, 20_000), []) // eslint-disable-line
 
   const DEFAULT_SERVICES = [
     'תיקון תקר',

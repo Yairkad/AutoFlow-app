@@ -2,6 +2,8 @@
 
 > Auto-maintained by OpenWolf. Last scanned: 2026-10-20T11:06:53.417Z
 > Files: 103 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-21T08:57:29.513Z
+> Files: 73 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -29,7 +31,7 @@
 
 ## ../../../root/.claude/plans/
 
-- `reactive-giggling-petal.md` — כרטיס עבודה: צמיגים שנתקעים על "מסתנכרן..." וצמיגים כפולים באותו מיקום (~1186 tok)
+- `reactive-giggling-petal.md` — תיקונים בכרטיסי "לקוחות ממתינים" (~603 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
 

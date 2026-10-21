@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
+import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 interface AlertPayment {
   id: string
@@ -140,7 +141,9 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'salaries' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_debts' }, () => load())
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    // Realtime alone is unreliable on Netfree — also refresh on focus / every 30s
+    const stopLive = startLiveRefresh(() => load(), 30_000)
+    return () => { stopLive(); supabase.removeChannel(channel) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const visiblePayments  = payments.filter(p => !dismissed.has(p.id))

@@ -2431,6 +2431,7 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 08:30 | Zone count design: contiguous-shelf approach approved; yard terminal must get count/map/receive-suggestion; layout 6+2+2+1 cabinets; awaiting letters/permission answers | - | questions asked | ~4k |
 
 ## Session: 2026-10-19 08:49
+## Session: 2026-10-18 16:23
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
@@ -2530,6 +2531,7 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 13:30 | Rebuilt closed PR #11 on current main: scan result shows buy/sell price; tire edit has width/profile/rim | components/scan/ScanClient.tsx | tsc ok, lint unchanged (3 pre-existing) | ~10k |
 
 ## Session: 2026-10-19 12:09
+## Session: 2026-10-18 17:39
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
@@ -2547,6 +2549,7 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 13:45 | PR #53 merged; resolved .wolf/memory.md conflict on PR #54 (merged origin/main) | .wolf/memory.md | pushed | ~3k |
 
 ## Session: 2026-10-20 08:05
+## Session: 2026-10-21 08:29
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
@@ -2587,3 +2590,10 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:04 | Created lib/forms/poaForm.ts | — | ~2189 |
 | 11:06 | Created components/documents/PowerOfAttorneyPanel.tsx | — | ~5510 |
 | 12:00 | POA form (ייפוי כוח) overlay on official MoT PDF: calibration, saved proxies/owners, print; migration 099 | lib/forms/poaForm.ts, components/documents/PowerOfAttorneyPanel.tsx, DocumentsClient.tsx, public/forms/yipuy-koah.pdf | verified print alignment + UI via Playwright | ~40k |
+## Session: 2026-10-21 08:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:57 | Created ../../../root/.claude/plans/reactive-giggling-petal.md | — | ~519 |
+| 08:57 | Edited ../../../root/.claude/plans/reactive-giggling-petal.md | expanded (+9 lines) | ~201 |
+| 20:00 | Waiting-customer cards: phone, payment status, supplier, ⋮ menu, compact; live refresh across screens | RequestsPanel, useLiveRefresh, 100 migration, many clients | playwright ok, build ok | ~20k |

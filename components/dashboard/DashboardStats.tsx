@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { saveUiSettings } from '@/lib/uiSettings'
 import { balanceOf } from '@/lib/debts/ledger'
+import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 type Section = 'finance' | 'tires' | 'cars'
 type CardId = 'income' | 'expenses' | 'profit' | 'debts' | 'products' | 'employees' | 'tires' | 'alignment' | 'cars' | 'inspections'
@@ -367,7 +368,9 @@ export default function DashboardStats() {
       ch = ch.on('postgres_changes', { event: '*', schema: 'public', table }, () => fetchStats(admin, mods))
     }
     const channel = ch.subscribe()
-    return () => { supabase.removeChannel(channel) }
+    // Realtime alone is unreliable on Netfree — also refresh on focus / every 60s
+    const stopLive = startLiveRefresh(() => fetchStats(admin, mods), 60_000)
+    return () => { stopLive(); supabase.removeChannel(channel) }
   }, [profile]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return (

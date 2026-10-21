@@ -8,6 +8,7 @@ import { sessionTotal, formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
 import type { SearchResult } from '@/app/api/yard/search/route'
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 interface Props {
   session:  YardSession
@@ -232,6 +233,10 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       return { ...initialSession, yard_session_items: [...server, ...stillLocal] }
     })
   }, [initialSession])
+
+  // Changes from the office / another device show up without a refresh (realtime is unreliable on Netfree).
+  // Skipped while something is still saving — the safety net below handles that case.
+  useLiveRefresh(() => { if (!items.some(i => isTemp(i.id))) router.refresh() }, 20_000)
 
   // Safety net: if something is still syncing after 4s, pull the card from the server every 3s
   const hasTemps = items.some(i => isTemp(i.id))

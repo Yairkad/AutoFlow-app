@@ -28,6 +28,14 @@ export interface TireLoan {
 export type RequestKind   = 'order' | 'inquiry'
 export type RequestStatus = 'new' | 'ordered' | 'arrived' | 'notified' | 'closed' | 'cancelled'
 
+export type PaymentStatus = 'unpaid' | 'partial' | 'paid'
+
+export const PAYMENT_LABEL: Record<PaymentStatus, string> = {
+  unpaid:  'לא שולם',
+  partial: 'שולם חלקית',
+  paid:    'שולם',
+}
+
 export interface CustomerRequest {
   id:              string
   tenant_id:       string
@@ -45,6 +53,9 @@ export interface CustomerRequest {
   notes:           string | null
   created_by_name: string | null
   created_at:      string
+  payment_status:  PaymentStatus
+  paid_amount:     number | null
+  supplier_name:   string | null
   updated_at:      string
 }
 

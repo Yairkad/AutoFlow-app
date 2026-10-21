@@ -13,6 +13,7 @@ import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal
 import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
 import { markScheduledPaymentPaid } from '@/lib/utils/markCheckPaid'
 import { reverseSupplierPayment } from '@/lib/debts/reverseSupplierPayment'
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -106,9 +107,11 @@ export default function ChecksJournalClient() {
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
+  const loadedRef = useRef(false)
   const load = useCallback(async () => {
     if (!tenantId) return
-    setLoading(true)
+    // Only the first load shows the spinner — background refreshes update in place
+    if (!loadedRef.current) setLoading(true)
     await autoMarkOverdueChecksPaid(supabase, tenantId).catch(() => {})
     const [payRes, suppRes, catRes, linkRes] = await Promise.all([
       supabase.from('scheduled_payments').select('*').eq('tenant_id', tenantId).eq('payment_method', 'check').order('due_date', { ascending: true }),
@@ -120,10 +123,13 @@ export default function ChecksJournalClient() {
     setSuppliers(suppRes.data ?? [])
     if (catRes.data && catRes.data.length > 0) setExpenseCats(catRes.data.map(r => r.name))
     setLinkedIds(new Set((linkRes.data ?? []).map(r => r.scheduled_payment_id).filter((id): id is string => !!id)))
+    loadedRef.current = true
     setLoading(false)
   }, [supabase, tenantId])
 
   useEffect(() => { load() }, [load])
+  // Other devices' changes show up without a page refresh (realtime alone is unreliable on Netfree)
+  useLiveRefresh(load, 60_000)
 
   // Deep-link: ?supplier=<id>
   const didAutoOpen = useRef(false)

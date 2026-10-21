@@ -7,6 +7,7 @@ import { YARD_SECTIONS, canYard, sectionForPath, type YardKey } from '@/lib/yard
 import { createClient } from '@/lib/supabase/client'
 import { YARD_IDLE_MS } from '@/lib/auth/yard-session'
 import YardLogin from './YardLogin'
+import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 interface Props {
   isAdmin: boolean
@@ -48,8 +49,8 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tire_loans' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_requests' }, soon)
       .subscribe()
-    const id = setInterval(soon, 120_000)
-    return () => { clearTimeout(timer); clearInterval(id); sb.removeChannel(ch) }
+    const stopLive = startLiveRefresh(soon, 30_000)   // focus + every 30s — realtime is unreliable on Netfree
+    return () => { clearTimeout(timer); stopLive(); sb.removeChannel(ch) }
   }, [])
 
   // Idle terminal → sign the employee out so the next person has to pick their own name

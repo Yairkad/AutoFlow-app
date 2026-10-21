@@ -8,6 +8,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import CustomerDetailsTab from './CustomerDetailsTab'
 import CustomerTrackingTab from './CustomerTrackingTab'
 import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, RecurringItem, CustomerAction } from './shared'
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 type Tab = 'details' | 'tracking'
 
@@ -73,6 +74,8 @@ export default function CustomersClient() {
   }, [supabase, resolveTenant, showToast, profile, profileLoading])
 
   useEffect(() => { loadAll() }, [loadAll])
+  // Other devices' changes show up without a page refresh (realtime alone is unreliable on Netfree)
+  useLiveRefresh(loadAll)
 
   // Parse ?tab=details|tracking&open=<id> once
   useEffect(() => {
