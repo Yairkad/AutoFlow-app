@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 function useIsMobile() {
   const [mobile, setMobile] = useState(false)
@@ -79,8 +80,10 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
       .channel('reminders-panel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders' }, fetch)
       .subscribe()
+    // Realtime alone is unreliable on Netfree — also refresh on focus / every 30s
+    const stopLive = startLiveRefresh(fetch, 30_000)
 
-    return () => { supabase.removeChannel(channel) }
+    return () => { stopLive(); supabase.removeChannel(channel) }
   }, [])
 
   const today = new Date().toISOString().split('T')[0]

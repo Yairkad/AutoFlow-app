@@ -8,6 +8,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import SupplierDetailsTab from './SupplierDetailsTab'
 import SupplierTrackingTab from './SupplierTrackingTab'
 import { Supplier, SupplierDebt, ScheduledPayment, SupplierDebtPayment, RecurringItem } from './shared'
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 type Tab = 'details' | 'tracking'
 
@@ -105,6 +106,8 @@ export default function SuppliersClient() {
   }, [supabase, resolveTenant, showToast, profile, profileLoading])
 
   useEffect(() => { loadAll() }, [loadAll])
+  // Other devices' changes show up without a page refresh (realtime alone is unreliable on Netfree)
+  useLiveRefresh(loadAll)
 
   // Parse ?tab=details|tracking&open=<id> once
   useEffect(() => {

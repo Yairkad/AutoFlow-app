@@ -7,7 +7,10 @@ import type { YardSession, YardSessionItem, YardService, TirePosition } from '@/
 import { sessionTotal, formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
 import TirePositionPicker from '@/components/yard/TirePositionPicker'
+import NoStockChargeDialog, { type NoStockCharge } from '@/components/yard/NoStockChargeDialog'
 import type { SearchResult } from '@/app/api/yard/search/route'
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
+import { useScanTyping } from '@/lib/hooks/useScanTyping'
 
 interface Props {
   session:  YardSession
@@ -33,6 +36,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const [scanMode,       setScanMode]       = useState(false)
   const [barcodeInput,   setBarcodeInput]   = useState('')
   const [scanTireResult, setScanTireResult] = useState<SearchResult | null>(null)
+  const [noStockBarcode, setNoStockBarcode] = useState<string | null>(null)
   const scanRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
   const items = session.yard_session_items ?? []
@@ -118,7 +122,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const tempSeq = useRef(0)
   const queuedRef = useRef(new Map<string, { unit_price?: number; quantity?: number; deleted?: boolean }>())
 
-  type NewItem = Pick<YardSessionItem, 'item_type' | 'ref_id' | 'name' | 'sku' | 'quantity' | 'unit_price' | 'original_price' | 'price_modified' | 'tire_position'>
+  type NewItem = Pick<YardSessionItem, 'item_type' | 'ref_id' | 'name' | 'sku' | 'quantity' | 'unit_price' | 'original_price' | 'price_modified' | 'tire_position' | 'no_stock'>
 
   function queueEdit(id: string, edit: { unit_price?: number; quantity?: number; deleted?: boolean }) {
     queuedRef.current.set(id, { ...queuedRef.current.get(id), ...edit })
@@ -201,6 +205,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
         item_type: i.item_type, ref_id: i.ref_id, name: i.name, sku: i.sku ?? null,
         quantity: i.quantity ?? 1, unit_price: i.unit_price, original_price: i.original_price ?? i.unit_price,
         price_modified: i.price_modified ?? false, tire_position: i.tire_position ?? null,
+        no_stock: i.no_stock ?? false,
       })))
     } catch {}
   }, []) // eslint-disable-line
@@ -232,6 +237,10 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
       return { ...initialSession, yard_session_items: [...server, ...stillLocal] }
     })
   }, [initialSession])
+
+  // Changes from the office / another device show up without a refresh (realtime is unreliable on Netfree).
+  // Skipped while something is still saving — the safety net below handles that case.
+  useLiveRefresh(() => { if (!items.some(i => isTemp(i.id))) router.refresh() }, 20_000)
 
   // Safety net: if something is still syncing after 4s, pull the card from the server every 3s
   const hasTemps = items.some(i => isTemp(i.id))
@@ -329,8 +338,10 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     if (scanMode) { setBarcodeInput(''); setTimeout(() => scanRef.current?.focus(), 50) }
   }, [scanMode])
 
+  // Auto-search only for scanner-speed input; typed by hand → Enter / "חפש"
+  const scanTyping = useScanTyping()
   useEffect(() => {
-    if (!scanMode || !barcodeInput.trim()) return
+    if (!scanMode || !barcodeInput.trim() || !scanTyping.isScanner(barcodeInput)) return
     const t = setTimeout(() => { handleBarcodeScan(barcodeInput.trim()) }, 200)
     return () => clearTimeout(t)
   }, [barcodeInput, scanMode]) // eslint-disable-line
@@ -339,17 +350,13 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     setScanMode(false)
     setBarcodeInput('')
     const res  = await fetch(`/api/yard/barcode?code=${encodeURIComponent(code)}`)
-    const item: SearchResult | null = await res.json()
+    const item: SearchResult | null = res.ok ? await res.json() : null
 
-    if (!item) {
-      showError(`ברקוד לא נמצא: ${code}`)
-      return
-    }
+    // Not in the system → charge it anyway ("ללא מלאי"); the office sorts the stock out later
+    if (!item) { setNoStockBarcode(code); return }
 
-    if (item.stock !== null && item.stock <= 0) {
-      showError(`פריט אזל מהמלאי: ${item.name}`)
-      return
-    }
+    // Out of stock is no longer a stop — it's added and flagged "ללא מלאי"
+    const noStock = item.type !== 'service' && item.stock !== null && item.stock <= 0
 
     if (item.type === 'tire') {
       setScanTireResult(item)
@@ -360,7 +367,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     addItems([{
       item_type: item.type, ref_id: item.id, name: item.name, sku: item.sku,
       quantity: 1, unit_price: item.price, original_price: item.price,
-      price_modified: false, tire_position: null,
+      price_modified: false, tire_position: null, no_stock: noStock,
     }])
   }
 
@@ -370,10 +377,21 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     if (!result) return
     removeTiresAt(replace)
     addItems(positions.map(pos => ({
-      item_type: 'tire' as const, ref_id: result.id, name: result.name, sku: result.sku,
+      item_type: 'tire' as const, ref_id: result.id || null, name: result.name, sku: result.sku,
       quantity: 1, unit_price: result.price, original_price: result.price,
       price_modified: false, tire_position: pos,
+      no_stock: !result.id || (result.stock ?? 0) <= 0,
     })))
+  }
+
+  // Unknown barcode charged anyway: a tire goes through the position picker, a product straight in
+  function chargeScannedWithoutStock(c: NoStockCharge) {
+    setNoStockBarcode(null)
+    if (c.type === 'tire') { setScanTireResult({ id: '', type: 'tire', name: c.name, sku: c.sku, price: c.price, stock: 0 }); return }
+    addItems([{
+      item_type: 'product', ref_id: null, name: c.name, sku: c.sku, quantity: 1,
+      unit_price: c.price, original_price: c.price, price_modified: false, tire_position: null, no_stock: true,
+    }])
   }
 
   // Tires already on the car, by position — for the position picker's "replace?" question
@@ -518,12 +536,20 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
             type="text"
             inputMode="none"
             value={barcodeInput}
-            onChange={e => setBarcodeInput(e.target.value)}
+            onChange={e => { scanTyping.track(e.target.value); setBarcodeInput(e.target.value) }}
             onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) handleBarcodeScan(v) } }}
             placeholder="סרוק ברקוד..."
             className="flex-1 border-2 border-blue-500 rounded-xl text-base font-bold bg-blue-50 outline-none"
             style={{ padding: '10px 14px', letterSpacing: '2px', direction: 'ltr' }}
           />
+          <button
+            onClick={() => { const v = barcodeInput.trim(); if (v) handleBarcodeScan(v) }}
+            disabled={!barcodeInput.trim()}
+            className="rounded-xl bg-blue-600 text-white font-bold flex-shrink-0 disabled:opacity-40"
+            style={{ padding: '0 14px', height: '44px', fontSize: '14px' }}
+          >
+            🔍 חפש
+          </button>
           <button
             onClick={() => setScanMode(false)}
             className="rounded-xl border-2 border-slate-300 font-bold text-slate-600 bg-white flex-shrink-0 active:bg-slate-100 transition-colors"
@@ -532,6 +558,11 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
             ביטול
           </button>
         </div>
+      )}
+
+      {noStockBarcode && (
+        <NoStockChargeDialog kind="choose" barcode={noStockBarcode}
+          onClose={() => setNoStockBarcode(null)} onConfirm={chargeScannedWithoutStock} />
       )}
 
       {/* Scanned tire — position picker */}
@@ -655,6 +686,9 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
                       <span>כמות: {item.quantity}</span>
                       {item.price_modified && (
                         <span className="bg-amber-100 text-amber-700 rounded font-bold" style={{ fontSize: '11px', padding: '1px 5px' }}>שונה</span>
+                      )}
+                      {item.no_stock && (
+                        <span className="bg-orange-100 text-orange-800 rounded font-bold" style={{ fontSize: '11px', padding: '1px 5px' }}>ללא מלאי</span>
                       )}
                       {isSyncing && (
                         <span className="text-blue-500 font-semibold" style={{ fontSize: '11px' }}>⏳ נשמר...</span>

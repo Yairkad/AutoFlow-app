@@ -86,6 +86,7 @@ export default function QuickReportsPanel({ variant }: { variant: 'yard' | 'offi
           <Stat label="צמיגים" value={String(s.byType.tire.qty)} color="#2563eb" sub={money ? ils(s.byType.tire.amount) : undefined} />
           <Stat label="מוצרים" value={String(s.byType.product.qty)} color="#ea580c" sub={money ? ils(s.byType.product.amount) : undefined} />
           <Stat label="שירותים" value={String(s.byType.service.qty)} color="#16a34a" sub={money ? ils(s.byType.service.amount) : undefined} />
+          {s.noStockUnits > 0 && <Stat label="נמכרו ללא מלאי" value={String(s.noStockUnits)} color="#ea580c" sub="לסדר במעקב רחבה" />}
         </div>
 
         <p className="font-black text-slate-700 mt-2" style={{ fontSize: '17px' }}>📦 קיבלנו (קליטות מלאי)</p>

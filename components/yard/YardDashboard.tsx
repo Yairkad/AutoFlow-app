@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { YardSession } from '@/lib/yard/types'
 import { minutesSince, sessionTotal, formatPlate } from '@/lib/yard/types'
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 interface Props { initialSessions: YardSession[] }
 
@@ -31,6 +32,9 @@ export default function YardDashboard({ initialSessions }: Props) {
       .subscribe()
     return () => { clearTimeout(timer); supabase.removeChannel(channel) }
   }, []) // eslint-disable-line
+
+  // Also refresh the moment the screen comes back into view (realtime is unreliable on Netfree)
+  useLiveRefresh(() => router.refresh(), 30_000)
 
   function timerState(openedAt: string): 'ok' | 'warn' | 'critical' {
     const m = minutesSince(openedAt)

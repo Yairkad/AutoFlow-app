@@ -8,6 +8,7 @@ import {
   type LoanDirection, type TireLoan,
 } from '@/lib/yard/hub'
 import { AddButton, Chips, Empty, Field, HubFrame, IconBtn, cardGrid, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle, todayISO } from './ui'
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 type View = 'borrowed' | 'lent' | 'closed'
 
@@ -36,6 +37,8 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
   }, [showToast])
 
   useEffect(() => { loadOpen() }, [loadOpen])
+  // Other devices' changes show up without a page refresh (realtime alone is unreliable on Netfree)
+  useLiveRefresh(loadOpen)
 
   useEffect(() => {
     if (view !== 'closed' || closed) return

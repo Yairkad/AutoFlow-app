@@ -13,6 +13,11 @@ export interface YardSessionItem {
   original_price: number
   price_modified: boolean
   tire_position:  TirePosition | null
+  /** Charged without stock (missing from inventory / not in the system) — migration 101 */
+  no_stock?:          boolean
+  /** Units sold beyond stock, computed when the card is closed */
+  no_stock_qty?:      number | null
+  stock_resolved_at?: string | null
   created_at:     string
 }
 

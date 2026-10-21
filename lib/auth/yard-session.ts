@@ -3,9 +3,12 @@
 // /api/yard routes accept. Web Crypto only, so proxy.ts can verify it too.
 
 export const YARD_COOKIE = 'yard_emp'
-/** Hard cap; the terminal also returns to the picker after YARD_IDLE_MS without use. */
-export const YARD_SESSION_MAX_AGE = 12 * 60 * 60 // seconds
-export const YARD_IDLE_MS = 30 * 60 * 1000
+/**
+ * The employee stays signed in until they press "יציאה" — no idle logout (owner's request:
+ * workers kept having to sign in again). The cookie lives 30 days and is renewed on every
+ * use (/api/yard-auth/renew), so a terminal in daily use never expires.
+ */
+export const YARD_SESSION_MAX_AGE = 30 * 24 * 60 * 60 // seconds
 
 export interface YardSessionPayload {
   e: string   // employee id

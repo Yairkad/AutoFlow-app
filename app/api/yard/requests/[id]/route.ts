@@ -3,7 +3,8 @@ import { requireYard } from '@/lib/auth/yard-token'
 import { createServiceClient } from '@/lib/supabase/service'
 import { parseTireSize } from '@/lib/tires/size'
 
-const EDITABLE = ['kind', 'customer_name', 'phone', 'plate', 'item_desc', 'qty', 'quoted_price', 'notes'] as const
+const EDITABLE = ['kind', 'customer_name', 'phone', 'plate', 'item_desc', 'qty', 'quoted_price', 'notes', 'supplier_name'] as const
+const PAYMENT = ['unpaid', 'partial', 'paid']
 const STATUSES = ['new', 'ordered', 'arrived', 'notified', 'closed', 'cancelled']
 
 // PATCH /api/yard/requests/[id] — edit fields and/or move status
@@ -20,6 +21,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     update.tire_width = size?.width ?? null
     update.tire_profile = size?.profile ?? null
     update.tire_rim = size?.rim ?? null
+  }
+  if (b.payment_status !== undefined) {
+    if (!PAYMENT.includes(b.payment_status)) return NextResponse.json({ error: 'invalid payment_status' }, { status: 400 })
+    update.payment_status = b.payment_status
+    // amount only means something for a partial payment
+    update.paid_amount = b.payment_status === 'partial' && Number(b.paid_amount) > 0 ? Number(b.paid_amount) : null
   }
   if (b.status !== undefined) {
     if (!STATUSES.includes(b.status)) return NextResponse.json({ error: 'invalid status' }, { status: 400 })

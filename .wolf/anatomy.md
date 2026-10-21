@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-20T11:06:53.417Z
-> Files: 103 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-21T09:35:23.468Z
+> Files: 104 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -29,7 +29,7 @@
 
 ## ../../../root/.claude/plans/
 
-- `reactive-giggling-petal.md` — כרטיס עבודה: צמיגים שנתקעים על "מסתנכרן..." וצמיגים כפולים באותו מיקום (~1186 tok)
+- `reactive-giggling-petal.md` — תיקון: ברקוד שמוקלד ידנית נחתך באמצע (~313 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
 
@@ -564,10 +564,6 @@
 ## lib/expenses/
 
 
-## public/forms/
-
-- `yipuy-koah.pdf` — official MoT 'ייפוי כוח לאדם פרטי' (1 page A4), background of the POA form
-
 ## lib/forms/
 
 - `poaForm.ts` — Power-of-attorney form model: FIELDS default positions in PDF pt (measured from the PDF's boxes), layout overrides, fieldValue, idDigits (LTR, zero-padded), poaPrintHtml (A4 margin 0, pt units), renderPoaBackground (~2200 tok)
@@ -629,12 +625,14 @@
 ## public/
 
 
+## public/forms/
+
+
 ## scripts/
 
 
 ## supabase/migrations/
 
-- `099_poa_form_settings.sql` — poa_form_settings (tenant PK): layout JSONB (calibration), proxies/owners JSONB quick-fill lists, RLS by tenant (~350 tok)
 - `082_bank_statement_charge_date_card.sql` — Credit-card statements commonly carry two distinct dates per transaction -- (~172 tok)
 - `083_inspection_intake.sql` — Purchase-inspection pre-fill ("טופס מילוי מראש"): the office sends the customer a personal (~352 tok)
 - `086_cars_license_deposit.sql` — cars.license_deposited bool + license_deposit_date (car off the road, license deposited) (~120 tok)
@@ -648,6 +646,7 @@
 - `090_cars_docs_gov_test.sql` — cars.doc_names text[] (card doc chips) + gov_last_test_date (~100 tok)
 - `093_yard_worker_hub.sql` — ════════════════════════════════════════════ (~1248 tok)
 - `094_car_sale_contracts.sql` — ════════════════════════════════════════════ (~671 tok)
+- `099_poa_form_settings.sql` — poa_form_settings (tenant PK): layout JSONB (calibration), proxies/owners JSONB quick-fill lists, RLS by tenant (~350 tok)
 
 ## tests/
 

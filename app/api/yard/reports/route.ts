@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   const [sessionsRes, tireInRes, prodInRes] = await Promise.all([
     selectAll((a, b) => sb.from('yard_sessions')
-      .select('id, yard_session_items(item_type, name, quantity, unit_price)')
+      .select('id, yard_session_items(item_type, name, quantity, unit_price, no_stock_qty)')
       .eq('tenant_id', tid).eq('status', 'archived')
       .gte('closed_at', fromTs).lt('closed_at', toTs)
       .order('closed_at').range(a, b)),
@@ -50,13 +50,15 @@ export async function GET(req: NextRequest) {
       total: 0,
       byType: { tire: { qty: 0, amount: 0 }, product: { qty: 0, amount: 0 }, service: { qty: 0, amount: 0 } },
       topTires: [],
+      noStockUnits: 0,
     },
     received: { tires: 0, products: 0, cost: 0, topTires: [] },
   }
 
   const soldSizes = new Map<string, number>()
   for (const s of sessionsRes.data) {
-    for (const it of (s.yard_session_items ?? []) as { item_type: 'tire' | 'product' | 'service'; name: string; quantity: number; unit_price: number }[]) {
+    for (const it of (s.yard_session_items ?? []) as { item_type: 'tire' | 'product' | 'service'; name: string; quantity: number; unit_price: number; no_stock_qty: number | null }[]) {
+      report.sold.noStockUnits += it.no_stock_qty ?? 0
       const amount = Number(it.unit_price) * it.quantity
       const bucket = report.sold.byType[it.item_type]
       if (!bucket) continue

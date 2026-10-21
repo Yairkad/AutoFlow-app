@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
     qty:             Math.max(1, Number(b.qty) || 1),
     quoted_price:    b.quoted_price !== '' && b.quoted_price != null ? Number(b.quoted_price) : null,
     notes:           b.notes?.trim() || null,
+    supplier_name:   b.supplier_name?.trim() || null,
     created_by:      auth.user.userId,
     created_by_name: auth.user.name,
   }).select().single()

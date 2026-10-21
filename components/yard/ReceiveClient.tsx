@@ -7,6 +7,7 @@ import { whatsappLink } from '@/lib/yard/hub'
 import { tireSizeSearchParams } from '@/lib/tires/size'
 import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
 import PlacementSheet, { type Placement } from '@/components/stock/PlacementSheet'
+import { useScanTyping } from '@/lib/hooks/useScanTyping'
 
 interface WaitingCustomer { id: string; customer_name: string; phone: string | null; item_desc: string; qty: number }
 
@@ -78,9 +79,12 @@ export default function ReceiveClient() {
   }, [stage])
 
   // ── Debounce ──────────────────────────────────────────────────────────────
+  // Auto-search only for scanner-speed input; typed by hand → Enter / "חפש"
+  const scanTyping = useScanTyping()
   useEffect(() => {
     if (!scanBuf.trim()) return
     if (stage !== 'scan') return
+    if (!scanTyping.isScanner(scanBuf)) return
     const t = setTimeout(() => {
       const code = scanBuf.trim()
       setScanBuf('')
@@ -372,7 +376,7 @@ export default function ReceiveClient() {
                 ref={scanRef}
                 type="text" inputMode="none"
                 value={scanBuf}
-                onChange={e => setScanBuf(e.target.value)}
+                onChange={e => { scanTyping.track(e.target.value); setScanBuf(e.target.value) }}
                 onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) { setScanBuf(''); handleQuickScan(v) } } }}
                 placeholder="פוקוס כאן וסרוק..."
                 className="w-full border-2 border-amber-300 rounded-xl font-bold bg-white outline-none focus:border-amber-500 transition-colors"
@@ -447,14 +451,18 @@ export default function ReceiveClient() {
                 ref={scanRef}
                 type="text" inputMode="none"
                 value={scanBuf}
-                onChange={e => setScanBuf(e.target.value)}
+                onChange={e => { scanTyping.track(e.target.value); setScanBuf(e.target.value) }}
                 onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) handleScan(v) } }}
                 placeholder="הכנס פוקוס וסרוק..."
                 className="w-full border-2 border-blue-400 rounded-2xl font-bold bg-blue-50 outline-none focus:border-blue-600 transition-colors"
                 style={{ padding: '16px 18px', fontSize: '20px', letterSpacing: '3px', direction: 'ltr', textAlign: 'center' }}
                 autoFocus
               />
-              <p className="text-slate-400 text-sm text-center">הסורק מזהה אוטומטית · Enter לחיפוש ידני</p>
+              <button onClick={() => { const v = scanBuf.trim(); if (v) handleScan(v) }} disabled={!scanBuf.trim()}
+                className="self-center bg-blue-600 text-white rounded-xl font-bold disabled:opacity-40" style={{ padding: '8px 18px', fontSize: 15 }}>
+                🔍 חפש
+              </button>
+              <p className="text-slate-400 text-sm text-center">הסורק מזהה אוטומטית · הקלדה ידנית: Enter או ״חפש״</p>
             </div>
           )}
 

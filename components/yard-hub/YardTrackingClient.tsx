@@ -6,12 +6,14 @@ import LoansPanel from './LoansPanel'
 import RequestsPanel from './RequestsPanel'
 import QuickReportsPanel from './QuickReportsPanel'
 import StockSummaryCards from './StockSummaryCards'
+import NoStockPanel from './NoStockPanel'
 
-type Tab = 'loans' | 'requests' | 'reports'
+type Tab = 'loans' | 'requests' | 'nostock' | 'reports'
 
 const TABS: { value: Tab; icon: string; label: string; countKey?: string }[] = [
   { value: 'requests', icon: '⏳', label: 'לקוחות ממתינים', countKey: 'yard_requests' },
   { value: 'loans',    icon: '🔁', label: 'השאלות',          countKey: 'yard_loans' },
+  { value: 'nostock',  icon: '📦', label: 'נמכר ללא מלאי',  countKey: 'no_stock' },
   { value: 'reports',  icon: '📊', label: 'דוחות' },
 ]
 
@@ -57,6 +59,7 @@ export default function YardTrackingClient() {
 
       {tab === 'loans'    && <LoansPanel variant="office" />}
       {tab === 'requests' && <RequestsPanel variant="office" />}
+      {tab === 'nostock'  && <NoStockPanel variant="office" />}
       {tab === 'reports'  && <QuickReportsPanel variant="office" />}
     </div>
   )

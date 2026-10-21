@@ -48,6 +48,13 @@ export default function YardLogin({ onCancel, currentName }: Props) {
     router.refresh()
   }
 
+  async function logout() {
+    setBusy(true)
+    await fetch('/api/yard-auth/logout', { method: 'POST' }).catch(() => {})
+    onCancel?.()
+    router.refresh()
+  }
+
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ background: '#0f172a', direction: 'rtl', padding: 16 }}>
       <div className="bg-white rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: 520, maxHeight: '100%', padding: 20 }}>
@@ -62,6 +69,14 @@ export default function YardLogin({ onCancel, currentName }: Props) {
         <p className="text-slate-500 mb-4" style={{ fontSize: 14 }}>
           {picked ? 'הקלד את הקוד שלך' : currentName ? `מחובר כעת: ${currentName} · בחר עובד` : 'בחר את השם שלך'}
         </p>
+        {/* Sessions don't expire on their own any more — this is how an employee signs out */}
+        {onCancel && currentName && !picked && (
+          <button onClick={logout} disabled={busy}
+            className="self-start bg-red-50 text-red-700 border border-red-200 rounded-xl font-bold mb-3 disabled:opacity-60"
+            style={{ padding: '8px 14px', fontSize: 14 }}>
+            🚪 יציאה ({currentName})
+          </button>
+        )}
 
         {!picked ? (
           <div className="overflow-y-auto" style={{ minHeight: 0 }}>

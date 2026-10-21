@@ -8,6 +8,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import PageHeader from '@/components/ui/PageHeader'
+import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -127,6 +128,8 @@ export default function RemindersClient() {
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [load, supabase])
+  // Other devices' changes show up without a page refresh (realtime alone is unreliable on Netfree)
+  useLiveRefresh(load)
 
   // ── Derived lists ──────────────────────────────────────────────────────────
 

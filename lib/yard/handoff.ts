@@ -13,6 +13,7 @@ export interface HandoffItem {
   original_price: number
   price_modified: boolean
   tire_position: TirePosition | null
+  no_stock?: boolean
 }
 
 export function handOffToCard(sessionId: string, items: HandoffItem[], replaceIds: string[] = []) {

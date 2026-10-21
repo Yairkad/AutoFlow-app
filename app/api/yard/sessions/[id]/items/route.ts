@@ -44,6 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     original_price: b.original_price ?? b.unit_price,
     price_modified: b.price_modified ?? false,
     tire_position:  b.tire_position ?? null,
+    no_stock:       b.no_stock === true,
   }))
 
   const { data, error } = await supabase
