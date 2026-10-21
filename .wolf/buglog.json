@@ -1286,5 +1286,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-20T12:00:00Z"
+  },
+  {
+    "id": "bug-058",
+    "timestamp": "2026-10-21T22:00:00Z",
+    "error_message": "ברקוד שמוקלד ידנית נחתך — המסוף מחפש חלק מהברקוד",
+    "file": "components/yard/WorkCardClient.tsx",
+    "root_cause": "Scan inputs auto-searched 200ms after the last keystroke; a person typing pauses longer, so the lookup ran on a partial code.",
+    "fix": "lib/hooks/useScanTyping.ts: auto-search only when keys arrived scanner-fast (<60ms apart) and the value is >=4 chars; otherwise Enter or a new '🔍 חפש' button. Applied in WorkCardClient, TireSearchClient, ReceiveClient.",
+    "tags": [
+      "yard",
+      "barcode",
+      "scanner",
+      "debounce"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-21T22:00:00Z"
   }
 ]

@@ -2610,3 +2610,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 22:00 | Barcode fields: auto-search only at scanner speed; manual typing → Enter/חפש | useScanTyping, WorkCard/TireSearch/Receive | playwright ok, build ok | ~6k |

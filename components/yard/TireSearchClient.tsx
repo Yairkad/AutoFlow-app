@@ -9,6 +9,7 @@ import NoStockChargeDialog, { type NoStockCharge } from '@/components/yard/NoSto
 import { handOffToCard, occupiedPositions, tireIdsAt } from '@/lib/yard/handoff'
 import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
 import { tireSizeSearchParams } from '@/lib/tires/size'
+import { useScanTyping } from '@/lib/hooks/useScanTyping'
 
 type TireResult = SearchResult & { size: string; brand: string }
 
@@ -63,8 +64,10 @@ export default function TireSearchClient({ session }: Props) {
     setTimeout(() => scanRef.current?.focus(), 50)
   }, [scanMode])
 
+  // Auto-search only for scanner-speed input; typed by hand → Enter / "חפש"
+  const scanTyping = useScanTyping()
   useEffect(() => {
-    if (!scanMode || !barcodeInput.trim()) return
+    if (!scanMode || !barcodeInput.trim() || !scanTyping.isScanner(barcodeInput)) return
     const t = setTimeout(() => { handleBarcode(barcodeInput.trim()) }, 200)
     return () => clearTimeout(t)
   }, [barcodeInput, scanMode]) // eslint-disable-line
@@ -201,13 +204,21 @@ export default function TireSearchClient({ session }: Props) {
                   type="text"
                   inputMode="none"
                   value={barcodeInput}
-                  onChange={e => setBarcodeInput(e.target.value)}
+                  onChange={e => { scanTyping.track(e.target.value); setBarcodeInput(e.target.value) }}
                   onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) handleBarcode(v) } }}
                   placeholder="סרוק ברקוד..."
                   className="w-full border-2 border-blue-500 rounded-xl text-base font-bold bg-blue-50 outline-none"
                   style={{ padding: '10px 14px', letterSpacing: '2px', direction: 'ltr' }}
                 />
               </div>
+              <button
+                onClick={() => { const v = barcodeInput.trim(); if (v) handleBarcode(v) }}
+                disabled={!barcodeInput.trim()}
+                className="rounded-xl bg-blue-600 text-white font-bold flex-shrink-0 disabled:opacity-40"
+                style={{ padding: '0 14px', height: '44px', fontSize: '14px' }}
+              >
+                🔍 חפש
+              </button>
               <button
                 onClick={() => setScanMode(false)}
                 className="rounded-xl border-2 border-slate-300 font-bold text-slate-600 bg-white flex-shrink-0 active:bg-slate-100 transition-colors"
