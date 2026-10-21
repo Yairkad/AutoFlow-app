@@ -271,14 +271,9 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
               : PAYMENT_LABEL[pay]
             return (
               <div key={r.id} className={`bg-white rounded-xl border-2 flex flex-col ${r.status === 'arrived' ? 'border-green-500' : 'border-slate-200'}`} style={{ padding: '10px 12px', gap: 6 }}>
-                {/* Row 1: name · phone · status · ⋮ */}
+                {/* Row 1: name · status · ⋮ */}
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-black text-slate-900 truncate" style={{ fontSize: 16 }}>{r.customer_name}</div>
-                    {r.phone && (
-                      <a href={`tel:${r.phone}`} className="font-bold" style={{ fontSize: 14, color: '#1d4ed8', direction: 'ltr', display: 'inline-block' }}>📞 {r.phone}</a>
-                    )}
-                  </div>
+                  <div className="flex-1 min-w-0 font-black text-slate-900 truncate" style={{ fontSize: 16 }}>{r.customer_name}</div>
                   <span className={`rounded-full font-bold text-xs flex-shrink-0 ${STATUS_COLOR[r.status]}`} style={{ padding: '3px 9px', whiteSpace: 'nowrap' }}>
                     {REQUEST_STATUS_LABEL[r.status]}
                   </span>
@@ -290,6 +285,10 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                     { key: 'del', icon: '🗑', label: 'מחיקת הפנייה', danger: true, onClick: () => remove(r) },
                   ]} />
                 </div>
+                {/* Phone on its own line so it never wraps */}
+                {r.phone && (
+                  <a href={`tel:${r.phone}`} className="font-bold self-start" style={{ fontSize: 14, color: '#1d4ed8', direction: 'ltr', whiteSpace: 'nowrap', marginTop: -4 }}>📞 {r.phone}</a>
+                )}
 
                 {/* Row 2: item · price · payment · age */}
                 <div className="flex items-center flex-wrap gap-x-2 gap-y-1" style={{ fontSize: 13 }}>
@@ -319,12 +318,12 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                 )}
 
                 {next && (
-                  <button onClick={() => advance(r, next)} className={`w-full ${r.kind === 'inquiry' ? 'bg-violet-600 hover:bg-violet-700' : NEXT_COLOR[r.status]} text-white rounded-lg font-bold mt-auto`} style={{ padding: '8px', fontSize: 14 }}>
+                  <button onClick={() => advance(r, next)} className={`w-full ${r.kind === 'inquiry' ? 'bg-violet-600 hover:bg-violet-700' : NEXT_COLOR[r.status]} text-white rounded-lg font-bold`} style={{ padding: '8px', fontSize: 14, marginTop: 'auto' }}>
                     {r.kind === 'inquiry' && r.status === 'new' ? '✓ בירור בוצע' : NEXT_LABEL[r.status]}
                   </button>
                 )}
                 {!isOpen && (
-                  <button onClick={() => setStatus(r, 'new')} className="w-full bg-slate-100 text-slate-700 rounded-lg font-bold mt-auto" style={{ padding: '8px', fontSize: 14 }}>פתח מחדש</button>
+                  <button onClick={() => setStatus(r, 'new')} className="w-full bg-slate-100 text-slate-700 rounded-lg font-bold" style={{ padding: '8px', fontSize: 14, marginTop: 'auto' }}>פתח מחדש</button>
                 )}
               </div>
             )
