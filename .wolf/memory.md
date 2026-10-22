@@ -2618,3 +2618,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 12:40 | Requests: unit price ↔ total linked, remaining balance on partial pay, "📞 סיכום שיחה" (install_at + dated note, also on arrived→notified), next-step button colour per stage; contracts: signed copy via scanner agent + separate camera; documents tabs deep-link ?tab= | RequestsPanel.tsx, requests/[id]/route.ts, hub.ts, migration 102, CarContractEditor.tsx, DocumentsClient.tsx | tsc+eslint clean | ~30k |
 | 06:21 | Security update: next 16.1.6→16.4.2, react→19.2.9, npm audit fix (22 -> 9) | package.json, package-lock.json | build OK | ~3k |
+| 08:08 | chore(deps): update sharp 0.34.5 -> 0.35.5 (security) | package.json, package-lock.json | build OK, smoke test OK | ~2k |
