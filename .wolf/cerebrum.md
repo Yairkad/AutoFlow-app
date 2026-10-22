@@ -31,6 +31,8 @@
 
 - **No tables in explanations (2026-10-07):** user said he doesn't like looking at tables — explain comparisons in short prose / bullet points instead.
 
+- [2026-10-21] Cards: user wants a FIXED row order on every card (same row = same info across cards), small meta (supplier / created-by) just above a bottom-pinned action button. Phone format XXX-XXXX-XXX (054-9090-911), never wrapped.
+
 <!-- How the user likes things done. Code style, tools, patterns, communication. -->
 - **Salary model (2026-06-03):** Salary tab uses simple monthly net-entry model. No hourly/monthly type distinction. Each month user enters the net payslip amount directly (stored in `salaries.base`). External bonuses/deductions stored in `additions`/`deductions` JSONB. `total = base + additions - deductions`. Employee profile has no salary reference field.
 - **Manual over automatic for money-matching (2026-07-05):** User explicitly rejected automatic FIFO reconciliation for supplier checks vs. debts — he sometimes deliberately pays a newer month's invoices while intentionally leaving an older month open (a dispute or business reason), and does NOT want the system to silently close the older debt first. Any debt/payment matching logic must let the user pick which specific debt(s)/month(s) a payment settles, with the system only suggesting a default (editable), never deciding unilaterally.
@@ -41,6 +43,7 @@
 
 ## Key Learnings
 - [2026-10-22] Security update to Next 16.4.2: `npm run build` locally needs placeholder env vars (Supabase createClient at module load). eslint-config-next 16.4 adds rules → more lint errors, but `next build` does not run lint. Next 16.4 removed several `experimental` flags (e.g. viewTransition, turbopackUseSystemTlsCerts) and type-checks test files during build.
+- [2026-10-21] **Do-Not-Repeat:** Tailwind margin utilities (mt-auto, m-*, etc.) do NOT work — app/globals.css has an unlayered `* { margin: 0 }` that beats Tailwind's layered utilities. Use inline style margins (e.g. marginTop: 'auto' to pin a button to a card bottom). Phone numbers in cards: own row + whiteSpace nowrap.
 - [2026-10-21] customer_requests.quoted_price = TOTAL (payment 'נשאר' compares to it); the form shows unit price ↔ total linked, unit derived as total/qty. install_at (migration 102) set via '📞 סיכום שיחה' sheet (also opens on arrived→notified); call notes are appended to notes as 'dd/mm: text' lines. Documents page tabs deep-link via ?tab=templates|contracts|poa|drive (read from window.location on mount, replaceState on switch). Car contract signed copy: 📠 scanner agent (lib/scannerAgent) + 📷 camera + upload.
 - [2026-10-21] "חיוב ללא מלאי": yard search shows out-of-stock items (include_empty=1) and offers NoStockChargeDialog (tire size / product name + price suggested from a matching item) for things not in the system; unknown barcodes open it too. Items carry yard_session_items.no_stock; on archive the API stores no_stock_qty (units beyond stock, ref_id null = all units). Office tab "נמכר ללא מלאי" (NoStockPanel, /api/yard/no-stock) with "✓ סודר" → stock_resolved_at. Migration 101.
 - [2026-10-21] Yard terminal session: no idle logout; cookie 30 days, renewed via POST /api/yard-auth/renew on open/focus; explicit "🚪 יציאה" in the switch-employee dialog (owner's request).

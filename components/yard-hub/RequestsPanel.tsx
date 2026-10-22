@@ -30,6 +30,12 @@ function fmtInstall(iso: string): string {
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
 
+/** 0549090911 → 054-9090-911; anything else stays as typed */
+function fmtPhone(p: string): string {
+  const d = p.replace(/\D/g, '')
+  return d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}` : p
+}
+
 const PAY_COLOR: Record<PaymentStatus, string> = {
   unpaid:  'bg-red-50 text-red-700 border-red-200',
   partial: 'bg-amber-50 text-amber-800 border-amber-200',
@@ -271,16 +277,11 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
               : PAYMENT_LABEL[pay]
             return (
               <div key={r.id} className={`bg-white rounded-xl border-2 flex flex-col ${r.status === 'arrived' ? 'border-green-500' : 'border-slate-200'}`} style={{ padding: '10px 12px', gap: 6 }}>
-                {/* Row 1: name · phone · status · ⋮ */}
+                {/* Fixed rows, same order on every card: name+date / phone+status / item / price+payment / … / meta / button */}
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-black text-slate-900 truncate" style={{ fontSize: 16 }}>{r.customer_name}</div>
-                    {r.phone && (
-                      <a href={`tel:${r.phone}`} className="font-bold" style={{ fontSize: 14, color: '#1d4ed8', direction: 'ltr', display: 'inline-block' }}>📞 {r.phone}</a>
-                    )}
-                  </div>
-                  <span className={`rounded-full font-bold text-xs flex-shrink-0 ${STATUS_COLOR[r.status]}`} style={{ padding: '3px 9px', whiteSpace: 'nowrap' }}>
-                    {REQUEST_STATUS_LABEL[r.status]}
+                  <div className="flex-1 min-w-0 font-black text-slate-900 truncate" style={{ fontSize: 16 }}>{r.customer_name}</div>
+                  <span className="text-slate-400 flex-shrink-0" style={{ fontSize: 11.5, whiteSpace: 'nowrap' }}>
+                    {fmtDate(r.created_at)}{isOpen && days > 0 ? ` · ${days} ימים` : ''}
                   </span>
                   <RowActionsMenu align="end" actions={[
                     ...(r.phone ? [{ key: 'wa', icon: '💬', label: 'שליחת וואטסאפ', onClick: () => window.open(whatsappLink(r.phone!, r.status === 'arrived' ? `שלום ${r.customer_name}, הצמיג שהזמנת (${r.item_desc}) הגיע אלינו 🙂` : undefined), '_blank') }] : []),
@@ -291,16 +292,28 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                   ]} />
                 </div>
 
-                {/* Row 2: item · price · payment · age */}
+                <div className="flex items-center gap-2" style={{ marginTop: -4 }}>
+                  <div className="flex-1 min-w-0">
+                    {r.phone
+                      ? <a href={`tel:${r.phone}`} className="font-bold" style={{ fontSize: 14, color: '#1d4ed8', direction: 'ltr', whiteSpace: 'nowrap', display: 'inline-block' }}>📞 {fmtPhone(r.phone)}</a>
+                      : <span className="text-slate-300" style={{ fontSize: 13 }}>אין טלפון</span>}
+                  </div>
+                  <span className={`rounded-full font-bold text-xs flex-shrink-0 ${STATUS_COLOR[r.status]}`} style={{ padding: '3px 9px', whiteSpace: 'nowrap' }}>
+                    {REQUEST_STATUS_LABEL[r.status]}
+                  </span>
+                </div>
+
+                <div className="font-bold text-slate-800" style={{ direction: 'ltr', textAlign: 'right', fontSize: 15 }}>
+                  {r.item_desc}{r.qty > 1 ? ` × ${r.qty}` : ''}
+                </div>
+
                 <div className="flex items-center flex-wrap gap-x-2 gap-y-1" style={{ fontSize: 13 }}>
-                  <span className="font-bold text-slate-800" style={{ direction: 'ltr', fontSize: 15 }}>{r.item_desc}{r.qty > 1 ? ` × ${r.qty}` : ''}</span>
-                  {r.quoted_price != null && (
-                    <span className="text-slate-600">₪{r.quoted_price}{r.qty > 1 && <span className="text-slate-400" style={{ fontSize: 12 }}> (₪{round2(r.quoted_price / r.qty)} ליח&apos;)</span>}</span>
-                  )}
+                  {r.quoted_price != null
+                    ? <span className="font-bold text-slate-800" style={{ fontSize: 14 }}>₪{r.quoted_price}{r.qty > 1 && <span className="text-slate-400 font-normal" style={{ fontSize: 12 }}> (₪{round2(r.quoted_price / r.qty)} ליח&apos;)</span>}</span>
+                    : <span className="text-slate-300">אין מחיר</span>}
                   <button onClick={() => openPayment(r)} className={`rounded-full border font-bold ${PAY_COLOR[pay]}`} style={{ padding: '1px 8px', fontSize: 12 }}>
                     {payText}
                   </button>
-                  <span className="text-slate-400" style={{ fontSize: 12 }}>{isOpen && days > 0 ? `${days} ימים` : fmtDate(r.created_at)}</span>
                 </div>
 
                 {r.install_at && (
@@ -309,22 +322,21 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                   </button>
                 )}
 
-                {(r.supplier_name || r.plate || r.notes || r.created_by_name) && (
-                  <div className="text-slate-500 flex flex-wrap gap-x-2" style={{ fontSize: 12 }}>
-                    {r.supplier_name && <span>📦 ספק: {r.supplier_name}</span>}
-                    {r.plate && <span>🚗 {r.plate}</span>}
-                    {r.notes && <span style={{ whiteSpace: 'pre-line' }}>📝 {r.notes}</span>}
-                    {r.created_by_name && <span className="text-slate-400">· {r.created_by_name}</span>}
-                  </div>
-                )}
+                {/* Small details sit right above the button, pinned to the bottom */}
+                <div className="text-slate-500 flex flex-wrap gap-x-2" style={{ fontSize: 12, marginTop: 'auto' }}>
+                  {r.supplier_name && <span>📦 ספק: {r.supplier_name}</span>}
+                  {r.plate && <span>🚗 {r.plate}</span>}
+                  {r.notes && <span style={{ whiteSpace: 'pre-line' }}>📝 {r.notes}</span>}
+                  {r.created_by_name && <span className="text-slate-400">· {r.created_by_name}</span>}
+                </div>
 
                 {next && (
-                  <button onClick={() => advance(r, next)} className={`w-full ${r.kind === 'inquiry' ? 'bg-violet-600 hover:bg-violet-700' : NEXT_COLOR[r.status]} text-white rounded-lg font-bold mt-auto`} style={{ padding: '8px', fontSize: 14 }}>
+                  <button onClick={() => advance(r, next)} className={`w-full ${r.kind === 'inquiry' ? 'bg-violet-600 hover:bg-violet-700' : NEXT_COLOR[r.status]} text-white rounded-lg font-bold`} style={{ padding: '8px', fontSize: 14 }}>
                     {r.kind === 'inquiry' && r.status === 'new' ? '✓ בירור בוצע' : NEXT_LABEL[r.status]}
                   </button>
                 )}
                 {!isOpen && (
-                  <button onClick={() => setStatus(r, 'new')} className="w-full bg-slate-100 text-slate-700 rounded-lg font-bold mt-auto" style={{ padding: '8px', fontSize: 14 }}>פתח מחדש</button>
+                  <button onClick={() => setStatus(r, 'new')} className="w-full bg-slate-100 text-slate-700 rounded-lg font-bold" style={{ padding: '8px', fontSize: 14 }}>פתח מחדש</button>
                 )}
               </div>
             )
