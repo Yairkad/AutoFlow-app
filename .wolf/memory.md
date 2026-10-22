@@ -2617,3 +2617,5 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 12:40 | Requests: unit price ↔ total linked, remaining balance on partial pay, "📞 סיכום שיחה" (install_at + dated note, also on arrived→notified), next-step button colour per stage; contracts: signed copy via scanner agent + separate camera; documents tabs deep-link ?tab= | RequestsPanel.tsx, requests/[id]/route.ts, hub.ts, migration 102, CarContractEditor.tsx, DocumentsClient.tsx | tsc+eslint clean | ~30k |
+| 13:00 | Request cards: phone own row nowrap, status buttons pinned bottom (inline marginTop auto; global * margin:0 beats mt-auto) | RequestsPanel.tsx | fixed | ~3k |
+| 13:20 | Request card fixed row order: name+date / phone (054-9090-911)+status / item / price+payment / install / meta pinned bottom / button | RequestsPanel.tsx | done | ~4k |

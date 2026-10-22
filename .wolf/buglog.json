@@ -1303,5 +1303,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-21T22:00:00Z"
+  },
+  {
+    "id": "bug-067",
+    "timestamp": "2026-10-21T13:00:00Z",
+    "error_message": "Waiting-customer cards: status button not at the card bottom; phone number wraps onto two lines",
+    "file": "components/yard-hub/RequestsPanel.tsx",
+    "root_cause": "app/globals.css has an unlayered `* { margin: 0 }` which overrides Tailwind's layered `mt-auto`; phone sat in a squeezed column next to the status chip",
+    "fix": "marginTop:'auto' inline on the bottom buttons; phone moved to its own row with white-space:nowrap",
+    "tags": [
+      "css",
+      "tailwind",
+      "margin",
+      "layout",
+      "yard-hub"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-21T13:00:00Z"
   }
 ]
