@@ -7,14 +7,16 @@ export interface StorageCabinet { code: string; shelves: number }
 export interface StorageRow {
   id: string
   name: string
-  x: number            // grid position (cabinet widths) on the map
-  y: number            // grid position (rows of the map)
+  x: number            // grid: cabinet widths from the right · free layout: px from its wall
+  y: number            // grid: row of the map · free layout: px from the top
+  side?: 'right' | 'left'  // free layout: which wall x is measured from (letters sit against it)
   dir: 'h' | 'v'       // cabinets side by side, or one under the other
   contiguous: boolean  // shelves continue between neighbouring cabinets
   cabinets: StorageCabinet[]
 }
 
-export interface StorageLayout { rows: StorageRow[] }
+// free = rows placed anywhere in the room (px); older maps sit on the grid until edited
+export interface StorageLayout { rows: StorageRow[]; free?: boolean }
 
 // From the user's sketch of the room: cabinets along the two side walls (exact count on the long
 // wall unsure). Edited on /tires/storage to match reality.

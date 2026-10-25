@@ -2648,3 +2648,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 12:59 | Storage map free floor plan (wall side + px position), left-wall letters against the wall | components/stock/StorageMap.tsx, StorageMapEditor.tsx, lib/stock/storage.ts | rendered + tsc/eslint clean | ~15k |
