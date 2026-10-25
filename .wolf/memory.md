@@ -2619,3 +2619,17 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:40 | Requests: unit price ↔ total linked, remaining balance on partial pay, "📞 סיכום שיחה" (install_at + dated note, also on arrived→notified), next-step button colour per stage; contracts: signed copy via scanner agent + separate camera; documents tabs deep-link ?tab= | RequestsPanel.tsx, requests/[id]/route.ts, hub.ts, migration 102, CarContractEditor.tsx, DocumentsClient.tsx | tsc+eslint clean | ~30k |
 | 13:00 | Request cards: phone own row nowrap, status buttons pinned bottom (inline marginTop auto; global * margin:0 beats mt-auto) | RequestsPanel.tsx | fixed | ~3k |
 | 13:20 | Request card fixed row order: name+date / phone (054-9090-911)+status / item / price+payment / install / meta pinned bottom / button | RequestsPanel.tsx | done | ~4k |
+
+## Session: 2026-10-25 11:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:23 | Zone count: counted shelves orange per round (30d / manual new round), size-change dot, select-uncounted/all, next-shelf + continue-to-next-cabinet | components/stock/ZoneCountPanel.tsx, StorageMap.tsx, lib/stock/zoneCount.ts, api/yard/zone-count, api/yard/stock-summary | tsc+eslint clean | ~25k |
+
+## Session: 2026-10-25 11:48
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:50 | Created lib/cars/contractPayments.ts | — | ~1078 |
+| 11:50 | Created components/cars/ContractPaymentsPanel.tsx | — | ~2903 |
+| 11:52 | Car contract payment follow-up: receipts column (mig 103), ContractPaymentsPanel on /reminders, dashboard alert chips, check ids | lib/cars/contractPayments.ts, components/cars/ContractPaymentsPanel.tsx, RemindersClient, AlertsPanel, saleContract, CarContractEditor/Panel | tsc clean | ~20k |

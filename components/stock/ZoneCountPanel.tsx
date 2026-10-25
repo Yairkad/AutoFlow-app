@@ -6,15 +6,16 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { api } from '@/components/yard-hub/ui'
 import TirePickerModal from '@/components/tires/TirePickerModal'
 import StorageMap from './StorageMap'
-import { cabinetOf, findCabinet, parseLocation, shelvesOfCabinet, sortShelves, type StorageLayout } from '@/lib/stock/storage'
+import { allShelves, cabinetOf, findCabinet, parseLocation, shelvesOfCabinet, sortShelves, type StorageLayout } from '@/lib/stock/storage'
 import {
-  buildReview, expandScope, expectedTires, tireLabel, toSave,
-  type OutsideChoice, type ReviewRow, type ZoneEntry, type ZoneTire,
+  ROUND_DAYS, buildReview, expandScope, expectedTires, shelfSizeChanges, tireLabel, toSave,
+  type CountRound, type OutsideChoice, type ReviewRow, type ZoneEntry, type ZoneTire,
 } from '@/lib/stock/zoneCount'
 
 // Count part of the stock: pick cabinets / shelves on the map, scan shelf by shelf, review, save.
 // Same screen on the yard terminal (variant 'yard') and in the office (variant 'office').
 // The work in progress is kept in localStorage, so a refresh / lock screen doesn't lose it.
+// Shelves already counted this round show orange on the map (red dot = sizes changed since).
 
 type Step = 'pick' | 'scan' | 'review' | 'done'
 
@@ -43,7 +44,7 @@ const btn = 'rounded-xl font-bold active:scale-[.98] transition-all disabled:opa
 export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office' }) {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
-  const [data, setData] = useState<{ layout: StorageLayout; tires: ZoneTire[] } | null>(null)
+  const [data, setData] = useState<{ layout: StorageLayout; tires: ZoneTire[]; round: CountRound } | null>(null)
   const [loadErr, setLoadErr] = useState<string | null>(null)
 
   const [step, setStep] = useState<Step>('pick')
@@ -66,7 +67,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
   const inputRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
-    try { setData(await api<{ layout: StorageLayout; tires: ZoneTire[] }>('/api/yard/zone-count')) }
+    try { setData(await api<{ layout: StorageLayout; tires: ZoneTire[]; round: CountRound }>('/api/yard/zone-count')) }
     catch (e) { setLoadErr((e as Error).message) }
   }, [])
 
@@ -88,6 +89,29 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
   }, [tires])
   const tireById = useMemo(() => new Map(tires.map(t => [t.id, t])), [tires])
 
+  // ── Count round ───────────────────────────────────────────────────────────────
+
+  const round = useMemo(() => {
+    if (!data) return null
+    const all = allShelves(data.layout)
+    const done = new Set(all.filter(s => data.round.shelves[s]))
+    const changes = [...done].map(s => ({ shelf: s, ...shelfSizeChanges(data.round.shelves[s], s, tires) }))
+      .filter(c => c.added.length || c.removed.length)
+    const cabinets = data.layout.rows.flatMap(r => r.cabinets)
+    const doneCabs = new Set(cabinets.filter(c => shelvesOfCabinet(c).every(s => done.has(s))).map(c => c.code))
+    return {
+      all, done, changes, dot: new Set(changes.map(c => c.shelf)),
+      tint: Object.fromEntries([...doneCabs].map(c => [c, { bg: '#fb923c', color: '#fff' }])),
+      nextCab: cabinets.find(c => !doneCabs.has(c.code)) ?? null,
+    }
+  }, [data, tires])
+
+  async function newRound() {
+    if (!await confirm({ msg: 'להתחיל סבב ספירה חדש? כל המדפים יחזרו לסימון "לא נספר"', icon: '🔄' })) return
+    try { await api('/api/yard/zone-count', 'PUT'); showToast('התחיל סבב ספירה חדש', 'success'); load() }
+    catch (e) { showToast(`שגיאה: ${(e as Error).message}`, 'error') }
+  }
+
   // ── Pick ──────────────────────────────────────────────────────────────────────
 
   function toggleShelf(s: string) {
@@ -106,9 +130,9 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
     })
   }
 
-  function start() {
-    if (!data || picked.size === 0) return
-    const { scope: sc, added: ad } = expandScope(data.layout, [...picked], tires)
+  function start(shelves = [...picked]) {
+    if (!data || shelves.length === 0) return
+    const { scope: sc, added: ad } = expandScope(data.layout, shelves, tires)
     setScope(sc); setAdded(ad); setActive(sc[0]); setEntries([]); setOutsideChoice({}); setKeep(new Set()); setNotes('')
     setStep('scan')
   }
@@ -207,9 +231,10 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
     setSaving(true)
     try {
       const r = await api<{ updated: number; created: number }>('/api/yard/zone-count', 'POST', toSave(scope, review, notes))
-      setResult(r); setStep('done'); saveDraft(null)
+      saveDraft(null)
+      await load()            // fresh round, so "continue to the next cabinet" skips this one
+      setResult(r); setStep('done')
       showToast('הספירה נשמרה ✓', 'success')
-      load()
     } catch (e) {
       showToast(`שגיאה בשמירה: ${(e as Error).message}`, 'error')
     } finally { setSaving(false) }
@@ -260,7 +285,48 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
         <div className="text-slate-500" style={{ fontSize: 13, marginBottom: 10 }}>
           לחיצה על האות = כל הארון · לחיצה על מדף = רק המדף. אפשר לבחור כמה.
         </div>
-        <StorageMap layout={data.layout} selected={picked} onShelf={toggleShelf} onCabinet={toggleCabinet} />
+        <StorageMap layout={data.layout} selected={picked} onShelf={toggleShelf} onCabinet={toggleCabinet}
+          done={round?.done} dot={round?.dot} cabinetTint={round?.tint} />
+        {round && (
+          <div className="flex flex-col gap-2" style={{ marginTop: 10, fontSize: 13 }}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-600">
+              <span><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: 3, background: '#fdba74', verticalAlign: 'middle', marginLeft: 4 }} />
+                נספר בסבב: <b>{round.done.size} מתוך {round.all.length} מדפים</b></span>
+              <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 99, background: '#dc2626', verticalAlign: 'middle', marginLeft: 4 }} />
+                נכנסה / יצאה מידה מאז הספירה</span>
+              <span className="text-slate-400">
+                {data.round.startedAt ? `סבב מ-${new Date(data.round.startedAt).toLocaleDateString('he-IL')}` : `${ROUND_DAYS} הימים האחרונים`}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {round.done.size < round.all.length && (
+                <button onClick={() => setPicked(new Set(round.all.filter(s => !round.done.has(s))))}
+                  className={`${btn} bg-blue-50 text-blue-800 border border-blue-200`} style={{ padding: '7px 10px', fontSize: 13 }}>
+                  בחר כל מה שלא נספר ({round.all.length - round.done.size})
+                </button>
+              )}
+              <button onClick={() => setPicked(new Set(round.all))}
+                className={`${btn} bg-slate-50 text-slate-700 border border-slate-200`} style={{ padding: '7px 10px', fontSize: 13 }}>בחר הכל</button>
+              {round.done.size > 0 && (
+                <button onClick={newRound} className={`${btn} bg-white text-orange-800 border border-orange-300`} style={{ padding: '7px 10px', fontSize: 13 }}>
+                  🔄 סבב ספירה חדש
+                </button>
+              )}
+            </div>
+            {round.changes.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg text-red-900" style={{ padding: '6px 10px' }}>
+                <b>שינוי מידות מאז הספירה:</b>
+                {round.changes.map(c => (
+                  <div key={c.shelf}>
+                    <b><bdi dir="ltr">{c.shelf}</bdi></b>
+                    {c.added.length > 0 && <> · נכנס: <bdi dir="ltr">{c.added.join(', ')}</bdi></>}
+                    {c.removed.length > 0 && <> · יצא: <bdi dir="ltr">{c.removed.join(', ')}</bdi></>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {pickedCabs.length > 0 && (
         <div className="text-slate-600" style={{ fontSize: 14 }}>
@@ -273,7 +339,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
       )}
     </>, <>
       {picked.size > 0 && <button onClick={() => setPicked(new Set())} className={`${btn} bg-slate-100 text-slate-700`} style={{ padding: '14px 16px' }}>נקה</button>}
-      <button onClick={start} disabled={picked.size === 0} className={`${btn} bg-blue-700 text-white flex-1`} style={{ padding: 14, fontSize: 17 }}>
+      <button onClick={() => start()} disabled={picked.size === 0} className={`${btn} bg-blue-700 text-white flex-1`} style={{ padding: 14, fontSize: 17 }}>
         התחל ספירה{picked.size ? ` (${picked.size} מדפים)` : ''} ←
       </button>
     </>)
@@ -328,9 +394,21 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
       </button>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="font-bold text-slate-700 border-b border-slate-200 flex justify-between" style={{ padding: '10px 12px', fontSize: 15 }}>
-          <span>מדף {active}</span>
-          <span className="text-slate-500 font-semibold" style={{ fontSize: 13 }}>{shelfCount[active] ?? 0} נסרקו</span>
+        <div className="font-bold text-slate-700 border-b border-slate-200 flex items-center justify-between gap-2" style={{ padding: '8px 12px', fontSize: 15 }}>
+          <span>מדף {active} <span className="text-slate-500 font-semibold" style={{ fontSize: 13 }}>· {shelfCount[active] ?? 0} נסרקו</span></span>
+          {scope.length > 1 && (() => {
+            const i = scope.indexOf(active)
+            return (
+              <span className="flex gap-1.5">
+                <button onClick={() => setActive(scope[i - 1])} disabled={i <= 0}
+                  className={`${btn} bg-slate-100 text-slate-700`} style={{ padding: '8px 10px', fontSize: 14 }}>→ הקודם</button>
+                <button onClick={() => setActive(scope[i + 1])} disabled={i >= scope.length - 1}
+                  className={`${btn} bg-blue-700 text-white`} style={{ padding: '8px 12px', fontSize: 14 }}>
+                  {i < scope.length - 1 ? `מדף הבא ${scope[i + 1]} ←` : 'מדף אחרון'}
+                </button>
+              </span>
+            )
+          })()}
         </div>
         {shelfRows.length === 0 && <div className="text-slate-400 text-center" style={{ padding: 20, fontSize: 14 }}>אין צמיגים רשומים על המדף הזה — סרוק מה שיש עליו</div>}
         {shelfRows.map(r => (
@@ -453,7 +531,14 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
       <span style={{ fontSize: 56 }}>✅</span>
       <div className="font-black text-slate-800" style={{ fontSize: 20 }}>הספירה נשמרה</div>
       <div className="text-slate-600">עודכנו {result?.updated ?? 0} צמיגים{result?.created ? ` · ${result.created} חדשים ממתינים לפרטים` : ''}</div>
-      <button onClick={reset} className={`${btn} bg-blue-700 text-white`} style={{ padding: '14px 24px', fontSize: 17 }}>ספירה נוספת</button>
+      {round?.nextCab && (
+        <button onClick={() => { reset(); start(shelvesOfCabinet(round.nextCab!)) }} className={`${btn} bg-blue-700 text-white`} style={{ padding: '14px 24px', fontSize: 17 }}>
+          המשך לארון {round.nextCab.code} ←
+        </button>
+      )}
+      <button onClick={reset} className={`${btn} ${round?.nextCab ? 'bg-slate-100 text-slate-700' : 'bg-blue-700 text-white'}`} style={{ padding: '14px 24px', fontSize: 17 }}>
+        {round?.nextCab ? 'בחירה במפה' : 'ספירה נוספת'}
+      </button>
     </div>
   ))
 }

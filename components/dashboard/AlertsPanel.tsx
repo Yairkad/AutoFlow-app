@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
 import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
+import { KIND_LABEL, daysFromToday, isSettled, loadExpectedPayments, type ExpectedPayment } from '@/lib/cars/contractPayments'
 
 interface AlertPayment {
   id: string
@@ -77,6 +78,30 @@ const SALARY_CHIP: React.CSSProperties = {
 // Checks are only surfaced this close to their due_date, so alerts stay focused
 // on what's actually about to happen (transfers keep the wider 30-day lookahead).
 const CHECK_ALERT_DAYS = 5
+// Buyers' payments on car sale contracts: late / bounced, or due within this many days
+const CONTRACT_ALERT_DAYS = 3
+
+function ContractChip({ p, wide }: { p: ExpectedPayment; wide?: boolean }) {
+  const bounced = p.receipt?.status === 'bounced'
+  const days = daysFromToday(p.due)
+  const cs = chipStyle(bounced ? -1 : days)
+  const when = bounced ? '↩ חזר' : dayLabel(days)
+  return wide ? (
+    <a href="/reminders" style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', textDecoration: 'none', ...cs }}>
+      <div style={{ fontWeight: 700 }}>🚗 {p.buyer} · {KIND_LABEL[p.kind]}{p.checkNum && ` ${p.checkNum}`}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+        <span style={{ fontWeight: 800 }}>{fmt(p.amount)}</span><span>{when}</span>
+      </div>
+    </a>
+  ) : (
+    <a href="/reminders" style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '16px', fontSize: '12px', fontWeight: 600, textDecoration: 'none', ...cs }}>
+      <span>🚗 {p.buyer}</span>
+      <span style={{ opacity: 0.65, fontWeight: 400 }}>· {KIND_LABEL[p.kind]}</span>
+      <span style={{ fontWeight: 800 }}>{fmt(p.amount)}</span>
+      <span style={{ opacity: 0.75, fontWeight: 500 }}>{when}</span>
+    </a>
+  )
+}
 
 export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
   const { profile } = useProfile()
@@ -85,6 +110,7 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
   const [suppliers,     setSuppliers]     = useState<Supplier[]>([])
   const [employees,     setEmployees]     = useState<Employee[]>([])
   const [custDebts,     setCustDebts]     = useState<CustomerDebtAlert[]>([])
+  const [contractPays,  setContractPays]  = useState<ExpectedPayment[]>([])
   const dismissed = new Set<string>()
   const [loading,   setLoading]   = useState(true)
   const [popupOpen, setPopupOpen] = useState(false)
@@ -130,6 +156,10 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
     setSalaries(salRes.data ?? [])
     setEmployees(empRes.data ?? [])
     setCustDebts((debtRes.data ?? []).filter(d => d.amount - d.paid > 0))
+    if (profile?.tenantId) {
+      const { items } = await loadExpectedPayments(supabase, profile.tenantId)
+      setContractPays(items.filter(p => !isSettled(p) && (p.receipt?.status === 'bounced' || daysFromToday(p.due) <= CONTRACT_ALERT_DAYS)))
+    }
     setLoading(false)
   }
 
@@ -149,7 +179,7 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
   const visiblePayments  = payments.filter(p => !dismissed.has(p.id))
   const visibleSalaries  = salaries.filter(s => !dismissed.has(s.id) && (s.total || 0) > 0)
   const visibleCustDebts = custDebts.filter(d => !dismissed.has(d.id))
-  const totalCount = visiblePayments.length + visibleSalaries.length + visibleCustDebts.length
+  const totalCount = visiblePayments.length + visibleSalaries.length + visibleCustDebts.length + contractPays.length
 
   // Checks are summarized per due-month (count + total) instead of listed one by one —
   // a supplier list of every single check reads as noise; transfers stay itemized.
@@ -216,6 +246,7 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
                 <div style={{ color: 'var(--primary)', fontSize: '13px' }}>✓ אין התראות פעילות</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {contractPays.map(p => <ContractChip key={p.contractId + p.key} p={p} wide />)}
                   {checkGroups.map(g => {
                     const cs = chipStyle(g.minDays)
                     return (
@@ -313,6 +344,9 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
         </span>
       ) : (
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', flex: 1 }}>
+
+          {/* Buyers' payments on car sale contracts */}
+          {contractPays.map(p => <ContractChip key={p.contractId + p.key} p={p} />)}
 
           {/* Checks — summarized per due-month, not one chip per check */}
           {checkGroups.map(g => (
