@@ -9,6 +9,7 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import PageHeader from '@/components/ui/PageHeader'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
+import ContractPaymentsPanel from '@/components/cars/ContractPaymentsPanel'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -257,6 +258,8 @@ export default function RemindersClient() {
         actions={<><Button variant="secondary" onClick={() => openAdd('task')}>+ משימה</Button><Button onClick={() => openAdd('reminder')}>+ תזכורת</Button></>}
         marginBottom={24}
       />
+
+      <ContractPaymentsPanel />
 
       {loading ? (
         <div style={{ color: 'var(--text-muted)', padding: 40, textAlign: 'center' }}>טוען...</div>

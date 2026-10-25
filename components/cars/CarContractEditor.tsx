@@ -497,7 +497,7 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
             })}
           </ul>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
-            <button type="button" className="csc-add" onClick={() => patch(x => ({ ...x, checks: [...x.checks, { num: '', amount: '', date: '' }] }))}>+ הוסף שיק</button>
+            <button type="button" className="csc-add" onClick={() => patch(x => ({ ...x, checks: [...x.checks, { id: newId(), num: '', amount: '', date: '' }] }))}>+ הוסף שיק</button>
             <button type="button" className="csc-add" onClick={splitChecks} title="מחלק את היתרה (סכום כולל פחות מזומן והעברות) שווה בשווה, שיק בכל חודש מתאריך השיק הראשון">⚖️ חלק את היתרה שווה + תאריכים חודשיים</button>
           </div>
           <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>הקונה ימציא למוכר בעת החתימה צילום תעודת זהות וצילום השיקים.</div>

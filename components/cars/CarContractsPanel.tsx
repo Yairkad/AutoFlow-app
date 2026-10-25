@@ -63,7 +63,7 @@ export default function CarContractsPanel({ carId, prefill, onOpen }: Props) {
     const { id: _id, created_at: _c, updated_at: _u, ...rest } = full
     const { data: ins, error } = await sb.from('car_sale_contracts').insert({
       ...rest, status: 'draft', contract_date: todayIso(),
-      data: { ...full.data, date: todayIso(), signedFile: null },
+      data: { ...full.data, date: todayIso(), signedFile: null }, receipts: {},
       created_by: profile.userId, created_by_name: profile.fullName,
     }).select('id').single()
     if (error || !ins) { showToast('שגיאה בשכפול', 'error'); return }

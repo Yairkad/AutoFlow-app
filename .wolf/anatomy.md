@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-21T09:35:23.468Z
-> Files: 104 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-25T11:50:52.445Z
+> Files: 106 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -410,9 +410,12 @@
 
 ## components/cars/
 
+- `ContractPaymentsPanel.tsx` — /reminders: buyers' expected payments from signed car contracts (late / 30 days / later / received), mark received / cleared / swapped / bounced (~2400 tok)
+
 - `CarContractEditor.tsx` — Full-screen car sale contract editor, edited inline on the document (fields, clauses add/move/delete, checks table + split). "הפרטים שלי" quick-fill into seller OR buyer; default clause wording; print via contractHtml (~8000 tok)
 - `CarContractsPanel.tsx` — Contract history list (Documents tab 'חוזי מכירת רכב', or per car via carId + onOpen): search, open, duplicate, delete (~2100 tok)
 - `CarsClient.tsx` — Cars tab: compact card grid (5/row desktop, 2 mobile) → click opens detail modal (all fields + actions + Drive docs). Docs saved to Drive רכבים/<plate>/ named "<plate> - <doc name>". Filters: search, בהפקדה (license_deposited), ללא טסט, expiring ≤30d (~22000 tok)
+- `ContractPaymentsPanel.tsx` — SOON_DAYS — renders modal (~2903 tok)
 
 ## components/checks/
 
@@ -553,6 +556,7 @@
 
 ## lib/cars/
 
+- `contractPayments.ts` — Done = nothing more to expect. A bounced check is still owed. (~1078 tok)
 - `saleContract.ts` — Car sale contract data model, DEFAULT_CLAUSES, newContract, numberToHebrewWords/priceToWords, contractHtml (one A4 page; >5 checks → two tables) (~3900 tok)
 
 ## lib/contexts/
@@ -664,3 +668,5 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
+
+- `lib/cars/contractPayments.ts` — expectedPayments() from contract data + receipts, loadExpectedPayments / setReceipt (~1300 tok)

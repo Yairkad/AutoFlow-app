@@ -9,6 +9,7 @@ export interface ContractParty {
 }
 
 export interface ContractCheck {
+  id?: string    // stable key for payment tracking (older contracts: none → tracked by position)
   num: string
   amount: string
   date: string   // yyyy-mm-dd
@@ -146,7 +147,7 @@ export function newContract(opts: {
     priceWords: price ? priceToWords(price) : '',
     payLines: [],
     checksOn: true,
-    checks: [{ num: '', amount: '', date: '' }],
+    checks: [{ id: newId(), num: '', amount: '', date: '' }],
     clauses: cloneClauses(clauses?.length ? clauses : DEFAULT_CLAUSES),
   }
 }

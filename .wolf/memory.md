@@ -2625,3 +2625,11 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 11:23 | Zone count: counted shelves orange per round (30d / manual new round), size-change dot, select-uncounted/all, next-shelf + continue-to-next-cabinet | components/stock/ZoneCountPanel.tsx, StorageMap.tsx, lib/stock/zoneCount.ts, api/yard/zone-count, api/yard/stock-summary | tsc+eslint clean | ~25k |
+
+## Session: 2026-10-25 11:48
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:50 | Created lib/cars/contractPayments.ts | — | ~1078 |
+| 11:50 | Created components/cars/ContractPaymentsPanel.tsx | — | ~2903 |
+| 11:52 | Car contract payment follow-up: receipts column (mig 103), ContractPaymentsPanel on /reminders, dashboard alert chips, check ids | lib/cars/contractPayments.ts, components/cars/ContractPaymentsPanel.tsx, RemindersClient, AlertsPanel, saleContract, CarContractEditor/Panel | tsc clean | ~20k |
