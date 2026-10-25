@@ -18,15 +18,16 @@ export async function GET() {
       sb.from('tires').select('qty, cost_price, sell_price').eq('tenant_id', tid).gt('qty', 0).order('id').range(a, b)),
     sb.from('tire_sales').select('sold_date, created_at').eq('tenant_id', tid).eq('movement_type', 'order')
       .order('sold_date', { ascending: false }).order('created_at', { ascending: false }).limit(1),
-    sb.from('tire_inventory_count_sessions').select('counted_at').eq('tenant_id', tid)
-      .order('counted_at', { ascending: false }).limit(1),
+    sb.from('tire_inventory_count_sessions').select('counted_at, zone').eq('tenant_id', tid)
+      .order('counted_at', { ascending: false }).limit(10),
   ])
   if (tiresRes.error) return NextResponse.json({ error: tiresRes.error.message }, { status: 500 })
 
   const out: StockSummary = {
     tireCount: 0, tireModels: 0, costValue: 0, sellValue: 0, missingCost: 0,
     lastReceiveDate: lastInRes.data?.[0]?.sold_date ?? null,
-    lastCountDate:   lastCountRes.data?.[0]?.counted_at ?? null,
+    // an empty zone only marks a new count round
+    lastCountDate:   lastCountRes.data?.find(s => !s.zone || s.zone.length)?.counted_at ?? null,
   }
   for (const t of tiresRes.data) {
     out.tireCount += t.qty

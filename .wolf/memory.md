@@ -2624,3 +2624,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 11:23 | Zone count: counted shelves orange per round (30d / manual new round), size-change dot, select-uncounted/all, next-shelf + continue-to-next-cabinet | components/stock/ZoneCountPanel.tsx, StorageMap.tsx, lib/stock/zoneCount.ts, api/yard/zone-count, api/yard/stock-summary | tsc+eslint clean | ~25k |

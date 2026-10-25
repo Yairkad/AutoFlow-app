@@ -16,10 +16,14 @@ const V_HEAD  = 24   // 'v' row: letter cell width
 const V_SHELF = 26   // 'v' row: shelf cell width
 const V_ROW   = 30   // 'v' row: height of one cabinet line
 
+const DOT: React.CSSProperties = { position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: 99, background: '#dc2626', border: '1px solid #fff' }
+
 interface Props {
   layout: StorageLayout
   selected?: Set<string>                                    // shelves picked for a count
   highlight?: Set<string>                                   // "the tire is here"
+  done?: Set<string>                                        // already counted this round (orange)
+  dot?: Set<string>                                         // sizes changed since that count
   onShelf?: (shelf: string) => void
   onCabinet?: (code: string) => void
   cabinetTint?: Record<string, { bg: string; color: string }>
@@ -35,7 +39,7 @@ function rowSize(r: StorageRow) {
     : { w: V_HEAD + maxShelves * V_SHELF + 4, h: r.cabinets.length * (V_ROW + 4) + Math.max(0, r.cabinets.length - 1) * gap }
 }
 
-export default function StorageMap({ layout, selected, highlight, onShelf, onCabinet, cabinetTint, shelfBadge }: Props) {
+export default function StorageMap({ layout, selected, highlight, done, dot, onShelf, onCabinet, cabinetTint, shelfBadge }: Props) {
   // Each map row (y) is as tall as its tallest cabinet row
   const levels = [...new Set(layout.rows.map(r => r.y))].sort((a, b) => a - b)
   const levelTop = new Map<number, number>()
@@ -72,19 +76,21 @@ export default function StorageMap({ layout, selected, highlight, onShelf, onCab
                       {shelvesOfCabinet(c).map((s, i) => {
                         const sel = selected?.has(s)
                         const hi  = highlight?.has(s)
+                        const ok  = !sel && !hi && done?.has(s)
                         const badge = shelfBadge?.[s]
                         return (
                           <button key={s} type="button" onClick={() => onShelf?.(s)} disabled={!onShelf} title={`${s} — מדף ${i + 1} מלמעלה`}
                             style={{
                               position: 'relative', width: V_SHELF, border: 'none', padding: 0, flexShrink: 0,
                               borderRight: i ? '1px solid #cbd5e1' : 'none', fontFamily: 'inherit', fontSize: 11, fontWeight: sel || hi ? 900 : 600,
-                              background: hi ? '#f59e0b' : sel ? '#2563eb' : '#fff',
-                              color: hi || sel ? '#fff' : '#475569', cursor: onShelf ? 'pointer' : 'default',
+                              background: hi ? '#f59e0b' : sel ? '#2563eb' : ok ? '#fdba74' : '#fff',
+                              color: hi || sel ? '#fff' : ok ? '#7c2d12' : '#475569', cursor: onShelf ? 'pointer' : 'default',
                             }}>
                             {s}
                             {badge !== undefined && badge !== '' && (
                               <span style={{ position: 'absolute', top: 0, left: 1, fontSize: 9, fontWeight: 900, color: sel || hi ? '#fff' : '#16a34a' }}>{badge}</span>
                             )}
+                            {dot?.has(s) && <span style={DOT} />}
                           </button>
                         )
                       })}
@@ -103,19 +109,21 @@ export default function StorageMap({ layout, selected, highlight, onShelf, onCab
                       {shelvesOfCabinet(c).map((s, i) => {
                         const sel = selected?.has(s)
                         const hi  = highlight?.has(s)
+                        const ok  = !sel && !hi && done?.has(s)
                         const badge = shelfBadge?.[s]
                         return (
                           <button key={s} type="button" onClick={() => onShelf?.(s)} disabled={!onShelf}
                             style={{
                               position: 'relative', display: 'block', width: '100%', height: SHELF_H, border: 'none', padding: 0,
                               borderTop: i ? '1px solid #cbd5e1' : 'none', fontFamily: 'inherit', fontSize: 12, fontWeight: sel || hi ? 900 : 600,
-                              background: hi ? '#f59e0b' : sel ? '#2563eb' : '#fff',
-                              color: hi || sel ? '#fff' : '#475569', cursor: onShelf ? 'pointer' : 'default',
+                              background: hi ? '#f59e0b' : sel ? '#2563eb' : ok ? '#fdba74' : '#fff',
+                              color: hi || sel ? '#fff' : ok ? '#7c2d12' : '#475569', cursor: onShelf ? 'pointer' : 'default',
                             }}>
                             {s}
                             {badge !== undefined && badge !== '' && (
                               <span style={{ position: 'absolute', top: 1, left: 2, fontSize: 10, fontWeight: 900, color: sel || hi ? '#fff' : '#16a34a' }}>{badge}</span>
                             )}
+                            {dot?.has(s) && <span style={DOT} />}
                           </button>
                         )
                       })}

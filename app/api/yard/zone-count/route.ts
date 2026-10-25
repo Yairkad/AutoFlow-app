@@ -4,7 +4,8 @@ import { canYard } from '@/lib/yard/access'
 import { createServiceClient } from '@/lib/supabase/service'
 import { selectAll } from '@/lib/supabase/selectAll'
 import { loadLayout } from '@/lib/stock/server'
-import type { ZoneCountSave, ZoneTire } from '@/lib/stock/zoneCount'
+import { parseLocation } from '@/lib/stock/storage'
+import { ROUND_DAYS, ROUND_MARK_NOTE, type CountRound, type ZoneCountSave, type ZoneTire } from '@/lib/stock/zoneCount'
 
 // Yard employees with the count section, office users who manage tires
 async function guard(): Promise<{ error: NextResponse } | { user: YardUser }> {
@@ -15,19 +16,70 @@ async function guard(): Promise<{ error: NextResponse } | { user: YardUser }> {
   return { user }
 }
 
-// GET /api/yard/zone-count — map + every tire (with location) for counting by cabinet / shelf
+// GET /api/yard/zone-count — map + every tire (with location) for counting by cabinet / shelf,
+// and which shelves were already counted in the current round
 export async function GET() {
   const auth = await guard()
   if ('error' in auth) return auth.error
   const sb = createServiceClient()
   const tid = auth.user.tenantId
-  const [{ layout }, tires] = await Promise.all([
+  const [{ layout }, tires, round] = await Promise.all([
     loadLayout(sb, tid),
     selectAll<ZoneTire>((a, b) => sb.from('tires')
       .select('id, sku, brand, width, profile, rim, qty, location').eq('tenant_id', tid).order('id').range(a, b)),
+    loadRound(sb, tid),
   ])
   if (tires.error) return NextResponse.json({ error: tires.error.message }, { status: 500 })
-  return NextResponse.json({ layout, tires: tires.data })
+  if ('error' in round) return NextResponse.json({ error: round.error }, { status: 500 })
+  return NextResponse.json({ layout, tires: tires.data, round })
+}
+
+// Zone counts of the last ROUND_DAYS days after the latest "new round" mark; each shelf keeps its
+// latest count + the tires found on it then (to spot sizes that changed since).
+async function loadRound(sb: ReturnType<typeof createServiceClient>, tid: string): Promise<CountRound | { error: string }> {
+  let since = new Date(Date.now() - ROUND_DAYS * 86_400_000).toISOString()
+  const { data: sessions, error } = await sb.from('tire_inventory_count_sessions')
+    .select('id, counted_at, zone, counted_by_name').eq('tenant_id', tid).not('zone', 'is', null)
+    .gte('counted_at', since).order('counted_at', { ascending: false }).limit(500)
+  if (error) return { error: error.message }
+
+  const shelves: CountRound['shelves'] = {}
+  const sessionOf: Record<string, string> = {}
+  let startedAt: string | null = null
+  for (const s of sessions ?? []) {
+    if (!s.zone?.length) { startedAt = s.counted_at; since = s.counted_at; break }
+    for (const shelf of s.zone as string[]) {
+      if (shelves[shelf]) continue
+      shelves[shelf] = { at: s.counted_at, by: s.counted_by_name, tireIds: [] }
+      sessionOf[shelf] = s.id
+    }
+  }
+
+  const ids = [...new Set(Object.values(sessionOf))]
+  if (ids.length) {
+    const entries = await selectAll<{ session_id: string; tire_id: string | null; location: string | null; counted_qty: number }>((a, b) =>
+      sb.from('tire_inventory_count_entries').select('session_id, tire_id, location, counted_qty')
+        .in('session_id', ids).order('id').range(a, b))
+    if (entries.error) return { error: entries.error.message }
+    for (const e of entries.data) {
+      if (!e.tire_id || e.counted_qty <= 0) continue
+      for (const shelf of parseLocation(e.location)) {
+        if (sessionOf[shelf] === e.session_id) shelves[shelf].tireIds.push(e.tire_id)
+      }
+    }
+  }
+  return { since, startedAt, shelves }
+}
+
+// PUT /api/yard/zone-count — start a new count round (every shelf goes back to "not counted")
+export async function PUT() {
+  const auth = await guard()
+  if ('error' in auth) return auth.error
+  const { error } = await createServiceClient().from('tire_inventory_count_sessions').insert({
+    tenant_id: auth.user.tenantId, notes: ROUND_MARK_NOTE, is_first: false, zone: [], counted_by_name: auth.user.name,
+  })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
 }
 
 // POST /api/yard/zone-count — save a zone count. The client already decided every tire's

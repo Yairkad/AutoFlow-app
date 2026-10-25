@@ -149,3 +149,30 @@ export function toSave(scope: string[], rows: ReviewRow[], notes: string): ZoneC
     })),
   }
 }
+
+// ── Count round: which shelves were already counted ────────────────────────────
+
+/** A round ends after ROUND_DAYS, or earlier when someone starts a new one. */
+export const ROUND_DAYS = 30
+/** A session with an empty zone isn't a count — it marks "new count round from here". */
+export const ROUND_MARK_NOTE = '🔄 התחלת סבב ספירה חדש'
+
+export interface ShelfCount { at: string; by: string | null; tireIds: string[] }
+export interface CountRound {
+  since: string                          // counts from here on are in the round
+  startedAt: string | null               // set when the round was started by hand
+  shelves: Record<string, ShelfCount>    // shelf → its latest count in the round
+}
+
+const sizeKey = (t: ZoneTire) => tireSizeText(t) || tireLabel(t)
+
+/**
+ * Sizes that arrived on / left the shelf since it was counted. The same tires coming and
+ * going (sold, restocked) is not a change — only a size that wasn't there, or is gone.
+ */
+export function shelfSizeChanges(rec: ShelfCount, shelf: string, tires: ZoneTire[]): { added: string[]; removed: string[] } {
+  const byId = new Map(tires.map(t => [t.id, t]))
+  const before = new Set(rec.tireIds.map(id => byId.get(id)).filter((t): t is ZoneTire => !!t).map(sizeKey))
+  const now = new Set(tires.filter(t => t.qty > 0 && parseLocation(t.location).includes(shelf)).map(sizeKey))
+  return { added: [...now].filter(k => !before.has(k)), removed: [...before].filter(k => !now.has(k)) }
+}
