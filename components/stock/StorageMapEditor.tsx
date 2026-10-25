@@ -1,11 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import StorageMap from './StorageMap'
+import StorageMap, { roomSize, toFree } from './StorageMap'
 import { validateLayout, type StorageLayout, type StorageRow } from '@/lib/stock/storage'
 
-// Admin editor for the cabinets map: rows of cabinets, each with a position on the grid,
+// Admin editor for the cabinets map: rows of cabinets, each placed freely in the room (wall + arrows),
 // direction, "shelves continue" flag, and its cabinets (letter + number of shelves).
+// An older grid map is converted on open — every row stays where it was drawn.
+
+const STEP = 20   // px per arrow press
 
 const inp = 'border-2 border-slate-200 focus:border-blue-500 rounded-lg outline-none bg-white'
 
@@ -14,12 +17,12 @@ export default function StorageMapEditor({ initial, onSave, onCancel }: {
   onSave: (l: StorageLayout) => Promise<void>
   onCancel: () => void
 }) {
-  const [layout, setLayout] = useState<StorageLayout>(() => JSON.parse(JSON.stringify(initial)))
+  const [layout, setLayout] = useState<StorageLayout>(() => toFree(JSON.parse(JSON.stringify(initial))))
   const [saving, setSaving] = useState(false)
   const err = validateLayout(layout)
 
   const setRow = (id: string, patch: Partial<StorageRow>) =>
-    setLayout(l => ({ rows: l.rows.map(r => r.id === id ? { ...r, ...patch } : r) }))
+    setLayout(l => ({ ...l, rows: l.rows.map(r => r.id === id ? { ...r, ...patch } : r) }))
 
   function nextLetter(): string {
     const used = new Set(layout.rows.flatMap(r => r.cabinets.map(c => c.code)))
@@ -28,8 +31,8 @@ export default function StorageMapEditor({ initial, onSave, onCancel }: {
   }
 
   function addRow() {
-    const y = Math.max(-1, ...layout.rows.map(r => r.y)) + 1
-    setLayout(l => ({ rows: [...l.rows, { id: 'r' + Date.now(), name: 'שורה חדשה', x: 0, y, dir: 'h', contiguous: false, cabinets: [{ code: nextLetter(), shelves: 5 }] }] }))
+    const y = layout.rows.length ? roomSize(layout).h + 20 : 0
+    setLayout(l => ({ ...l, rows: [...l.rows, { id: 'r' + Date.now(), name: 'שורה חדשה', x: 0, y, side: 'right', dir: 'h', contiguous: false, cabinets: [{ code: nextLetter(), shelves: 5 }] }] }))
   }
 
   async function save() {
@@ -50,16 +53,28 @@ export default function StorageMapEditor({ initial, onSave, onCancel }: {
             <input className={inp} style={{ padding: '6px 10px', fontWeight: 700, flex: '1 1 140px' }} value={r.name}
               onChange={e => setRow(r.id, { name: e.target.value })} aria-label="שם השורה" />
             <button className="text-red-600 font-bold" style={{ fontSize: 13 }}
-              onClick={() => setLayout(l => ({ rows: l.rows.filter(x => x.id !== r.id) }))}>🗑 מחק שורה</button>
+              onClick={() => setLayout(l => ({ ...l, rows: l.rows.filter(x => x.id !== r.id) }))}>🗑 מחק שורה</button>
           </div>
 
           <div className="flex flex-wrap items-center gap-3" style={{ fontSize: 13 }}>
-            <span className="font-bold text-slate-600">מיקום בתרשים:</span>
+            <span className="font-bold text-slate-600">צמוד לקיר:</span>
+            <span className="flex rounded-lg overflow-hidden border border-slate-300">
+              {(['right', 'left'] as const).map(side => (
+                <button key={side} onClick={() => setRow(r.id, { side, x: 0 })}
+                  className={`font-bold ${(r.side ?? 'right') === side ? 'bg-slate-800 text-white' : 'bg-white text-slate-600'}`} style={{ padding: '6px 12px' }}>
+                  {side === 'right' ? 'ימין' : 'שמאל'}
+                </button>
+              ))}
+            </span>
+            <span className="font-bold text-slate-600">הזזה:</span>
             <span className="flex items-center gap-1">
-              <button className="bg-slate-100 rounded-md font-black" style={{ width: 32, height: 32 }} onClick={() => setRow(r.id, { x: r.x + 1 })} aria-label="שמאלה">←</button>
-              <button className="bg-slate-100 rounded-md font-black" style={{ width: 32, height: 32 }} onClick={() => setRow(r.id, { x: Math.max(0, r.x - 1) })} aria-label="ימינה">→</button>
-              <button className="bg-slate-100 rounded-md font-black" style={{ width: 32, height: 32 }} onClick={() => setRow(r.id, { y: Math.max(0, r.y - 1) })} aria-label="למעלה">↑</button>
-              <button className="bg-slate-100 rounded-md font-black" style={{ width: 32, height: 32 }} onClick={() => setRow(r.id, { y: r.y + 1 })} aria-label="למטה">↓</button>
+              {/* x is measured from the row's wall: toward the left = away from the right wall, toward the left wall */}
+              <button className="bg-slate-100 rounded-md font-black" style={{ width: 32, height: 32 }} aria-label="שמאלה"
+                onClick={() => setRow(r.id, { x: r.side === 'left' ? Math.max(0, r.x - STEP) : r.x + STEP })}>←</button>
+              <button className="bg-slate-100 rounded-md font-black" style={{ width: 32, height: 32 }} aria-label="ימינה"
+                onClick={() => setRow(r.id, { x: r.side === 'left' ? r.x + STEP : Math.max(0, r.x - STEP) })}>→</button>
+              <button className="bg-slate-100 rounded-md font-black" style={{ width: 32, height: 32 }} onClick={() => setRow(r.id, { y: Math.max(0, r.y - STEP) })} aria-label="למעלה">↑</button>
+              <button className="bg-slate-100 rounded-md font-black" style={{ width: 32, height: 32 }} onClick={() => setRow(r.id, { y: r.y + STEP })} aria-label="למטה">↓</button>
             </span>
             <label className="flex items-center gap-1 cursor-pointer">
               <input type="checkbox" checked={r.dir === 'v'} onChange={e => setRow(r.id, { dir: e.target.checked ? 'v' : 'h' })} />
