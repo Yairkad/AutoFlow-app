@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T09:22:59.218Z
-> Files: 124 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T09:58:59.244Z
+> Files: 125 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -39,7 +39,8 @@
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/
 
-- `src.html` — אוטו ליין – דף הבית החדש (~8982 tok)
+- `cars-src.html` — אוטו ליין – רכבים למכירה (~2771 tok)
+- `src.html` — אוטו ליין – דף הבית החדש (~9298 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/
 
