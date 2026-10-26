@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T08:46:58.153Z
-> Files: 123 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T08:50:37.514Z
+> Files: 124 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -37,6 +37,10 @@
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
 
 
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/
+
+- `src.html` — אוטו ליין – דף הבית החדש (~6790 tok)
+
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/
 
 - `A-Clean.dc.html` — הצעה A – נקי וחם (~7631 tok)
@@ -46,8 +50,8 @@
 - `A2-Home.dc.html` — A2 – דף הבית (~6300 tok)
 - `A2-Mobile.dc.html` — A2 – מובייל (~1596 tok)
 - `A2-Status.dc.html` — A2 – מעקב טיפול (~2248 tok)
-- `A3-Home.dc.html` — A3 – דף הבית בסגנון המותג (~6066 tok)
-- `A3-Mobile.dc.html` — A3 – מובייל (~1655 tok)
+- `A3-Home.dc.html` — A3 – דף הבית בסגנון המותג (~5883 tok)
+- `A3-Mobile.dc.html` — A3 – מובייל (~1337 tok)
 - `B-Mobile.dc.html` — הצעה B מובייל (~1421 tok)
 - `B-Plate.dc.html` — הצעה B – לוחית רישוי (~6208 tok)
 - `C-Bento.dc.html` — הצעה C – בנטו (~6894 tok)

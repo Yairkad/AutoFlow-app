@@ -2682,3 +2682,14 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 08:46 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | — | ~6066 |
 | 08:46 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Mobile.dc.html | — | ~1655 |
 | 08:47 | Round 3 (A3): homepage+mobile in user's own brand style (navy #283970 top, elliptical arc to cream #F7F3EB, floating white card r28 soft shadow, amber stars #FFBD59, logo-yellow #F1DE3C sparkles, בס״ד on top) | artifact 8Hz89LcTMpWGnd5q2tup7s | awaiting feedback | ~25k |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | removed 11 lines | ~6 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | 2→5 lines | ~188 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | inline fix | ~23 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | 1→2 lines | ~51 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | inline fix | ~19 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | removed 22 lines | ~45 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | expanded (+20 lines) | ~407 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Mobile.dc.html | removed 9 lines | ~9 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Mobile.dc.html | inline fix | ~27 |
+| 08:50 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | — | ~6790 |
+| 08:50 | Switched to plain HTML mockup (user found canvas hard): https://claude.ai/artifact/Keq1bmDXrPk9xLEWDupBkC — reviews moved near contact (5 newest Google), 'מעקב טיפול' replaced by link to pre-purchase inspection form | artifact | awaiting feedback | ~20k |

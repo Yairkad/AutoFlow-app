@@ -5,6 +5,7 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+- [2026-10-26] Prefers mockups as one plain full HTML page, NOT the Design canvas (found it hard). Reviews: not in hero, place near contact; show 5 newest Google reviews. Drop public "status tracking" from homepage; link to pre-purchase inspection intake form instead.
 - [2026-10-26] Brand visual style (from user review-card print): navy #283970 top band → large elliptical arc into cream #F7F3EB, floating white card radius ~28 with soft navy shadow, amber stars #FFBD59, logo yellow #F1DE3C (NOT #F5C800) for sparkles/CTA, thin navy divider line, "בס״ד" small at top. Logo: navy "אוטו ליין" wordmark + yellow swoosh + "מרכז שירותי רכב בהנהלת שרון מועלם".
 - [2026-10-26] Design taste: dislikes "AI-looking" design (pill tags, yellow-highlighted word, icons in colored squares, floating cards, huge cards). Prefers solid/professional: smaller type, 6–8px radius, thin borders, dense. Public site split: home + separate /cars and /status pages. Wants Google reviews section + "write a review" button.
 - [2026-10-26] Homepage redesign: user wants brand yellow+navy on a light cream base (not white/pale-yellow); priorities = call/WhatsApp, cars for sale, services+price list; ignore old landing-redesign-demo.html (dark GSAP). Wants mockups + per-section plan BEFORE code.
