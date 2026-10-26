@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-export default function SiteFooter({ name, logo, address, phone }: { name: string; logo: string | null; address: string; phone: string }) {
+export default function SiteFooter({ name, logo }: { name: string; logo: string | null }) {
   return (
     <footer className="al-footer">
       <div className="al-wrap">
@@ -12,7 +12,6 @@ export default function SiteFooter({ name, logo, address, phone }: { name: strin
           <Link href="/accessibility">נגישות</Link>
           <Link href="/login">כניסת עובדים</Link>
         </nav>
-        <span className="al-copy">© {new Date().getFullYear()} {name}{address ? ` · ${address}` : ''}{phone ? ` · ${phone}` : ''}</span>
       </div>
     </footer>
   )

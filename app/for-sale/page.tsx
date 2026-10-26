@@ -65,7 +65,7 @@ export default async function ForSalePage() {
         </div>
       </section>
 
-      <SiteFooter name={B.name} logo={B.logo} address={B.address} phone={B.phone} />
+      <SiteFooter name={B.name} logo={B.logo} />
       <ContactFab phone={B.phone} waHref={B.waHref} />
     </div>
   )

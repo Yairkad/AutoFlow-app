@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 }
 
 const TENANT_ID = 'c618f567-139b-4ce9-ac77-67affe93c27d'
-const UPDATED   = '7 באוקטובר 2026'
+const UPDATED   = '26 באוקטובר 2026'
 
 export default async function PrivacyPage() {
   const service = createServiceClient()
@@ -74,7 +74,8 @@ export default async function PrivacyPage() {
 
         <Section title="3. מטרת השימוש במידע">
           <ul>
-            <li>מתן שירות רכב ועדכון לקוחות על סטטוס הרכב בזמן אמת.</li>
+            <li>מתן שירות רכב ועדכון לקוחות על סטטוס הרכב, באמצעות קישור מעקב אישי שנשלח ללקוח.</li>
+            <li>טיפול בפניות שהתקבלו בטלפון, ב-WhatsApp או בטופס הזמנת בדיקת קנייה.</li>
             <li>שליחת עדכונים (WhatsApp / SMS) על התקדמות הטיפול.</li>
             <li>ניהול חשבונות ותשלומים.</li>
             <li>שיפור השירות וניתוח דפוסי שימוש באתר.</li>
@@ -97,6 +98,25 @@ export default async function PrivacyPage() {
           </ul>
         </Section>
 
+        <Section title="4א. שירותים של צדדים שלישיים באתר">
+          <ul>
+            <li>
+              <strong>מפת Google:</strong> בדף הבית מוטמעת מפה של Google Maps. בעת טעינת המפה, Google עשויה
+              לקבל מהדפדפן שלך מידע טכני (כגון כתובת IP) ולהציב עוגיות משלה, בהתאם
+              ל<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#1a2a6c' }}>מדיניות הפרטיות של Google</a>.
+            </li>
+            <li>
+              <strong>ביקורות Google:</strong> הדירוג והביקורות המוצגים באתר הם תוכן ציבורי שנמשך מ-Google ושייך
+              לכותביו. השליפה נעשית מהשרת שלנו, ולא מועבר ל-Google כל מידע עליך בעת הצפייה בהם.
+              לחיצה על &quot;דרגו את החוויה שלכם&quot; או &quot;לכל הביקורות&quot; מעבירה אותך לאתר Google.
+            </li>
+            <li>
+              <strong>WhatsApp, Waze ו-Google Maps:</strong> כפתורי יצירת הקשר והניווט פותחים את השירותים האלה.
+              מרגע המעבר, השימוש כפוף לתנאים ולמדיניות הפרטיות של אותם שירותים.
+            </li>
+          </ul>
+        </Section>
+
         <Section title="5. אבטחת מידע">
           אנו נוקטים אמצעי אבטחה טכניים וארגוניים כדי להגן על המידע האישי, כולל
           הצפנת תעבורה (HTTPS/TLS), בקרת גישה מבוססת הרשאות, ואחסון מאובטח בשרתי ענן באירופה.
@@ -104,9 +124,9 @@ export default async function PrivacyPage() {
         </Section>
 
         <Section title="6. עוגיות (Cookies)">
-          האתר משתמש בעוגיות חיוניות בלבד לצורך מעקב סטטוס רכב.
-          לא נעשה שימוש בעוגיות פרסומיות או מעקב. ניתן לכבות עוגיות בהגדרות הדפדפן,
-          אך הדבר עשוי לפגוע בפעולת שאילתת הסטטוס.
+          האתר עצמו אינו משתמש בעוגיות פרסומיות או בעוגיות מעקב. עוגיות חיוניות משמשות רק
+          לכניסת עובדים למערכת הניהול. המפה המוטמעת של Google עשויה להציב עוגיות של Google
+          (ראו סעיף 4א). ניתן לחסום עוגיות בהגדרות הדפדפן; המפה עלולה שלא להיטען במצב זה.
         </Section>
 
         <Section title="7. זכויות הנושא">

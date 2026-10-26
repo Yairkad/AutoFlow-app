@@ -207,7 +207,6 @@
 .al-footer nav { display: flex; flex-wrap: wrap; gap: 10px 22px; }
 .al-site .al-footer a { color: var(--al-on-navy); }
 .al-site .al-footer a:hover { color: #fff; }
-.al-copy { width: 100%; border-top: 1px solid rgba(255,255,255,.12); padding-top: 16px; }
 
 /* ── Floating contact button (RTL: flex-end = the left edge) ── */
 .al-fab { position: fixed; z-index: 40; left: calc(22px + env(safe-area-inset-left, 0px)); bottom: calc(22px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
