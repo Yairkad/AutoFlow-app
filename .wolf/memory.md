@@ -2774,3 +2774,5 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:48 | Landing fixes: removed בס״ד from header, sticky header fixed (overflow-x clip), phone tile call+WhatsApp buttons, address tile Waze/Maps logo buttons full-width | site.css, page.tsx, icons.tsx, SiteHeader.tsx | done | ~15k |
 | 11:51 | Top nav: + רכבים למכירה, - ביקורות, 'בדיקה לפני קניה'→'בדיקות קניה' (home + for-sale) | app/page.tsx, app/for-sale/page.tsx | done | ~2k |
 | 11:55 | Removed footer copyright line; updated privacy (Google map/reviews, WhatsApp/Waze, cookies, personal tracking link), terms (services list, prices info-only, cars for sale, reviews 3rd party, IP marks), accessibility (real contact details, dialogs/FAB/reduced-motion, known limits) | app/privacy, app/terms, app/accessibility, SiteFooter | done | ~12k |
+| 12:02 | Created app/zz-preview/page.tsx | — | ~1311 |
+| 12:07 | axe-core audit (WCAG 2.1 AA + best-practice) on /, /for-sale, legal pages + open states → fixed landmarks, link underline, modal contrast, car tile button, heading levels; now 0 violations (color-contrast over gradients = manual review) | landing + legal | done | ~25k |

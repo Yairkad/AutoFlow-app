@@ -103,7 +103,7 @@ export default async function PrivacyPage() {
             <li>
               <strong>מפת Google:</strong> בדף הבית מוטמעת מפה של Google Maps. בעת טעינת המפה, Google עשויה
               לקבל מהדפדפן שלך מידע טכני (כגון כתובת IP) ולהציב עוגיות משלה, בהתאם
-              ל<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#1a2a6c' }}>מדיניות הפרטיות של Google</a>.
+              ל<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#1a2a6c', textDecoration: 'underline' }}>מדיניות הפרטיות של Google</a>.
             </li>
             <li>
               <strong>ביקורות Google:</strong> הדירוג והביקורות המוצגים באתר הם תוכן ציבורי שנמשך מ-Google ושייך

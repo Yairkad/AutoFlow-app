@@ -48,6 +48,7 @@ export default async function ForSalePage() {
     <div className="al-site" dir="rtl">
       <SiteHeader name={B.name} logo={B.logo} phone={B.phone} links={links} />
 
+      <main>
       <section className="al-page-hero" aria-labelledby="al-sale-title">
         <div className="al-wrap">
           <nav className="al-crumbs" aria-label="פירורי לחם"><Link href="/">דף הבית</Link> / רכבים למכירה</nav>
@@ -64,6 +65,7 @@ export default async function ForSalePage() {
           {B.waHref && <a href={B.waHref} target="_blank" rel="noopener noreferrer" className="al-btn al-btn-yellow">דברו איתנו</a>}
         </div>
       </section>
+      </main>
 
       <SiteFooter name={B.name} logo={B.logo} />
       <ContactFab phone={B.phone} waHref={B.waHref} />

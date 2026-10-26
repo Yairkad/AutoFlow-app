@@ -60,6 +60,7 @@ export default async function LandingPage() {
     <div className="al-site" dir="rtl">
       <SiteHeader name={B.name} logo={B.logo} phone={B.phone} links={links} />
 
+      <main>
       <section className="al-hero" aria-labelledby="al-hero-title">
         {B.heroImage && <div className="al-hero-photo" style={{ backgroundImage: `url("${B.heroImage}")` }} aria-hidden="true" />}
         <div className="al-wrap">
@@ -106,7 +107,6 @@ export default async function LandingPage() {
         </div>
       </div>
 
-      <main>
         <section id="services" className="al-section al-after-hero"aria-labelledby="al-services-title">
           <div className="al-wrap">
             <div className="al-sec-title"><h2 id="al-services-title">השירותים שלנו</h2></div>

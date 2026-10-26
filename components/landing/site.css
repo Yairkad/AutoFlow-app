@@ -21,6 +21,8 @@
 .al-site a:focus-visible, .al-site button:focus-visible, .al-site summary:focus-visible, .al-tile:focus-visible, .al-car:focus-visible {
   outline: 3px solid var(--al-yellow); outline-offset: 2px;
 }
+.al-car-open { position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; border: 0; padding: 0; background: transparent; cursor: pointer; }
+.al-site .al-car-open:focus-visible { outline: 3px solid var(--al-yellow); outline-offset: -3px; }
 .al-site h1, .al-site h2, .al-site h3 { text-wrap: balance; }
 .al-wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 
@@ -102,15 +104,15 @@
 .al-img svg { opacity: .5; }
 .al-shade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 22%, rgba(27,40,88,.94) 72%); pointer-events: none; }
 .al-tile-body { position: absolute; inset: auto 0 0 0; padding: 22px 22px 20px; display: flex; flex-direction: column; gap: 8px; transition: transform .35s cubic-bezier(.2,.7,.2,1); }
-.al-tile h3, .al-car h3 { margin: 0; font-size: 21px; font-weight: 800; display: flex; align-items: center; gap: 10px; color: #fff; }
-.al-tile h3::before, .al-car h3::before { content: ""; width: 22px; height: 3px; background: var(--al-yellow); flex-shrink: 0; transition: width .35s; }
+.al-tile h3, .al-car h2 { margin: 0; font-size: 21px; font-weight: 800; display: flex; align-items: center; gap: 10px; color: #fff; }
+.al-tile h3::before, .al-car h2::before { content: ""; width: 22px; height: 3px; background: var(--al-yellow); flex-shrink: 0; transition: width .35s; }
 .al-tile p { margin: 0; font-size: 15px; color: var(--al-on-navy); }
 .al-tile-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding-top: 6px; }
 .al-site .al-tile-actions a, .al-tile-actions button { background: none; border: 0; padding: 0; font: inherit; font-size: 15px; font-weight: 700; color: var(--al-yellow); cursor: pointer; text-decoration: none; }
 .al-site .al-tile-actions a:hover, .al-tile-actions button:hover { text-decoration: underline; text-underline-offset: 3px; color: var(--al-yellow); }
 .al-tile:hover .al-img, .al-tile.is-on .al-img, .al-car:hover .al-img, .al-car.is-on .al-img { transform: scale(1.07); }
 .al-tile:hover .al-tile-body, .al-tile.is-on .al-tile-body, .al-car:hover .al-tile-body, .al-car.is-on .al-tile-body { transform: translateY(-6px); }
-.al-tile:hover h3::before, .al-tile.is-on h3::before, .al-car:hover h3::before, .al-car.is-on h3::before { width: 40px; }
+.al-tile:hover h3::before, .al-tile.is-on h3::before, .al-car:hover h2::before, .al-car.is-on h2::before { width: 40px; }
 
 .al-badge { position: absolute; top: 0; right: 0; z-index: 2; background: var(--al-yellow); color: var(--al-navy-deep); font-size: 13px; font-weight: 800; padding: 6px 12px; }
 .al-badge.is-reserved { background: #fff; }

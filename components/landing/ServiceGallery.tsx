@@ -61,7 +61,6 @@ export default function ServiceGallery({ services, prices, intakeHref, carsHref 
             <article
               key={s.id}
               className={`al-tile${active === s.id ? ' is-on' : ''}`}
-              tabIndex={0}
               onClick={e => { if (!(e.target as HTMLElement).closest('a,button')) setActive(a => a === s.id ? null : s.id) }}
             >
               <div className="al-img">

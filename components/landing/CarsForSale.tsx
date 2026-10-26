@@ -217,7 +217,7 @@ function CarModal({ car, phone, onClose }: { car: CarForSale; phone: string; onC
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
               <div>
-                <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '2px' }}>מחיר מבוקש</div>
+                <div style={{ fontSize: '12px', color: '#5B6474', marginBottom: '2px' }}>מחיר מבוקש</div>
                 <div style={{ fontSize: '28px', fontWeight: 900, color: '#1a2a6c' }}>
                   {car.ask_price ? `₪${fmt(car.ask_price)}` : 'לפי הסכמה'}
                 </div>
@@ -273,7 +273,7 @@ function CarModal({ car, phone, onClose }: { car: CarForSale; phone: string; onC
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '10px 14px' }}>
-      <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '2px' }}>{label}</div>
+      <div style={{ fontSize: '11px', color: '#5B6474', marginBottom: '2px' }}>{label}</div>
       <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e293b' }}>{value}</div>
     </div>
   )
@@ -303,11 +303,9 @@ function CarTile({ car, onOpen }: { car: CarForSale; onOpen: () => void }) {
   return (
     <article
       className="al-car"
-      tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen() } }}
-      aria-label={`${title} – לפרטים`}
     >
+      {/* one real button over the whole tile, so the title stays a heading */}
+      <button type="button" className="al-car-open" onClick={onOpen} aria-label={`${title} – לפרטים`} />
       <span className={`al-badge${car.status === 'reserved' ? ' is-reserved' : ''}`}>{car.status === 'reserved' ? 'שמור' : 'זמין'}</span>
       {photos.length > 1 && <span className="al-photo-count">{photos.length} תמונות</span>}
       <div className="al-img">
@@ -315,11 +313,11 @@ function CarTile({ car, onOpen }: { car: CarForSale; onOpen: () => void }) {
       </div>
       <div className="al-shade" />
       <div className="al-tile-body">
-        <h3>{title}</h3>
+        <h2>{title}</h2>
         {specs.length > 0 && <div className="al-specs">{specs.map(s => <span key={s}>{s}</span>)}</div>}
         <div className="al-price-row">
           <span className="al-price">{car.ask_price ? `₪${fmt(car.ask_price)}` : 'לפי הסכמה'}</span>
-          <span className="al-more">פרטים ←</span>
+          <span className="al-more" aria-hidden="true">פרטים ←</span>
         </div>
       </div>
     </article>

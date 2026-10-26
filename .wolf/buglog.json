@@ -1405,5 +1405,72 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-26T14:00:00Z"
+  },
+  {
+    "id": "bug-073",
+    "timestamp": "2026-10-26T16:00:00Z",
+    "error_message": "axe: region / landmark-one-main on public pages",
+    "file": "app/page.tsx, app/for-sale/page.tsx",
+    "root_cause": "hero + info tiles were outside <main>; /for-sale had no <main>; floating button outside any landmark",
+    "fix": "<main> wraps hero..contact on both pages; ContactFab is an <aside aria-label>",
+    "tags": [
+      "a11y",
+      "axe",
+      "landmarks",
+      "landing"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T16:00:00Z"
+  },
+  {
+    "id": "bug-074",
+    "timestamp": "2026-10-26T16:00:00Z",
+    "error_message": "axe: link-in-text-block on privacy page",
+    "file": "app/privacy/page.tsx",
+    "root_cause": "inline link distinguished by colour only (1.27:1 vs body text)",
+    "fix": "underline inline text links (privacy + terms)",
+    "tags": [
+      "a11y",
+      "axe",
+      "links",
+      "legal"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T16:00:00Z"
+  },
+  {
+    "id": "bug-075",
+    "timestamp": "2026-10-26T16:00:00Z",
+    "error_message": "axe: color-contrast in car detail modal",
+    "file": "components/landing/CarsForSale.tsx",
+    "root_cause": "#94a3b8 labels on white (~2.6:1)",
+    "fix": "#5B6474",
+    "tags": [
+      "a11y",
+      "axe",
+      "contrast"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T16:00:00Z"
+  },
+  {
+    "id": "bug-076",
+    "timestamp": "2026-10-26T16:00:00Z",
+    "error_message": "axe: aria-allowed-role on car tile + heading skip",
+    "file": "components/landing/CarsForSale.tsx",
+    "root_cause": "<article role=button> is not allowed; tile titles were h3 right after page h1",
+    "fix": "article keeps an h2 title; a transparent full-size <button class=al-car-open> opens the modal; service tiles no longer focusable",
+    "tags": [
+      "a11y",
+      "axe",
+      "aria",
+      "headings"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T16:00:00Z"
   }
 ]

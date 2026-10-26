@@ -119,7 +119,7 @@ export default async function TermsPage() {
 
         <Section title="7. פרטיות">
           השימוש באתר כפוף גם ל
-          <Link href="/privacy" style={{ color: '#1a2a6c', fontWeight: 600 }}> מדיניות הפרטיות</Link> שלנו,
+          <Link href="/privacy" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'underline' }}> מדיניות הפרטיות</Link> שלנו,
           המהווה חלק בלתי נפרד מתנאי שימוש אלו.
         </Section>
 

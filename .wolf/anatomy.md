@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T11:47:04.878Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T12:02:51.526Z
 > Files: 140 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -431,7 +431,7 @@
 
 ## app/zz-preview/
 
-- `page.tsx` — TEMPORARY visual check — delete before commit. (~532 tok)
+- `page.tsx` — TEMPORARY accessibility check with sample data — delete before commit. (~1311 tok)
 
 ## components/alignment/
 
