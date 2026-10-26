@@ -5,6 +5,7 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+- [2026-10-26] Homepage v4 prefs: header full width, separate, sticky; hero with photo of the place in background; services = gallery tiles with image, square corners, small hover/tap animation; wording "מכירת רכב" (not סוכנות), "מחירון שירות" + note that actual price is set on site (info only); inspection prices by קבוצת רישוי with a license illustration.
 - [2026-10-26] Homepage feedback: big logo in a designed header; no price list section on home (tire prices in popup from the פנצריה card); no cars section on home (link from service card only); WhatsApp/call = one round floating button bottom-left opening a choice; curves soft (not sharp), varied directions, some edges straight, footer straight; reviews auto-scroll, no scrollbar.
 - [2026-10-26] Prefers mockups as one plain full HTML page, NOT the Design canvas (found it hard). Reviews: not in hero, place near contact; show 5 newest Google reviews. Drop public "status tracking" from homepage; link to pre-purchase inspection intake form instead.
 - [2026-10-26] Brand visual style (from user review-card print): navy #283970 top band → large elliptical arc into cream #F7F3EB, floating white card radius ~28 with soft navy shadow, amber stars #FFBD59, logo yellow #F1DE3C (NOT #F5C800) for sparkles/CTA, thin navy divider line, "בס״ד" small at top. Logo: navy "אוטו ליין" wordmark + yellow swoosh + "מרכז שירותי רכב בהנהלת שרון מועלם".
