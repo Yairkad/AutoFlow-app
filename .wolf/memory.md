@@ -2769,3 +2769,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 11:22 | Edited lib/landing/googleReviews.ts | added optional chaining | ~457 |
+| 11:41 | Reviews switched to Places API (New) (legacy not offered to new projects), daily refresh; user set GOOGLE_PLACES_API_KEY in Vercel, Place ID ChIJ9S6jHnzFAhURZ1QJPW73CWE (to paste in settings), deployed branch — user: 'looks good' | lib/landing/googleReviews.ts | done | ~10k |
