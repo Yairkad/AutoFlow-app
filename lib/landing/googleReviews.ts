@@ -1,6 +1,6 @@
 // Google rating + the 5 newest reviews for the public home page.
 // Needs GOOGLE_PLACES_API_KEY (server env) and the business Place ID (Settings → דף ציבורי).
-// Cached for 6 hours so every page view doesn't call Google. Any failure → null (section hidden).
+// Refreshed once a day so every page view doesn't call Google. Any failure → null (section hidden).
 
 export interface GoogleReview { author: string; rating: number; text: string; when: string; photo: string | null }
 export interface GoogleReviews { rating: number | null; total: number | null; reviews: GoogleReview[] }
@@ -12,7 +12,7 @@ export function allReviewsUrl(placeId: string) {
   return `https://search.google.com/local/reviews?placeid=${encodeURIComponent(placeId)}`
 }
 
-const TTL_MS = 6 * 60 * 60 * 1000
+const TTL_MS = 24 * 60 * 60 * 1000
 // The home page is force-dynamic (which turns fetch caching off), so keep a per-instance memo too.
 const memo = new Map<string, { at: number; data: GoogleReviews }>()
 
@@ -31,7 +31,7 @@ async function load(placeId: string, key: string): Promise<GoogleReviews | null>
     + `?place_id=${encodeURIComponent(placeId)}&fields=rating,user_ratings_total,reviews`
     + `&reviews_sort=newest&language=iw&key=${key}`
   try {
-    const res = await fetch(url, { next: { revalidate: 21600 } })
+    const res = await fetch(url, { next: { revalidate: 86400 } })
     if (!res.ok) return null
     const json = await res.json()
     if (json.status !== 'OK') return null
