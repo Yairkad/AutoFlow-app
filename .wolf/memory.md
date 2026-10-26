@@ -2649,3 +2649,17 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 12:59 | Storage map free floor plan (wall side + px position), left-wall letters against the wall | components/stock/StorageMap.tsx, StorageMapEditor.tsx, lib/stock/storage.ts | rendered + tsc/eslint clean | ~15k |
+
+## Session: 2026-10-26 08:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:15 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/canvas.json | — | ~373 |
+| 08:16 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/Main.dc.html | — | ~4459 |
+| 08:17 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A-Mobile.dc.html | — | ~1804 |
+| 08:17 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/B-Mobile.dc.html | — | ~1421 |
+| 08:18 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/C-Mobile.dc.html | — | ~2082 |
+| 08:19 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A-Clean.dc.html | — | ~7631 |
+| 08:21 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/B-Plate.dc.html | — | ~6208 |
+| 08:22 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/C-Bento.dc.html | — | ~6894 |
+| 08:23 | Homepage redesign: design-language board + section plan + 3 proposals (A clean/cream, B license-plate signage, C bento) as Design canvas artifact https://claude.ai/artifact/8Hz89LcTMpWGnd5q2tup7s — no code changed yet | (artifact only) | awaiting user pick | ~45k |

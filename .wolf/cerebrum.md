@@ -5,6 +5,7 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+- [2026-10-26] Homepage redesign: user wants brand yellow+navy on a light cream base (not white/pale-yellow); priorities = call/WhatsApp, cars for sale, services+price list; ignore old landing-redesign-demo.html (dark GSAP). Wants mockups + per-section plan BEFORE code.
 - [2026-10-19] **Do-Not-Repeat (user angry):** EVERY message to the user in Hebrew — including progress lines between tool calls and final summaries. Wrote several English status lines/summary this session; user shouted "בעברית תמיד!!!".
 - [2026-10-19] Contract print prefs: larger font (13.5px) and margins, 'עמוד Y מתוך X' footer, checks as a bullet line per check "שיק מס' X, ע"ס Y ש"ח, לתאריך: Z" exactly like the original HTML (NOT a table), never leave only the signatures on a new page. Editor should look like a fixed A4 sheet.
 - [2026-10-19] Signed car contracts: "סמן כנחתם" offers scan (DocumentScannerModal) / file upload → Drive רכבים/<plate>/"<plate> - הסכם מכירה חתום" (no plate → חוזי מכירה/). Stored in contract data.signedFile (no DB column). Admin + Drive connected only, like car docs.

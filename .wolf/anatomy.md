@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-25T11:50:52.445Z
-> Files: 106 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T08:22:56.902Z
+> Files: 116 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -36,6 +36,17 @@
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
 
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/
+
+- `A-Clean.dc.html` — הצעה A – נקי וחם (~7631 tok)
+- `A-Mobile.dc.html` — הצעה A מובייל (~1804 tok)
+- `B-Mobile.dc.html` — הצעה B מובייל (~1421 tok)
+- `B-Plate.dc.html` — הצעה B – לוחית רישוי (~6208 tok)
+- `C-Bento.dc.html` — הצעה C – בנטו (~6894 tok)
+- `C-Mobile.dc.html` — הצעה C מובייל (~2082 tok)
+- `canvas.json` (~373 tok)
+- `Main.dc.html` — קו עיצובי ותוכנית (~4459 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/
 
@@ -410,11 +421,10 @@
 
 ## components/cars/
 
-- `ContractPaymentsPanel.tsx` — /reminders: buyers' expected payments from signed car contracts (late / 30 days / later / received), mark received / cleared / swapped / bounced (~2400 tok)
-
 - `CarContractEditor.tsx` — Full-screen car sale contract editor, edited inline on the document (fields, clauses add/move/delete, checks table + split). "הפרטים שלי" quick-fill into seller OR buyer; default clause wording; print via contractHtml (~8000 tok)
 - `CarContractsPanel.tsx` — Contract history list (Documents tab 'חוזי מכירת רכב', or per car via carId + onOpen): search, open, duplicate, delete (~2100 tok)
 - `CarsClient.tsx` — Cars tab: compact card grid (5/row desktop, 2 mobile) → click opens detail modal (all fields + actions + Drive docs). Docs saved to Drive רכבים/<plate>/ named "<plate> - <doc name>". Filters: search, בהפקדה (license_deposited), ללא טסט, expiring ≤30d (~22000 tok)
+- `ContractPaymentsPanel.tsx` — /reminders: buyers' expected payments from signed car contracts (late / 30 days / later / received), mark received / cleared / swapped / bounced (~2400 tok)
 - `ContractPaymentsPanel.tsx` — SOON_DAYS — renders modal (~2903 tok)
 
 ## components/checks/
@@ -662,11 +672,10 @@
 
 - `intakeImage.tsx` — renderIntakeOgImage(name, logoBase64): branded 1200x630 link preview (logo card + inspection badge, colours from logo) via next/og ImageResponse (~1100 tok)
 - `intakeTenant.ts` — getIntakeTenant(token): tenant name+logo for personal/fixed intake link (~250 tok)
+- `lib/cars/contractPayments.ts` — expectedPayments() from contract data + receipts, loadExpectedPayments / setReceipt (~1300 tok)
 - `logoColors.ts` — logoPalette(buf): dominant dark colour → bg, bright saturated → accent (sharp) (~700 tok)
 - `main.go` — Windows agent: self-install (HKCU Run), HTTP 127.0.0.1:47321 /status /scan, origin approval MessageBox, runs scan.ps1 (~2800 tok)
 - `main.go` — go:build windows (~3100 tok)
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-
-- `lib/cars/contractPayments.ts` — expectedPayments() from contract data + receipts, loadExpectedPayments / setReceipt (~1300 tok)
