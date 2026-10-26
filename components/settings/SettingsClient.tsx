@@ -21,6 +21,8 @@ interface PublicInfo {
   meta_title?: string
   meta_description?: string
   email?: string
+  hero_image?: string
+  google_place_id?: string
 }
 
 interface Tenant {
@@ -269,6 +271,21 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
                 {field('קישור Waze', <input className="form-input" dir="ltr" value={tenant.public_info?.waze_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, waze_url: e.target.value } } : t)} placeholder="https://waze.com/ul/..." />)}
                 {field('קישור Google Maps', <input className="form-input" dir="ltr" value={tenant.public_info?.maps_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, maps_url: e.target.value } } : t)} placeholder="https://maps.app.goo.gl/..." />)}
               </div>
+              {field('תמונת רקע לראש דף הבית', (
+                <HeroImageField
+                  value={tenant.public_info?.hero_image ?? ''}
+                  onChange={v => setTenant(t => t ? { ...t, public_info: { ...t.public_info, hero_image: v } } : t)}
+                  onError={msg => showToast(msg, 'error')}
+                />
+              ))}
+              {field('מזהה העסק בגוגל (Place ID) – להצגת ביקורות', (
+                <>
+                  <input className="form-input" dir="ltr" value={tenant.public_info?.google_place_id ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, google_place_id: e.target.value.trim() } } : t)} placeholder="ChIJ..." />
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    מוצאים אותו ב-<a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener noreferrer">Place ID Finder</a>. ריק = סקשן הביקורות לא מוצג.
+                  </div>
+                </>
+              ))}
 
               {/* SEO */}
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginTop: '4px' }}>🔍 SEO / כרטיסיית הדפדפן</div>
@@ -1918,6 +1935,42 @@ export default function SettingsClient() {
             {tabContent.vault}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// Background photo for the public home page hero: upload (≤900KB) or an image / Google Drive link.
+function HeroImageField({ value, onChange, onError }: { value: string; onChange: (v: string) => void; onError: (msg: string) => void }) {
+  function toDirect(url: string) {
+    const m = url.match(/\/file\/d\/([^/]+)/) ?? url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/)
+    return m ? `https://lh3.googleusercontent.com/d/${m[1]}` : url
+  }
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 900_000) { onError('התמונה גדולה מדי (מקסימום 900KB) – אפשר להדביק קישור במקום'); return }
+    const reader = new FileReader()
+    reader.onload = ev => onChange(ev.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+      {value && (
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <img src={value} alt="" style={{ width: '120px', height: '68px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }} />
+          <button type="button" onClick={() => onChange('')} aria-label="הסר תמונה" style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: 'var(--danger)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '10px' }}>✕</button>
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
+        <input type="file" accept="image/*" onChange={onFile} style={{ fontSize: '13px' }} />
+        <input
+          className="form-input" dir="ltr" style={{ fontSize: '12px' }}
+          placeholder="או הדבק קישור תמונה / Google Drive..."
+          defaultValue={value && !value.startsWith('data:') ? value : ''}
+          onBlur={e => { const v = e.target.value.trim(); if (v && !value.startsWith('data:')) onChange(toDirect(v)) }}
+        />
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>תמונה רוחבית של המקום. מוצגת מתחת לשכבה כחולה, כך שהטקסט נשאר קריא.</div>
       </div>
     </div>
   )

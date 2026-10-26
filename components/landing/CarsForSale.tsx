@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { waLink } from '@/lib/landing/wa'
+import { Icon } from './icons'
 
-interface CarForSale {
+export interface CarForSale {
   id: string
   make: string | null
   model: string | null
@@ -50,7 +52,7 @@ function PhotoCarousel({ photos, title, height = '100%', onPhotoClick }: {
 
   if (photos.length === 0) {
     return (
-      <div style={{ width: '100%', height, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', background: '#f1f5f9' }}>🚗</div>
+      <div style={{ width: '100%', height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#283970', background: '#ECE6D8' }}><Icon name="car" size={64} stroke={1.4} /></div>
     )
   }
 
@@ -101,7 +103,7 @@ function PhotoCarousel({ photos, title, height = '100%', onPhotoClick }: {
 
 // ── Car detail modal ───────────────────────────────────────────────────────────
 
-function CarModal({ car, waHref, onClose }: { car: CarForSale; waHref: string; onClose: () => void }) {
+function CarModal({ car, phone, onClose }: { car: CarForSale; phone: string; onClose: () => void }) {
   const photos = car.photos.filter(Boolean)
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
   const title = [car.make, car.model, car.year].filter(Boolean).join(' ')
@@ -125,9 +127,7 @@ function CarModal({ car, waHref, onClose }: { car: CarForSale; waHref: string; o
     return () => { document.body.style.overflow = '' }
   }, [])
 
-  const waMsg = waHref
-    ? waHref.replace('ברצוני לקבל מידע', encodeURIComponent(`שלום, אני מעוניין ברכב ${title}`))
-    : ''
+  const waHref = waLink(phone, `שלום, אני מעוניין ברכב ${title}`)
 
   return (
     <>
@@ -152,7 +152,7 @@ function CarModal({ car, waHref, onClose }: { car: CarForSale; waHref: string; o
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '16px 20px', borderBottom: '1px solid #e2e8f0',
-            background: '#1a2a6c',
+            background: '#283970',
           }}>
             <div>
               <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: '#fff' }}>{title || 'רכב למכירה'}</h2>
@@ -200,12 +200,12 @@ function CarModal({ car, waHref, onClose }: { car: CarForSale; waHref: string; o
           {/* Details */}
           <div style={{ padding: '20px 24px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-              {car.km != null      && <DetailRow icon="🛣️" label="ק״מ"        value={`${fmt(car.km)} ק"מ`} />}
-              {car.fuel_type       && <DetailRow icon="⛽"  label="דלק"        value={car.fuel_type} />}
-              {car.color           && <DetailRow icon="🎨" label="צבע"        value={car.color} />}
-              {car.seats != null   && <DetailRow icon="💺" label="מושבים"     value={String(car.seats)} />}
-              {car.condition       && <DetailRow icon="⭐" label="מצב"        value={CONDITION_MAP[car.condition] ?? car.condition} />}
-              {car.year != null    && <DetailRow icon="📅" label="שנת ייצור"  value={String(car.year)} />}
+              {car.km != null      && <DetailRow label="ק״מ"        value={`${fmt(car.km)} ק"מ`} />}
+              {car.fuel_type       && <DetailRow label="דלק"        value={car.fuel_type} />}
+              {car.color           && <DetailRow label="צבע"        value={car.color} />}
+              {car.seats != null   && <DetailRow label="מושבים"     value={String(car.seats)} />}
+              {car.condition       && <DetailRow label="מצב"        value={CONDITION_MAP[car.condition] ?? car.condition} />}
+              {car.year != null    && <DetailRow label="שנת ייצור"  value={String(car.year)} />}
             </div>
 
             {car.notes && (
@@ -224,17 +224,17 @@ function CarModal({ car, waHref, onClose }: { car: CarForSale; waHref: string; o
               </div>
               {waHref && (
                 <a
-                  href={waMsg || waHref}
+                  href={waHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    background: '#25d366', color: '#fff', borderRadius: '12px',
+                    background: '#0E7A3E', color: '#fff', borderRadius: '999px',
                     padding: '12px 24px', fontWeight: 700, fontSize: '15px',
-                    textDecoration: 'none', boxShadow: '0 4px 12px rgba(37,211,102,.35)',
+                    textDecoration: 'none',
                   }}
                 >
-                  💬 צור קשר על הרכב הזה
+                  <Icon name="wa" size={18} />שאלו אותנו על הרכב בוואטסאפ
                 </a>
               )}
             </div>
@@ -270,81 +270,16 @@ function CarModal({ car, waHref, onClose }: { car: CarForSale; waHref: string; o
 
 // ── Detail row helper ─────────────────────────────────────────────────────────
 
-function DetailRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '10px 14px' }}>
-      <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '2px' }}>{icon} {label}</div>
+      <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '2px' }}>{label}</div>
       <div style={{ fontSize: '14px', fontWeight: 700, color: '#1e293b' }}>{value}</div>
     </div>
   )
 }
 
 // ── Car card ──────────────────────────────────────────────────────────────────
-
-function CarCard({ car, onOpen }: { car: CarForSale; onOpen: () => void }) {
-  const photos = car.photos.filter(Boolean)
-  const title = [car.make, car.model, car.year].filter(Boolean).join(' ')
-
-  return (
-    <div
-      onClick={onOpen}
-      style={{
-        background: '#fff', borderRadius: '16px', overflow: 'hidden',
-        boxShadow: '0 2px 16px rgba(0,0,0,.08)', border: '1px solid #e2e8f0',
-        display: 'flex', flexDirection: 'column', cursor: 'pointer',
-        transition: 'transform .2s, box-shadow .2s',
-      }}
-      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 32px rgba(0,0,0,.13)' }}
-      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ''; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 2px 16px rgba(0,0,0,.08)' }}
-    >
-      {/* Photo */}
-      <div style={{ position: 'relative', aspectRatio: '4/3', background: '#f1f5f9', overflow: 'hidden' }}>
-        <PhotoCarousel photos={photos} title={title} height="100%" />
-        {car.status === 'reserved' && (
-          <div style={{ position: 'absolute', top: '10px', right: '10px', background: '#d97706', color: '#fff', borderRadius: '6px', padding: '3px 10px', fontSize: '12px', fontWeight: 700, pointerEvents: 'none' }}>
-            שמור
-          </div>
-        )}
-        <div style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'rgba(26,42,108,.8)', color: '#F5C800', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, pointerEvents: 'none' }}>
-          לחץ לפרטים ↗
-        </div>
-      </div>
-
-      {/* Info */}
-      <div style={{ padding: '16px 18px', flex: 1, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#1a2a6c' }}>{title || 'רכב למכירה'}</h3>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-          {car.km != null  && <Chip icon="🛣️">{fmt(car.km)} ק"מ</Chip>}
-          {car.fuel_type   && <Chip icon="⛽">{car.fuel_type}</Chip>}
-          {car.color       && <Chip icon="🎨">{car.color}</Chip>}
-          {car.seats != null && <Chip icon="💺">{car.seats} מושבים</Chip>}
-        </div>
-
-        <div style={{ marginTop: 'auto', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
-          <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '2px' }}>מחיר מבוקש</div>
-          <div style={{ fontSize: '22px', fontWeight: 900, color: '#1a2a6c' }}>
-            {car.ask_price ? `₪${fmt(car.ask_price)}` : 'לפי הסכמה'}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Chip ──────────────────────────────────────────────────────────────────────
-
-function Chip({ icon, children }: { icon: string; children: React.ReactNode }) {
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: '4px',
-      background: '#f8fafc', border: '1px solid #e2e8f0',
-      borderRadius: '20px', padding: '3px 10px', fontSize: '12px', color: '#475569',
-    }}>
-      {icon} {children}
-    </span>
-  )
-}
 
 function arrowBtn(side: 'left' | 'right'): React.CSSProperties {
   return {
@@ -358,36 +293,104 @@ function arrowBtn(side: 'left' | 'right'): React.CSSProperties {
   }
 }
 
-// ── Main section ──────────────────────────────────────────────────────────────
+// ── Car tile (same square-tile look as the services gallery) ─────────────────
 
-export default function CarsForSale({ cars, waHref }: { cars: CarForSale[]; waHref: string }) {
+function CarTile({ car, onOpen }: { car: CarForSale; onOpen: () => void }) {
+  const photos = car.photos.filter(Boolean)
+  const title = [car.make, car.model].filter(Boolean).join(' ') || 'רכב למכירה'
+  const specs = [car.year && String(car.year), car.km != null && `${fmt(car.km)} ק"מ`, car.fuel_type].filter(Boolean) as string[]
+
+  return (
+    <article
+      className="al-car"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen() } }}
+      aria-label={`${title} – לפרטים`}
+    >
+      <span className={`al-badge${car.status === 'reserved' ? ' is-reserved' : ''}`}>{car.status === 'reserved' ? 'שמור' : 'זמין'}</span>
+      {photos.length > 1 && <span className="al-photo-count">{photos.length} תמונות</span>}
+      <div className="al-img">
+        {photos[0] ? <img src={driveThumb(photos[0])} alt="" loading="lazy" /> : <Icon name="car" size={64} stroke={1.4} />}
+      </div>
+      <div className="al-shade" />
+      <div className="al-tile-body">
+        <h3>{title}</h3>
+        {specs.length > 0 && <div className="al-specs">{specs.map(s => <span key={s}>{s}</span>)}</div>}
+        <div className="al-price-row">
+          <span className="al-price">{car.ask_price ? `₪${fmt(car.ask_price)}` : 'לפי הסכמה'}</span>
+          <span className="al-more">פרטים ←</span>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+// ── Catalog with filters (/for-sale) ──────────────────────────────────────────
+
+const PRICE_STEPS = [50_000, 80_000, 120_000, 180_000, 250_000]
+
+export default function CarsForSale({ cars, phone }: { cars: CarForSale[]; phone: string }) {
   const [selected, setSelected] = useState<CarForSale | null>(null)
+  const [make, setMake] = useState('')
+  const [fuel, setFuel] = useState('')
+  const [maxPrice, setMaxPrice] = useState(0)
+  const [sort, setSort] = useState<'new' | 'price'>('new')
 
-  if (cars.length === 0) return null
+  const makes = useMemo(() => [...new Set(cars.map(c => c.make).filter(Boolean) as string[])].sort(), [cars])
+  const fuels = useMemo(() => [...new Set(cars.map(c => c.fuel_type).filter(Boolean) as string[])].sort(), [cars])
+
+  const shown = useMemo(() => {
+    const list = cars.filter(c =>
+      (!make || c.make === make) &&
+      (!fuel || c.fuel_type === fuel) &&
+      (!maxPrice || (c.ask_price ?? 0) <= maxPrice))
+    return sort === 'price' ? [...list].sort((a, b) => (a.ask_price ?? Infinity) - (b.ask_price ?? Infinity)) : list
+  }, [cars, make, fuel, maxPrice, sort])
 
   return (
     <>
-      <section id="cars-for-sale" style={{ background: '#fff', padding: '80px 40px' }} aria-labelledby="cars-title">
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <h2 id="cars-title" style={{ fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 800, color: '#1a2a6c', margin: '0 0 8px' }}>
-              רכבים למכירה
-            </h2>
-            <p style={{ color: '#64748b', fontSize: '16px', margin: 0 }}>רכבים איכותיים במחירים הוגנים</p>
-            <div style={{ width: '48px', height: '4px', background: '#F5C800', borderRadius: '2px', margin: '16px auto 0' }} />
-          </div>
+      <div className="al-wrap">
+        <form className="al-filters" aria-label="סינון רכבים" onSubmit={e => e.preventDefault()}>
+          <label htmlFor="f-make">יצרן
+            <select id="f-make" value={make} onChange={e => setMake(e.target.value)}>
+              <option value="">הכל</option>
+              {makes.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </label>
+          <label htmlFor="f-price">מחיר עד
+            <select id="f-price" value={maxPrice} onChange={e => setMaxPrice(Number(e.target.value))}>
+              <option value={0}>ללא הגבלה</option>
+              {PRICE_STEPS.map(p => <option key={p} value={p}>₪{p.toLocaleString('he-IL')}</option>)}
+            </select>
+          </label>
+          <label htmlFor="f-fuel">דלק
+            <select id="f-fuel" value={fuel} onChange={e => setFuel(e.target.value)}>
+              <option value="">הכל</option>
+              {fuels.map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </label>
+          <label htmlFor="f-sort">מיון
+            <select id="f-sort" value={sort} onChange={e => setSort(e.target.value as 'new' | 'price')}>
+              <option value="new">החדשים ביותר</option>
+              <option value="price">מחיר: מהנמוך</option>
+            </select>
+          </label>
+        </form>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
-            {cars.map(car => (
-              <CarCard key={car.id} car={car} onOpen={() => setSelected(car)} />
-            ))}
-          </div>
-        </div>
-      </section>
+        {cars.length === 0 ? (
+          <p className="al-empty">כרגע אין רכבים למכירה. מחפשים רכב מסוים? דברו איתנו ונעדכן כשמגיע רכב מתאים.</p>
+        ) : (
+          <>
+            <p className="al-count">{shown.length === cars.length ? `${cars.length} רכבים זמינים` : `${shown.length} מתוך ${cars.length} רכבים`}</p>
+            {shown.length === 0
+              ? <p className="al-empty">אין רכבים שמתאימים לסינון. נסו לשנות את הבחירה.</p>
+              : <div className="al-cars">{shown.map(car => <CarTile key={car.id} car={car} onOpen={() => setSelected(car)} />)}</div>}
+          </>
+        )}
+      </div>
 
-      {selected && (
-        <CarModal car={selected} waHref={waHref} onClose={() => setSelected(null)} />
-      )}
+      {selected && <CarModal car={selected} phone={phone} onClose={() => setSelected(null)} />}
     </>
   )
 }

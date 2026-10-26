@@ -2739,3 +2739,22 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:17 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/cars-src.html | expanded (+9 lines) | ~149 |
 | 10:17 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/cars-src.html | 1→3 lines | ~114 |
 | 10:17 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/cars-src.html | added 1 condition(s) | ~120 |
+| 10:20 | Created components/landing/site.css | — | ~6663 |
+| 10:20 | Created components/landing/icons.tsx | — | ~911 |
+| 10:20 | Created components/landing/SiteHeader.tsx | — | ~527 |
+| 10:20 | Created components/landing/ContactFab.tsx | — | ~363 |
+| 10:21 | Created components/landing/ServiceGallery.tsx | — | ~1733 |
+| 10:21 | Created lib/landing/googleReviews.ts | — | ~550 |
+| 10:21 | Edited lib/landing/googleReviews.ts | added optional chaining | ~196 |
+| 10:21 | Created lib/landing/business.ts | — | ~499 |
+| 10:22 | Created app/page.tsx | — | ~3364 |
+| 10:23 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/cars-new.tsx | — | ~1332 |
+| 10:23 | Created app/for-sale/page.tsx | — | ~758 |
+| 10:23 | Edited proxy.ts | 1→2 lines | ~36 |
+| 10:24 | Edited components/landing/site.css | modified not() | ~134 |
+| 10:28 | Edited components/landing/site.css | CSS: padding-top | ~52 |
+| 10:28 | Edited components/landing/site.css | CSS: padding-top | ~30 |
+| 10:28 | Edited app/page.tsx | inline fix | ~17 |
+| 10:31 | Created app/zz-preview/page.tsx | — | ~420 |
+| 10:32 | Edited components/landing/site.css | inline fix | ~20 |
+| 10:34 | Implemented new public site: app/page.tsx rewrite, /for-sale page, SiteHeader/ContactFab/ServiceGallery/SiteFooter/icons/site.css, lib/landing (business, googleReviews, wa), settings hero image + Place ID; removed CustomerSearch/PriceList/FaqAccordion + old landing CSS. tsc+build pass | many | done, pushed | ~120k |

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T10:17:23.987Z
-> Files: 125 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T10:32:06.799Z
+> Files: 137 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -36,6 +36,10 @@
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
 
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/
+
+- `cars-new.tsx` — ── Car tile (same square-tile look as the services gallery) ───────────────── (~1332 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/
 
@@ -75,6 +79,7 @@
 ## ./
 
 - `_tmp_resolve_memory.mjs` — Declares path (~151 tok)
+- `proxy.ts` — ── Public paths – no auth needed ────────────────────────────────────────── (~1663 tok)
 
 ## .claude/
 
@@ -85,6 +90,7 @@
 ## app/
 
 - `globals.css` — Styles: 50 rules, 23 vars (~6406 tok)
+- `page.tsx` — dynamic (~3147 tok)
 
 ## app/(app)/
 
@@ -315,6 +321,10 @@
 ## app/expenses/
 
 
+## app/for-sale/
+
+- `page.tsx` — Public catalog of cars for sale (the internal /cars route is the office module). (~758 tok)
+
 ## app/guide/[token]/
 
 - `page.tsx` — public guide page by tenants.guide_public_token, header colour from logo (logoPalette) (~600 tok)
@@ -419,6 +429,10 @@
 ## app/yard/tire-lookup/
 
 
+## app/zz-preview/
+
+- `page.tsx` — TEMPORARY visual check — delete before commit. (~420 tok)
+
 ## components/alignment/
 
 
@@ -477,6 +491,14 @@
 
 ## components/landing/
 
+- `CarsForSale.tsx` — public cars catalog for /for-sale: filters (make/price/fuel/sort), square image tiles (CarTile), detail CarModal + lightbox; WhatsApp msg per car via lib/landing/wa (~4500 tok)
+- `ContactFab.tsx` — floating round button bottom-left → choice call / WhatsApp (~363 tok)
+- `icons.tsx` — Icon (stroke line icons), Star, Sparkle, QuoteMark for the public site — no emoji there (~911 tok)
+- `PromotionsCarousel.tsx` — active promotions carousel (home, only when promos exist) (~1700 tok)
+- `ServiceGallery.tsx` — services as square image tiles (text always visible, hover/tap zoom); 'מחירון שירות' dialog from price_list matched to the service by name/keyword (kindOf/categoryFor); inspection dialog adds licence-group illustration; links to intake form / /for-sale (~1733 tok)
+- `site.css` — all public-site styles, `al-` prefix; also neutralises globals.css rules on bare main/button (~6832 tok)
+- `SiteFooter.tsx` — public footer: logo, legal links, employee login (~300 tok)
+- `SiteHeader.tsx` — full-width sticky white header (big logo, nav, call dot, mobile menu) (~527 tok)
 
 ## components/layout/
 
@@ -604,6 +626,11 @@
 
 ## lib/inspections/
 
+
+## lib/landing/
+
+- `business.ts` — Business details shared by the public pages (home + /for-sale). (~499 tok)
+- `googleReviews.ts` — Google rating + the 5 newest reviews for the public home page. (~696 tok)
 
 ## lib/og/
 

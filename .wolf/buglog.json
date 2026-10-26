@@ -1321,5 +1321,72 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-21T13:00:00Z"
+  },
+  {
+    "id": "bug-068",
+    "timestamp": "2026-10-26T12:00:00Z",
+    "error_message": "<dialog> price popup rendered at the top-right instead of centered",
+    "file": "components/landing/site.css",
+    "root_cause": "globals.css `* { margin:0 }` removes the UA `margin:auto` that centers a modal dialog",
+    "fix": "`.al-dialog { margin: auto }`",
+    "tags": [
+      "css",
+      "dialog",
+      "margin",
+      "landing"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T12:00:00Z"
+  },
+  {
+    "id": "bug-069",
+    "timestamp": "2026-10-26T12:00:00Z",
+    "error_message": "Public page <main> would get 16px padding / 80px bottom padding on mobile",
+    "file": "components/landing/site.css",
+    "root_cause": "globals.css app-shell rules target bare `main`/`footer` with !important",
+    "fix": "`.al-site main { margin-right:0 !important; padding:0 !important }`",
+    "tags": [
+      "css",
+      "globals",
+      "landing",
+      "mobile"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T12:00:00Z"
+  },
+  {
+    "id": "bug-070",
+    "timestamp": "2026-10-26T12:00:00Z",
+    "error_message": "Floating contact button jumped right when its menu opened",
+    "file": "components/landing/site.css",
+    "root_cause": "column flex with align-items:flex-start — in RTL that is the RIGHT edge",
+    "fix": "align-items:flex-end (= left in RTL) on .al-fab and .al-fab-menu",
+    "tags": [
+      "css",
+      "rtl",
+      "flex",
+      "landing"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T12:00:00Z"
+  },
+  {
+    "id": "bug-071",
+    "timestamp": "2026-10-26T12:00:00Z",
+    "error_message": "Car WhatsApp message never contained the car name",
+    "file": "components/landing/CarsForSale.tsx",
+    "root_cause": "waHref text was already encodeURIComponent'ed, so .replace('ברצוני לקבל מידע', …) never matched",
+    "fix": "build the per-car link with waLink(phone, text) (lib/landing/wa.ts)",
+    "tags": [
+      "whatsapp",
+      "landing",
+      "encoding"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T12:00:00Z"
   }
 ]
