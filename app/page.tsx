@@ -8,7 +8,7 @@ import SiteHeader from '@/components/landing/SiteHeader'
 import ContactFab from '@/components/landing/ContactFab'
 import SiteFooter from '@/components/landing/SiteFooter'
 import ServiceGallery from '@/components/landing/ServiceGallery'
-import PromotionsCarousel from '@/components/landing/PromotionsCarousel'
+import PromotionCoupons from '@/components/landing/PromotionCoupons'
 import { Icon, Star, Sparkle, QuoteMark, WazeLogo, MapsPin } from '@/components/landing/icons'
 import '@/components/landing/site.css'
 
@@ -35,7 +35,7 @@ export default async function LandingPage() {
   const [business, { data: services }, { data: promotions }, { data: priceItems }, { data: faqItems }, { count: carCount }] = await Promise.all([
     loadBusiness(),
     service.from('services').select('id,name,description,image_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('sort_order'),
-    service.from('promotions').select('id,title,description,fine_print,image_url,link_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).lte('start_date', today).or('end_date.is.null,end_date.gte.' + today).order('sort_order'),
+    service.from('promotions').select('*').eq('tenant_id', TENANT_ID).eq('is_active', true).lte('start_date', today).or('end_date.is.null,end_date.gte.' + today).order('sort_order'),
     service.from('price_list').select('id,category,service_name,price,price_note,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('category').order('sort_order'),
     service.from('faq').select('id,question,answer,image_url,sort_order').eq('tenant_id', TENANT_ID).eq('is_active', true).order('sort_order'),
     service.from('cars').select('id', { count: 'exact', head: true }).eq('tenant_id', TENANT_ID).in('status', ['available', 'reserved']),
@@ -123,7 +123,7 @@ export default async function LandingPage() {
           <section className="al-section" style={{ paddingTop: 0 }} aria-labelledby="al-promos-title">
             <div className="al-wrap al-promo">
               <div className="al-sec-title" style={{ marginBottom: 32 }}><h2 id="al-promos-title">מבצעים</h2></div>
-              <PromotionsCarousel promotions={promotions ?? []} />
+              <PromotionCoupons items={promotions ?? []} />
             </div>
           </section>
         )}

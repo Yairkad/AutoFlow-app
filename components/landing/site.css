@@ -165,8 +165,23 @@
 .al-faq details img { margin-top: 10px; max-width: 100%; border-radius: 12px; }
 .al-center-link { display: block; text-align: center; font-weight: 700; margin-top: 22px; }
 
-/* ── Promotions ──────────────────────────────────────────── */
+/* ── Promotions as coupons ───────────────────────────────── */
 .al-promo { max-width: 1040px; margin: 0 auto; }
+.al-coupons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.al-coupons.is-single { grid-template-columns: minmax(0, 640px); justify-content: center; }
+.al-coupon { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 150px; background: #fff; box-shadow: var(--al-shadow); min-height: 180px; }
+.al-coupon-main { padding: 24px 26px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.al-coupon-eyebrow { font-size: 13px; font-weight: 800; color: var(--al-navy); }
+.al-coupon h3 { margin: 0; font-size: 21px; font-weight: 800; color: var(--al-navy-deep); line-height: 1.25; }
+.al-coupon p { margin: 0; font-size: 15px; color: var(--al-muted); }
+.al-coupon small { font-size: 13px; color: var(--al-soft); }
+.al-coupon-main a { margin-top: auto; padding-top: 6px; font-weight: 700; font-size: 15px; text-decoration: underline; text-underline-offset: 3px; }
+.al-coupon-stub { background: var(--al-navy-deep); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 16px; border-right: 2px dashed var(--al-cream-2); }
+.al-coupon-stub b { font-size: 34px; line-height: 1.05; color: var(--al-yellow); font-weight: 800; overflow-wrap: anywhere; }
+.al-coupon-stub span { font-size: 13px; color: var(--al-on-navy); }
+/* the two half-circle "punch" notches where the stub is torn off */
+.al-coupon::before, .al-coupon::after { content: ""; position: absolute; left: 138px; width: 24px; height: 24px; border-radius: 50%; background: var(--al-cream); }
+.al-coupon::before { top: -12px; } .al-coupon::after { bottom: -12px; }
 
 /* ── Reviews ─────────────────────────────────────────────── */
 .al-reviews { position: relative; background: var(--al-navy); color: #fff; padding-block: 170px 80px; overflow: hidden; }
@@ -265,6 +280,7 @@
   .al-reviews { padding-top: 110px; }
   .al-reviews::before { height: 70px; }
   .al-lic-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .al-coupons { grid-template-columns: 1fr; }
   .al-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .al-cars { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .al-footer .al-wrap { flex-direction: column; text-align: center; }
@@ -276,6 +292,8 @@
   .al-tile { aspect-ratio: 4 / 3; }
   .al-cars { grid-template-columns: 1fr; }
   .al-car { aspect-ratio: 1 / 1; }
+  .al-coupon { grid-template-columns: minmax(0, 1fr) 110px; }
+  .al-coupon::before, .al-coupon::after { left: 98px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .al-site *, .al-dialog { transition: none !important; animation: none !important; }

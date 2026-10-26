@@ -2777,3 +2777,6 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:02 | Created app/zz-preview/page.tsx | — | ~1311 |
 | 12:07 | axe-core audit (WCAG 2.1 AA + best-practice) on /, /for-sale, legal pages + open states → fixed landmarks, link underline, modal contrast, car tile button, heading levels; now 0 violations (color-contrast over gradients = manual review) | landing + legal | done | ~25k |
 | 12:13 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/promos/promo-layouts.html | — | ~4224 |
+| 12:17 | Created components/landing/PromotionCoupons.tsx | — | ~494 |
+| 12:18 | Created app/zz-preview/page.tsx | — | ~301 |
+| 12:19 | Promotions → coupon layout (PromotionCoupons, replaces carousel); migration 104 adds promotions.benefit/benefit_sub; settings fields 'הטבה בגדול' + 'שורה מתחת להטבה' (sent only once column exists); no end_date → no expiry line | app/page.tsx, components/landing/PromotionCoupons.tsx, site.css, SettingsClient, supabase/migrations/104 | done | ~15k |

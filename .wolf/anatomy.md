@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T12:13:23.376Z
-> Files: 141 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T12:18:31.475Z
+> Files: 142 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -435,7 +435,7 @@
 
 ## app/zz-preview/
 
-- `page.tsx` — TEMPORARY accessibility check with sample data — delete before commit. (~1311 tok)
+- `page.tsx` — TEMPORARY visual check — delete before commit. (~301 tok)
 
 ## components/alignment/
 
@@ -498,6 +498,7 @@
 - `CarsForSale.tsx` — public cars catalog for /for-sale: filters (make/price/fuel/sort), square image tiles (CarTile), detail CarModal + lightbox; WhatsApp msg per car via lib/landing/wa (~4500 tok)
 - `ContactFab.tsx` — floating round button bottom-left → choice call / WhatsApp (~363 tok)
 - `icons.tsx` — Icon (stroke line icons), Star, Sparkle, QuoteMark for the public site — no emoji there (~911 tok)
+- `PromotionCoupons.tsx` — Active promotions as coupons: text on one side, a "torn-off" stub with the benefit (~494 tok)
 - `PromotionsCarousel.tsx` — active promotions carousel (home, only when promos exist) (~1700 tok)
 - `ServiceGallery.tsx` — services as square image tiles (text always visible, hover/tap zoom); 'מחירון שירות' dialog from price_list matched to the service by name/keyword (kindOf/categoryFor); inspection dialog adds licence-group illustration; links to intake form / /for-sale (~1733 tok)
 - `site.css` — all public-site styles, `al-` prefix; also neutralises globals.css rules on bare main/button (~6832 tok)
