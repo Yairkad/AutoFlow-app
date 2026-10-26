@@ -2782,3 +2782,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:19 | Promotions → coupon layout (PromotionCoupons, replaces carousel); migration 104 adds promotions.benefit/benefit_sub; settings fields 'הטבה בגדול' + 'שורה מתחת להטבה' (sent only once column exists); no end_date → no expiry line | app/page.tsx, components/landing/PromotionCoupons.tsx, site.css, SettingsClient, supabase/migrations/104 | done | ~15k |
 | 12:22 | Created app/zz-preview/page.tsx | — | ~1943 |
 | 12:28 | Responsive audit 320–1920 on all public pages (hscroll, out-of-viewport, clipped text, tap targets): fixed FAB off-screen on phones (aside→div role), coupon stacks on ≤420px, legal page link targets ≥44px; accessibility widget skipped per user | ContactFab, site.css, legal pages | done | ~20k |
+
+## Session: 2026-10-26 12:36
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
