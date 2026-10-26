@@ -2758,3 +2758,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:31 | Created app/zz-preview/page.tsx | — | ~420 |
 | 10:32 | Edited components/landing/site.css | inline fix | ~20 |
 | 10:34 | Implemented new public site: app/page.tsx rewrite, /for-sale page, SiteHeader/ContactFab/ServiceGallery/SiteFooter/icons/site.css, lib/landing (business, googleReviews, wa), settings hero image + Place ID; removed CustomerSearch/PriceList/FaqAccordion + old landing CSS. tsc+build pass | many | done, pushed | ~120k |
+
+## Session: 2026-10-26 11:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
