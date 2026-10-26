@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T08:22:56.902Z
-> Files: 116 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T08:40:13.552Z
+> Files: 121 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -41,11 +41,16 @@
 
 - `A-Clean.dc.html` — הצעה A – נקי וחם (~7631 tok)
 - `A-Mobile.dc.html` — הצעה A מובייל (~1804 tok)
+- `A2-Cars.dc.html` — A2 – רכבים למכירה (~2387 tok)
+- `A2-HeroPhoto.dc.html` — A2 – Hero עם תמונה (~1084 tok)
+- `A2-Home.dc.html` — A2 – דף הבית (~6300 tok)
+- `A2-Mobile.dc.html` — A2 – מובייל (~1596 tok)
+- `A2-Status.dc.html` — A2 – מעקב טיפול (~2248 tok)
 - `B-Mobile.dc.html` — הצעה B מובייל (~1421 tok)
 - `B-Plate.dc.html` — הצעה B – לוחית רישוי (~6208 tok)
 - `C-Bento.dc.html` — הצעה C – בנטו (~6894 tok)
 - `C-Mobile.dc.html` — הצעה C מובייל (~2082 tok)
-- `canvas.json` (~373 tok)
+- `canvas.json` (~622 tok)
 - `Main.dc.html` — קו עיצובי ותוכנית (~4459 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/
