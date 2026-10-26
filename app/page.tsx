@@ -6,6 +6,7 @@ import { loadBusiness } from '@/lib/landing/business'
 import { fetchGoogleReviews, writeReviewUrl, allReviewsUrl } from '@/lib/landing/googleReviews'
 import SiteHeader from '@/components/landing/SiteHeader'
 import ContactFab from '@/components/landing/ContactFab'
+import MapEmbed from '@/components/landing/MapEmbed'
 import SiteFooter from '@/components/landing/SiteFooter'
 import ServiceGallery from '@/components/landing/ServiceGallery'
 import PromotionCoupons from '@/components/landing/PromotionCoupons'
@@ -196,7 +197,7 @@ export default async function LandingPage() {
                   {B.mapsUrl && <a href={B.mapsUrl} target="_blank" rel="noopener noreferrer" className="al-btn al-btn-ghost-n"><MapsPin size={18} />Google Maps</a>}
                 </div>
               </div>
-              {mapSrc && <iframe className="al-map" src={mapSrc} title={`מפה: ${B.address}`} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />}
+              {mapSrc && <MapEmbed src={mapSrc} address={B.address} />}
             </div>
           </div>
         </section>

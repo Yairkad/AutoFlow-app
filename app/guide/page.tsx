@@ -20,5 +20,5 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function GuidePage() {
   const g = await loadGuide({ tenantId: LANDING_TENANT_ID })
   if (!g) notFound()
-  return <div className={assistant.className}><GuideView content={g.content} business={g.business} /></div>
+  return <div className={assistant.className}><GuideView content={g.content} business={g.business} legalLinks /></div>
 }

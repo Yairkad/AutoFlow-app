@@ -101,8 +101,8 @@ export default async function PrivacyPage() {
         <Section title="4א. שירותים של צדדים שלישיים באתר">
           <ul>
             <li>
-              <strong>מפת Google:</strong> בדף הבית מוטמעת מפה של Google Maps. בעת טעינת המפה, Google עשויה
-              לקבל מהדפדפן שלך מידע טכני (כגון כתובת IP) ולהציב עוגיות משלה, בהתאם
+              <strong>מפת Google:</strong> בדף הבית ניתן להציג מפה של Google Maps. המפה נטענת רק לאחר לחיצה על
+              &quot;הצגת מפה&quot;; מרגע זה Google עשויה לקבל מהדפדפן שלך מידע טכני (כגון כתובת IP) ולהציב עוגיות משלה, בהתאם
               ל<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#1a2a6c', textDecoration: 'underline' }}>מדיניות הפרטיות של Google</a>.
             </li>
             <li>
@@ -125,7 +125,7 @@ export default async function PrivacyPage() {
 
         <Section title="6. עוגיות (Cookies)">
           האתר עצמו אינו משתמש בעוגיות פרסומיות או בעוגיות מעקב. עוגיות חיוניות משמשות רק
-          לכניסת עובדים למערכת הניהול. המפה המוטמעת של Google עשויה להציב עוגיות של Google
+          לכניסת עובדים למערכת הניהול. עוגיות של Google מוצבות רק אם בחרת להציג את המפה בדף הבית
           (ראו סעיף 4א). ניתן לחסום עוגיות בהגדרות הדפדפן; המפה עלולה שלא להיטען במצב זה.
         </Section>
 

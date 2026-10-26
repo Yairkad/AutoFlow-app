@@ -80,7 +80,7 @@ export default async function AccessibilityPage() {
               כאשר מופעלת הגדרת &quot;הפחתת תנועה&quot;.
             </li>
             <li>
-              המפה המוטמעת היא רכיב של Google ואינה בשליטתנו. הכתובת, הטלפון וקישורי הניווט מוצגים גם כטקסט לצדה.
+              המפה (נטענת בלחיצה על &quot;הצגת מפה&quot;) היא רכיב של Google ואינה בשליטתנו. הכתובת, הטלפון וקישורי הניווט מוצגים גם כטקסט לצדה.
             </li>
             <li>תמונות שירותים ורכבים המועלות למערכת מוצגות כקישוט, והמידע עצמו מופיע בטקסט שלצידן.</li>
           </ul>
@@ -119,9 +119,15 @@ export default async function AccessibilityPage() {
           אנו מתחייבים לסקור ולעדכן הצהרה זו לפחות אחת לשנה.
         </Section>
 
-        <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
+        <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', gap: '32px', flexWrap: 'wrap' }}>
           <Link href="/" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px', display: 'inline-block', padding: '12px 0' }}>
             ← חזרה לדף הבית
+          </Link>
+          <Link href="/privacy" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px', display: 'inline-block', padding: '12px 0' }}>
+            מדיניות פרטיות
+          </Link>
+          <Link href="/terms" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px', display: 'inline-block', padding: '12px 0' }}>
+            תנאי שימוש
           </Link>
         </div>
       </main>
