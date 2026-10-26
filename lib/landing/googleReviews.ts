@@ -26,26 +26,41 @@ export async function fetchGoogleReviews(placeId: string): Promise<GoogleReviews
   return data ?? hit?.data ?? null
 }
 
+interface NewApiReview {
+  rating?: number
+  text?: { text?: string }
+  originalText?: { text?: string }
+  relativePublishTimeDescription?: string
+  publishTime?: string
+  authorAttribution?: { displayName?: string; photoUri?: string }
+}
+
+// Places API (New) — the legacy Place Details API is not offered to new Cloud projects.
+// It returns up to 5 reviews chosen by Google (no "newest" sort), so they are ordered by date here.
 async function load(placeId: string, key: string): Promise<GoogleReviews | null> {
-  const url = 'https://maps.googleapis.com/maps/api/place/details/json'
-    + `?place_id=${encodeURIComponent(placeId)}&fields=rating,user_ratings_total,reviews`
-    + `&reviews_sort=newest&language=iw&key=${key}`
+  const url = `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?languageCode=iw`
   try {
-    const res = await fetch(url, { next: { revalidate: 86400 } })
+    const res = await fetch(url, {
+      headers: { 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'rating,userRatingCount,reviews' },
+      next: { revalidate: 86400 },
+    })
     if (!res.ok) return null
-    const json = await res.json()
-    if (json.status !== 'OK') return null
-    const r = json.result ?? {}
+    const r = await res.json() as { rating?: number; userRatingCount?: number; reviews?: NewApiReview[] }
+    const reviews = [...(r.reviews ?? [])]
+      .sort((a, b) => (b.publishTime ?? '').localeCompare(a.publishTime ?? ''))
+      .slice(0, 5)
+      .map(v => ({
+        author: v.authorAttribution?.displayName ?? '',
+        rating: Number(v.rating ?? 5),
+        text: v.originalText?.text ?? v.text?.text ?? '',
+        when: v.relativePublishTimeDescription ?? '',
+        photo: v.authorAttribution?.photoUri ?? null,
+      }))
+      .filter(v => v.text)
     return {
       rating: typeof r.rating === 'number' ? r.rating : null,
-      total: typeof r.user_ratings_total === 'number' ? r.user_ratings_total : null,
-      reviews: (r.reviews ?? []).slice(0, 5).map((v: Record<string, unknown>) => ({
-        author: String(v.author_name ?? ''),
-        rating: Number(v.rating ?? 5),
-        text: String(v.text ?? ''),
-        when: String(v.relative_time_description ?? ''),
-        photo: typeof v.profile_photo_url === 'string' ? v.profile_photo_url : null,
-      })),
+      total: typeof r.userRatingCount === 'number' ? r.userRatingCount : null,
+      reviews,
     }
   } catch {
     return null

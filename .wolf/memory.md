@@ -2768,3 +2768,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 11:22 | Edited lib/landing/googleReviews.ts | added optional chaining | ~457 |

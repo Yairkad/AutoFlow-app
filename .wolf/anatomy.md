@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T10:32:06.799Z
-> Files: 137 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T11:22:46.681Z
+> Files: 140 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -630,7 +630,7 @@
 ## lib/landing/
 
 - `business.ts` — Business details shared by the public pages (home + /for-sale). (~499 tok)
-- `googleReviews.ts` — Google rating + the 5 newest reviews for the public home page. (~696 tok)
+- `googleReviews.ts` — Google rating + the 5 newest reviews for the public home page. (~850 tok)
 
 ## lib/og/
 
