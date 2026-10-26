@@ -256,14 +256,16 @@ export default function LoginPage() {
           </form>
         )}
 
-        {/* Back to home link */}
-        <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+        {/* Back to home + legal links */}
+        <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '4px 18px' }}>
           <Link
             href="/"
-            style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+            style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '6px 0' }}
           >
             ← חזרה לדף הבית
           </Link>
+          <Link href="/privacy" style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '6px 0' }}>מדיניות פרטיות</Link>
+          <Link href="/terms" style={{ fontSize: '13px', color: 'var(--text-muted)', padding: '6px 0' }}>תנאי שימוש</Link>
         </div>
       </div>
     </div>

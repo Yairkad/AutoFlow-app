@@ -80,7 +80,8 @@ function subscribeHash(cb: () => void) {
 
 const card: React.CSSProperties = { background: '#fff', borderRadius: 18, border: '1px solid #e5eaf1', boxShadow: '0 2px 10px rgba(15,23,42,.05)' }
 
-export default function GuideView({ content, business }: { content: GuideContent; business: GuideBusiness }) {
+// legalLinks: only on the site's own /guide — /privacy and /terms are that business's policies, not other garages'.
+export default function GuideView({ content, business, legalLinks = false }: { content: GuideContent; business: GuideBusiness; legalLinks?: boolean }) {
   const [lang, setLang]   = useState<Lang>('he')
   // Topic lives in the URL hash so the phone's back button returns to the hub
   const hash    = useSyncExternalStore(subscribeHash, () => window.location.hash, () => '')
@@ -194,6 +195,13 @@ export default function GuideView({ content, business }: { content: GuideContent
           </div>
         )}
         <p style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', margin: '14px 16px 0' }}>{pick(content.footerNote, lang)}</p>
+        {legalLinks && (
+          <p style={{ fontSize: 12.5, textAlign: 'center', margin: '6px 16px 0', display: 'flex', justifyContent: 'center', gap: 16 }}>
+            <a href="/privacy" style={{ color: '#475569', textDecoration: 'underline', padding: '6px 0' }}>{lang === 'en' ? 'Privacy policy' : 'מדיניות פרטיות'}</a>
+            <a href="/terms" style={{ color: '#475569', textDecoration: 'underline', padding: '6px 0' }}>{lang === 'en' ? 'Terms of use' : 'תנאי שימוש'}</a>
+            <a href="/accessibility" style={{ color: '#475569', textDecoration: 'underline', padding: '6px 0' }}>{lang === 'en' ? 'Accessibility' : 'נגישות'}</a>
+          </p>
+        )}
       </div>
     </div>
   )
