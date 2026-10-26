@@ -2649,3 +2649,136 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 12:59 | Storage map free floor plan (wall side + px position), left-wall letters against the wall | components/stock/StorageMap.tsx, StorageMapEditor.tsx, lib/stock/storage.ts | rendered + tsc/eslint clean | ~15k |
+
+## Session: 2026-10-26 08:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:15 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/canvas.json | — | ~373 |
+| 08:16 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/Main.dc.html | — | ~4459 |
+| 08:17 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A-Mobile.dc.html | — | ~1804 |
+| 08:17 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/B-Mobile.dc.html | — | ~1421 |
+| 08:18 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/C-Mobile.dc.html | — | ~2082 |
+| 08:19 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A-Clean.dc.html | — | ~7631 |
+| 08:21 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/B-Plate.dc.html | — | ~6208 |
+| 08:22 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/C-Bento.dc.html | — | ~6894 |
+| 08:23 | Homepage redesign: design-language board + section plan + 3 proposals (A clean/cream, B license-plate signage, C bento) as Design canvas artifact https://claude.ai/artifact/8Hz89LcTMpWGnd5q2tup7s — no code changed yet | (artifact only) | awaiting user pick | ~45k |
+
+## Session: 2026-10-26 08:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:36 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/canvas.json | — | ~622 |
+| 08:37 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A2-Home.dc.html | — | ~6300 |
+| 08:38 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A2-HeroPhoto.dc.html | — | ~1084 |
+| 08:39 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A2-Cars.dc.html | — | ~2387 |
+| 08:39 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A2-Status.dc.html | — | ~2249 |
+| 08:39 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A2-Status.dc.html | inline fix | ~33 |
+| 08:40 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A2-Mobile.dc.html | — | ~1596 |
+| 08:40 | Round 2 (A2): solid A direction, multi-page — home + hero-photo alt + /cars + /status + mobile, Google reviews section with 'write review' | artifact 8Hz89LcTMpWGnd5q2tup7s | awaiting feedback | ~40k |
+| 08:44 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/canvas.json | 2→4 lines | ~97 |
+| 08:45 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/canvas.json | 2→3 lines | ~39 |
+| 08:45 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/canvas.json | inline fix | ~24 |
+| 08:46 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | — | ~6066 |
+| 08:46 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Mobile.dc.html | — | ~1655 |
+| 08:47 | Round 3 (A3): homepage+mobile in user's own brand style (navy #283970 top, elliptical arc to cream #F7F3EB, floating white card r28 soft shadow, amber stars #FFBD59, logo-yellow #F1DE3C sparkles, בס״ד on top) | artifact 8Hz89LcTMpWGnd5q2tup7s | awaiting feedback | ~25k |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | removed 11 lines | ~6 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | 2→5 lines | ~188 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | inline fix | ~23 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | 1→2 lines | ~51 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | inline fix | ~19 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | removed 22 lines | ~45 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Home.dc.html | expanded (+20 lines) | ~407 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Mobile.dc.html | removed 9 lines | ~9 |
+| 08:48 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/A3-Mobile.dc.html | inline fix | ~27 |
+| 08:50 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | — | ~6790 |
+| 08:50 | Switched to plain HTML mockup (user found canvas hard): https://claude.ai/artifact/Keq1bmDXrPk9xLEWDupBkC — reviews moved near contact (5 newest Google), 'מעקב טיפול' replaced by link to pre-purchase inspection form | artifact | awaiting feedback | ~20k |
+
+## Session: 2026-10-26 08:57
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-26 09:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:10 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | — | ~6872 |
+| 09:11 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | 1→4 lines | ~94 |
+| 09:11 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | 1→3 lines | ~91 |
+| 09:11 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | 2→5 lines | ~157 |
+| 09:11 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | 1→2 lines | ~20 |
+| 09:11 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | 2→3 lines | ~22 |
+| 09:11 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | inline fix | ~33 |
+| 09:11 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | "rv-track" → "rv-viewport" | ~32 |
+| 09:11 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | 7→9 lines | ~182 |
+| 09:12 | HTML mockup v3: bigger logo + white floating header, tire price list in popup (pricelist section removed), cars section removed (link from card only), WhatsApp → floating round FAB bottom-left (call/WA choice), soft oversized-ellipse curves in varied directions, straight footer, reviews auto-marquee | artifact Keq1bmDXrPk9xLEWDupBkC | awaiting feedback | ~25k |
+| 09:22 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | — | ~8982 |
+| 09:23 | HTML mockup v4: full-width sticky white header, hero photo layer under navy, rounder arcs, services as square-corner image gallery w/ hover/tap reveal, 'מחירון שירות' popups (tire + inspection by license group w/ license illustration) + 'price set on site' disclaimer, 'מכירת רכב' | artifact Keq1bmDXrPk9xLEWDupBkC | awaiting more feedback | ~20k |
+
+## Session: 2026-10-26 09:56
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:57 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | 2→3 lines | ~92 |
+| 09:57 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | 2→2 lines | ~31 |
+| 09:57 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | — | ~0 |
+| 09:57 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | expanded (+6 lines) | ~307 |
+| 09:57 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | 3→2 lines | ~27 |
+| 09:57 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | 14→18 lines | ~228 |
+| 09:57 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | 1→3 lines | ~130 |
+| 09:57 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/src.html | inline fix | ~21 |
+| 09:58 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/cars-src.html | — | ~2771 |
+| 09:59 | HTML mockup v5: tile text always visible, info strip as navy square tiles, new cars.html page (gallery-style car tiles) linked from 'מכירת רכב'. User wants image control from settings: services.image_url already editable in SettingsClient landing tab; hero image needs new public_info.hero_image | artifact Keq1bmDXrPk9xLEWDupBkC | awaiting feedback | ~25k |
+
+## Session: 2026-10-26 10:17
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:17 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/cars-src.html | expanded (+8 lines) | ~297 |
+| 10:17 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/cars-src.html | expanded (+9 lines) | ~149 |
+| 10:17 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/cars-src.html | 1→3 lines | ~114 |
+| 10:17 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/cars-src.html | added 1 condition(s) | ~120 |
+| 10:20 | Created components/landing/site.css | — | ~6663 |
+| 10:20 | Created components/landing/icons.tsx | — | ~911 |
+| 10:20 | Created components/landing/SiteHeader.tsx | — | ~527 |
+| 10:20 | Created components/landing/ContactFab.tsx | — | ~363 |
+| 10:21 | Created components/landing/ServiceGallery.tsx | — | ~1733 |
+| 10:21 | Created lib/landing/googleReviews.ts | — | ~550 |
+| 10:21 | Edited lib/landing/googleReviews.ts | added optional chaining | ~196 |
+| 10:21 | Created lib/landing/business.ts | — | ~499 |
+| 10:22 | Created app/page.tsx | — | ~3364 |
+| 10:23 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/cars-new.tsx | — | ~1332 |
+| 10:23 | Created app/for-sale/page.tsx | — | ~758 |
+| 10:23 | Edited proxy.ts | 1→2 lines | ~36 |
+| 10:24 | Edited components/landing/site.css | modified not() | ~134 |
+| 10:28 | Edited components/landing/site.css | CSS: padding-top | ~52 |
+| 10:28 | Edited components/landing/site.css | CSS: padding-top | ~30 |
+| 10:28 | Edited app/page.tsx | inline fix | ~17 |
+| 10:31 | Created app/zz-preview/page.tsx | — | ~420 |
+| 10:32 | Edited components/landing/site.css | inline fix | ~20 |
+| 10:34 | Implemented new public site: app/page.tsx rewrite, /for-sale page, SiteHeader/ContactFab/ServiceGallery/SiteFooter/icons/site.css, lib/landing (business, googleReviews, wa), settings hero image + Place ID; removed CustomerSearch/PriceList/FaqAccordion + old landing CSS. tsc+build pass | many | done, pushed | ~120k |
+
+## Session: 2026-10-26 11:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-26 11:17
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:22 | Edited lib/landing/googleReviews.ts | added optional chaining | ~457 |
+| 11:41 | Reviews switched to Places API (New) (legacy not offered to new projects), daily refresh; user set GOOGLE_PLACES_API_KEY in Vercel, Place ID ChIJ9S6jHnzFAhURZ1QJPW73CWE (to paste in settings), deployed branch — user: 'looks good' | lib/landing/googleReviews.ts | done | ~10k |
+| 11:47 | Created app/zz-preview/page.tsx | — | ~532 |
+| 11:48 | Landing fixes: removed בס״ד from header, sticky header fixed (overflow-x clip), phone tile call+WhatsApp buttons, address tile Waze/Maps logo buttons full-width | site.css, page.tsx, icons.tsx, SiteHeader.tsx | done | ~15k |
+| 11:51 | Top nav: + רכבים למכירה, - ביקורות, 'בדיקה לפני קניה'→'בדיקות קניה' (home + for-sale) | app/page.tsx, app/for-sale/page.tsx | done | ~2k |
+| 11:55 | Removed footer copyright line; updated privacy (Google map/reviews, WhatsApp/Waze, cookies, personal tracking link), terms (services list, prices info-only, cars for sale, reviews 3rd party, IP marks), accessibility (real contact details, dialogs/FAB/reduced-motion, known limits) | app/privacy, app/terms, app/accessibility, SiteFooter | done | ~12k |
+| 12:02 | Created app/zz-preview/page.tsx | — | ~1311 |
+| 12:07 | axe-core audit (WCAG 2.1 AA + best-practice) on /, /for-sale, legal pages + open states → fixed landmarks, link underline, modal contrast, car tile button, heading levels; now 0 violations (color-contrast over gradients = manual review) | landing + legal | done | ~25k |
+| 12:13 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/promos/promo-layouts.html | — | ~4224 |
+| 12:17 | Created components/landing/PromotionCoupons.tsx | — | ~494 |
+| 12:18 | Created app/zz-preview/page.tsx | — | ~301 |
+| 12:19 | Promotions → coupon layout (PromotionCoupons, replaces carousel); migration 104 adds promotions.benefit/benefit_sub; settings fields 'הטבה בגדול' + 'שורה מתחת להטבה' (sent only once column exists); no end_date → no expiry line | app/page.tsx, components/landing/PromotionCoupons.tsx, site.css, SettingsClient, supabase/migrations/104 | done | ~15k |
+| 12:22 | Created app/zz-preview/page.tsx | — | ~1943 |
+| 12:28 | Responsive audit 320–1920 on all public pages (hscroll, out-of-viewport, clipped text, tap targets): fixed FAB off-screen on phones (aside→div role), coupon stacks on ≤420px, legal page link targets ≥44px; accessibility widget skipped per user | ContactFab, site.css, legal pages | done | ~20k |

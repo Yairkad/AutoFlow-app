@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 }
 
 const TENANT_ID = 'c618f567-139b-4ce9-ac77-67affe93c27d'
-const UPDATED   = '18 במרץ 2026'
+const UPDATED   = '26 באוקטובר 2026'
 
 export default async function TermsPage() {
   const service = createServiceClient()
@@ -33,7 +33,7 @@ export default async function TermsPage() {
         <Link href="/" style={{ color: '#F5C800', fontWeight: 800, fontSize: '20px', textDecoration: 'none', letterSpacing: '-0.5px' }}>
           {name}
         </Link>
-        <Link href="/" style={{ color: '#fff', fontSize: '14px', opacity: 0.8, textDecoration: 'none' }}>
+        <Link href="/" style={{ color: '#fff', fontSize: '14px', opacity: 0.8, textDecoration: 'none', display: 'inline-block', padding: '12px 0' }}>
           ← חזרה לדף הבית
         </Link>
       </header>
@@ -48,15 +48,19 @@ export default async function TermsPage() {
         </p>
 
         <Section title="1. כללי">
-          תנאי שימוש אלו מסדירים את השימוש באתר ובשירות מעקב הרכב של <strong>{name}</strong>.
+          תנאי שימוש אלו מסדירים את השימוש באתר ובשירותים המקוונים של <strong>{name}</strong>.
           השימוש באתר מהווה הסכמה לתנאים אלו במלואם. אם אינך מסכים – אנא הימנע מהשימוש באתר.
         </Section>
 
         <Section title="2. מטרת השירות">
           <p style={{ marginBottom: '10px' }}>האתר מציע:</p>
           <ul>
-            <li><strong>מעקב סטטוס רכב</strong> – לקוח רשאי לבדוק את מצב הרכב שלו שנמצא בטיפול, באמצעות מספר לוחית ו-4 ספרות אחרונות של טלפונו.</li>
-            <li><strong>מידע כללי</strong> – שירותי העסק, מחירון, קידומים ופרטי יצירת קשר.</li>
+            <li><strong>מידע כללי</strong> – שירותי העסק, מחירון שירות, מבצעים, שאלות נפוצות ופרטי יצירת קשר והגעה.</li>
+            <li><strong>רכבים למכירה</strong> – הצגת רכבים יד 2 המוצעים למכירה על ידי העסק.</li>
+            <li><strong>הזמנת בדיקת קנייה</strong> – טופס מקוון למילוי פרטים לקראת בדיקת רכב לפני קנייה.</li>
+            <li><strong>מעקב סטטוס רכב</strong> – באמצעות קישור אישי שנשלח ללקוח שהרכב שלו בטיפול.</li>
+            <li><strong>מדריך הצמיגים</strong> – מידע כללי על צמיגים וגלגלים.</li>
+            <li><strong>ביקורות לקוחות</strong> – הצגת דירוג וביקורות מ-Google.</li>
           </ul>
         </Section>
 
@@ -65,6 +69,17 @@ export default async function TermsPage() {
             <li>
               <strong>הסטטוס המוצג הוא אינפורמטיבי בלבד</strong> ואינו מהווה התחייבות חוזית לסיום הטיפול במועד מסוים.
               עיכובים עשויים להיגרם עקב חלקי חילוף, עומס עבודה, או גורמים חיצוניים.
+            </li>
+            <li>
+              <strong>המחירים באתר הם לידיעה בלבד</strong> וכוללים מע&quot;מ. המחיר בפועל ייקבע במקום, לאחר בדיקת
+              הרכב, ועשוי להשתנות לפי סוג הרכב, מצבו והעבודה הנדרשת. מחיר בדיקת קנייה נקבע לפי קבוצת הרישוי של הרכב.
+            </li>
+            <li>
+              <strong>רכבים למכירה:</strong> הפרטים והתמונות מוצגים להמחשה, בכפוף לזמינות הרכב ולטעויות אפשריות,
+              ואינם מהווים הצעה מחייבת. תנאי העסקה ייקבעו בהסכם מכר חתום בלבד.
+            </li>
+            <li>
+              <strong>ביקורות Google</strong> הן תוכן של צדדים שלישיים המוצג כפי שהוא. העסק אינו עורך אותן ואינו אחראי לתוכנן.
             </li>
             <li>
               {name} לא יישא באחריות לנזק שייגרם עקב הסתמכות על הנתונים המוצגים באתר.
@@ -77,7 +92,8 @@ export default async function TermsPage() {
 
         <Section title="4. שימוש מותר">
           <ul>
-            <li>הגשת פניות בתום לב לבדיקת סטטוס רכב שבבעלותך או שאתה מורשה לשאול לגביו.</li>
+            <li>שימוש בקישור מעקב אישי רק לגבי רכב שבבעלותך או שאתה מורשה לברר לגביו.</li>
+            <li>מילוי טופס בדיקת קנייה בפרטים נכונים, ובמסמכים שיש לך הרשאה למסור.</li>
             <li>קבלת מידע על שירותי העסק לצרכים אישיים בלבד.</li>
           </ul>
         </Section>
@@ -97,12 +113,13 @@ export default async function TermsPage() {
 
         <Section title="6. קניין רוחני">
           כל התכנים באתר – לרבות טקסטים, תמונות, לוגו ועיצוב – הם רכוש {name} ומוגנים בזכויות יוצרים.
-          אין להעתיק, לשכפל או להפיץ תכנים ללא אישור מפורש בכתב.
+          אין להעתיק, לשכפל או להפיץ תכנים ללא אישור מפורש בכתב. ביקורות הלקוחות שייכות לכותביהן ול-Google,
+          והסימנים Google, Google Maps, Waze ו-WhatsApp שייכים לבעליהם.
         </Section>
 
         <Section title="7. פרטיות">
           השימוש באתר כפוף גם ל
-          <Link href="/privacy" style={{ color: '#1a2a6c', fontWeight: 600 }}> מדיניות הפרטיות</Link> שלנו,
+          <Link href="/privacy" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'underline' }}> מדיניות הפרטיות</Link> שלנו,
           המהווה חלק בלתי נפרד מתנאי שימוש אלו.
         </Section>
 
@@ -124,10 +141,10 @@ export default async function TermsPage() {
         </Section>
 
         <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', gap: '32px', flexWrap: 'wrap' }}>
-          <Link href="/" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px' }}>
+          <Link href="/" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px', display: 'inline-block', padding: '12px 0' }}>
             ← חזרה לדף הבית
           </Link>
-          <Link href="/privacy" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px' }}>
+          <Link href="/privacy" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px', display: 'inline-block', padding: '12px 0' }}>
             מדיניות פרטיות
           </Link>
         </div>

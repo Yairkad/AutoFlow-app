@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-25T11:50:52.445Z
-> Files: 106 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T12:22:04.134Z
+> Files: 142 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -37,6 +37,37 @@
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
 
 
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/
+
+- `cars-new.tsx` — ── Car tile (same square-tile look as the services gallery) ───────────────── (~1332 tok)
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/
+
+- `cars-src.html` — אוטו ליין – רכבים למכירה (~3295 tok)
+- `src.html` — אוטו ליין – דף הבית החדש (~9298 tok)
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/
+
+- `A-Clean.dc.html` — הצעה A – נקי וחם (~7631 tok)
+- `A-Mobile.dc.html` — הצעה A מובייל (~1804 tok)
+- `A2-Cars.dc.html` — A2 – רכבים למכירה (~2387 tok)
+- `A2-HeroPhoto.dc.html` — A2 – Hero עם תמונה (~1084 tok)
+- `A2-Home.dc.html` — A2 – דף הבית (~6300 tok)
+- `A2-Mobile.dc.html` — A2 – מובייל (~1596 tok)
+- `A2-Status.dc.html` — A2 – מעקב טיפול (~2248 tok)
+- `A3-Home.dc.html` — A3 – דף הבית בסגנון המותג (~5883 tok)
+- `A3-Mobile.dc.html` — A3 – מובייל (~1337 tok)
+- `B-Mobile.dc.html` — הצעה B מובייל (~1421 tok)
+- `B-Plate.dc.html` — הצעה B – לוחית רישוי (~6208 tok)
+- `C-Bento.dc.html` — הצעה C – בנטו (~6894 tok)
+- `C-Mobile.dc.html` — הצעה C מובייל (~2082 tok)
+- `canvas.json` (~732 tok)
+- `Main.dc.html` — קו עיצובי ותוכנית (~4459 tok)
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/promos/
+
+- `promo-layouts.html` — פריסות מבצעים – אוטו ליין (~4224 tok)
+
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/
 
 - `poster.mjs` — Declares src (~290 tok)
@@ -52,6 +83,7 @@
 ## ./
 
 - `_tmp_resolve_memory.mjs` — Declares path (~151 tok)
+- `proxy.ts` — ── Public paths – no auth needed ────────────────────────────────────────── (~1663 tok)
 
 ## .claude/
 
@@ -62,6 +94,7 @@
 ## app/
 
 - `globals.css` — Styles: 50 rules, 23 vars (~6406 tok)
+- `page.tsx` — dynamic (~3147 tok)
 
 ## app/(app)/
 
@@ -292,6 +325,10 @@
 ## app/expenses/
 
 
+## app/for-sale/
+
+- `page.tsx` — Public catalog of cars for sale (the internal /cars route is the office module). (~758 tok)
+
 ## app/guide/[token]/
 
 - `page.tsx` — public guide page by tenants.guide_public_token, header colour from logo (logoPalette) (~600 tok)
@@ -396,6 +433,10 @@
 ## app/yard/tire-lookup/
 
 
+## app/zz-preview/
+
+- `page.tsx` — TEMPORARY responsive check with realistic sample data — delete before commit. (~1943 tok)
+
 ## components/alignment/
 
 
@@ -410,11 +451,10 @@
 
 ## components/cars/
 
-- `ContractPaymentsPanel.tsx` — /reminders: buyers' expected payments from signed car contracts (late / 30 days / later / received), mark received / cleared / swapped / bounced (~2400 tok)
-
 - `CarContractEditor.tsx` — Full-screen car sale contract editor, edited inline on the document (fields, clauses add/move/delete, checks table + split). "הפרטים שלי" quick-fill into seller OR buyer; default clause wording; print via contractHtml (~8000 tok)
 - `CarContractsPanel.tsx` — Contract history list (Documents tab 'חוזי מכירת רכב', or per car via carId + onOpen): search, open, duplicate, delete (~2100 tok)
 - `CarsClient.tsx` — Cars tab: compact card grid (5/row desktop, 2 mobile) → click opens detail modal (all fields + actions + Drive docs). Docs saved to Drive רכבים/<plate>/ named "<plate> - <doc name>". Filters: search, בהפקדה (license_deposited), ללא טסט, expiring ≤30d (~22000 tok)
+- `ContractPaymentsPanel.tsx` — /reminders: buyers' expected payments from signed car contracts (late / 30 days / later / received), mark received / cleared / swapped / bounced (~2400 tok)
 - `ContractPaymentsPanel.tsx` — SOON_DAYS — renders modal (~2903 tok)
 
 ## components/checks/
@@ -455,6 +495,15 @@
 
 ## components/landing/
 
+- `CarsForSale.tsx` — public cars catalog for /for-sale: filters (make/price/fuel/sort), square image tiles (CarTile), detail CarModal + lightbox; WhatsApp msg per car via lib/landing/wa (~4500 tok)
+- `ContactFab.tsx` — floating round button bottom-left → choice call / WhatsApp (~363 tok)
+- `icons.tsx` — Icon (stroke line icons), Star, Sparkle, QuoteMark for the public site — no emoji there (~911 tok)
+- `PromotionCoupons.tsx` — Active promotions as coupons: text on one side, a "torn-off" stub with the benefit (~494 tok)
+- `PromotionsCarousel.tsx` — active promotions carousel (home, only when promos exist) (~1700 tok)
+- `ServiceGallery.tsx` — services as square image tiles (text always visible, hover/tap zoom); 'מחירון שירות' dialog from price_list matched to the service by name/keyword (kindOf/categoryFor); inspection dialog adds licence-group illustration; links to intake form / /for-sale (~1733 tok)
+- `site.css` — all public-site styles, `al-` prefix; also neutralises globals.css rules on bare main/button (~6832 tok)
+- `SiteFooter.tsx` — public footer: logo, legal links, employee login (~300 tok)
+- `SiteHeader.tsx` — full-width sticky white header (big logo, nav, call dot, mobile menu) (~527 tok)
 
 ## components/layout/
 
@@ -583,6 +632,11 @@
 ## lib/inspections/
 
 
+## lib/landing/
+
+- `business.ts` — Business details shared by the public pages (home + /for-sale). (~499 tok)
+- `googleReviews.ts` — Google rating + the 5 newest reviews for the public home page. (~850 tok)
+
 ## lib/og/
 
 - `intakeImage.tsx` — renderIntakeOgImage(name, logoBase64): branded 1200x630 link preview (logo card + inspection badge, colours from logo) via next/og ImageResponse (~1100 tok)
@@ -662,11 +716,10 @@
 
 - `intakeImage.tsx` — renderIntakeOgImage(name, logoBase64): branded 1200x630 link preview (logo card + inspection badge, colours from logo) via next/og ImageResponse (~1100 tok)
 - `intakeTenant.ts` — getIntakeTenant(token): tenant name+logo for personal/fixed intake link (~250 tok)
+- `lib/cars/contractPayments.ts` — expectedPayments() from contract data + receipts, loadExpectedPayments / setReceipt (~1300 tok)
 - `logoColors.ts` — logoPalette(buf): dominant dark colour → bg, bright saturated → accent (sharp) (~700 tok)
 - `main.go` — Windows agent: self-install (HKCU Run), HTTP 127.0.0.1:47321 /status /scan, origin approval MessageBox, runs scan.ps1 (~2800 tok)
 - `main.go` — go:build windows (~3100 tok)
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-
-- `lib/cars/contractPayments.ts` — expectedPayments() from contract data + receipts, loadExpectedPayments / setReceipt (~1300 tok)

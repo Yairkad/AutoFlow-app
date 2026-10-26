@@ -1321,5 +1321,174 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-21T13:00:00Z"
+  },
+  {
+    "id": "bug-068",
+    "timestamp": "2026-10-26T12:00:00Z",
+    "error_message": "<dialog> price popup rendered at the top-right instead of centered",
+    "file": "components/landing/site.css",
+    "root_cause": "globals.css `* { margin:0 }` removes the UA `margin:auto` that centers a modal dialog",
+    "fix": "`.al-dialog { margin: auto }`",
+    "tags": [
+      "css",
+      "dialog",
+      "margin",
+      "landing"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T12:00:00Z"
+  },
+  {
+    "id": "bug-069",
+    "timestamp": "2026-10-26T12:00:00Z",
+    "error_message": "Public page <main> would get 16px padding / 80px bottom padding on mobile",
+    "file": "components/landing/site.css",
+    "root_cause": "globals.css app-shell rules target bare `main`/`footer` with !important",
+    "fix": "`.al-site main { margin-right:0 !important; padding:0 !important }`",
+    "tags": [
+      "css",
+      "globals",
+      "landing",
+      "mobile"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T12:00:00Z"
+  },
+  {
+    "id": "bug-070",
+    "timestamp": "2026-10-26T12:00:00Z",
+    "error_message": "Floating contact button jumped right when its menu opened",
+    "file": "components/landing/site.css",
+    "root_cause": "column flex with align-items:flex-start — in RTL that is the RIGHT edge",
+    "fix": "align-items:flex-end (= left in RTL) on .al-fab and .al-fab-menu",
+    "tags": [
+      "css",
+      "rtl",
+      "flex",
+      "landing"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T12:00:00Z"
+  },
+  {
+    "id": "bug-071",
+    "timestamp": "2026-10-26T12:00:00Z",
+    "error_message": "Car WhatsApp message never contained the car name",
+    "file": "components/landing/CarsForSale.tsx",
+    "root_cause": "waHref text was already encodeURIComponent'ed, so .replace('ברצוני לקבל מידע', …) never matched",
+    "fix": "build the per-car link with waLink(phone, text) (lib/landing/wa.ts)",
+    "tags": [
+      "whatsapp",
+      "landing",
+      "encoding"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T12:00:00Z"
+  },
+  {
+    "id": "bug-072",
+    "timestamp": "2026-10-26T14:00:00Z",
+    "error_message": "Public site header not sticky on scroll",
+    "file": "components/landing/site.css",
+    "root_cause": "`.al-site { overflow-x: hidden }` makes the wrapper a scroll container, so position:sticky on the header sticks to it instead of the viewport",
+    "fix": "overflow-x: clip on .al-site (clips without creating a scroll container)",
+    "tags": [
+      "css",
+      "sticky",
+      "overflow",
+      "landing"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T14:00:00Z"
+  },
+  {
+    "id": "bug-073",
+    "timestamp": "2026-10-26T16:00:00Z",
+    "error_message": "axe: region / landmark-one-main on public pages",
+    "file": "app/page.tsx, app/for-sale/page.tsx",
+    "root_cause": "hero + info tiles were outside <main>; /for-sale had no <main>; floating button outside any landmark",
+    "fix": "<main> wraps hero..contact on both pages; ContactFab is an <aside aria-label>",
+    "tags": [
+      "a11y",
+      "axe",
+      "landmarks",
+      "landing"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T16:00:00Z"
+  },
+  {
+    "id": "bug-074",
+    "timestamp": "2026-10-26T16:00:00Z",
+    "error_message": "axe: link-in-text-block on privacy page",
+    "file": "app/privacy/page.tsx",
+    "root_cause": "inline link distinguished by colour only (1.27:1 vs body text)",
+    "fix": "underline inline text links (privacy + terms)",
+    "tags": [
+      "a11y",
+      "axe",
+      "links",
+      "legal"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T16:00:00Z"
+  },
+  {
+    "id": "bug-075",
+    "timestamp": "2026-10-26T16:00:00Z",
+    "error_message": "axe: color-contrast in car detail modal",
+    "file": "components/landing/CarsForSale.tsx",
+    "root_cause": "#94a3b8 labels on white (~2.6:1)",
+    "fix": "#5B6474",
+    "tags": [
+      "a11y",
+      "axe",
+      "contrast"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T16:00:00Z"
+  },
+  {
+    "id": "bug-076",
+    "timestamp": "2026-10-26T16:00:00Z",
+    "error_message": "axe: aria-allowed-role on car tile + heading skip",
+    "file": "components/landing/CarsForSale.tsx",
+    "root_cause": "<article role=button> is not allowed; tile titles were h3 right after page h1",
+    "fix": "article keeps an h2 title; a transparent full-size <button class=al-car-open> opens the modal; service tiles no longer focusable",
+    "tags": [
+      "a11y",
+      "axe",
+      "aria",
+      "headings"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T16:00:00Z"
+  },
+  {
+    "id": "bug-077",
+    "timestamp": "2026-10-26T18:00:00Z",
+    "error_message": "Floating contact button jumped to the right / partly off-screen on phones",
+    "file": "components/landing/ContactFab.tsx",
+    "root_cause": "FAB was changed to <aside> for the landmark; globals.css styles bare `aside` as the app sidebar drawer at <=900px (position/right/transform)",
+    "fix": "<div role=\"complementary\" aria-label> instead of <aside> — same landmark, no app-shell CSS",
+    "tags": [
+      "css",
+      "globals",
+      "aside",
+      "landing",
+      "mobile"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T18:00:00Z"
   }
 ]

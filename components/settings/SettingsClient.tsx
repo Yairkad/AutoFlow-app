@@ -21,6 +21,8 @@ interface PublicInfo {
   meta_title?: string
   meta_description?: string
   email?: string
+  hero_image?: string
+  google_place_id?: string
 }
 
 interface Tenant {
@@ -269,6 +271,21 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
                 {field('קישור Waze', <input className="form-input" dir="ltr" value={tenant.public_info?.waze_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, waze_url: e.target.value } } : t)} placeholder="https://waze.com/ul/..." />)}
                 {field('קישור Google Maps', <input className="form-input" dir="ltr" value={tenant.public_info?.maps_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, maps_url: e.target.value } } : t)} placeholder="https://maps.app.goo.gl/..." />)}
               </div>
+              {field('תמונת רקע לראש דף הבית', (
+                <HeroImageField
+                  value={tenant.public_info?.hero_image ?? ''}
+                  onChange={v => setTenant(t => t ? { ...t, public_info: { ...t.public_info, hero_image: v } } : t)}
+                  onError={msg => showToast(msg, 'error')}
+                />
+              ))}
+              {field('מזהה העסק בגוגל (Place ID) – להצגת ביקורות', (
+                <>
+                  <input className="form-input" dir="ltr" value={tenant.public_info?.google_place_id ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, google_place_id: e.target.value.trim() } } : t)} placeholder="ChIJ..." />
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    מוצאים אותו ב-<a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener noreferrer">Place ID Finder</a>. ריק = סקשן הביקורות לא מוצג.
+                  </div>
+                </>
+              ))}
 
               {/* SEO */}
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginTop: '4px' }}>🔍 SEO / כרטיסיית הדפדפן</div>
@@ -991,7 +1008,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
 type LandingSub = 'services' | 'promotions' | 'prices' | 'faq' | 'guide'
 
 interface LandingService { id: string; name: string; description: string | null; icon: string | null; image_url: string | null; sort_order: number; is_active: boolean }
-interface LandingPromotion { id: string; title: string; description: string | null; fine_print: string | null; image_url: string | null; link_url: string | null; start_date: string | null; end_date: string | null; sort_order: number; is_active: boolean }
+interface LandingPromotion { id: string; title: string; description: string | null; fine_print: string | null; benefit?: string | null; benefit_sub?: string | null; image_url: string | null; link_url: string | null; start_date: string | null; end_date: string | null; sort_order: number; is_active: boolean }
 interface LandingPrice { id: string; category: string; service_name: string; price: number | null; price_note: string | null; sort_order: number; is_active: boolean }
 interface LandingFaq { id: string; question: string; answer: string; image_url: string | null; sort_order: number; is_active: boolean }
 
@@ -1155,7 +1172,7 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
   const [items, setItems] = useState<LandingPromotion[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editItem, setEditItem] = useState<LandingPromotion | null>(null)
-  const [form, setForm] = useState({ title: '', description: '', fine_print: '', image_url: null as string | null, link_url: '', start_date: '', end_date: '', sort_order: '0', is_active: true })
+  const [form, setForm] = useState({ title: '', description: '', fine_print: '', benefit: '', benefit_sub: '', image_url: null as string | null, link_url: '', start_date: '', end_date: '', sort_order: '0', is_active: true })
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -1185,16 +1202,24 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
     reader.readAsDataURL(file)
   }
 
-  function openAdd() { setForm({ title: '', description: '', fine_print: '', image_url: null, link_url: '', start_date: new Date().toISOString().slice(0,10), end_date: '', sort_order: '0', is_active: true }); setEditItem(null); setShowForm(true) }
-  function openEdit(i: LandingPromotion) { setForm({ title: i.title, description: i.description ?? '', fine_print: i.fine_print ?? '', image_url: i.image_url ?? null, link_url: i.link_url ?? '', start_date: i.start_date ?? '', end_date: i.end_date ?? '', sort_order: String(i.sort_order), is_active: i.is_active }); setEditItem(i); setShowForm(true) }
+  function openAdd() { setForm({ title: '', description: '', fine_print: '', benefit: '', benefit_sub: '', image_url: null, link_url: '', start_date: new Date().toISOString().slice(0,10), end_date: '', sort_order: '0', is_active: true }); setEditItem(null); setShowForm(true) }
+  function openEdit(i: LandingPromotion) { setForm({ title: i.title, description: i.description ?? '', fine_print: i.fine_print ?? '', benefit: i.benefit ?? '', benefit_sub: i.benefit_sub ?? '', image_url: i.image_url ?? null, link_url: i.link_url ?? '', start_date: i.start_date ?? '', end_date: i.end_date ?? '', sort_order: String(i.sort_order), is_active: i.is_active }); setEditItem(i); setShowForm(true) }
 
   async function save() {
     if (!form.title.trim()) { showToast('חובה כותרת', 'error'); return }
     setSaving(true)
-    const payload = { tenant_id: tenantId, title: form.title.trim(), description: form.description.trim() || null, fine_print: form.fine_print.trim() || null, image_url: form.image_url ?? null, link_url: form.link_url.trim() || null, start_date: form.start_date || null, end_date: form.end_date || null, sort_order: parseInt(form.sort_order) || 0, is_active: form.is_active }
-    if (editItem) await supabase.from('promotions').update(payload).eq('id', editItem.id)
-    else await supabase.from('promotions').insert(payload)
-    setSaving(false); setShowForm(false); load(); showToast(editItem ? 'עודכן' : 'נוסף', 'success')
+    // benefit / benefit_sub come from migration 104: send them only once the column exists
+    // (a loaded row carries the key) or when filled in, so saving keeps working before it runs
+    const hasBenefitCols = items.some(i => 'benefit' in i)
+    const benefit = hasBenefitCols || form.benefit.trim() || form.benefit_sub.trim()
+      ? { benefit: form.benefit.trim() || null, benefit_sub: form.benefit_sub.trim() || null } : {}
+    const payload = { tenant_id: tenantId, title: form.title.trim(), description: form.description.trim() || null, fine_print: form.fine_print.trim() || null, ...benefit, image_url: form.image_url ?? null, link_url: form.link_url.trim() || null, start_date: form.start_date || null, end_date: form.end_date || null, sort_order: parseInt(form.sort_order) || 0, is_active: form.is_active }
+    const { error } = editItem
+      ? await supabase.from('promotions').update(payload).eq('id', editItem.id)
+      : await supabase.from('promotions').insert(payload)
+    setSaving(false)
+    if (error) { showToast(/benefit/.test(error.message) ? 'צריך להריץ את מיגרציה 104 לפני שמירת "הטבה"' : 'שגיאה בשמירה', 'error'); return }
+    setShowForm(false); load(); showToast(editItem ? 'עודכן' : 'נוסף', 'success')
   }
 
   async function del(id: string) { await supabase.from('promotions').delete().eq('id', id); load(); showToast('נמחק', 'success') }
@@ -1209,9 +1234,13 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--primary)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
           <div style={{ marginBottom: '10px' }}><label className="form-label">כותרת *</label><input className="form-input" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="לדוגמה: 20% הנחה על צמיגים" /></div>
           <div style={{ marginBottom: '10px' }}><label className="form-label">תיאור</label><textarea className="form-input" style={{ height: '60px', resize: 'vertical' }} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="פרטי המבצע..." /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+            <div><label className="form-label" htmlFor="promo-benefit">הטבה בגדול (על הקופון)</label><input id="promo-benefit" className="form-input" value={form.benefit} maxLength={12} onChange={e => setForm(f => ({ ...f, benefit: e.target.value }))} placeholder="לדוגמה: 10% / מתנה" /></div>
+            <div><label className="form-label" htmlFor="promo-benefit-sub">שורה מתחת להטבה</label><input id="promo-benefit-sub" className="form-input" value={form.benefit_sub} maxLength={30} onChange={e => setForm(f => ({ ...f, benefit_sub: e.target.value }))} placeholder="לדוגמה: הנחה / איזון גלגלים" /></div>
+          </div>
           <div style={{ marginBottom: '10px' }}><label className="form-label">אותיות קטנות (תנאים, הגבלות, תוקף)</label><input className="form-input" value={form.fine_print} onChange={e => setForm(f => ({ ...f, fine_print: e.target.value }))} placeholder="לדוגמה: בתוקף עד 30.4. לרכבים פרטיים בלבד." /></div>
           <div style={{ marginBottom: '10px' }}>
-            <label className="form-label">תמונה למבצע (אופציונלי)</label>
+            <label className="form-label">תמונה למבצע (אופציונלי, לא מוצגת בפריסת הקופון)</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               {form.image_url && (
                 <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -1918,6 +1947,42 @@ export default function SettingsClient() {
             {tabContent.vault}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// Background photo for the public home page hero: upload (≤900KB) or an image / Google Drive link.
+function HeroImageField({ value, onChange, onError }: { value: string; onChange: (v: string) => void; onError: (msg: string) => void }) {
+  function toDirect(url: string) {
+    const m = url.match(/\/file\/d\/([^/]+)/) ?? url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/)
+    return m ? `https://lh3.googleusercontent.com/d/${m[1]}` : url
+  }
+  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 900_000) { onError('התמונה גדולה מדי (מקסימום 900KB) – אפשר להדביק קישור במקום'); return }
+    const reader = new FileReader()
+    reader.onload = ev => onChange(ev.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+      {value && (
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <img src={value} alt="" style={{ width: '120px', height: '68px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border)' }} />
+          <button type="button" onClick={() => onChange('')} aria-label="הסר תמונה" style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', background: 'var(--danger)', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '10px' }}>✕</button>
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: '200px' }}>
+        <input type="file" accept="image/*" onChange={onFile} style={{ fontSize: '13px' }} />
+        <input
+          className="form-input" dir="ltr" style={{ fontSize: '12px' }}
+          placeholder="או הדבק קישור תמונה / Google Drive..."
+          defaultValue={value && !value.startsWith('data:') ? value : ''}
+          onBlur={e => { const v = e.target.value.trim(); if (v && !value.startsWith('data:')) onChange(toDirect(v)) }}
+        />
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>תמונה רוחבית של המקום. מוצגת מתחת לשכבה כחולה, כך שהטקסט נשאר קריא.</div>
       </div>
     </div>
   )

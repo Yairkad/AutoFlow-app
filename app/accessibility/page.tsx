@@ -1,14 +1,27 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { createServiceClient } from '@/lib/supabase/service'
+import { LANDING_TENANT_ID } from '@/lib/landingTenant'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'הצהרת נגישות – אוטו ליין',
   description: 'הצהרת הנגישות של אוטו ליין פנצריה ושירותי רכב',
 }
 
-const UPDATED = '17 במרץ 2026'
+const UPDATED = '26 באוקטובר 2026'
 
-export default function AccessibilityPage() {
+export default async function AccessibilityPage() {
+  const { data: tenant } = await createServiceClient()
+    .from('tenants')
+    .select('phone,address,public_info')
+    .eq('id', LANDING_TENANT_ID)
+    .single()
+  const phone   = tenant?.phone   ?? ''
+  const address = tenant?.address ?? ''
+  const email   = (tenant?.public_info as { email?: string } | null)?.email ?? ''
+
   return (
     <div dir="rtl" style={{ background: '#f8fafc', minHeight: '100vh', fontFamily: 'var(--font-heebo, Heebo), sans-serif' }}>
 
@@ -17,7 +30,7 @@ export default function AccessibilityPage() {
         <Link href="/" style={{ color: '#F5C800', fontWeight: 800, fontSize: '20px', textDecoration: 'none', letterSpacing: '-0.5px' }}>
           אוטו ליין
         </Link>
-        <Link href="/" style={{ color: '#fff', fontSize: '14px', opacity: 0.8, textDecoration: 'none' }}>
+        <Link href="/" style={{ color: '#fff', fontSize: '14px', opacity: 0.8, textDecoration: 'none', display: 'inline-block', padding: '12px 0' }}>
           ← חזרה לדף הבית
         </Link>
       </header>
@@ -48,8 +61,12 @@ export default function AccessibilityPage() {
             <li>מבנה כותרות היררכי (H1 → H2 → H3).</li>
             <li>תיאורי alt לתמונות בעלות משמעות.</li>
             <li>כיוון RTL מלא בעברית.</li>
-            <li>פונט Heebo – מותאם לקריאה בעברית, גודל גופן מינימלי 14px.</li>
+            <li>פונט Heebo – מותאם לקריאה בעברית, גודל גופן בסיסי 16px.</li>
             <li>שדות טפסים עם תוויות (label) ברורות.</li>
+            <li>מסגרת מיקוד בולטת לכל רכיב שניתן לנווט אליו במקלדת.</li>
+            <li>חלונות קופצים (מחירון שירות, פרטי רכב) נסגרים במקש Esc ובכפתור סגירה עם תיאור קולי.</li>
+            <li>כפתור יצירת הקשר הצף וכפתור התפריט מתוארים לקוראי מסך ומציינים אם הם פתוחים.</li>
+            <li>כיבוד הגדרת המערכת &quot;הפחתת תנועה&quot;: בהפעלתה האנימציות והגלילה האוטומטית מושבתות.</li>
           </ul>
         </Section>
 
@@ -58,8 +75,14 @@ export default function AccessibilityPage() {
             על אף מאמצינו, ייתכנו אזורים באתר שטרם הונגשו במלואם. מגבלות ידועות:
           </p>
           <ul>
-            <li>תמונות מבצעים דינמיות – נשאף לספק חלופת טקסט לכל תמונה.</li>
-            <li>קרוסל המבצעים – מוצגות בקרות ניווט נגישות, אך ייתכנו שיפורים נוספים.</li>
+            <li>
+              רצועת ביקורות הלקוחות נגללת אוטומטית. הגלילה נעצרת בהצבעה עם העכבר, ומושבתת לגמרי
+              כאשר מופעלת הגדרת &quot;הפחתת תנועה&quot;.
+            </li>
+            <li>
+              המפה המוטמעת היא רכיב של Google ואינה בשליטתנו. הכתובת, הטלפון וקישורי הניווט מוצגים גם כטקסט לצדה.
+            </li>
+            <li>תמונות שירותים ורכבים המועלות למערכת מוצגות כקישוט, והמידע עצמו מופיע בטקסט שלצידן.</li>
           </ul>
           <p style={{ marginTop: '10px' }}>אנו עובדים על שיפור מתמיד ומקבלים פניות בנושא.</p>
         </Section>
@@ -77,8 +100,9 @@ export default function AccessibilityPage() {
             נתקלת בבעיית נגישות? נשמח לדעת ולתקן בהקדם. ניתן לפנות לאחראי הנגישות:
           </p>
           <ul>
-            <li><strong>טלפון:</strong> [מספר טלפון]</li>
-            <li><strong>כתובת:</strong> [כתובת העסק]</li>
+            {phone   && <li><strong>טלפון:</strong> <a href={`tel:${phone}`} style={{ color: '#1a2a6c' }}>{phone}</a></li>}
+            {email   && <li><strong>דואר אלקטרוני:</strong> <a href={`mailto:${email}`} style={{ color: '#1a2a6c' }}>{email}</a></li>}
+            {address && <li><strong>כתובת:</strong> {address}</li>}
           </ul>
           <p style={{ marginTop: '10px' }}>
             אנו מתחייבים להגיב לפניות נגישות תוך <strong>7 ימי עסקים</strong>.
@@ -96,7 +120,7 @@ export default function AccessibilityPage() {
         </Section>
 
         <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <Link href="/" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px' }}>
+          <Link href="/" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px', display: 'inline-block', padding: '12px 0' }}>
             ← חזרה לדף הבית
           </Link>
         </div>

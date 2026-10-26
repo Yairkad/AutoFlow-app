@@ -15,6 +15,7 @@ const PUBLIC_PREFIXES = [
   '/track',
   '/intake',           // purchase-inspection pre-fill form (customer link)
   '/guide',            // public tire & wheel guide (QR at the garage)
+  '/for-sale',         // public cars-for-sale catalog
   '/privacy',
   '/terms',
   '/accessibility',
