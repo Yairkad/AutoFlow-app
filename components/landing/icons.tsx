@@ -48,6 +48,30 @@ export function Sparkle({ size = 20, color, style }: { size?: number; color: str
   )
 }
 
+// Brand marks for the navigation buttons (simplified Waze / Google Maps logos).
+export function WazeLogo({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
+      <rect width="100" height="100" rx="22" fill="#33CCFF" />
+      <path d="M50 14C32 14 18 27.6 18 44.4c0 10.4 5 19.5 12.8 25.4l-1.3 3.2 2.8 5.1 6.5-3.2c3.2.9 6.7 1.4 11.2 1.4s8-.5 11.2-1.4l6.5 3.2 2.8-5.1-1.3-3.2C77 63.9 82 54.8 82 44.4 82 27.6 68 14 50 14z" fill="#fff" />
+      <circle cx="39" cy="42" r="5.5" fill="#33CCFF" /><circle cx="61" cy="42" r="5.5" fill="#33CCFF" />
+      <path d="M37 55 Q50 64 63 55" stroke="#33CCFF" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+      <circle cx="37" cy="82" r="5.5" fill="#4d4d4d" /><circle cx="63" cy="82" r="5.5" fill="#4d4d4d" />
+    </svg>
+  )
+}
+
+export function MapsPin({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M24 4C15.2 4 8 11.2 8 20c0 12 16 28 16 28s16-16 16-28C40 11.2 32.8 4 24 4z" fill="#EA4335" />
+      <path d="M24 4C15.2 4 8 11.2 8 20c0 3.8 1.2 7.3 3.2 10.2L28 6.2C26.7 4.8 25.4 4 24 4z" fill="#C5221F" />
+      <circle cx="24" cy="20" r="7" fill="#fff" />
+      <circle cx="24" cy="20" r="3.5" fill="#4285F4" />
+    </svg>
+  )
+}
+
 export function QuoteMark() {
   return (
     <svg width="30" height="26" viewBox="0 0 30 26" fill="currentColor" aria-hidden="true" style={{ color: '#283970', flexShrink: 0 }}>

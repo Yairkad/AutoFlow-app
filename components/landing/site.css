@@ -8,7 +8,8 @@
   --al-shadow: 0 10px 30px rgba(27,40,88,.08); --al-shadow-lg: 0 24px 50px rgba(27,40,88,.18);
   background: var(--al-cream); color: var(--al-ink);
   font-family: var(--font-heebo), Heebo, Arial, sans-serif; font-size: 16px; line-height: 1.6;
-  overflow-x: hidden; min-height: 100vh;
+  /* clip, not hidden: overflow-x:hidden would make this a scroll box and break the sticky header */
+  overflow-x: clip; min-height: 100vh;
 }
 .al-site *, .al-site *::before, .al-site *::after { box-sizing: border-box; }
 /* undo app-shell rules in globals.css that target bare main/footer/button */
@@ -44,7 +45,6 @@
 .al-header { position: sticky; top: 0; z-index: 50; background: #fff; border-bottom: 1px solid var(--al-cream-2); transition: box-shadow .2s; }
 .al-header.is-scrolled { box-shadow: 0 8px 24px rgba(27,40,88,.12); }
 .al-header-in { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 96px; position: relative; }
-.al-bsd { position: absolute; top: 4px; left: max(16px, env(safe-area-inset-left, 0px)); font-size: 11px; color: var(--al-soft); }
 .al-brand { display: flex; align-items: center; text-decoration: none; }
 .al-brand img { height: 76px; width: auto; max-width: 240px; object-fit: contain; display: block; transition: height .2s; }
 .al-header.is-scrolled .al-brand img { height: 60px; }
@@ -81,10 +81,13 @@
 .al-info > div:hover .al-label::before { width: 36px; }
 .al-info strong { font-size: 19px; color: #fff; }
 .al-info span { color: var(--al-on-navy); }
-.al-info-links { display: flex; gap: 16px; font-size: 15px; font-weight: 700; }
-.al-site .al-info-links a { color: var(--al-yellow); }
-.al-site .al-info-links a:hover { color: #fff; }
-.al-info .al-btn { margin-top: 4px; align-self: flex-start; height: 46px; border-radius: 0; }
+/* two equal buttons across the bottom of a tile (call + WhatsApp, Waze + Maps) */
+.al-tile-btns { display: flex; gap: 8px; margin-top: auto; padding-top: 12px; position: relative; }
+.al-site .al-tile-btns a { flex: 1 1 0; min-width: 0; height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 700; text-decoration: none; white-space: nowrap; transition: filter .2s; }
+.al-site .al-tile-btns a:hover { filter: brightness(.95); }
+.al-site .al-tile-btns .is-call { background: var(--al-yellow); color: var(--al-navy-deep); }
+.al-site .al-tile-btns .is-wa { background: var(--al-wa); color: #fff; }
+.al-site .al-tile-btns .is-nav { background: #fff; color: var(--al-navy-deep); }
 .al-ltr { direction: ltr; unicode-bidi: isolate; }
 
 /* ── Image tiles (services + cars) ───────────────────────── */

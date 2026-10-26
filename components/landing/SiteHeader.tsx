@@ -25,7 +25,6 @@ export default function SiteHeader({ name, logo, phone, links }: {
   return (
     <header className={`al-header${scrolled ? ' is-scrolled' : ''}`}>
       <div className="al-wrap al-header-in">
-        <span className="al-bsd">בס״ד</span>
         <Link href="/" className="al-brand">
           {logo ? <img src={logo} alt={name} /> : <span className="al-brand-name">{name}</span>}
         </Link>

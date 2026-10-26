@@ -9,7 +9,7 @@ import ContactFab from '@/components/landing/ContactFab'
 import SiteFooter from '@/components/landing/SiteFooter'
 import ServiceGallery from '@/components/landing/ServiceGallery'
 import PromotionsCarousel from '@/components/landing/PromotionsCarousel'
-import { Icon, Star, Sparkle, QuoteMark } from '@/components/landing/icons'
+import { Icon, Star, Sparkle, QuoteMark, WazeLogo, MapsPin } from '@/components/landing/icons'
 import '@/components/landing/site.css'
 
 export const dynamic = 'force-dynamic'
@@ -86,17 +86,22 @@ export default async function LandingPage() {
             <span className="al-label">כתובת</span>
             <strong>{B.address || '—'}</strong>
             {(B.wazeUrl || B.mapsUrl) && (
-              <span className="al-info-links">
-                {B.wazeUrl && <a href={B.wazeUrl} target="_blank" rel="noopener noreferrer">Waze</a>}
-                {B.mapsUrl && <a href={B.mapsUrl} target="_blank" rel="noopener noreferrer">Google Maps</a>}
-              </span>
+              <div className="al-tile-btns">
+                {B.wazeUrl && <a href={B.wazeUrl} target="_blank" rel="noopener noreferrer" className="is-nav"><WazeLogo />Waze</a>}
+                {B.mapsUrl && <a href={B.mapsUrl} target="_blank" rel="noopener noreferrer" className="is-nav"><MapsPin />Google Maps</a>}
+              </div>
             )}
           </div>
           <div>
             <Icon name="phone" size={120} stroke={1.6} className="al-bg-ic" />
             <span className="al-label">טלפון</span>
             <strong className="al-ltr">{B.phone || '—'}</strong>
-            {B.phone && <a href={`tel:${B.phone}`} className="al-btn al-btn-yellow"><Icon name="phone" size={17} />חייגו עכשיו</a>}
+            {B.phone && (
+              <div className="al-tile-btns">
+                <a href={`tel:${B.phone}`} className="is-call"><Icon name="phone" size={17} />חייגו עכשיו</a>
+                {B.waHref && <a href={B.waHref} target="_blank" rel="noopener noreferrer" className="is-wa"><Icon name="wa" size={17} />וואטסאפ</a>}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -187,8 +192,8 @@ export default async function LandingPage() {
                   {B.email && <div><dt>מייל</dt><dd><a href={`mailto:${B.email}`}>{B.email}</a></dd></div>}
                 </dl>
                 <div className="al-contact-btns">
-                  {B.wazeUrl && <a href={B.wazeUrl} target="_blank" rel="noopener noreferrer" className="al-btn al-btn-navy"><Icon name="nav" size={16} />ניווט ב-Waze</a>}
-                  {B.mapsUrl && <a href={B.mapsUrl} target="_blank" rel="noopener noreferrer" className="al-btn al-btn-ghost-n">Google Maps</a>}
+                  {B.wazeUrl && <a href={B.wazeUrl} target="_blank" rel="noopener noreferrer" className="al-btn al-btn-ghost-n"><WazeLogo size={20} />ניווט ב-Waze</a>}
+                  {B.mapsUrl && <a href={B.mapsUrl} target="_blank" rel="noopener noreferrer" className="al-btn al-btn-ghost-n"><MapsPin size={18} />Google Maps</a>}
                 </div>
               </div>
               {mapSrc && <iframe className="al-map" src={mapSrc} title={`מפה: ${B.address}`} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />}

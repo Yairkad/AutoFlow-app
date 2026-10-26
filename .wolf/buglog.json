@@ -1388,5 +1388,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-26T12:00:00Z"
+  },
+  {
+    "id": "bug-072",
+    "timestamp": "2026-10-26T14:00:00Z",
+    "error_message": "Public site header not sticky on scroll",
+    "file": "components/landing/site.css",
+    "root_cause": "`.al-site { overflow-x: hidden }` makes the wrapper a scroll container, so position:sticky on the header sticks to it instead of the viewport",
+    "fix": "overflow-x: clip on .al-site (clips without creating a scroll container)",
+    "tags": [
+      "css",
+      "sticky",
+      "overflow",
+      "landing"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T14:00:00Z"
   }
 ]
