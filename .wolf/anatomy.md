@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T12:02:51.526Z
-> Files: 140 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T12:13:23.376Z
+> Files: 141 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -63,6 +63,10 @@
 - `C-Mobile.dc.html` — הצעה C מובייל (~2082 tok)
 - `canvas.json` (~732 tok)
 - `Main.dc.html` — קו עיצובי ותוכנית (~4459 tok)
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/promos/
+
+- `promo-layouts.html` — פריסות מבצעים – אוטו ליין (~4224 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/87679de7-aaf4-52fe-84d2-6fc592b21cba/scratchpad/
 
