@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T08:50:37.514Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T09:11:45.310Z
 > Files: 124 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -39,7 +39,7 @@
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/autoline-home/
 
-- `src.html` — אוטו ליין – דף הבית החדש (~6790 tok)
+- `src.html` — אוטו ליין – דף הבית החדש (~7108 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/homepage-design/project/
 
