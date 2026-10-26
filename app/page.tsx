@@ -50,9 +50,9 @@ export default async function LandingPage() {
 
   const links = [
     { href: '#services', label: 'שירותים' },
-    ...(B.intakeHref ? [{ href: B.intakeHref, label: 'בדיקה לפני קניה' }] : []),
+    ...(B.intakeHref ? [{ href: B.intakeHref, label: 'בדיקות קניה' }] : []),
+    { href: '/for-sale', label: 'רכבים למכירה' },
     ...(faq.length ? [{ href: '#faq', label: 'שאלות נפוצות' }] : []),
-    ...(reviews ? [{ href: '#reviews', label: 'ביקורות' }] : []),
     { href: '#contact', label: 'צור קשר' },
   ]
 

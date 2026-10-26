@@ -39,6 +39,7 @@ export default async function ForSalePage() {
 
   const links = [
     { href: '/#services', label: 'שירותים' },
+    ...(B.intakeHref ? [{ href: B.intakeHref, label: 'בדיקות קניה' }] : []),
     { href: '/for-sale', label: 'רכבים למכירה', current: true },
     { href: '/#contact', label: 'צור קשר' },
   ]

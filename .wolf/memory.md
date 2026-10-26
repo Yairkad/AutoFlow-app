@@ -2772,3 +2772,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:41 | Reviews switched to Places API (New) (legacy not offered to new projects), daily refresh; user set GOOGLE_PLACES_API_KEY in Vercel, Place ID ChIJ9S6jHnzFAhURZ1QJPW73CWE (to paste in settings), deployed branch — user: 'looks good' | lib/landing/googleReviews.ts | done | ~10k |
 | 11:47 | Created app/zz-preview/page.tsx | — | ~532 |
 | 11:48 | Landing fixes: removed בס״ד from header, sticky header fixed (overflow-x clip), phone tile call+WhatsApp buttons, address tile Waze/Maps logo buttons full-width | site.css, page.tsx, icons.tsx, SiteHeader.tsx | done | ~15k |
+| 11:51 | Top nav: + רכבים למכירה, - ביקורות, 'בדיקה לפני קניה'→'בדיקות קניה' (home + for-sale) | app/page.tsx, app/for-sale/page.tsx | done | ~2k |
