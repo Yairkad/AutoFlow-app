@@ -17,7 +17,8 @@ export default function ContactFab({ phone, waHref }: { phone: string; waHref: s
   if (!phone && !waHref) return null
 
   return (
-    <aside className="al-fab" aria-label="יצירת קשר מהיר">
+    // a div with the landmark role: globals.css styles bare <aside> as the app sidebar drawer on mobile
+    <div className="al-fab" role="complementary" aria-label="יצירת קשר מהיר">
       {open && (
         <div className="al-fab-menu" id="al-fab-menu" onClick={() => setOpen(false)}>
           {waHref && <a href={waHref} target="_blank" rel="noopener noreferrer" className="al-fab-wa"><Icon name="wa" />וואטסאפ</a>}
@@ -27,6 +28,6 @@ export default function ContactFab({ phone, waHref }: { phone: string; waHref: s
       <button type="button" className="al-fab-btn" aria-label="יצירת קשר" aria-expanded={open} aria-controls="al-fab-menu" onClick={() => setOpen(o => !o)}>
         {open ? <Icon name="x" size={24} stroke={2.4} /> : <Icon name="chat" size={28} />}
       </button>
-    </aside>
+    </div>
   )
 }

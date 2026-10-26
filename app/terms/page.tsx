@@ -33,7 +33,7 @@ export default async function TermsPage() {
         <Link href="/" style={{ color: '#F5C800', fontWeight: 800, fontSize: '20px', textDecoration: 'none', letterSpacing: '-0.5px' }}>
           {name}
         </Link>
-        <Link href="/" style={{ color: '#fff', fontSize: '14px', opacity: 0.8, textDecoration: 'none' }}>
+        <Link href="/" style={{ color: '#fff', fontSize: '14px', opacity: 0.8, textDecoration: 'none', display: 'inline-block', padding: '12px 0' }}>
           ← חזרה לדף הבית
         </Link>
       </header>
@@ -141,10 +141,10 @@ export default async function TermsPage() {
         </Section>
 
         <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', gap: '32px', flexWrap: 'wrap' }}>
-          <Link href="/" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px' }}>
+          <Link href="/" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px', display: 'inline-block', padding: '12px 0' }}>
             ← חזרה לדף הבית
           </Link>
-          <Link href="/privacy" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px' }}>
+          <Link href="/privacy" style={{ color: '#1a2a6c', fontWeight: 600, textDecoration: 'none', fontSize: '15px', display: 'inline-block', padding: '12px 0' }}>
             מדיניות פרטיות
           </Link>
         </div>

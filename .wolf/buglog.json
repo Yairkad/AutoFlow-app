@@ -1472,5 +1472,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-26T16:00:00Z"
+  },
+  {
+    "id": "bug-077",
+    "timestamp": "2026-10-26T18:00:00Z",
+    "error_message": "Floating contact button jumped to the right / partly off-screen on phones",
+    "file": "components/landing/ContactFab.tsx",
+    "root_cause": "FAB was changed to <aside> for the landmark; globals.css styles bare `aside` as the app sidebar drawer at <=900px (position/right/transform)",
+    "fix": "<div role=\"complementary\" aria-label> instead of <aside> — same landmark, no app-shell CSS",
+    "tags": [
+      "css",
+      "globals",
+      "aside",
+      "landing",
+      "mobile"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-26T18:00:00Z"
   }
 ]
