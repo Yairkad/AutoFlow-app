@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T12:40:35.781Z
-> Files: 167 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T13:29:15.155Z
+> Files: 168 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -619,6 +619,7 @@
 
 - `ReceiveClient.tsx` — office: opened from the management app (/tires/receive) instead of the yard terminal (~9794 tok)
 - `SearchSheet.tsx` — 'numeric' opens the phone's number pad (tire sizes); 'search' the normal keyboard (~1753 tok)
+- `SessionItemsEditor.tsx` — SessionItemsEditor — renders table (~2336 tok)
 - `TireLookupClient.tsx` — normalizeTireSize (~1660 tok)
 - `YardDashboard.tsx` — YardDashboard (~1826 tok)
 - `YardLogin.tsx` — Shown as a switch-employee overlay (with a cancel button) instead of the full login screen (~1416 tok)
