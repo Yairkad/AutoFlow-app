@@ -351,7 +351,7 @@ export default function Sidebar({
             onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
             onMouseLeave={e => (e.currentTarget.style.opacity = '0.4')}
           >
-            ✦ ערוך סידור תפריט
+            ערוך סידור תפריט
           </button>
         )}
       </aside>

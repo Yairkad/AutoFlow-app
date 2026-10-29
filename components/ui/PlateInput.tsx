@@ -77,7 +77,7 @@ export default function PlateInput({ module, onFill }: Props) {
             fontFamily: 'inherit',
           }}
         >
-          {loading ? '⏳' : '🔍 משיכת פרטים'}
+          {loading ? '⏳' : 'משיכת פרטים'}
         </button>
       </div>
 

@@ -85,7 +85,7 @@ export default function QuickExpenseModal({
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>סגור</Button>
-          <Button onClick={save} loading={saving}>💾 שמור והמשך</Button>
+          <Button onClick={save} loading={saving}>שמור והמשך</Button>
         </>
       }
     >

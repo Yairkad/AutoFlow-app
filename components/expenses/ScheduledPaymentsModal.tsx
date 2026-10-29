@@ -782,7 +782,7 @@ export default function ScheduledPaymentsModal({
                   cursor: 'pointer',
                 }}
               >
-                📥 ייבא Excel
+                ייבא Excel
               </button>
               {rows.length > 0 && (
                 <button
@@ -795,7 +795,7 @@ export default function ScheduledPaymentsModal({
                     cursor: exporting ? 'wait' : 'pointer', opacity: exporting ? 0.6 : 1,
                   }}
                 >
-                  {exporting ? 'מכין...' : '📊 ייצא Excel'}
+                  {exporting ? 'מכין...' : 'ייצא Excel'}
                 </button>
               )}
               <Button size="sm" onClick={openAdd}>+ הוסף תשלום</Button>
@@ -915,13 +915,13 @@ export default function ScheduledPaymentsModal({
         footer={
           seriesPreview ? (
             <>
-              <Button variant="secondary" onClick={backToEditSeries}>✏️ חזרה לעריכה</Button>
+              <Button variant="secondary" onClick={backToEditSeries}>חזרה לעריכה</Button>
               <Button onClick={confirmSeriesCreate} loading={saving}>✓ אשר וצור</Button>
             </>
           ) : (
             <>
               <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
-              <Button onClick={save} loading={saving}>💾 שמור</Button>
+              <Button onClick={save} loading={saving}>שמור</Button>
             </>
           )
         }
@@ -1055,7 +1055,7 @@ export default function ScheduledPaymentsModal({
                   background: fMethod === m ? 'var(--success-soft)' : '#f8fafc',
                   color: fMethod === m ? 'var(--primary)' : 'var(--text-muted)',
                 }}>
-                  {m === 'check' ? "📝 צ'ק" : '🏦 העברה בנקאית'}
+                  {m === 'check' ? "צ'ק" : 'העברה בנקאית'}
                 </button>
               ))}
             </div>
@@ -1101,7 +1101,7 @@ export default function ScheduledPaymentsModal({
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonthShort(mk)}</span>
                     <button type="button" onClick={() => toggleMonthDebtSelected(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
-                      {debts.every(d => selectedDebtIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                      {debts.every(d => selectedDebtIds.has(d.id)) ? 'בטל בחירת חודש' : 'בחר חודש'}
                     </button>
                   </div>
                   {debts.map(d => {
@@ -1145,7 +1145,7 @@ export default function ScheduledPaymentsModal({
         footer={
           <>
             <Button variant="secondary" onClick={() => setPayOpen(false)}>ביטול</Button>
-            <Button onClick={markPaid} loading={paySaving}>✅ אשר תשלום</Button>
+            <Button variant="success" onClick={markPaid} loading={paySaving}>אשר תשלום</Button>
           </>
         }
       >

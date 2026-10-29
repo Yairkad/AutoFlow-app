@@ -1165,7 +1165,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         open={modal}
         onClose={() => setModal(false)}
         title={editItem ? `עריכת ${tab === 'expenses' ? 'הוצאה' : 'הכנסה'}` : `הוספת ${tab === 'expenses' ? 'הוצאה' : 'הכנסה'}`}
-        footer={<><Button variant="secondary" onClick={() => setModal(false)}>ביטול</Button><Button onClick={save} loading={saving}>💾 שמור</Button></>}
+        footer={<><Button variant="secondary" onClick={() => setModal(false)}>ביטול</Button><Button onClick={save} loading={saving}>שמור</Button></>}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <Input label="תאריך" type="date" value={fDate} onChange={e => setFDate(e.target.value)} />
@@ -1286,7 +1286,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                           background: fSchedMethod === m ? '#e0f2fe' : '#fff',
                           color: fSchedMethod === m ? '#0369a1' : 'var(--text-muted)',
                         }}>
-                          {m === 'check' ? "📝 צ'ק" : '🏦 העברה בנקאית'}
+                          {m === 'check' ? "צ'ק" : 'העברה בנקאית'}
                         </button>
                       ))}
                     </div>
@@ -1376,7 +1376,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         onClose={() => { setRecFormModal(false); setRecListModal(true) }}
         title={editRec ? 'עריכת הוצאה קבועה' : 'הוצאה קבועה חדשה'}
         maxWidth={460}
-        footer={<><Button variant="secondary" onClick={() => { setRecFormModal(false); setRecListModal(true) }}>ביטול</Button><Button onClick={saveRec} loading={recSaving}>💾 שמור</Button></>}
+        footer={<><Button variant="secondary" onClick={() => { setRecFormModal(false); setRecListModal(true) }}>ביטול</Button><Button onClick={saveRec} loading={recSaving}>שמור</Button></>}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <Input label="תיאור" placeholder="חשמל, שכירות..." value={rfDesc} onChange={e => setRfDesc(e.target.value)} />
@@ -1434,7 +1434,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           footer={
             <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
               <Button variant="secondary" onClick={handleVarSkip} style={{ marginLeft: 'auto' }}>דלג לחודש זה</Button>
-              <Button onClick={handleVarAdd} loading={varSaving}>✅ הוסף</Button>
+              <Button onClick={handleVarAdd} loading={varSaving}>הוסף</Button>
             </div>
           }
         >

@@ -1219,14 +1219,14 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             )}
             <div style={{ display: 'flex', gap: 8 }}>
               <Button onClick={() => uploadCarDriveFile(pendingDoc, docName)} disabled={!docName.trim() || carDriveUploading}>
-                {carDriveUploading ? '⏳ מעלה...' : '📤 שמור ב-Drive'}
+                {carDriveUploading ? 'מעלה...' : 'שמור ב-Drive'}
               </Button>
               <button onClick={() => { setPendingDoc(null); setDocName('') }} disabled={carDriveUploading} style={btn}>ביטול</button>
             </div>
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
-            {isMobile && <button onClick={() => setShowCarScanner(true)} style={btn}>📷 סרוק</button>}
+            {isMobile && <button onClick={() => setShowCarScanner(true)} style={btn}>סרוק</button>}
             <label style={{ cursor: 'pointer' }}>
               <input type="file" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setPendingDoc(f); setDocName('') } e.target.value = '' }} />
               <span style={btn}>📤 הוסף מסמך</span>
@@ -1483,7 +1483,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
                         <td style={td()}>{fmtKm(car.km) || '—'}</td>
                         <td style={{ ...td(), color: 'var(--danger)', fontSize: 11, maxWidth: 260 }}>{car.notes?.split('\n').filter(l => l.includes('❌')).slice(-1)[0] || '—'}</td>
                         <td style={td()}>
-                          <button onClick={() => changeCarStatus(car.id, 'checking')} style={{ ...actionBtn('#0369a1', '#fff'), padding: '3px 10px', fontSize: 11 }}>🔄 החזר לבדיקה</button>
+                          <button onClick={() => changeCarStatus(car.id, 'checking')} style={{ ...actionBtn('#0369a1', '#fff'), padding: '3px 10px', fontSize: 11 }}>החזר לבדיקה</button>
                         </td>
                       </tr>
                     ))}
@@ -1638,7 +1638,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             <button
               onClick={e => { e.stopPropagation(); printBuyRequest(req) }}
               style={{ flex: 1, padding: '7px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: '1.5px solid #bbf7d0', background: 'var(--success-soft)', color: 'var(--success)', cursor: 'pointer', fontFamily: 'inherit' }}>
-              🖨️ הדפס טופס
+              הדפס טופס
             </button>
             <a
               href={buildYad2Url(req)}
@@ -2007,7 +2007,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
           <Button variant="secondary" onClick={() => setCarModal(false)}>ביטול</Button>
-          <Button onClick={saveCar}>💾 שמור</Button>
+          <Button onClick={saveCar}>שמור</Button>
         </div>
       </Modal>
 
@@ -2054,7 +2054,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
               <Field label="הערות"><textarea value={sellForm.notes} onChange={e => setSellForm(f=>({...f,notes:e.target.value}))} rows={2} style={{...inp(),resize:'vertical'}} /></Field>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
                 <Button variant="secondary" onClick={() => setSellModal(false)}>ביטול</Button>
-                <Button onClick={confirmSell}>✅ אשר מכירה</Button>
+                <Button variant="success" onClick={confirmSell}>אשר מכירה</Button>
               </div>
             </div>
           ) : null
@@ -2079,7 +2079,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           {declineErr && <span style={{ fontSize: 12, color: 'var(--danger)' }}>יש למלא סיבה</span>}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <Button variant="secondary" onClick={() => setDeclineModal(false)}>ביטול</Button>
-            <Button variant="danger" onClick={confirmDecline}>❌ לא קונים</Button>
+            <Button variant="danger" onClick={confirmDecline}>לא קונים</Button>
           </div>
         </div>
       </Modal>
@@ -2094,7 +2094,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           <Field label="הערות"><textarea value={buyerForm.notes} onChange={e => setBuyerForm(f=>({...f,notes:e.target.value}))} rows={2} style={{...inp(),resize:'vertical'}} /></Field>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <Button variant="secondary" onClick={() => setBuyerModal(false)}>ביטול</Button>
-            <Button onClick={saveBuyer}>🟡 שמור</Button>
+            <Button onClick={saveBuyer}>שמור</Button>
           </div>
         </div>
       </Modal>
@@ -2172,7 +2172,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           <Field label="הערות"><textarea value={saleReqForm.notes} onChange={e => setSaleReqForm(f=>({...f,notes:e.target.value}))} rows={2} style={{...inp(),resize:'vertical'}} /></Field>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <Button variant="secondary" onClick={() => setSaleReqModal(false)}>ביטול</Button>
-            <Button onClick={saveSaleReq}>💾 שמור</Button>
+            <Button onClick={saveSaleReq}>שמור</Button>
           </div>
         </div>
       </Modal>
@@ -2233,7 +2233,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           <Field label="הערות"><textarea value={reqForm.notes} onChange={e => setReqForm(f=>({...f,notes:e.target.value}))} rows={2} style={{...inp(),resize:'vertical'}} /></Field>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <Button variant="secondary" onClick={() => setReqModal(false)}>ביטול</Button>
-            <Button onClick={saveReq}>💾 שמור</Button>
+            <Button onClick={saveReq}>שמור</Button>
           </div>
         </div>
       </Modal>

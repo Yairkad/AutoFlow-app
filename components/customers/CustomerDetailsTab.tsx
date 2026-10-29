@@ -413,8 +413,8 @@ export default function CustomerDetailsTab({
                   💬 ווצאפ
                 </a>
               )}
-              <Button variant="outline" size="sm" onClick={() => openModal(selected)}>✏️ ערוך</Button>
-              <Button variant="danger" size="sm" onClick={() => deleteCustomer(selected)}>🗑 מחק</Button>
+              <Button variant="outline" size="sm" onClick={() => openModal(selected)}>ערוך</Button>
+              <Button variant="danger" size="sm" onClick={() => deleteCustomer(selected)}>מחק</Button>
               <button
                 onClick={() => setSelected(null)}
                 style={{ padding: '6px 10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', color: 'var(--text-muted)' }}
@@ -584,7 +584,7 @@ export default function CustomerDetailsTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowModal(false)}>ביטול</Button>
-              <Button loading={saving} onClick={saveCustomer}>💾 שמור</Button>
+              <Button loading={saving} onClick={saveCustomer}>שמור</Button>
             </div>
           </div>
         </div>
@@ -665,7 +665,7 @@ export default function CustomerDetailsTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowRecItemModal(false)}>ביטול</Button>
-              <Button loading={riSaving} onClick={saveRecItem}>💾 שמור</Button>
+              <Button loading={riSaving} onClick={saveRecItem}>שמור</Button>
             </div>
           </div>
         </div>
@@ -688,7 +688,7 @@ export default function CustomerDetailsTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowActionModal(false)}>ביטול</Button>
-              <Button loading={aSaving} onClick={saveAction}>💾 שמור</Button>
+              <Button loading={aSaving} onClick={saveAction}>שמור</Button>
             </div>
           </div>
         </div>

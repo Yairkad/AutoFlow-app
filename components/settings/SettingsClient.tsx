@@ -210,7 +210,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
           </div>
         </div>
 
-        <Button variant="secondary" style={{ flexShrink: 0 }} onClick={() => setEditing(true)}>✏️ עריכה</Button>
+        <Button variant="secondary" style={{ flexShrink: 0 }} onClick={() => setEditing(true)}>עריכה</Button>
       </div>
 
       {/* ── Edit Modal ── */}
@@ -297,7 +297,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
             {/* Action buttons */}
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '22px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
               <Button variant="secondary" onClick={cancel}>ביטול</Button>
-              <Button loading={saving} onClick={save}>💾 שמור</Button>
+              <Button loading={saving} onClick={save}>שמור</Button>
             </div>
           </div>
         </div>
@@ -514,7 +514,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
               </div>
 
               <div style={{ display: 'flex', gap: '8px' }}>
-                <Button loading={saving} onClick={saveEdit}>💾 שמור</Button>
+                <Button loading={saving} onClick={saveEdit}>שמור</Button>
                 <Button variant="secondary" onClick={() => setEditing(null)}>ביטול</Button>
               </div>
             </div>
@@ -660,7 +660,7 @@ function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType
                 <option value="30">חודש</option>
               </select>
             </div>
-            <Button loading={creating} onClick={createToken}>🔗 צור קישור</Button>
+            <Button loading={creating} onClick={createToken}>צור קישור</Button>
           </div>
         </div>
       )}
@@ -857,7 +857,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                 autoFocus
               />
               {pinError && <div style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{pinError}</div>}
-              <Button fullWidth onClick={verifyPin}>🔓 פתח כספת</Button>
+              <Button fullWidth onClick={verifyPin}>פתח כספת</Button>
             </>
           )}
         </div>
@@ -876,8 +876,8 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>({items.length} פריטים)</span>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <Button variant="secondary" size="sm" onClick={() => { setChangingPin(true); setNewPin(''); setNewPinConfirm(''); setPinError('') }}>🔑 שינוי קוד</Button>
-          <Button variant="secondary" size="sm" onClick={() => { setUnlocked(false); setPinInput(''); setPinError('') }}>🔒 נעל</Button>
+          <Button variant="secondary" size="sm" onClick={() => { setChangingPin(true); setNewPin(''); setNewPinConfirm(''); setPinError('') }}>שינוי קוד</Button>
+          <Button variant="secondary" size="sm" onClick={() => { setUnlocked(false); setPinInput(''); setPinError('') }}>נעל</Button>
           <Button size="sm" onClick={openAdd}>+ הוסף</Button>
         </div>
       </div>
@@ -945,7 +945,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
             <textarea className="form-input" style={{ height: '70px', resize: 'vertical' }} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="פרטים נוספים..." />
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button loading={saving} onClick={save}>שמור</Button>
             <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
@@ -972,7 +972,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', flexWrap: 'wrap' }}>
                         <span style={{ color: 'var(--text-muted)', fontSize: '12px', minWidth: '80px' }}>שם משתמש:</span>
                         <code style={{ flex: 1, minWidth: '80px', direction: 'ltr', fontSize: '12px', wordBreak: 'break-all' }}>{item.username}</code>
-                        <button onClick={() => copyText(item.username!, 'שם משתמש')} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>📋 העתק</button>
+                        <button onClick={() => copyText(item.username!, 'שם משתמש')} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>העתק</button>
                       </div>
                     )}
                     {item.password && (
@@ -981,8 +981,8 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                         <code style={{ flex: 1, minWidth: '80px', direction: 'ltr', fontSize: '12px', letterSpacing: isRevealed ? 'normal' : '2px', wordBreak: 'break-all' }}>
                           {isRevealed ? item.password : '•'.repeat(Math.min(item.password.length, 12))}
                         </code>
-                        <button onClick={() => toggleReveal(item.id)} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', flexShrink: 0 }}>{isRevealed ? '🙈 הסתר' : '👁 הצג'}</button>
-                        <button onClick={() => copyText(item.password!, 'סיסמא')} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>📋 העתק</button>
+                        <button onClick={() => toggleReveal(item.id)} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', flexShrink: 0 }}>{isRevealed ? 'הסתר' : 'הצג'}</button>
+                        <button onClick={() => copyText(item.password!, 'סיסמא')} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>העתק</button>
                       </div>
                     )}
                     {item.notes && (
@@ -1141,7 +1141,7 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button loading={saving} onClick={save}>שמור</Button>
             <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
@@ -1275,7 +1275,7 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button loading={saving} onClick={save}>שמור</Button>
             <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
@@ -1384,7 +1384,7 @@ function FaqSection({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button loading={saving} onClick={save}>שמור</Button>
             <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
@@ -1469,7 +1469,7 @@ function PricesSection({ supabase, tenantId, showToast }: { supabase: ReturnType
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button loading={saving} onClick={save}>שמור</Button>
             <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
@@ -1649,7 +1649,7 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
             opacity: drivingUp || !driveConnected ? 0.6 : 1, fontFamily: 'inherit',
           }}
         >
-          {drivingUp ? 'מגבה...' : '☁️ גבה עכשיו לדרייב'}
+          {drivingUp ? 'מגבה...' : 'גבה עכשיו לדרייב'}
         </button>
       </div>
 
@@ -1670,7 +1670,7 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
             opacity: exporting ? 0.7 : 1, fontFamily: 'inherit',
           }}
         >
-          {exporting ? 'מייצא...' : '⬇️ ייצא גיבוי'}
+          {exporting ? 'מייצא...' : 'ייצא גיבוי'}
         </button>
       </div>
 
@@ -1865,7 +1865,7 @@ export default function SettingsClient() {
                     background: 'transparent', color: 'var(--text-muted)', whiteSpace: 'nowrap',
                   }}
                 >
-                  {driveMerging ? '⏳ ממזג...' : '🗂️ מזג תיקיות כפולות'}
+                  {driveMerging ? 'ממזג...' : 'מזג תיקיות כפולות'}
                 </button>
               )}
               <a

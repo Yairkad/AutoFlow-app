@@ -455,7 +455,7 @@ export default function ProductsClient() {
         iconShadow="#ec489944"
         title="מוצרים"
         subtitle={viewOnly ? 'מצב צפיה בלבד' : undefined}
-        actions={!viewOnly ? <Button onClick={openAdd}>➕ מוצר חדש</Button> : <Button variant="outline" onClick={() => setShowPricelist(true)}>🖨️ מחירון</Button>}
+        actions={!viewOnly ? <Button onClick={openAdd}>מוצר חדש</Button> : <Button variant="outline" onClick={() => setShowPricelist(true)}>מחירון</Button>}
       />
 
       {/* Stats */}
@@ -762,7 +762,7 @@ export default function ProductsClient() {
               {/* Save */}
               <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                 <Button onClick={saveMovement} loading={mvSaving} style={{ width: '100%' }}>
-                  💾 רשום
+                  רשום
                 </Button>
               </div>
             </div>
@@ -840,7 +840,7 @@ export default function ProductsClient() {
         title={editId ? '✏️ עריכת מוצר' : '➕ הוספת מוצר'} maxWidth={640}
         footer={<>
           <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
-          <Button onClick={saveForm}>💾 {editId ? 'שמור שינויים' : 'שמור מוצר'}</Button>
+          <Button onClick={saveForm}>{editId ? 'שמור שינויים' : 'שמור מוצר'}</Button>
         </>}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', direction: 'rtl' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>

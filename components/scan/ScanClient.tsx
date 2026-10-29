@@ -341,7 +341,7 @@ export default function ScanClient() {
         </div>
         {mode === 'scan' ? (
           <button onClick={startCount} className={`bg-slate-800 text-white font-bold rounded-xl active:brightness-90 transition-all ${isMobile ? 'w-full' : ''}`} style={{ padding: '10px 18px', fontSize: '14px' }}>
-            📦 התחל ספירת מלאי
+            התחל ספירת מלאי
           </button>
         ) : (
           <div className={`flex gap-2 ${isMobile ? 'w-full' : ''}`}>
@@ -531,7 +531,7 @@ export default function ScanClient() {
             <p className="text-slate-500 text-sm">מחיר מכירה: <span style={{ fontWeight: 700, color: '#1e293b' }}>{foundItem.sell_price != null ? `₪${foundItem.sell_price}` : '—'}</span></p>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => openEdit(foundItem)} className="flex-1 bg-blue-600 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '11px' }}>✏️ ערוך כאן</button>
+            <button onClick={() => openEdit(foundItem)} className="flex-1 bg-blue-600 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '11px' }}>ערוך כאן</button>
             <button onClick={closeModal} className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all" style={{ padding: '11px' }}>סגור</button>
           </div>
         </Modal>
@@ -637,7 +637,7 @@ export default function ScanClient() {
                         background: newTireForm.condition === c ? (c === 'used' ? '#fef3c7' : 'var(--success-soft)') : '#fff',
                         color: newTireForm.condition === c ? (c === 'used' ? '#92400e' : 'var(--success)') : '#64748b',
                       }}>
-                        {c === 'new' ? '✓ חדש' : '♻ משומש'}
+                        {c === 'new' ? '✓ חדש' : 'משומש'}
                       </button>
                     ))}
                   </div>
@@ -725,7 +725,7 @@ export default function ScanClient() {
                     background: editForm.condition === c ? (c === 'used' ? '#fef3c7' : 'var(--success-soft)') : '#fff',
                     color: editForm.condition === c ? (c === 'used' ? '#92400e' : 'var(--success)') : '#64748b',
                   }}>
-                    {c === 'new' ? '✓ חדש' : '♻ משומש'}
+                    {c === 'new' ? '✓ חדש' : 'משומש'}
                   </button>
                 ))}
               </div>

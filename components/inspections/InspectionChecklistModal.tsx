@@ -899,7 +899,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
                 loading={saving}
                 style={{ fontSize: 14, fontWeight: 800, padding: '10px 0' }}
               >
-                🖨️ שמור והדפס ממצאים
+                שמור והדפס ממצאים
               </Button>
               <Button
                 variant="secondary"
@@ -907,7 +907,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
                 loading={saving}
                 style={{ flexShrink: 0, padding: '10px 18px', fontWeight: 700, whiteSpace: 'nowrap' }}
               >
-                💾 שמור
+                שמור
               </Button>
               <button
                 onClick={() => jumpTo(0)}

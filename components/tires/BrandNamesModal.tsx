@@ -52,7 +52,7 @@ export default function BrandNamesModal({ open, onClose, tenantId, brands, saved
     <Modal open={open} onClose={onClose} title="🔤 שמות חברות בעברית" maxWidth={520}
       footer={<>
         <Button variant="secondary" onClick={onClose}>ביטול</Button>
-        <Button loading={saving} onClick={save}>💾 שמור</Button>
+        <Button loading={saving} onClick={save}>שמור</Button>
       </>}>
       <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '10px' }}>
         שם אחד לכל חברה — חל על כל הצמיגים שלה. אפשר לחפש בעברית ובאנגלית, והתצוגה בעברית עם האנגלית מתחת.

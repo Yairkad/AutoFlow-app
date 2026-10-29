@@ -213,7 +213,7 @@ export default function RecurringTab({ rows, suppliers, tenantId, supabase, onRe
         footer={
           <>
             <Button variant="secondary" onClick={() => setModal(false)}>ביטול</Button>
-            <Button onClick={save} loading={saving}>💾 שמור</Button>
+            <Button onClick={save} loading={saving}>שמור</Button>
           </>
         }
       >

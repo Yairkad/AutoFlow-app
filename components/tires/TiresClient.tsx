@@ -654,7 +654,7 @@ export default function TiresClient() {
             { key: 'scan', label: 'בסריקה', icon: '📷', onClick: () => { window.location.href = '/tires/receive' } },
             { key: 'manual', label: 'בהקלדה ידנית', icon: '✍️', onClick: () => { setRecvItems([emptyRecvItem]); setRecvOpen(true) } },
           ]} />
-          <Button onClick={openAdd}>➕ צמיג חדש</Button>
+          <Button onClick={openAdd}>צמיג חדש</Button>
         </> : undefined}
       />
 
@@ -669,7 +669,7 @@ export default function TiresClient() {
         {missingCount > 0 && (
           <button onClick={() => { setTab('tires'); setFilterMissing('any') }} title="הצג צמיגים להשלמת פרטים"
             style={{ border: 'none', padding: 0, cursor: 'pointer', background: 'none', fontFamily: 'inherit', textAlign: 'inherit' }}>
-            <StatCard label='⚠ חסרי נתונים / מחיר' value={missingCount} color='orange' />
+            <StatCard label='חסרי נתונים / מחיר' value={missingCount} color='orange' />
           </button>
         )}
       </div>
@@ -806,7 +806,7 @@ export default function TiresClient() {
                                   background: (e.condition ?? t.condition) === 'used' ? '#fef3c7' : 'var(--success-soft)',
                                   color:      (e.condition ?? t.condition) === 'used' ? '#92400e' : 'var(--primary)',
                                 }}>
-                                {(e.condition ?? t.condition) === 'used' ? '♻ משומש' : '✓ חדש'}
+                                {(e.condition ?? t.condition) === 'used' ? 'משומש' : '✓ חדש'}
                               </button>
                               <div style={{ display: 'flex', gap: 4 }}>
                                 {([['commercial', 'מסחרי', '#fff7ed', '#c2410c'], ['reinforced', 'מחוזק', '#eff6ff', '#1d4ed8']] as const).map(([val, label, bg, color]) => (
@@ -859,7 +859,7 @@ export default function TiresClient() {
                             ) : (
                               <button onClick={() => enterEditForRow(t.id)} title="לחץ להשלמת מידה"
                                 style={{ fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                ⚠ חסרה מידה
+                                חסרה מידה
                               </button>
                             )
                           )}
@@ -1053,10 +1053,10 @@ export default function TiresClient() {
             <Button variant="danger" style={{ marginLeft: 'auto' }} onClick={async () => {
               const t = tires.find(x => x.id === editId)
               if (t) { setFormOpen(false); await deleteTire(t) }
-            }}>🗑 מחק</Button>
+            }}>מחק</Button>
           )}
           <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
-          <Button onClick={saveForm} loading={formSaving}>💾 {editId ? 'שמור שינויים' : 'שמור צמיג'}</Button>
+          <Button onClick={saveForm} loading={formSaving}>{editId ? 'שמור שינויים' : 'שמור צמיג'}</Button>
         </>}>
 
         <div style={{ direction: 'rtl', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -1218,7 +1218,7 @@ export default function TiresClient() {
                     color: form.condition === c ? (c === 'used' ? '#92400e' : 'var(--primary)') : 'var(--text-muted)',
                     fontFamily: 'inherit',
                   }}>
-                    {c === 'new' ? '✓ חדש' : '♻ משומש'}
+                    {c === 'new' ? '✓ חדש' : 'משומש'}
                   </button>
                 ))}
               </div>
@@ -1289,7 +1289,7 @@ export default function TiresClient() {
         title="✍️ קליטה ידנית למלאי" maxWidth={600}
         footer={<>
           <Button variant="secondary" onClick={() => setRecvOpen(false)}>ביטול</Button>
-          <Button onClick={saveReceiving} loading={recvSaving}>💾 קלוט הזמנה</Button>
+          <Button onClick={saveReceiving} loading={recvSaving}>קלוט הזמנה</Button>
         </>}>
         <div style={{ direction: 'rtl', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {suppliers.length > 0 && (

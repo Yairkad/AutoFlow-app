@@ -1049,10 +1049,10 @@ export default function SupplierTrackingTab({
           <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Button onClick={() => openSuppModal()}>+ הוסף חשבונית/זיכוי</Button>
             {bulkSelectMode && (
-              <Button variant="secondary" onClick={() => { setBulkSelectMode(false); setBulkSelectedIds(new Set()) }}>✖ בטל בחירה</Button>
+              <Button variant="secondary" onClick={() => { setBulkSelectMode(false); setBulkSelectedIds(new Set()) }}>בטל בחירה</Button>
             )}
             {bulkSelectMode && bulkSelectedIds.size > 0 && (
-              <Button onClick={startBulkEdit}>✏️ ערוך נבחרים ({bulkSelectedIds.size})</Button>
+              <Button onClick={startBulkEdit}>ערוך נבחרים ({bulkSelectedIds.size})</Button>
             )}
             <div style={{ display: 'flex', gap: '6px' }}>
               <FilterBtn f="open" label="פתוחים" />
@@ -1172,7 +1172,7 @@ export default function SupplierTrackingTab({
                         {group.totalBal > 0 && (
                           <button onClick={() => openPaySupplier(group.sid)}
                             style={{ padding: '4px 12px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
-                            💰 תשלום
+                            תשלום
                           </button>
                         )}
                         {group.sid && (
@@ -1227,7 +1227,7 @@ export default function SupplierTrackingTab({
                                   </span>
                                   {!it.active && <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>(לא פעיל)</span>}
                                   {it.type === 'meter' && it.active && (
-                                    <button onClick={() => openMeterReadModal(it)} style={{ padding: '3px 9px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>📊 הזן קריאת מונה</button>
+                                    <button onClick={() => openMeterReadModal(it)} style={{ padding: '3px 9px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>הזן קריאת מונה</button>
                                   )}
                                   <button onClick={() => openRecItemModal(group.sid!, it)} style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>✏️</button>
                                   <button onClick={() => deleteRecItem(it.id)} style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>🗑</button>
@@ -1513,12 +1513,12 @@ export default function SupplierTrackingTab({
                           <button type="button" onClick={() => setScannerForLine(i)} disabled={uploadingLineIdx === i} style={{
                             padding: '5px 10px', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: '6px',
                             fontSize: '11px', fontWeight: 600, cursor: uploadingLineIdx === i ? 'default' : 'pointer', color: 'var(--text)',
-                          }}>📷 צלם</button>
+                          }}>צלם</button>
                           <span className="hide-mobile" style={{ display: 'contents' }}>
                             <button type="button" onClick={() => scanLineWithAgent(i)} disabled={agentScanningIdx !== null || uploadingLineIdx === i} style={{
                               padding: '5px 10px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px',
                               fontSize: '11px', fontWeight: 700, cursor: agentScanningIdx !== null ? 'default' : 'pointer', color: '#1d4ed8',
-                            }}>{agentScanningIdx === i ? 'סורק...' : '📠 סרוק'}</button>
+                            }}>{agentScanningIdx === i ? 'סורק...' : 'סרוק'}</button>
                             {hasSavedScanner && !agentMissing && i === 0 && (
                               <button type="button" onClick={() => openScannerPicker(null)} title="בחירת סורק אחר מבין הסורקים המחוברים למחשב"
                                 style={{ alignSelf: 'center', background: 'none', border: 'none', padding: 0, fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -1554,7 +1554,7 @@ export default function SupplierTrackingTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={closeSuppModal}>{bulkQueue && bulkQueue.length > 1 ? 'דלג ⏭' : 'ביטול'}</Button>
-              <Button loading={sSaving} onClick={saveSuppDebt}>💾 שמור</Button>
+              <Button loading={sSaving} onClick={saveSuppDebt}>שמור</Button>
             </div>
           </div>
         </div>
@@ -1616,7 +1616,7 @@ export default function SupplierTrackingTab({
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0 8px' }}>
                   <span style={{ fontSize: '13px', fontWeight: 600 }}>בחר אילו חודשים לשלם</span>
-                  <button type="button" onClick={selectAllPayDebts} style={{ padding: '4px 10px', background: 'var(--success-soft)', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>☑ שלם הכל</button>
+                  <button type="button" onClick={selectAllPayDebts} style={{ padding: '4px 10px', background: 'var(--success-soft)', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>שלם הכל</button>
                 </div>
                 {payOpenCreditTotal > 0 && (
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '-4px 0 8px' }}>
@@ -1629,7 +1629,7 @@ export default function SupplierTrackingTab({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
                         <button type="button" onClick={() => toggleMonthPayDebts(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
-                          {debts.every(d => paySelectedIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                          {debts.every(d => paySelectedIds.has(d.id)) ? 'בטל בחירת חודש' : 'בחר חודש'}
                         </button>
                       </div>
                       {debts.map(d => {
@@ -1747,7 +1747,7 @@ export default function SupplierTrackingTab({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
                         <button type="button" onClick={() => toggleMonthAllocDebts(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
-                          {debts.every(d => allocSelectedIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                          {debts.every(d => allocSelectedIds.has(d.id)) ? 'בטל בחירת חודש' : 'בחר חודש'}
                         </button>
                       </div>
                       {debts.map(d => {
@@ -1985,7 +1985,7 @@ export default function SupplierTrackingTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowRecItemModal(false)}>ביטול</Button>
-              <Button loading={riSaving} onClick={saveRecItem}>💾 שמור</Button>
+              <Button loading={riSaving} onClick={saveRecItem}>שמור</Button>
             </div>
           </div>
         </div>
@@ -2018,7 +2018,7 @@ export default function SupplierTrackingTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setMeterReadItem(null)}>ביטול</Button>
-              <Button loading={mrSaving} onClick={saveMeterReading}>💾 שמור</Button>
+              <Button loading={mrSaving} onClick={saveMeterReading}>שמור</Button>
             </div>
           </div>
         </div>
@@ -2091,7 +2091,7 @@ export default function SupplierTrackingTab({
                   onClick={() => { setShowPrintChoice(false); setPrintMode('ledger') }}
                   disabled={!printSupplierId || (printRangeMode === 'months' && printMonths.size === 0)}
                   style={{ width: '100%' }}
-                >🖨️ הדפס כרטסת</Button>
+                >הדפס כרטסת</Button>
               </div>
 
               <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
@@ -2102,7 +2102,7 @@ export default function SupplierTrackingTab({
                 <Button
                   onClick={() => { setShowPrintChoice(false); setPrintMode('open-summary') }}
                   style={{ width: '100%' }}
-                >📋 הדפס סיכום חובות פתוחים</Button>
+                >הדפס סיכום חובות פתוחים</Button>
               </div>
 
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>

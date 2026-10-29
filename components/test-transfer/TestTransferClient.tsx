@@ -493,7 +493,7 @@ export default function TestTransferClient() {
             </div>
             <div style={{ paddingTop: 20 }}>
               <Button size="sm" onClick={handlePlateSearch} disabled={plateLoading}>
-                {plateLoading ? '...' : '🔍 מלא אוטומטית'}
+                {plateLoading ? '...' : 'מלא אוטומטית'}
               </Button>
             </div>
           </div>
@@ -627,7 +627,7 @@ export default function TestTransferClient() {
               disabled={saving}
               style={{ fontSize: 15, fontWeight: 800, padding: '10px 0' }}
             >
-              {saving ? 'שומר...' : '💾 שמור שינוע'}
+              {saving ? 'שומר...' : 'שמור שינוע'}
             </Button>
             <button
               onClick={clearForm}
@@ -639,7 +639,7 @@ export default function TestTransferClient() {
                 color: 'var(--text-muted)', whiteSpace: 'nowrap',
               }}
             >
-              🗑️ נקה
+              נקה
             </button>
           </div>
         </div>
@@ -879,7 +879,7 @@ export default function TestTransferClient() {
               }}>
                 <Button fullWidth onClick={handleSave} disabled={saving}
                   style={{ fontSize: 15, fontWeight: 800, padding: '10px 0' }}>
-                  {saving ? 'שומר...' : '💾 שמור'}
+                  {saving ? 'שומר...' : 'שמור'}
                 </Button>
                 <button onClick={clearForm} style={{
                   flexShrink: 0, padding: '10px 16px',

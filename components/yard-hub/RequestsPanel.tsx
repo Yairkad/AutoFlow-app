@@ -359,7 +359,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
           {payStatus === 'partial' && payFor.quoted_price != null && Number(payAmount) > 0 && (
             <div className="font-bold text-amber-800" style={{ fontSize: 15 }}>נשאר לתשלום: ₪{round2(payFor.quoted_price - Number(payAmount))}</div>
           )}
-          <button onClick={savePayment} className="bg-green-600 text-white rounded-xl font-black" style={{ padding: '14px', fontSize: '18px' }}>💾 שמור</button>
+          <button onClick={savePayment} className="bg-green-600 text-white rounded-xl font-black" style={{ padding: '14px', fontSize: '18px' }}>שמור</button>
         </Sheet>
       )}
 
@@ -394,7 +394,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
               className={inputCls} style={inputStyle} />
           </Field>
           <button onClick={() => saveCall()} className="bg-green-600 text-white rounded-xl font-black" style={{ padding: '14px', fontSize: '18px' }}>
-            {callFor.withStatus ? '✓ עודכן הלקוח' : '💾 שמור'}
+            {callFor.withStatus ? '✓ עודכן הלקוח' : 'שמור'}
           </button>
           {callFor.withStatus && (
             <button onClick={() => saveCall(true)} className="text-slate-500 font-semibold" style={{ padding: 6 }}>
@@ -437,7 +437,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
           <Field label="רכב"><input value={form.plate} onChange={e => f('plate', e.target.value)} className={inputCls} style={inputStyle} /></Field>
           <Field label="הערות"><input value={form.notes} onChange={e => f('notes', e.target.value)} className={inputCls} style={inputStyle} /></Field>
           <button onClick={save} disabled={saving} className="bg-green-600 text-white rounded-xl font-black disabled:opacity-60" style={{ padding: '14px', fontSize: '18px' }}>
-            {saving ? 'שומר...' : '💾 שמור'}
+            {saving ? 'שומר...' : 'שמור'}
           </button>
         </Sheet>
       )}

@@ -526,7 +526,7 @@ export default function ChecksJournalClient() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setPayItem(null)}>ביטול</Button>
-            <Button onClick={confirmPay} loading={paySaving}>✅ אשר תשלום</Button>
+            <Button variant="success" onClick={confirmPay} loading={paySaving}>אשר תשלום</Button>
           </>
         }
       >

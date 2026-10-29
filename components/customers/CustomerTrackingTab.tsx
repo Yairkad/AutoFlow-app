@@ -728,10 +728,10 @@ export default function CustomerTrackingTab({
         <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
           <Button onClick={() => openDebtModal()}>+ הוסף חשבונית/זיכוי</Button>
           {bulkSelectMode && (
-            <Button variant="secondary" onClick={() => { setBulkSelectMode(false); setBulkSelectedIds(new Set()) }}>✖ בטל בחירה</Button>
+            <Button variant="secondary" onClick={() => { setBulkSelectMode(false); setBulkSelectedIds(new Set()) }}>בטל בחירה</Button>
           )}
           {bulkSelectMode && bulkSelectedIds.size > 0 && (
-            <Button onClick={startBulkEdit}>✏️ ערוך נבחרים ({bulkSelectedIds.size})</Button>
+            <Button onClick={startBulkEdit}>ערוך נבחרים ({bulkSelectedIds.size})</Button>
           )}
           <div style={{ display: 'flex', gap: '6px' }}>
             <FilterBtn f="open" label="פתוחים" />
@@ -877,7 +877,7 @@ export default function CustomerTrackingTab({
                       {group.totalBal > 0 && (
                         <button onClick={() => openPayCustomer(group.cid)}
                           style={{ padding: '4px 12px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
-                          💰 תשלום
+                          תשלום
                         </button>
                       )}
                       {group.cid && (() => {
@@ -901,7 +901,7 @@ export default function CustomerTrackingTab({
                   {group.cid && mergeCid === group.cid && (
                     <div style={{ background: '#f5f3ff', borderBottom: '1px solid var(--border)', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '12px', color: '#5b21b6' }}>סמן 2+ שורות תשלום למיזוג לשורה אחת בהדפסה (נבחרו: {mergeSelected.size})</span>
-                      <Button size="sm" onClick={mergePayments} disabled={mergeSelected.size < 2}>🔗 מזג</Button>
+                      <Button size="sm" onClick={mergePayments} disabled={mergeSelected.size < 2}>מזג</Button>
                       <Button size="sm" variant="secondary" onClick={() => { setMergeCid(null); setMergeSelected(new Set()) }}>ביטול</Button>
                     </div>
                   )}
@@ -1103,7 +1103,7 @@ export default function CustomerTrackingTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setMeterReadItem(null)}>ביטול</Button>
-              <Button loading={mrSaving} onClick={saveMeterReading}>💾 שמור</Button>
+              <Button loading={mrSaving} onClick={saveMeterReading}>שמור</Button>
             </div>
           </div>
         </div>
@@ -1211,7 +1211,7 @@ export default function CustomerTrackingTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={closeDebtModal}>{bulkQueue && bulkQueue.length > 1 ? 'דלג ⏭' : 'ביטול'}</Button>
-              <Button loading={dSaving} onClick={saveDebt}>💾 שמור</Button>
+              <Button loading={dSaving} onClick={saveDebt}>שמור</Button>
             </div>
           </div>
         </div>
@@ -1287,7 +1287,7 @@ export default function CustomerTrackingTab({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
                         <button type="button" onClick={() => toggleMonthPayTags(mk)} style={{ padding: '1px 8px', background: 'transparent', color: '#7c3aed', border: '1px solid #ddd6fe', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
-                          {debts.every(d => payTagIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                          {debts.every(d => payTagIds.has(d.id)) ? 'בטל בחירת חודש' : 'בחר חודש'}
                         </button>
                       </div>
                       {debts.map(d => (
@@ -1306,7 +1306,7 @@ export default function CustomerTrackingTab({
 
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowPayModal(false)}>ביטול</Button>
-              <Button loading={paySaving} onClick={submitPayment} style={{ background: 'var(--success)', borderColor: 'var(--success)' }}>
+              <Button variant="success" loading={paySaving} onClick={submitPayment} style={{ background: 'var(--success)', borderColor: 'var(--success)' }}>
                 ✓ אשר תשלום
               </Button>
             </div>
@@ -1409,7 +1409,7 @@ export default function CustomerTrackingTab({
                 onClick={() => { setShowPrintChoice(false); setPrintMode('ledger') }}
                 disabled={!printCustomerId || (printRangeMode === 'months' && printMonths.size === 0)}
                 style={{ width: '100%' }}
-              >🖨️ הדפס כרטסת</Button>
+              >הדפס כרטסת</Button>
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowPrintChoice(false)}>סגור</Button>

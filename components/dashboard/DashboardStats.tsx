@@ -433,7 +433,7 @@ export default function DashboardStats() {
           onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
           onMouseLeave={e => (e.currentTarget.style.opacity = '0.4')}
         >
-          ✦ ערוך סידור כרטיסים
+          ערוך סידור כרטיסים
         </button>
       )}
     </div>

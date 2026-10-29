@@ -378,8 +378,8 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
         <div className="csc-party-h">
           <span>{label}</span>
           <span className="csc-tools">
-            <button type="button" className="csc-chip" onClick={() => fillMine(side)}>👤 הפרטים שלי</button>
-            <button type="button" className="csc-chip csc-chip-ghost" onClick={() => saveMine(side)} title="שמור את הפרטים בצד הזה כפרטים שלך">💾 שמור כפרטים שלי</button>
+            <button type="button" className="csc-chip" onClick={() => fillMine(side)}>הפרטים שלי</button>
+            <button type="button" className="csc-chip csc-chip-ghost" onClick={() => saveMine(side)} title="שמור את הפרטים בצד הזה כפרטים שלך">שמור כפרטים שלי</button>
           </span>
         </div>
         <div className="csc-grid">
@@ -498,7 +498,7 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
           </ul>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
             <button type="button" className="csc-add" onClick={() => patch(x => ({ ...x, checks: [...x.checks, { id: newId(), num: '', amount: '', date: '' }] }))}>+ הוסף שיק</button>
-            <button type="button" className="csc-add" onClick={splitChecks} title="מחלק את היתרה (סכום כולל פחות מזומן והעברות) שווה בשווה, שיק בכל חודש מתאריך השיק הראשון">⚖️ חלק את היתרה שווה + תאריכים חודשיים</button>
+            <button type="button" className="csc-add" onClick={splitChecks} title="מחלק את היתרה (סכום כולל פחות מזומן והעברות) שווה בשווה, שיק בכל חודש מתאריך השיק הראשון">חלק את היתרה שווה + תאריכים חודשיים</button>
           </div>
           <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>הקונה ימציא למוכר בעת החתימה צילום תעודת זהות וצילום השיקים.</div>
         </div>
@@ -526,7 +526,7 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
               <Button variant="ghost" onClick={() => setScanDevices(null)}>חזרה</Button>
             </>
           ) : (<>
-          <Button onClick={() => scanSigned()} disabled={agentBusy}>{agentBusy ? 'סורק...' : '📠 סרוק מהסורק'}</Button>
+          <Button onClick={() => scanSigned()} disabled={agentBusy}>{agentBusy ? 'סורק...' : 'סרוק מהסורק'}</Button>
           {!agentMissing && getSavedScanner() && (
             <button type="button" onClick={() => scanSigned(true)} disabled={agentBusy}
               style={{ alignSelf: 'center', marginTop: -6, background: 'none', border: 'none', padding: 0, fontSize: 12, color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -538,8 +538,8 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
               ⬇ התקנת סורק AutoFlow למחשב
             </a>
           )}
-          <Button variant="secondary" onClick={() => { setSignAsk(false); setScanning(true) }}>📷 צלם במצלמה</Button>
-          <Button variant="secondary" onClick={() => fileRef.current?.click()}>📤 העלה קובץ (PDF / תמונה)</Button>
+          <Button variant="secondary" onClick={() => { setSignAsk(false); setScanning(true) }}>צלם במצלמה</Button>
+          <Button variant="secondary" onClick={() => fileRef.current?.click()}>העלה קובץ (PDF / תמונה)</Button>
           <Button variant="ghost" onClick={() => setSignAsk(false)}>דלג</Button>
           </>)}
         </div>
@@ -557,9 +557,9 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
         {d?.signedFile && <a href={signedFileUrl(d.signedFile)} target="_blank" rel="noreferrer" className="csc-chip" style={{ textDecoration: 'none' }}>📎 חוזה חתום</a>}
         {uploading && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>⏳ מעלה לדרייב...</span>}
         <div style={{ flex: 1 }} />
-        <Button size="sm" variant="secondary" onClick={toggleSigned} disabled={!d || saving}>{status === 'signed' ? 'החזר לטיוטה' : '✅ סמן כנחתם'}</Button>
-        <Button size="sm" variant="secondary" onClick={handlePrint} disabled={!d || saving}>🖨️ הדפס / PDF</Button>
-        <Button size="sm" onClick={handleSave} loading={saving} disabled={!d}>💾 שמור</Button>
+        <Button size="sm" variant="secondary" onClick={toggleSigned} disabled={!d || saving}>{status === 'signed' ? 'החזר לטיוטה' : 'סמן כנחתם'}</Button>
+        <Button size="sm" variant="secondary" onClick={handlePrint} disabled={!d || saving}>הדפס / PDF</Button>
+        <Button size="sm" onClick={handleSave} loading={saving} disabled={!d}>שמור</Button>
         <RowActionsMenu align="end" actions={[
           ...(driveOk ? [
             { key: 'scan', label: d?.signedFile ? 'החלף עותק חתום (סריקה / קובץ)' : 'שמור עותק חתום (סריקה / קובץ)', icon: '📷', onClick: () => setSignAsk(true), disabled: !d || uploading },

@@ -696,7 +696,7 @@ function printSellerWaiver(bizNameStr: string, logoBase64: string, subTitle: str
     <div class="sig-box">חתימת הקונה<div class="sig-line"></div></div>
   </div>
 
-  <button class="print-btn" onclick="window.print()">🖨️ הדפסה / PDF</button>
+  <button class="print-btn" onclick="window.print()">הדפסה / PDF</button>
 </div>
 <script>document.querySelector('input')?.focus()<\/script>
 </body>
@@ -1151,7 +1151,7 @@ export default function DocumentsClient() {
                   opacity: uploadProgress ? 0.7 : 1,
                   border: '1.5px solid var(--border)',
                 }}>
-                  📷 סרוק
+                  סרוק
                 </button>}
                 <label htmlFor="doc-drive-upload" style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -1310,7 +1310,7 @@ export default function DocumentsClient() {
                   </div>
                 ) : (
                   <button onClick={() => setNewFolderMode(true)} disabled={driveLoading} style={{ padding: '6px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, opacity: driveLoading ? 0.5 : 1 }}>
-                    📁 תיקיה חדשה
+                    תיקיה חדשה
                   </button>
                 )}
               </div>
@@ -1404,7 +1404,7 @@ export default function DocumentsClient() {
               style={{ marginRight: 'auto' }}
               onClick={() => printChecklist(clCopies, '', '', '', logoBase64.current)}
             >
-              🖨️ הדפס
+              הדפס
             </Button>
           </div>
         </div>
@@ -1442,7 +1442,7 @@ export default function DocumentsClient() {
               style={{ marginRight: 'auto' }}
               onClick={() => printWarranty(wCopies, bizName.current, logoBase64.current, bizSubTitle.current, bizPhone.current, bizAddress.current, bizLicense.current)}
             >
-              🖨️ הדפס
+              הדפס
             </Button>
           </div>
         </div>
@@ -1471,7 +1471,7 @@ export default function DocumentsClient() {
               style={{ width: 50, padding: '4px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, textAlign: 'center' }}
             />
             <Button variant="primary" style={{ marginRight: 'auto' }} onClick={() => printBlankHeader(bhCopies, bizName.current, logoBase64.current, bizSubTitle.current, bizPhone.current, bizAddress.current, bizLicense.current)}>
-              🖨️ הדפס
+              הדפס
             </Button>
           </div>
         </div>
@@ -1493,7 +1493,7 @@ export default function DocumentsClient() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
             <Button variant="primary" style={{ marginRight: 'auto' }} onClick={() => printSellerWaiver(bizName.current, logoBase64.current, bizSubTitle.current, bizPhone.current, bizAddress.current, bizLicense.current)}>
-              📝 מלא והדפס
+              מלא והדפס
             </Button>
           </div>
         </div>
@@ -1532,7 +1532,7 @@ export default function DocumentsClient() {
                     style={{ marginTop: 4, background: '#7c3aed', borderColor: '#7c3aed' }}
                     onClick={() => printHtmlDoc(doc)}
                   >
-                    🖨️ פתח והדפס
+                    פתח והדפס
                   </Button>
                 </div>
               ))}
@@ -1576,7 +1576,7 @@ export default function DocumentsClient() {
                 style={{ width: 50, padding: '4px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, textAlign: 'center' }}
               />
               <Button variant="primary" style={{ marginRight: 'auto' }} onClick={() => printFormTemplate(f, copiesMap[f.id] ?? 1)}>
-                🖨️ הדפס
+                הדפס
               </Button>
             </div>
           </div>
@@ -1606,7 +1606,7 @@ export default function DocumentsClient() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
-            <Button variant="primary" onClick={saveTemplate} loading={saving}>💾 שמור</Button>
+            <Button variant="primary" onClick={saveTemplate} loading={saving}>שמור</Button>
           </>
         }
       >
@@ -1675,7 +1675,7 @@ export default function DocumentsClient() {
                 borderRadius: 8, background: 'none', width: '100%', cursor: 'pointer',
                 fontSize: 13, color: 'var(--text-muted)', fontFamily: 'inherit',
               }}
-            >➕ הוסף עמודה</button>
+            >הוסף עמודה</button>
           </div>
 
           <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
@@ -1757,7 +1757,7 @@ export default function DocumentsClient() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setHtmlPasteOpen(false)}>ביטול</Button>
-            <Button variant="primary" onClick={savePastedHtml} loading={htmlPasteSaving}>💾 שמור</Button>
+            <Button variant="primary" onClick={savePastedHtml} loading={htmlPasteSaving}>שמור</Button>
           </>
         }
       >

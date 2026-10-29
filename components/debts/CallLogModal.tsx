@@ -82,7 +82,7 @@ export default function CallLogModal({ open, onClose, debtId, debtName, calls, t
 
         <div className="sticky-actions" style={{ marginBottom: calls.length ? '16px' : 0 }}>
           <Button variant="secondary" onClick={close}>סגור</Button>
-          <Button loading={saving} onClick={save}>💾 שמור שיחה</Button>
+          <Button loading={saving} onClick={save}>שמור שיחה</Button>
         </div>
 
         {calls.length > 0 && (

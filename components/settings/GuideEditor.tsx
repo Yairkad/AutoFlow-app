@@ -156,9 +156,9 @@ function QrBox({ businessName, shortLink, showToast }: { businessName: string; s
         <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>הקישור הציבורי של המוסך שלך — לתלות בעסק או לשלוח ללקוח.</div>
         <div dir="ltr" style={{ fontSize: 12, wordBreak: 'break-all' }}>{url}</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Button onClick={() => printPoster(qr, url, businessName)}>🖨️ הדפס שלט</Button>
-          <Button variant="secondary" onClick={copy}>🔗 העתק</Button>
-          <Button variant="secondary" onClick={() => window.open(url, '_blank')}>👁️ צפה בדף</Button>
+          <Button onClick={() => printPoster(qr, url, businessName)}>הדפס שלט</Button>
+          <Button variant="secondary" onClick={copy}>העתק</Button>
+          <Button variant="secondary" onClick={() => window.open(url, '_blank')}>צפה בדף</Button>
         </div>
         {canRegen && !shortLink && (
           <button onClick={regenerate} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
@@ -304,7 +304,7 @@ export default function GuideEditor({ supabase, tenantId, showToast }: { supabas
         <button onClick={resetAll} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit' }}>
           החזר הכל לברירת המחדל
         </button>
-        <Button onClick={save} loading={saving} disabled={!dirty}>💾 {dirty ? 'שמור שינויים' : 'נשמר'}</Button>
+        <Button onClick={save} loading={saving} disabled={!dirty}>{dirty ? 'שמור שינויים' : 'נשמר'}</Button>
       </div>
     </div>
   )

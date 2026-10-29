@@ -53,7 +53,7 @@ export default function StorageMapEditor({ initial, onSave, onCancel }: {
             <input className={inp} style={{ padding: '6px 10px', fontWeight: 700, flex: '1 1 140px' }} value={r.name}
               onChange={e => setRow(r.id, { name: e.target.value })} aria-label="שם השורה" />
             <button className="text-red-600 font-bold" style={{ fontSize: 13 }}
-              onClick={() => setLayout(l => ({ ...l, rows: l.rows.filter(x => x.id !== r.id) }))}>🗑 מחק שורה</button>
+              onClick={() => setLayout(l => ({ ...l, rows: l.rows.filter(x => x.id !== r.id) }))}>מחק שורה</button>
           </div>
 
           <div className="flex flex-wrap items-center gap-3" style={{ fontSize: 13 }}>
@@ -116,7 +116,7 @@ export default function StorageMapEditor({ initial, onSave, onCancel }: {
       <div className="flex gap-2 justify-end">
         <button onClick={onCancel} className="bg-slate-100 rounded-xl font-bold text-slate-700" style={{ padding: '10px 18px' }}>ביטול</button>
         <button onClick={save} disabled={!!err || saving} className="bg-green-700 text-white rounded-xl font-bold disabled:opacity-40" style={{ padding: '10px 18px' }}>
-          {saving ? '⏳' : '💾 שמור תרשים'}
+          {saving ? '⏳' : 'שמור תרשים'}
         </button>
       </div>
     </div>

@@ -233,7 +233,7 @@ export default function MyProfilePage() {
             fontFamily: 'inherit',
           }}
         >
-          {saving ? 'שומר...' : '💾 שמור שינויים'}
+          {saving ? 'שומר...' : 'שמור שינויים'}
         </button>
       </div>
   )

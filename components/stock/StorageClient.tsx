@@ -153,8 +153,8 @@ export default function StorageClient() {
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <button onClick={() => setTab('count')} className="bg-blue-700 text-white rounded-xl font-bold" style={{ padding: '10px 18px' }}>🔢 התחל ספירה לפי אזור</button>
-            {profile?.isAdmin && <button onClick={() => setEditing(true)} className="bg-white border-2 border-slate-300 rounded-xl font-bold text-slate-700" style={{ padding: '10px 18px' }}>✏️ ערוך תרשים</button>}
+            <button onClick={() => setTab('count')} className="bg-blue-700 text-white rounded-xl font-bold" style={{ padding: '10px 18px' }}>התחל ספירה לפי אזור</button>
+            {profile?.isAdmin && <button onClick={() => setEditing(true)} className="bg-white border-2 border-slate-300 rounded-xl font-bold text-slate-700" style={{ padding: '10px 18px' }}>ערוך תרשים</button>}
           </div>
         </div>
       )}
@@ -173,7 +173,7 @@ export default function StorageClient() {
           </div>
           {autoFixable > 0 && (
             <button onClick={autoFormatAll} className="self-start bg-blue-700 text-white rounded-xl font-bold" style={{ padding: '10px 16px' }}>
-              ✨ תקן אוטומטית {autoFixable} מיקומים (a3 → A3)
+              תקן אוטומטית {autoFixable} מיקומים (a3 → A3)
             </button>
           )}
           {!fix && <div className="text-slate-400">טוען...</div>}

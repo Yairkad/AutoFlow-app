@@ -296,7 +296,7 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
                 border: '1.5px solid #555', background: 'transparent',
                 color: '#ddd', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
               }}>
-                ➕ עמוד נוסף
+                עמוד נוסף
               </button>
               <button onClick={addPage} style={{
                 flex: 1, padding: '11px', borderRadius: 10,
@@ -340,7 +340,7 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
               border: '1.5px solid #555', background: 'transparent',
               color: '#ddd', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
             }}>
-              ➕ הוסף עמוד
+              הוסף עמוד
             </button>
 
             <div style={{ display: 'flex', gap: 10 }}>

@@ -467,7 +467,7 @@ export default function DebtsClient() {
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
             <Button onClick={openTransferModal}>+ הוסף העברה לבדיקה</Button>
             {visibleTransfers.length > 0 && (
-              <Button variant="secondary" onClick={() => setPrintTransfersOpen(true)}>🖨 הדפס לאימות</Button>
+              <Button variant="secondary" onClick={() => setPrintTransfersOpen(true)}>הדפס לאימות</Button>
             )}
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>
               <input type="checkbox" checked={showVerifiedTransfers} onChange={e => setShowVerifiedTransfers(e.target.checked)} />
@@ -545,7 +545,7 @@ export default function DebtsClient() {
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowCustModal(false)}>ביטול</Button>
-              <Button loading={cSaving} onClick={saveCustDebt}>💾 שמור</Button>
+              <Button loading={cSaving} onClick={saveCustDebt}>שמור</Button>
             </div>
           </div>
         </div>
@@ -606,7 +606,7 @@ export default function DebtsClient() {
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowTransferModal(false)}>ביטול</Button>
-              <Button loading={trSaving} onClick={saveTransfer}>💾 שמור</Button>
+              <Button loading={trSaving} onClick={saveTransfer}>שמור</Button>
             </div>
           </div>
         </div>

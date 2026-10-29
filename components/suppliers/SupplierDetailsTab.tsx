@@ -351,8 +351,8 @@ export default function SupplierDetailsTab({
                   💬 ווצאפ
                 </a>
               )}
-              <Button variant="outline" size="sm" onClick={() => openModal(selected)}>✏️ ערוך</Button>
-              <Button variant="danger" size="sm" onClick={() => deleteSupplier(selected)}>🗑 מחק</Button>
+              <Button variant="outline" size="sm" onClick={() => openModal(selected)}>ערוך</Button>
+              <Button variant="danger" size="sm" onClick={() => deleteSupplier(selected)}>מחק</Button>
               <button
                 onClick={() => setSelected(null)}
                 style={{ padding: '6px 10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', color: 'var(--text-muted)' }}
@@ -628,7 +628,7 @@ export default function SupplierDetailsTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowModal(false)}>ביטול</Button>
-              <Button loading={saving} onClick={saveSupplier}>💾 שמור</Button>
+              <Button loading={saving} onClick={saveSupplier}>שמור</Button>
             </div>
           </div>
         </div>

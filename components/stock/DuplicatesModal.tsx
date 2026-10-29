@@ -49,7 +49,7 @@ export default function DuplicatesModal<T extends { id: string }>({ open, onClos
                         await onMerge(keepId, g.items.filter(i => i.id !== keepId).map(i => i.id))
                         setBusy(null)
                       }}>
-                      {busy === gKey ? '⏳ ממזג...' : '🔗 מזג לרשומה המסומנת'}
+                      {busy === gKey ? 'ממזג...' : 'מזג לרשומה המסומנת'}
                     </Button>
                   </div>
                   <div style={{ overflowX: 'auto' }}>

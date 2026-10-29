@@ -405,8 +405,8 @@ export default function InventoryCountClient() {
           </div>
 
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '-6px', marginBottom: '16px' }}>
-            <button onClick={() => setPicker({ mode: 'add' })} style={addBtn}>📋 בחר צמיג מהרשימה</button>
-            <button onClick={() => setNewTireOpen(true)} style={addBtn}>🆕 צמיג חדש בלי מקט</button>
+            <button onClick={() => setPicker({ mode: 'add' })} style={addBtn}>בחר צמיג מהרשימה</button>
+            <button onClick={() => setNewTireOpen(true)} style={addBtn}>צמיג חדש בלי מקט</button>
           </div>
 
           <input ref={scanRef} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
@@ -443,7 +443,7 @@ export default function InventoryCountClient() {
                       {isUnknown && (
                         <button onClick={() => { setLinkSaveSku(false); setPicker({ mode: 'link', key: e.key }) }}
                           style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, color: 'var(--accent)', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>
-                          🔗 שייך לצמיג קיים
+                          שייך לצמיג קיים
                         </button>
                       )}
                     </div>
@@ -572,7 +572,7 @@ export default function InventoryCountClient() {
                         {!e.newTire && (
                           <button onClick={() => { setLinkSaveSku(false); setPicker({ mode: 'link', key: e.key }) }}
                             style={{ display: 'block', margin: '4px auto 0', background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>
-                            🔗 זה צמיג קיים? שייך אליו
+                            זה צמיג קיים? שייך אליו
                           </button>
                         )}
                       </td>

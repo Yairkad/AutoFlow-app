@@ -58,7 +58,7 @@ export default function QuickAddCustomerModal({ open, onClose, tenantId, supabas
       footer={
         <>
           <Button variant="secondary" onClick={() => { reset(); onClose() }}>ביטול</Button>
-          <Button onClick={save} loading={saving}>💾 שמור</Button>
+          <Button onClick={save} loading={saving}>שמור</Button>
         </>
       }
     >

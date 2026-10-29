@@ -324,11 +324,11 @@ export default function PowerOfAttorneyPanel() {
           </div>
           {calib ? <>
             <Button variant="ghost" size="sm" onClick={exitCalib}>סיום כיול</Button>
-            <Button size="sm" onClick={saveLayout} disabled={!layoutDirty || savingLayout}>{savingLayout ? 'שומר…' : '💾 שמור כיול'}</Button>
+            <Button size="sm" onClick={saveLayout} disabled={!layoutDirty || savingLayout}>{savingLayout ? 'שומר…' : 'שמור כיול'}</Button>
           </> : <>
-            <Button variant="ghost" size="sm" onClick={handleClear}>🧹 נקה</Button>
-            <Button variant="outline" size="sm" onClick={() => setCalib(true)}>🎯 כיול שדות</Button>
-            <Button size="sm" onClick={handlePrint} disabled={!bg}>🖨️ הדפס</Button>
+            <Button variant="ghost" size="sm" onClick={handleClear}>נקה</Button>
+            <Button variant="outline" size="sm" onClick={() => setCalib(true)}>כיול שדות</Button>
+            <Button size="sm" onClick={handlePrint} disabled={!bg}>הדפס</Button>
           </>}
         </div>
 

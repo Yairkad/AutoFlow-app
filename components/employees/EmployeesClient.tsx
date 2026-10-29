@@ -954,7 +954,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
         footer={
           <>
             <Button variant="secondary" onClick={() => setEmpModal(false)}>ביטול</Button>
-            <Button onClick={saveEmp}>💾 שמור</Button>
+            <Button onClick={saveEmp}>שמור</Button>
           </>
         }
       >
@@ -1032,7 +1032,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
                       onChange={e => setForm(f => ({ ...f, yard_pin: e.target.value.replace(/\D/g, ''), yard_pin_remove: false }))} />
                   </div>
                   {hasPin && (
-                    <Button variant="secondary" onClick={() => setForm(f => ({ ...f, yard_pin: '', yard_pin_remove: true }))}>🚫 בטל קוד</Button>
+                    <Button variant="secondary" onClick={() => setForm(f => ({ ...f, yard_pin: '', yard_pin_remove: true }))}>בטל קוד</Button>
                   )}
                   {form.yard_pin_remove && <span style={{ fontSize: '12.5px', color: 'var(--danger)' }}>הקוד יבוטל בשמירה</span>}
                 </div>
@@ -1182,7 +1182,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
         footer={
           <>
             <Button variant="secondary" onClick={() => setAdjModal(false)}>ביטול</Button>
-            <Button onClick={saveAdj}>💾 שמור</Button>
+            <Button onClick={saveAdj}>שמור</Button>
           </>
         }
       >
@@ -1252,7 +1252,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
         footer={
           <>
             <Button variant="secondary" onClick={() => setPayModal(false)}>ביטול</Button>
-            <Button onClick={confirmPay} loading={paying}>✅ אישור תשלום</Button>
+            <Button variant="success" onClick={confirmPay} loading={paying}>אישור תשלום</Button>
           </>
         }
       >
@@ -1448,7 +1448,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
               <button
                 onClick={() => { openEdit(bankViewEmp); setBankViewEmp(null) }}
                 style={{ padding: '8px 20px', background: 'var(--bg-soft)', color: 'var(--success)', border: '1.5px solid #bbf7d0', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-              >✏️ עריכה מלאה</button>
+              >עריכה מלאה</button>
             </div>
           </div>
         </div>

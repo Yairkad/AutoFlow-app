@@ -309,7 +309,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
                 className={`${btn} bg-slate-50 text-slate-700 border border-slate-200`} style={{ padding: '7px 10px', fontSize: 13 }}>בחר הכל</button>
               {round.done.size > 0 && (
                 <button onClick={newRound} className={`${btn} bg-white text-orange-800 border border-orange-300`} style={{ padding: '7px 10px', fontSize: 13 }}>
-                  🔄 סבב ספירה חדש
+                  סבב ספירה חדש
                 </button>
               )}
             </div>
@@ -358,7 +358,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
       <div>
         <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
           <span className="font-bold text-slate-700" style={{ fontSize: 14 }}>על איזה מדף אתה סורק?</span>
-          <button onClick={() => setShowMap(m => !m)} className="text-blue-700 font-bold" style={{ fontSize: 13 }}>{showMap ? 'הסתר תרשים' : '🗺 תרשים'}</button>
+          <button onClick={() => setShowMap(m => !m)} className="text-blue-700 font-bold" style={{ fontSize: 13 }}>{showMap ? 'הסתר תרשים' : 'תרשים'}</button>
         </div>
         {showMap ? (
           <div className="bg-white rounded-xl border border-slate-200" style={{ padding: 10 }}>
@@ -390,7 +390,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
           style={{ padding: '8px 12px', fontSize: 14 }}>{flash.text}</div>
       )}
       <button onClick={() => setPicker({ mode: 'add' })} className="self-start text-blue-700 font-bold" style={{ fontSize: 14 }}>
-        📋 צמיג בלי ברקוד? בחר מהרשימה
+        צמיג בלי ברקוד? בחר מהרשימה
       </button>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -417,7 +417,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
               <div className="font-bold text-slate-800 truncate" style={{ fontSize: 15 }}>{r.n > 0 ? '✓ ' : ''}{r.label}</div>
               <div className="text-slate-500" style={{ fontSize: 12 }}>
                 {r.tire ? <>במערכת: {r.tire.qty}{r.tire.location ? <> · רשום ב-<bdi dir="ltr">{r.tire.location}</bdi></> : ''}</> : <span style={{ direction: 'ltr' }}>{r.sku}</span>}
-                {!r.tire && <button onClick={() => setPicker({ mode: 'link', key: r.key })} className="text-blue-700 font-bold underline" style={{ marginRight: 8 }}>🔗 שייך לצמיג קיים</button>}
+                {!r.tire && <button onClick={() => setPicker({ mode: 'link', key: r.key })} className="text-blue-700 font-bold underline" style={{ marginRight: 8 }}>שייך לצמיג קיים</button>}
               </div>
             </div>
             <button aria-label="פחות" onClick={() => r.tire ? addTire(r.tire, active, -1) : bump(r.key, { key: r.key, tireId: null, sku: r.sku, label: r.label }, active, -1)}
@@ -521,7 +521,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
     </>, <>
       <button onClick={() => setStep('scan')} className={`${btn} bg-slate-100 text-slate-700`} style={{ padding: '14px 16px' }}>→ חזרה לסריקה</button>
       <button onClick={save} disabled={saving || review.length === 0} className={`${btn} bg-green-700 text-white flex-1`} style={{ padding: 14, fontSize: 17 }}>
-        {saving ? '⏳ שומר...' : '✓ אשר ועדכן מלאי'}
+        {saving ? 'שומר...' : '✓ אשר ועדכן מלאי'}
       </button>
     </>)
   }

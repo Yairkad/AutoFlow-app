@@ -788,3 +788,10 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
+
+## Redesign additions (2026-10-29)
+- `components/layout/YardDrawer.tsx` — admin desktop yard drawer (left edge tab / left third, pushes main via --drawer-w), inline item editing via SessionItemsEditor
+- `components/yard/SessionItemsEditor.tsx` — edit a yard card's items in place (price/qty/add/remove)
+- `components/documents/FreeDocEditor.tsx` — free A4 editor: draggable/resizable styled text boxes, letterhead, printFreeDoc (type 'free_doc' in documents)
+- `components/reminders/RemindersClient.tsx` — "משימות": one task list, status tags, progress updates (reminder_updates, migration 107)
+- `supabase/migrations/107_task_updates.sql` — reminder_updates table + closed status for done reminders

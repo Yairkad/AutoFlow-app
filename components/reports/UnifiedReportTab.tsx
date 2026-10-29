@@ -59,7 +59,7 @@ export default function UnifiedReportTab({ tenantId }: Props) {
           <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>יתרת לקוחות פתוחה כוללת (כרטסת, נכון להיום)</span>
           <span style={{ fontSize: '16px', fontWeight: 800, color: totalOpenCustomerLedger >= 0 ? 'var(--success)' : 'var(--danger)' }}>{fmt(totalOpenCustomerLedger)}</span>
         </div>
-        <Button variant="secondary" size="sm" onClick={exportExcel} loading={exporting}>📊 ייצוא Excel</Button>
+        <Button variant="secondary" size="sm" onClick={exportExcel} loading={exporting}>ייצוא Excel</Button>
       </div>
 
       <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6 }}>

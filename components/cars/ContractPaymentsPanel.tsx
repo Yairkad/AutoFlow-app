@@ -153,7 +153,7 @@ export default function ContractPaymentsPanel() {
           <Button loading={saving} onClick={() => mark && save(mark, {
             status: form.status, at: form.at || todayIso(), note: form.note.trim() || undefined,
             how: form.status === 'swapped' ? form.how : undefined, by: profile?.fullName ?? null,
-          })}>💾 שמור</Button>
+          })}>שמור</Button>
         </>}>
         {mark && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
