@@ -185,7 +185,6 @@ export default function EmployeesClient() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [yardPinIds, setYardPinIds] = useState<Set<string>>(new Set())
   const [salaries, setSalaries] = useState<Salary[]>([])
-  const [tab, setTab] = useState<'employees' | 'salaries'>('employees')
   const [period, setPeriod] = useState(currentPeriod())
 
   // Employee modal
@@ -580,71 +579,6 @@ export default function EmployeesClient() {
 
   // ── Render: employee cards ───────────────────────────────────────────────────
 
-  function renderEmpCards() {
-    if (!employees.length) {
-      return (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-          <div style={{ fontSize: '48px', marginBottom: '12px' }}>👷</div>
-          <p>לא הוגדרו עובדים עדיין</p>
-          <Button onClick={openAdd} style={{ marginTop: '12px' }}>+ הוסף עובד ראשון</Button>
-        </div>
-      )
-    }
-
-    const sorted = [...employees].sort((a, b) => (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0))
-
-    return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: '16px' }}>
-        {sorted.map(e => (
-          <div key={e.id} style={{
-            background: '#fff', borderRadius: 'var(--radius)',
-            boxShadow: 'var(--shadow)', padding: '18px',
-            borderRight: `4px solid ${e.is_active ? 'var(--primary)' : 'var(--border)'}`,
-            opacity: e.is_active ? 1 : 0.7,
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <div>
-                <div style={{ fontWeight: 900, fontSize: '15px' }}>👷 {e.full_name}</div>
-                {e.role && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{e.role}</div>}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                <span style={{
-                  fontSize: '11px', fontWeight: 700, padding: '2px 8px',
-                  borderRadius: '10px', whiteSpace: 'nowrap',
-                  background: e.is_active ? 'var(--success-soft)' : '#f1f5f9',
-                  color: e.is_active ? 'var(--success)' : 'var(--text-muted)',
-                }}>
-                  {e.is_active ? 'פעיל' : 'לא פעיל'}
-                </span>
-                <RowActionsMenu actions={[
-                  { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openEdit(e) },
-                  { key: 'bank', label: 'פרטי בנק', icon: '🏦', onClick: () => setBankViewEmp(e) },
-                  ...(e.email ? [{ key: 'invite', label: 'הזמנה', icon: '🔗', onClick: () => sendInviteLink(e.email!) }] : []),
-                  { key: 'history', label: 'היסטוריה', icon: '📋', onClick: () => openHistory(e) },
-                  { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteEmp(e) },
-                ]} />
-              </div>
-            </div>
-
-            {e.phone && (
-              <a href={waLink(e.phone)} target="_blank" rel="noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#25d366', marginBottom: '5px', textDecoration: 'none' }}>
-                📞 {e.phone}
-              </a>
-            )}
-            {e.email && (
-              <a href={`mailto:${e.email}`}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--accent)', marginBottom: '5px', textDecoration: 'none' }}>
-                ✉️ {e.email}
-              </a>
-            )}
-
-          </div>
-        ))}
-      </div>
-    )
-  }
-
   // ── Print: all employees' additions/deductions for the period ────────────────
 
   function printAdjustments() {
@@ -719,7 +653,12 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
 
   function renderSalaryTable() {
     if (!periodEmps.length) {
-      return <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>אין עובדים פעילים לתקופה זו</div>
+      return (
+        <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+          {employees.length ? 'אין עובדים פעילים בחודש זה' : 'לא הוגדרו עובדים עדיין'}
+          {!employees.length && <div style={{ marginTop: 12 }}><Button onClick={openAdd}>+ הוסף עובד ראשון</Button></div>}
+        </div>
+      )
     }
 
     return (
@@ -746,13 +685,16 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
               const hasAdj = adds > 0 || deds > 0
 
               return (
-                <tr key={e.id} style={{ background: isPaid ? 'var(--success-soft)' : undefined }}>
+                <tr key={e.id}>
 
                   {/* עובד */}
                   <td style={tdSt}>
                     <strong>{e.full_name}</strong>
-                    {e.role && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{e.role}</div>}
-                    {sal?.notes && <div style={{ fontSize: '11px', color: '#7c3aed', marginTop: 2 }}>📝 {sal.notes}</div>}
+                    <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {e.role && <span>{e.role}</span>}
+                      {e.phone && <a href={waLink(e.phone)} target="_blank" rel="noreferrer" className="num" style={{ color: 'var(--text-muted)' }}>{e.phone}</a>}
+                    </div>
+                    {sal?.notes && <div style={{ fontSize: '11px', color: 'var(--accent)', marginTop: 2 }}>{sal.notes}</div>}
                   </td>
 
                   {/* נטו תלוש – inline editable */}
@@ -818,7 +760,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
                     {isPaid ? (
                       <div>
                         <span style={{ background: 'var(--success-soft)', color: 'var(--success)', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>
-                          ✅ שולם
+                          שולם
                         </span>
                         {sal?.payment_method && (
                           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
@@ -832,8 +774,8 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
                         )}
                       </div>
                     ) : (
-                      <span style={{ background: '#fff7ed', color: 'var(--warning)', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>
-                        ⏳ ממתין
+                      <span style={{ background: 'var(--warning-soft)', color: 'var(--warning)', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>
+                        ממתין
                       </span>
                     )}
                   </td>
@@ -842,13 +784,17 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
                   <td style={tdSt}>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       {!isPaid && (
-                        <Button size="sm" onClick={() => openPay(e.id)} disabled={!net && !sal?.base}>
-                          ✅ שלם
+                        <Button size="sm" variant="success" onClick={() => openPay(e.id)} disabled={!net && !sal?.base}>
+                          שלם
                         </Button>
                       )}
+                      <Button size="sm" variant="secondary" onClick={() => openEdit(e)}>ערוך פרטים</Button>
                       <RowActionsMenu align="end" actions={[
                         ...(isPaid && sal ? [{ key: 'unpay', label: 'בטל תשלום', icon: '↩️', onClick: () => unpay(sal) }] : []),
-                        { key: 'hist', label: 'היסטוריה', icon: '📋', onClick: () => openHistory(e) },
+                        { key: 'hist', label: 'היסטוריית משכורות', icon: '📋', onClick: () => openHistory(e) },
+                        { key: 'bank', label: 'פרטי בנק', icon: '🏦', onClick: () => setBankViewEmp(e) },
+                        ...(e.email ? [{ key: 'invite', label: 'שלח הזמנה למערכת', icon: '🔗', onClick: () => sendInviteLink(e.email!) }] : []),
+                        { key: 'delete', label: 'מחק עובד', icon: '🗑', danger: true, onClick: () => deleteEmp(e) },
                       ]} />
                     </div>
                   </td>
@@ -935,88 +881,69 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
         iconBg="linear-gradient(135deg,#8b5cf6,#a78bfa)"
         iconShadow="#8b5cf644"
         title="עובדים"
-        subtitle="ניהול עובדים ומשכורות"
+        subtitle="פרטי עובדים ומשכורות במקום אחד"
+        actions={<>
+          <Button onClick={openAdd}>+ הוסף עובד</Button>
+          <MoreMenu excel={{ onExport: exportExcel }} actions={[
+            { key: 'init', label: initingPeriod ? 'יוצר...' : 'אתחל חודש (רשומות שכר לכל העובדים)', icon: '🔄', disabled: initingPeriod, onClick: initPeriodRecords },
+            { key: 'print', label: 'הדפס תוספות / ניכויים', icon: '🖨️', onClick: printAdjustments },
+          ]} />
+        </>}
       />
 
-      {/* Stats */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+      {/* One screen: each employee's details + this period's salary (no inner tabs, 2026-10) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '12px', marginBottom: '18px' }}>
         {[
-          { label: 'עובדים פעילים', value: activeEmps.length, color: '' },
-          { label: 'שכר חודש נוכחי', value: fmt(totalPayroll), color: 'orange' },
-          { label: 'ממתינים לתשלום', value: unpaidCount, color: unpaidCount > 0 ? 'red' : '' },
+          { label: 'עובדים פעילים', value: String(activeEmps.length) },
+          { label: `משכורות ${periodLabel(period)}`, value: fmt(totalPayroll) },
+          { label: 'ממתינים לתשלום', value: String(unpaidCount), tone: unpaidCount > 0 ? 'var(--warning)' : undefined },
         ].map(s => (
-          <div key={s.label} style={{
-            flex: '1 1 160px', background: '#fff', borderRadius: 'var(--radius)',
-            boxShadow: 'var(--shadow)', padding: '16px 20px',
-            borderTop: `3px solid ${s.color === 'orange' ? 'var(--warning)' : s.color === 'red' ? 'var(--danger)' : 'var(--primary)'}`,
-          }}>
-            <div style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text)' }}>{s.value}</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{s.label}</div>
+          <div key={s.label} className="kpi-tile">
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>{s.label}</span>
+            <span className="num" style={{ fontSize: '22px', fontWeight: 700, color: s.tone ?? 'var(--text)' }}>{s.value}</span>
           </div>
         ))}
       </div>
 
-      {/* Tab bar */}
-      <div className="scroll-x" style={{ marginBottom: '24px' }}><div style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '11px', padding: '4px', gap: '4px' }}>
-        {(['employees', 'salaries'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
-            padding: '8px 22px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: '13px', fontWeight: tab === t ? 600 : 400,
-            background: tab === t ? '#fff' : 'transparent',
-            color: tab === t ? 'var(--text)' : 'var(--text-muted)',
-            boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-            transition: 'all .15s', whiteSpace: 'nowrap',
-          }}>
-            {t === 'employees' ? '👷 עובדים' : '💰 משכורות'}
-          </button>
-        ))}
-      </div></div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
+        <label htmlFor="emp-period" style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-muted)' }}>חודש:</label>
+        <select id="emp-period" value={period} onChange={e => setPeriod(e.target.value)} className="form-input" style={{ width: 'auto', margin: 0 }}>
+          {buildPeriodList().map(p => <option key={p} value={p}>{periodLabel(p)}</option>)}
+        </select>
+        {renderSalarySummary()}
+      </div>
 
-      {/* Employees tab */}
-      {tab === 'employees' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
-            <Button onClick={openAdd}>+ הוסף עובד</Button>
-            <MoreMenu actions={[]} excel={{ onExport: exportExcel }} />
-          </div>
-          {renderEmpCards()}
-        </div>
-      )}
+      <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+        מזינים את הנטו מהתלוש; תוספות וניכויים חוץ תלוש (בונוס, קנס) נכנסים בעמודה שלהם ומתווספים לסכום לתשלום.
+      </p>
 
-      {/* Salaries tab */}
-      {tab === 'salaries' && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontWeight: 700, fontSize: '14px' }}>תקופה:</label>
-              <select
-                value={period}
-                onChange={e => setPeriod(e.target.value)}
-                className="form-input" style={{ width: 'auto' }}
-              >
-                {buildPeriodList().map(p => (
-                  <option key={p} value={p}>{periodLabel(p)}</option>
-                ))}
-              </select>
+      {renderSalaryTable()}
+
+      {/* Employees not active in this period (left, not started yet, or turned off) */}
+      {(() => {
+        const others = employees.filter(e => !periodEmps.some(p => p.id === e.id))
+        if (!others.length) return null
+        return (
+          <details style={{ marginTop: '18px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+            <summary style={{ padding: '12px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '13.5px' }}>עובדים לא פעילים בחודש זה ({others.length})</summary>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {others.map(e => (
+                <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
+                  <div style={{ flex: 1 }}>
+                    <strong>{e.full_name}</strong>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginInlineStart: 8 }}>{e.role ?? ''}{e.is_active ? '' : ' · לא פעיל'}</span>
+                  </div>
+                  <Button size="sm" variant="secondary" onClick={() => openEdit(e)}>ערוך פרטים</Button>
+                  <RowActionsMenu align="end" actions={[
+                    { key: 'hist', label: 'היסטוריית משכורות', icon: '📋', onClick: () => openHistory(e) },
+                    { key: 'delete', label: 'מחק עובד', icon: '🗑', danger: true, onClick: () => deleteEmp(e) },
+                  ]} />
+                </div>
+              ))}
             </div>
-            {renderSalarySummary()}
-            <div style={{ marginInlineStart: 'auto' }}>
-              <MoreMenu actions={[
-                { key: 'init', label: initingPeriod ? 'יוצר...' : 'אתחל חודש (רשומות שכר לכל העובדים)', icon: '🔄', disabled: initingPeriod, onClick: initPeriodRecords },
-                { key: 'print', label: 'הדפס תוספות/ניכויים', icon: '🖨️', onClick: printAdjustments },
-              ]} />
-            </div>
-          </div>
-
-          {/* Salary tip */}
-          <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '12px', color: '#0369a1', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-            <span style={{ flexShrink: 0 }}>💡</span>
-            <span>הזן את הסכום הנטו שמופיע בתלוש של כל עובד. תוספות וניכויים <strong>חוץ תלוש</strong> (בונוסים, קנסות וכד׳) ניתן להוסיף עם כפתור ״+ הוסף״.</span>
-          </div>
-
-          {renderSalaryTable()}
-        </div>
-      )}
+          </details>
+        )
+      })()}
 
       {/* ── Employee Modal ─────────────────────────────────────────────────── */}
       <Modal
