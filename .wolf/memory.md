@@ -2872,3 +2872,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 00:00 | Footer: removed designer line; now privacy · accessibility · v6.2.81 · © Yair Kadosh; version reset to 6.2.81; bump-version patch no longer rolls over at 9 | components/layout/Footer.tsx, lib/version.json, scripts/bump-version.js | done | ~2k |
