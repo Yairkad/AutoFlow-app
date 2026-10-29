@@ -1023,7 +1023,7 @@ export default function CarsClient() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, overflowX: 'auto', WebkitOverflowScrolling: 'touch', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, overflowX: 'auto', WebkitOverflowScrolling: 'touch', padding: '4px', background: '#f1f5f9', borderRadius: '11px', width: 'fit-content', maxWidth: '100%' }}>
         {[
           { key: 'inventory', label: `במלאי (${invCars.length})` },
           { key: 'all',       label: `הכל (${invCars.length + checkCars.length + soldCars.length})` },
