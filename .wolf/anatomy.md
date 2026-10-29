@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T13:45:29.926Z
-> Files: 169 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T14:45:36.914Z
+> Files: 170 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -543,6 +543,7 @@
 
 ## components/reminders/
 
+- `RemindersClient.tsx` — STATUS — renders form (~5999 tok)
 
 ## components/reports/
 

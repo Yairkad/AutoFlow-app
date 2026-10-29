@@ -26,7 +26,7 @@ const NAV_ITEMS = [
   { href: '/customers',   label: 'לקוחות',                  color: '#78716c,#a8a29e', module: 'customers' },
   { href: '/inspections',   label: 'בדיקות קניה',  color: '#22c55e,#4ade80', module: 'inspections' },
   { href: '/test-transfer', label: 'שינוע לטסטים', color: '#d97706,#f59e0b', module: 'test_transfer' },
-  { href: '/reminders',   label: 'תזכורות',                 color: '#f59e0b,#fde68a', module: 'reminders' },
+  { href: '/reminders',   label: 'משימות',                  color: '#f59e0b,#fde68a', module: 'reminders' },
   { href: '/documents',   label: 'מסמכים',                  color: '#3b82f6,#93c5fd', module: 'documents' },
   { href: '/settings',    label: 'הגדרות',                  color: '#6b7280,#d1d5db', module: 'settings' },
   { href: '/my-profile',  label: 'הפרופיל שלי',             color: '#a855f7,#c084fc', module: 'my_profile' },

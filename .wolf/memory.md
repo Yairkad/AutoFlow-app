@@ -2848,3 +2848,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 13:45 | Created components/layout/YardDrawer.tsx | — | ~1844 |
 | 13:52 | Redesign stage 1 (tokens/fonts/sidebar/header/modal/buttons/yard drawer) + stage 2a (dashboard KPI tiles, 226 green literals → tokens, hex-alpha concat fixed) | many | tsc+lint clean, preview checked | ~80000 |
+
+## Session: 2026-10-29 14:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:45 | Created components/reminders/RemindersClient.tsx | — | ~5999 |
