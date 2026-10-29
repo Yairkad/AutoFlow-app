@@ -30,15 +30,15 @@ export default function SearchSelect({ options, value, onChange, emptyLabel, pla
   const all: SearchOption[] = [...(emptyLabel ? [{ value: '', label: emptyLabel }] : []), ...options]
   const shown = query.trim() ? options.filter(o => fuzzyIncludes(o.label, query)) : all
 
+  function close() { setOpen(false); setQuery('') }
+  function pick(o: SearchOption) { onChange(o.value); close() }
+
   useEffect(() => {
     if (!open) return
     const onDown = (e: MouseEvent) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) close() }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
   }, [open])
-
-  function close() { setOpen(false); setQuery('') }
-  function pick(o: SearchOption) { onChange(o.value); close() }
 
   function onKey(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setActive(a => Math.min(a + 1, shown.length - 1)) }

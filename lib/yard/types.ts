@@ -82,5 +82,6 @@ export interface SearchResult {
   size?:     string
   brand?:    string
   location?: string   // tires only — warehouse shelf location
+  brand_en?: string   // tires only — English brand when the name shows its Hebrew name
   dup_count?: number  // barcode lookup: how many records share this barcode (>1 = duplicates)
 }

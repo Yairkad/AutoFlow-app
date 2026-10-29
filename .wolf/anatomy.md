@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T06:26:48.473Z
-> Files: 155 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T06:32:26.310Z
+> Files: 159 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -265,6 +265,10 @@
 ## app/api/public/plate/test-status/
 
 - `route.ts` — POST {plates[]} → {plate: {tokef, lastTest}} from data.gov.il (local+imported, chunks of 100, filters array). Used by CarsClient auto-sync on load (~400 tok)
+
+## app/api/stock/invoice-items/
+
+- `route.ts` — Next.js API route: POST, DELETE (~1871 tok)
 
 ## app/api/stock/merge/
 
@@ -560,6 +564,7 @@
 
 ## components/suppliers/
 
+- `ArrivalsModal.tsx` — A line being typed in "מה הגיע?" (kept on the invoice line until the invoice is saved) (~2959 tok)
 - `SupplierDetailsTab.tsx` — "פרטים" tab: flat supplier record CRUD (name/contact/etc), no expand state (~9300 tok)
 - `SuppliersClient.tsx` — Shell: loads suppliers/debts/payments, tab switch (מעקב/פרטים), first-load-only loading spinner via hasLoadedRef (~2600 tok)
 - `SupplierTrackingTab.tsx` — "מעקב" tab: per-supplier accordion, month blocks, debt/invoice CRUD modal, bulk-edit, pay/print/Excel; search matches doc_number/invoices[].number too, and (unless it matched the supplier's name) narrows visible rows to just the matching invoice instead of showing the whole ledger (2026-09-17, bug-039) (~38353 tok)
@@ -569,11 +574,13 @@
 
 ## components/tires/
 
+- `BrandNamesModal.tsx` — Brands as written on the tires (~1016 tok)
 - `TirePickerModal.tsx` — shared picker: search existing tires by size/brand/SKU (inventory count add/link, tires merge) (~900 tok)
 - `TirePickerModal.tsx` — TirePickerModal (~1047 tok)
 
 ## components/ui/
 
+- `FilterBar.tsx` — Remembers whether the filters panel was open (per screen) (~1229 tok)
 - `MoreMenu.tsx` — Excel export / import as menu items (replaces a separate ExcelMenu button) (~1002 tok)
 - `SearchSelect.tsx` — Label of the empty choice (value ''), e.g. "— ללא ספק ספציפי —" (~1099 tok)
 

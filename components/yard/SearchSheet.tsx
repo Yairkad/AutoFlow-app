@@ -196,7 +196,7 @@ export default function SearchSheet<T>({
 
 /** Standard result row for /api/yard/search items. */
 export function ResultRow({ r, showType }: {
-  r: { name: string; sku: string | null; price: number; stock: number | null; location?: string; type: string }
+  r: { name: string; sku: string | null; price: number; stock: number | null; location?: string; type: string; brand_en?: string }
   showType?: boolean
 }) {
   const typeLabel = r.type === 'tire' ? 'צמיג' : r.type === 'service' ? 'שירות' : 'מוצר'
@@ -211,6 +211,7 @@ export function ResultRow({ r, showType }: {
           {r.stock != null && (r.stock > 0
             ? <span>מלאי: {r.stock}</span>
             : <span className="bg-red-100 text-red-700 font-bold rounded-full" style={{ padding: '0 8px' }}>אזל</span>)}
+          {r.brand_en && <span style={{ direction: 'ltr' }}>{r.brand_en}</span>}
           {r.location && <LocationBadge location={r.location} />}
           {r.sku && <span style={{ direction: 'ltr' }}>{r.sku}</span>}
         </div>

@@ -8,6 +8,7 @@ import { TenantRow } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import MoreMenu from '@/components/ui/MoreMenu'
 import SearchSelect from '@/components/ui/SearchSelect'
+import ArrivalsModal, { emptyArrival, toArrivalInputs, type ArrivalDraft, type SavedArrival } from '@/components/suppliers/ArrivalsModal'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
@@ -38,6 +39,7 @@ interface InvoiceEntry {
   driveFileId?: string
   driveFileName?: string
   driveFileUrl?: string
+  arrivals?: ArrivalDraft[]   // "📦 מה הגיע?" — added to stock when the invoice is saved
 }
 
 type Filter = 'open' | 'closed' | 'all'
@@ -139,6 +141,10 @@ export default function SupplierTrackingTab({
   const [sSupplier, setSSupplier] = useState('')
   const [sNotes, setSNotes]       = useState('')
   const [sInvoices, setSInvoices] = useState<InvoiceEntry[]>([EMPTY_INV()])
+  // "📦 מה הגיע?": goods received with an invoice (saved lines per debt + which window is open)
+  const [invoiceItems, setInvoiceItems] = useState<SavedArrival[]>([])
+  const [arrivalsLine, setArrivalsLine] = useState<number | null>(null)
+  const [viewArrivals, setViewArrivals] = useState<SupplierDebt | null>(null)
   const [sSaving, setSsaving]     = useState(false)
 
   // Scan/attach invoice file (Google Drive)
@@ -444,6 +450,35 @@ export default function SupplierTrackingTab({
     return sInvoices.some((other, idx) => idx !== i && other.number.trim().toLowerCase() === num)
   }
 
+  const loadInvoiceItems = async () => {
+    const { data, error } = await supabase.from('supplier_invoice_items')
+      .select('id, debt_id, item_type, description, qty, unit_cost').order('created_at')
+    if (error) console.error('[suppliers] invoice items', error.message)
+    setInvoiceItems(data ?? [])
+  }
+  useEffect(() => { loadInvoiceItems() }, [supplierDebts]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const itemsOfDebt = (id: string) => invoiceItems.filter(x => x.debt_id === id)
+
+  // Adds the "מה הגיע" lines of a saved invoice to stock; returns false if some failed
+  const saveArrivals = async (debtId: string, drafts: ArrivalDraft[] | undefined) => {
+    const items = toArrivalInputs(drafts ?? [])
+    if (!items.length) return true
+    const res = await fetch('/api/stock/invoice-items', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ debt_id: debtId, items }),
+    })
+    const out = await res.json().catch(() => ({}))
+    return res.ok && out.ok !== false
+  }
+
+  const deleteArrival = async (id: string) => {
+    if (!confirm('להסיר את הפריט? הכמות תרד מהמלאי.')) return
+    const res = await fetch(`/api/stock/invoice-items?id=${id}`, { method: 'DELETE' })
+    showToast(res.ok ? 'הוסר והמלאי עודכן ✓' : 'שגיאה בהסרה', res.ok ? 'success' : 'error')
+    loadInvoiceItems()
+  }
+
   const saveSuppDebt = async () => {
     const validLines = sInvoices.filter(i => i.number.trim() || parseFloat(i.amount) > 0)
     if (validLines.length === 0) { showToast('נא למלא לפחות שורה אחת', 'error'); return }
@@ -479,7 +514,8 @@ export default function SupplierTrackingTab({
       }
       const { error } = await supabase.from('supplier_debts').update(row).eq('id', editSupp.id)
       if (error) { showToast('שגיאה בעדכון', 'error'); setSsaving(false); return }
-      showToast('עודכן ✓', 'success')
+      const stockOk = await saveArrivals(editSupp.id, validLines.flatMap(l => l.arrivals ?? []))
+      showToast(stockOk ? 'עודכן ✓' : 'החשבונית עודכנה, אך חלק מהפריטים לא נקלטו למלאי', stockOk ? 'success' : 'error')
     } else {
       // New entry — bulk insert one independent row per line, each its own date/direction
       const rows = validLines.map(l => ({
@@ -500,7 +536,8 @@ export default function SupplierTrackingTab({
       }))
       const { error } = await supabase.from('supplier_debts').insert(rows)
       if (error) { showToast('שגיאה בשמירה', 'error'); setSsaving(false); return }
-      showToast(`נשמרו ${rows.length} רשומות ✓`, 'success')
+      const stockOk = (await Promise.all(validLines.map((l, i) => saveArrivals(rows[i].id, l.arrivals)))).every(Boolean)
+      showToast(stockOk ? `נשמרו ${rows.length} רשומות ✓` : 'נשמר, אך חלק מהפריטים לא נקלטו למלאי', stockOk ? 'success' : 'error')
     }
     setSsaving(false); reload(); closeSuppModal()
   }
@@ -1278,6 +1315,13 @@ export default function SupplierTrackingTab({
                                       ) : (
                                         <span title="אין קובץ חשבונית מצורף" style={{ marginRight: 4, opacity: 0.25 }}>📎</span>
                                       )}
+                                      {idx === 0 && itemsOfDebt(d.id).length > 0 && (
+                                        <button type="button" onClick={e => { e.stopPropagation(); setViewArrivals(d) }}
+                                          title="מה הגיע בחשבונית" aria-label={`מה הגיע בחשבונית ${item.number || ''}`}
+                                          style={{ marginRight: 4, border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: '13px' }}>
+                                          📦<span style={{ fontSize: '11px', color: '#15803d', fontWeight: 700 }}>{itemsOfDebt(d.id).length}</span>
+                                        </button>
+                                      )}
                                       {d.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>{d.description}</div>}
                                     </td>
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
@@ -1358,6 +1402,22 @@ export default function SupplierTrackingTab({
           })()}
         </div>
 
+      {/* ── "📦 מה הגיע?" — editing the open invoice line / viewing a saved invoice ── */}
+      {arrivalsLine !== null && sInvoices[arrivalsLine] && (
+        <ArrivalsModal open onClose={() => setArrivalsLine(null)}
+          title={`📦 מה הגיע${sInvoices[arrivalsLine].number ? ` — חשבונית ${sInvoices[arrivalsLine].number}` : ''}`}
+          drafts={sInvoices[arrivalsLine].arrivals ?? []}
+          onDraftsChange={d => setSInvoices(prev => prev.map((l, j) => j === arrivalsLine ? { ...l, arrivals: d } : l))}
+          saved={editSupp && arrivalsLine === 0 ? itemsOfDebt(editSupp.id) : []}
+          onDeleteSaved={deleteArrival} />
+      )}
+      {viewArrivals && (
+        <ArrivalsModal open readOnly onClose={() => setViewArrivals(null)}
+          title={`📦 מה הגיע${viewArrivals.doc_number ? ` — חשבונית ${viewArrivals.doc_number}` : ''}`}
+          drafts={[]} onDraftsChange={() => {}}
+          saved={itemsOfDebt(viewArrivals.id)} onDeleteSaved={deleteArrival} />
+      )}
+
       {/* ── SUPPLIER DEBT MODAL ── */}
       {showSuppModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(closeSuppModal)}>
@@ -1427,6 +1487,18 @@ export default function SupplierTrackingTab({
                         <div style={{ fontSize: '11px', color: 'var(--danger)', fontWeight: 600 }}>⚠ מספר חשבונית זה כבר קיים אצל ספק זה</div>
                       )}
                       <input value={inv.notes} onChange={e => updateInvoiceLine(i, 'notes', e.target.value)} placeholder="הערות לשורה זו (אופציונלי)..." className="form-input" style={{ margin: 0 }} />
+                      {inv.direction === 'charge' && (() => {
+                        const n = (inv.arrivals ?? []).filter(a => a.text.trim()).length + (editSupp && i === 0 ? itemsOfDebt(editSupp.id).length : 0)
+                        return (
+                          <button type="button" onClick={() => {
+                            if (!inv.arrivals?.length) setSInvoices(prev => prev.map((l, j) => j === i ? { ...l, arrivals: [emptyArrival()] } : l))
+                            setArrivalsLine(i)
+                          }}
+                            style={{ alignSelf: 'flex-start', padding: '4px 10px', background: n ? '#f0fdf4' : 'transparent', border: `1px solid ${n ? '#86efac' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: n ? '#15803d' : 'var(--text-muted)' }}>
+                            📦 מה הגיע?{n ? ` (${n})` : ''}
+                          </button>
+                        )
+                      })()}
 
                       {/* ── Scan / attach the invoice document itself ── */}
                       {!driveConnected ? (

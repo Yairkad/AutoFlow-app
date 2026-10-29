@@ -10,7 +10,10 @@ import Button from '@/components/ui/Button'
 import PageHeader from '@/components/ui/PageHeader'
 import StatCard from '@/components/ui/StatCard'
 import * as XLSX from 'xlsx'
-import ExcelMenu from '@/components/ui/ExcelMenu'
+import MoreMenu from '@/components/ui/MoreMenu'
+import FilterBar from '@/components/ui/FilterBar'
+import BrandNamesModal from '@/components/tires/BrandNamesModal'
+import { brandHe, brandMap, brandSearchText, type BrandName } from '@/lib/tires/brands'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import TirePickerModal from '@/components/tires/TirePickerModal'
 import { tireSizeText, hasTireSize, isTireMissingDetails, isTireMissingPrice, parseTireSize } from '@/lib/tires/size'
@@ -159,6 +162,9 @@ export default function TiresClient() {
   const [mergeSource, setMergeSource] = useState<Tire | null>(null)
   // Duplicates view: same brand+size or same barcode, merged group by group
   const [dupsOpen, setDupsOpen] = useState(false)
+  // Hebrew brand names (one per brand) — searched and shown above the English name
+  const [brandRows, setBrandRows] = useState<BrandName[]>([])
+  const [brandsOpen, setBrandsOpen] = useState(false)
 
   // Quick SKU inline edit (click directly on SKU cell)
   const [editingSkuId,    setEditingSkuId]    = useState<string | null>(null)
@@ -168,13 +174,15 @@ export default function TiresClient() {
   // ── Load ──────────────────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
-    const [{ data: ts }, { data: mvs }, { data: sups }] = await Promise.all([
+    const [{ data: ts }, { data: mvs }, { data: sups }, { data: brs }] = await Promise.all([
       sb.from('tires').select('*').eq('tenant_id', tenantId.current).order('created_at', { ascending: false }),
       sb.from('tire_sales').select('*').eq('tenant_id', tenantId.current)
         .order('sold_date', { ascending: false }).limit(300),
       sb.from('suppliers').select('id, name').eq('tenant_id', tenantId.current).order('name'),
+      sb.from('tire_brands').select('name_en, name_he').eq('tenant_id', tenantId.current),
     ])
     setTires(ts || [])
+    setBrandRows(brs || [])
     setMovements(mvs || [])
     setSuppliers(sups || [])
     setLoading(false)
@@ -208,6 +216,7 @@ export default function TiresClient() {
   // ── Filtered tires ────────────────────────────────────────────────────────────
 
   const dupGroups = findTireDuplicates(tires)
+  const brands = brandMap(brandRows)
 
   async function mergeGroup(targetId: string, sourceIds: string[]): Promise<boolean> {
     const res = await fetch('/api/stock/merge', {
@@ -232,7 +241,7 @@ export default function TiresClient() {
       if (filterMissing === 'price'   && !isTireMissingPrice(t))   return false
       if (filterMissing === 'any'     && !isTireMissingDetails(t) && !isTireMissingPrice(t)) return false
       if (search) {
-        const hay = [t.brand, tireSize(t), t.location, t.notes, t.load_idx, t.speed_idx, t.sku].join(' ')
+        const hay = [brandSearchText(brands, t.brand), tireSize(t), t.location, t.notes, t.load_idx, t.speed_idx, t.sku].join(' ')
         if (!fuzzyIncludes(hay, search)) return false
       }
       return true
@@ -641,8 +650,10 @@ export default function TiresClient() {
         title="צמיגים"
         subtitle={viewOnly ? 'מצב צפיה בלבד' : undefined}
         actions={!viewOnly ? <>
-          <Button variant="outline" onClick={() => window.location.href = '/tires/receive'}>📦 קבלת סחורה</Button>
-          <Button variant="outline" onClick={() => { setRecvItems([emptyRecvItem]); setRecvOpen(true) }}>✍️ קליטה ידנית</Button>
+          <MoreMenu label="📦 קבלת סחורה ▾" actions={[
+            { key: 'scan', label: 'בסריקה', icon: '📷', onClick: () => { window.location.href = '/tires/receive' } },
+            { key: 'manual', label: 'בהקלדה ידנית', icon: '✍️', onClick: () => { setRecvItems([emptyRecvItem]); setRecvOpen(true) } },
+          ]} />
           <Button onClick={openAdd}>➕ צמיג חדש</Button>
         </> : undefined}
       />
@@ -685,67 +696,64 @@ export default function TiresClient() {
       {/* ══════════ TAB: TIRES ══════════ */}
       {tab === 'tires' && (
         <>
-          {/* Filters */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center' }}>
-            <div style={{ position: 'relative', flex: '1 1 160px', minWidth: 0, display: 'flex', alignItems: 'center' }}>
-              <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 10, pointerEvents: 'none', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input className="form-input" style={{ paddingRight: 30 }} placeholder="חיפוש מותג / מידה..."
-                value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <select className="form-input" style={{ flex: '1 1 80px', minWidth: 0 }} value={filterWidth} onChange={e => setFilterWidth(e.target.value)}>
+          {/* Search always visible; filters open from "סינון"; secondary actions in ⋯ */}
+          <FilterBar storageKey="tires" search={search} onSearch={setSearch} placeholder="חיפוש חברה (עברית/אנגלית) / מידה / מק״ט..."
+            chips={[
+              ...(filterWidth ? [{ key: 'w', label: `רוחב ${filterWidth}`, onRemove: () => setFilterWidth('') }] : []),
+              ...(filterProf ? [{ key: 'p', label: `פרופיל ${filterProf}`, onRemove: () => setFilterProf('') }] : []),
+              ...(filterRim ? [{ key: 'r', label: `קוטר ${filterRim}`, onRemove: () => setFilterRim('') }] : []),
+              ...(filterStock ? [{ key: 's', label: filterStock === 'out' ? 'אזל' : 'במלאי', onRemove: () => setFilterStock('') }] : []),
+              ...(filterCondition ? [{ key: 'c', label: filterCondition === 'new' ? 'חדש בלבד' : 'משומש בלבד', onRemove: () => setFilterCondition('') }] : []),
+              ...(filterMissing ? [{ key: 'm', label: filterMissing === 'price' ? 'חסר מחיר' : filterMissing === 'details' ? 'חסרה מידה/מותג' : 'חסר משהו', onRemove: () => setFilterMissing('') }] : []),
+            ]}
+            onClearAll={() => { setSearch(''); setFilterWidth(''); setFilterProf(''); setFilterRim(''); setFilterStock(''); setFilterCondition(''); setFilterMissing('') }}
+            end={!viewOnly ? <>
+              {dupGroups.length > 0 && (
+                <Button variant="outline" onClick={() => setDupsOpen(true)} style={{ fontSize: '13px', borderColor: 'var(--warning)', color: '#92400e' }}>
+                  🔁 {dupGroups.length} כפילויות
+                </Button>
+              )}
+              <MoreMenu
+                excel={{ onExport: exportExcel, onImport: importExcel }}
+                actions={[
+                  { key: 'price', label: 'מחירון', icon: '🖨️', onClick: printPriceList },
+                  { key: 'count', label: 'ספירת מלאי', icon: '📦', onClick: () => { window.location.href = '/tires/inventory-count' } },
+                  { key: 'storage', label: 'ארונות וספירה לפי אזור', icon: '🗄', onClick: () => { window.location.href = '/tires/storage' } },
+                  { key: 'dups', label: `כפילויות${dupGroups.length ? ` (${dupGroups.length})` : ''}`, icon: '🔁', onClick: () => setDupsOpen(true) },
+                  { key: 'brands', label: 'שמות חברות בעברית', icon: '🔤', onClick: () => setBrandsOpen(true) },
+                ]}
+              />
+            </> : undefined}>
+            <select className="form-input" aria-label="רוחב" style={{ flex: '1 1 80px', minWidth: 0, margin: 0 }} value={filterWidth} onChange={e => setFilterWidth(e.target.value)}>
               <option value=''>רוחב</option>
               {WIDTHS.map(w => <option key={w} value={w}>{w}</option>)}
             </select>
-            <select className="form-input" style={{ flex: '1 1 80px', minWidth: 0 }} value={filterProf} onChange={e => setFilterProf(e.target.value)}>
+            <select className="form-input" aria-label="פרופיל" style={{ flex: '1 1 80px', minWidth: 0, margin: 0 }} value={filterProf} onChange={e => setFilterProf(e.target.value)}>
               <option value=''>פרופיל</option>
               {PROFILES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-            <select className="form-input" style={{ flex: '1 1 75px', minWidth: 0 }} value={filterRim} onChange={e => setFilterRim(e.target.value)}>
+            <select className="form-input" aria-label="קוטר" style={{ flex: '1 1 75px', minWidth: 0, margin: 0 }} value={filterRim} onChange={e => setFilterRim(e.target.value)}>
               <option value=''>קוטר</option>
               {RIMS.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
-            <select className="form-input" style={{ flex: '1 1 90px', minWidth: 0 }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
+            <select className="form-input" aria-label="מלאי" style={{ flex: '1 1 90px', minWidth: 0, margin: 0 }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
               <option value=''>כל המלאי</option>
               <option value='instock'>במלאי</option>
               <option value='out'>אזל</option>
             </select>
-            <select className="form-input" style={{ flex: '1 1 90px', minWidth: 0 }} value={filterCondition} onChange={e => setFilterCondition(e.target.value)}>
+            <select className="form-input" aria-label="מצב" style={{ flex: '1 1 90px', minWidth: 0, margin: 0 }} value={filterCondition} onChange={e => setFilterCondition(e.target.value)}>
               <option value=''>חדש + משומש</option>
               <option value='new'>חדש בלבד</option>
               <option value='used'>משומש בלבד</option>
             </select>
-            <select className="form-input" style={{ flex: '1 1 110px', minWidth: 0, borderColor: filterMissing ? 'var(--warning)' : undefined }}
+            <select className="form-input" aria-label="נתונים חסרים" style={{ flex: '1 1 110px', minWidth: 0, margin: 0, borderColor: filterMissing ? 'var(--warning)' : undefined }}
               value={filterMissing} onChange={e => setFilterMissing(e.target.value as typeof filterMissing)}>
               <option value=''>כל הנתונים</option>
               <option value='any'>⚠ חסר משהו</option>
               <option value='details'>חסרה מידה / מותג</option>
               <option value='price'>חסר מחיר מכירה</option>
             </select>
-            {(search || filterWidth || filterProf || filterRim || filterStock || filterCondition || filterMissing) && (
-              <button onClick={() => { setSearch(''); setFilterWidth(''); setFilterProf(''); setFilterRim(''); setFilterStock(''); setFilterCondition(''); setFilterMissing('') }}
-                style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--danger)', background: '#fef2f2', color: 'var(--danger)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
-                ✕ נקה
-              </button>
-            )}
-          </div>
-
-          {/* Actions row */}
-          {!viewOnly && (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
-              <Button variant="outline" onClick={printPriceList} style={{ fontSize: '13px' }}>🖨️ מחירון</Button>
-              <a href="/tires/inventory-count" style={{ textDecoration: 'none' }}>
-                <Button variant="outline" style={{ fontSize: '13px' }}>📦 ספירת מלאי</Button>
-              </a>
-              <a href="/tires/storage" style={{ textDecoration: 'none' }}>
-                <Button variant="outline" style={{ fontSize: '13px' }}>🗄 ארונות וספירה לפי אזור</Button>
-              </a>
-              <Button variant="outline" onClick={() => setDupsOpen(true)}
-                style={{ fontSize: '13px', ...(dupGroups.length ? { borderColor: 'var(--warning)', color: '#92400e' } : {}) }}>
-                🔁 כפילויות{dupGroups.length ? ` (${dupGroups.length})` : ''}
-              </Button>
-              <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
-            </div>
-          )}
+          </FilterBar>
 
           {/* Table */}
           <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
@@ -815,7 +823,12 @@ export default function TiresClient() {
                             </div>
                           ) : (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                              {t.brand || <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                              {brandHe(brands, t.brand) ? (
+                                <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                                  <span>{brandHe(brands, t.brand)}</span>
+                                  <span dir="ltr" style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'right' }}>{t.brand}</span>
+                                </span>
+                              ) : (t.brand || <span style={{ color: 'var(--text-muted)' }}>—</span>)}
                               {t.condition === 'used' && (
                                 <span style={{ fontSize: '10px', fontWeight: 700, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '4px', padding: '1px 5px' }}>♻</span>
                               )}
@@ -1242,6 +1255,12 @@ export default function TiresClient() {
         </div>
       </Modal>
 
+      {brandsOpen && (
+        <BrandNamesModal open onClose={() => setBrandsOpen(false)} tenantId={profile?.tenantId ?? ''}
+          brands={[...new Set(tires.map(t => t.brand?.trim()).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b))}
+          saved={brandRows} onSaved={load} showToast={showToast} />
+      )}
+
       <DuplicatesModal<Tire>
         open={dupsOpen} onClose={() => setDupsOpen(false)} title="🔁 כפילויות צמיגים"
         groups={dupGroups} keeperOf={pickKeeper} onMerge={mergeGroup}
@@ -1304,7 +1323,7 @@ export default function TiresClient() {
                 {item.dropOpen && (() => {
                   const q = item.search.trim().toLowerCase()
                   const matches = q
-                    ? tires.filter(t => tireSize(t).toLowerCase().includes(q) || (t.brand ?? '').toLowerCase().includes(q) || (t.sku ?? '').toLowerCase().includes(q)).slice(0, 8)
+                    ? tires.filter(t => tireSize(t).toLowerCase().includes(q) || fuzzyIncludes(brandSearchText(brands, t.brand), q) || (t.sku ?? '').toLowerCase().includes(q)).slice(0, 8)
                     : tires.slice(0, 8)
                   if (!matches.length) return null
                   return (

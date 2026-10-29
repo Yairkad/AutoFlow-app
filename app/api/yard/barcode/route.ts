@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createServiceClient } from '@/lib/supabase/service'
 import { tireSizeText } from '@/lib/tires/size'
+import { brandHe, brandMap } from '@/lib/tires/brands'
 import type { SearchResult } from '@/app/api/yard/search/route'
 
 // Same barcode as the scanner may read it: case, a dropped/added leading zero (EAN-13 vs UPC-A)
@@ -38,16 +39,19 @@ export async function GET(req: NextRequest) {
   if (tires?.length) {
     const tire = best(tires)
     const size = tireSizeText(tire, '/') || 'ללא מידה'
+    const { data: brandRows } = await sb.from('tire_brands').select('name_en, name_he').eq('tenant_id', tenantId)
+    const he = brandHe(brandMap(brandRows), tire.brand)
     const result: SearchResult = {
       id:    tire.id,
       type:  'tire',
-      name:  `${tire.brand ?? ''} ${size} ${tire.speed_idx ?? ''}${tire.load_idx ?? ''}`.trim(),
+      name:  `${he ?? tire.brand ?? ''} ${size} ${tire.speed_idx ?? ''}${tire.load_idx ?? ''}`.trim(),
       sku:   tire.sku ?? null,
       price: tire.sell_price ?? 0,
       stock: tire.qty,
       size,
       brand: tire.brand ?? undefined,
       location: tire.location ?? undefined,
+      ...(he && tire.brand ? { brand_en: tire.brand } : {}),
       ...(tires.length > 1 ? { dup_count: tires.length } : {}),
     }
     return NextResponse.json(result)

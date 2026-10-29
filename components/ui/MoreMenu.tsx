@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { RowMenuAction } from '@/components/ui/RowActionsMenu'
 
 interface Props {
@@ -17,7 +17,7 @@ interface Props {
 export default function MoreMenu({ actions, excel, label = '⋯ עוד' }: Props) {
   const [open, setOpen] = useState(false)
   const ref     = useRef<HTMLDivElement>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const fileId  = useId()
 
   useEffect(() => {
     if (!open) return
@@ -31,7 +31,7 @@ export default function MoreMenu({ actions, excel, label = '⋯ עוד' }: Props
   const items: RowMenuAction[] = [
     ...actions,
     ...(excel ? [{ key: 'xls-out', label: 'ייצוא Excel', icon: '📤', onClick: excel.onExport }] : []),
-    ...(excel?.onImport ? [{ key: 'xls-in', label: 'ייבוא Excel', icon: '📥', onClick: () => fileRef.current?.click() }] : []),
+    ...(excel?.onImport ? [{ key: 'xls-in', label: 'ייבוא Excel', icon: '📥', onClick: () => document.getElementById(fileId)?.click() }] : []),
   ]
   if (!items.length) return null
 
@@ -66,7 +66,7 @@ export default function MoreMenu({ actions, excel, label = '⋯ עוד' }: Props
         </div>
       )}
       {excel?.onImport && (
-        <input ref={fileRef} type="file" accept=".xlsx,.xls" aria-label="ייבוא Excel" style={{ display: 'none' }}
+        <input id={fileId} type="file" accept=".xlsx,.xls" aria-label="ייבוא Excel" style={{ display: 'none' }}
           onChange={e => { excel.onImport!(e); e.target.value = '' }} />
       )}
     </div>

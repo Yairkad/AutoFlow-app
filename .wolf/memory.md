@@ -2804,3 +2804,7 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 06:04 | Barcode lookup fix, fuzzy Hebrew search, office receive page, duplicates view+merge (tires & products) | api/yard/barcode, api/yard/search, api/stock/merge, lib/search/fuzzy, lib/stock/duplicates, DuplicatesModal, Tires/Products/Receive/Header | tsc+lint clean, logic tested | ~40000 |
 | 06:25 | Created components/ui/MoreMenu.tsx | — | ~1002 |
 | 06:26 | Created components/ui/SearchSelect.tsx | — | ~1099 |
+| 06:28 | Created app/api/stock/invoice-items/route.ts | — | ~1871 |
+| 06:29 | Created components/suppliers/ArrivalsModal.tsx | — | ~2959 |
+| 06:32 | Created components/tires/BrandNamesModal.tsx | — | ~1016 |
+| 06:32 | Created components/ui/FilterBar.tsx | — | ~1229 |

@@ -3,6 +3,7 @@ import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createServiceClient } from '@/lib/supabase/service'
 import { tireSizeText } from '@/lib/tires/size'
 import { likePatterns } from '@/lib/search/fuzzy'
+import { brandHe, brandMap, brandsMatchingHe } from '@/lib/tires/brands'
 
 export interface SearchResult {
   id:         string
@@ -14,6 +15,7 @@ export interface SearchResult {
   size?:      string   // tires only
   brand?:     string   // tires only
   location?:  string   // tires only — warehouse shelf location
+  brand_en?:  string   // tires only — English brand when the name shows its Hebrew name
   dup_count?: number   // barcode lookup: how many records share this barcode (>1 = duplicates)
 }
 
@@ -40,6 +42,15 @@ export async function GET(req: NextRequest) {
 
   // Tires
   if (type === 'all' || type === 'tire') {
+    // Hebrew brand names (tire_brands): searchable, and shown instead of the English name
+    const { data: brandRows } = await supabase.from('tire_brands').select('name_en, name_he').eq('tenant_id', profile.tenant_id)
+    const brands = brandMap(brandRows)
+    // brand / sku word: English as stored, or a Hebrew name of a brand
+    const wordFilter = (w: string) => [
+      `brand.ilike.${w}`, `sku.ilike.${w}`,
+      ...brandsMatchingHe(brandRows, w.replace(/%/g, '')).map(en => `brand.ilike."${en.replace(/["\\]/g, '')}"`),
+    ].join(',')
+
     let tireQuery = supabase
       .from('tires')
       .select('id, brand, width, profile, rim, speed_idx, load_idx, sell_price, qty, sku, location')
@@ -62,25 +73,28 @@ export async function GET(req: NextRequest) {
           .eq('profile', Number(nums[1]))
       } else if (nums.length === 1) {
         tireQuery = tireQuery.eq('width', Number(nums[0]))
-      } else {
-        for (const w of patterns) tireQuery = tireQuery.or(`brand.ilike.${w},sku.ilike.${w}`)
       }
+      // Words next to the size ("מישלן 205/55/16") narrow by brand; without a size they also match sku
+      const words = nums.length ? likePatterns(q.replace(/[\d/\\.-]+/g, ' ').replace(/(^|\s)z?r(?=\s|$)/gi, ' ')) : patterns
+      for (const w of words) tireQuery = tireQuery.or(wordFilter(w))
     }
 
     const { data: tires } = await tireQuery.order('brand').limit(40)
 
     for (const t of tires ?? []) {
       const size = tireSizeText(t, '/') || 'ללא מידה'
+      const he = brandHe(brands, t.brand)
       results.push({
         id:    t.id,
         type:  'tire',
-        name:  `${t.brand ?? ''} ${size} ${t.speed_idx ?? ''}${t.load_idx ?? ''}`.trim(),
+        name:  `${he ?? t.brand ?? ''} ${size} ${t.speed_idx ?? ''}${t.load_idx ?? ''}`.trim(),
         sku:   t.sku ?? null,
         price: t.sell_price ?? 0,
         stock: t.qty,
         size,
         brand: t.brand ?? undefined,
         location: t.location ?? undefined,
+        ...(he && t.brand ? { brand_en: t.brand } : {}),
       })
     }
   }

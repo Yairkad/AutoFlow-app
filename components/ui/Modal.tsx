@@ -10,17 +10,19 @@ interface Props {
   children: React.ReactNode
   footer?: React.ReactNode
   maxWidth?: number
+  /** false: the content survives closing (kept by the caller), so no unsaved-changes guard */
+  guard?: boolean
 }
 
 // Once something was typed in the window, a stray click outside never closes it,
 // and ✕ / Escape ask before throwing the typed details away.
-export default function Modal({ open, onClose, title, children, footer, maxWidth = 560 }: Props) {
+export default function Modal({ open, onClose, title, children, footer, maxWidth = 560, guard = true }: Props) {
   const { confirm } = useConfirm()
   const dirty = useRef(false)
   useEffect(() => { if (open) dirty.current = false }, [open])
 
   const requestClose = async () => {
-    if (dirty.current && !(await confirm({ msg: 'יש פרטים שלא נשמרו — לסגור בלי לשמור?', confirmLabel: 'סגור בלי לשמור' }))) return
+    if (dirty.current && !(await confirm({ msg: 'יש פרטים שלא נשמרו — לסגור בלי לשמור?', confirmLabel: 'סגור בלי לשמור', icon: '⚠️' }))) return
     onClose()
   }
   const closeRef = useRef(requestClose)
@@ -39,7 +41,7 @@ export default function Modal({ open, onClose, title, children, footer, maxWidth
   return (
     <div
       onClick={() => { if (!dirty.current) onClose() }}
-      onInput={() => { dirty.current = true }}
+      onInput={() => { if (guard) dirty.current = true }}
       style={{
         position: 'fixed', inset: 0,
         background: 'rgba(0,0,0,.45)',
