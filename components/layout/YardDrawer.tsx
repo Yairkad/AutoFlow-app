@@ -75,7 +75,7 @@ export default function YardDrawer() {
   }
 
   return (
-    <aside className="yard-drawer" aria-label="בקרת רחבה">
+    <aside className="yard-drawer yard-theme" aria-label="בקרת רחבה">
       <div className="yd-head">
         <CarIcon size={18} />
         <h2>בקרת רחבה</h2>

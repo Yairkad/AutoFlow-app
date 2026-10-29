@@ -295,7 +295,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                 <div className="flex items-center gap-2" style={{ marginTop: -4 }}>
                   <div className="flex-1 min-w-0">
                     {r.phone
-                      ? <a href={`tel:${r.phone}`} className="font-bold" style={{ fontSize: 14, color: '#1d4ed8', direction: 'ltr', whiteSpace: 'nowrap', display: 'inline-block' }}>📞 {fmtPhone(r.phone)}</a>
+                      ? <a href={`tel:${r.phone}`} className="font-bold" style={{ fontSize: 14, color: '#1E2B66', direction: 'ltr', whiteSpace: 'nowrap', display: 'inline-block' }}>📞 {fmtPhone(r.phone)}</a>
                       : <span className="text-slate-300" style={{ fontSize: 13 }}>אין טלפון</span>}
                   </div>
                   <span className={`rounded-full font-bold text-xs flex-shrink-0 ${STATUS_COLOR[r.status]}`} style={{ padding: '3px 9px', whiteSpace: 'nowrap' }}>

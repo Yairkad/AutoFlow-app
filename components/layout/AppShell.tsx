@@ -26,7 +26,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      <main style={{
+      <main className="yard-theme" style={{
         marginTop: 'var(--header-h)',
         marginRight: 'var(--sidebar-w)',
         marginLeft: 'var(--drawer-w, 0px)',

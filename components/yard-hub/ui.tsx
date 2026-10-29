@@ -41,7 +41,7 @@ export function Toggle<T extends string>({ value, options, onChange }: {
         return (
           <button key={o.value} type="button" onClick={() => onChange(o.value)}
             className={`flex-1 rounded-xl font-bold border-2 transition-colors ${active ? 'text-white' : 'bg-white text-slate-600 border-slate-200'}`}
-            style={{ padding: '11px 8px', fontSize: '15px', ...(active ? { background: o.color ?? '#1d4ed8', borderColor: o.color ?? '#1d4ed8' } : {}) }}>
+            style={{ padding: '11px 8px', fontSize: '15px', ...(active ? { background: o.color ?? '#1E2B66', borderColor: o.color ?? '#1E2B66' } : {}) }}>
             {o.label}
           </button>
         )

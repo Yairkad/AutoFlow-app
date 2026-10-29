@@ -353,8 +353,8 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
             className="text-base font-semibold transition-colors"
             style={{
               padding: '14px 24px',
-              borderBottom: tab === t ? '3px solid #2563eb' : '3px solid transparent',
-              color: tab === t ? '#1d4ed8' : '#94a3b8',
+              borderBottom: tab === t ? '3px solid #26357A' : '3px solid transparent',
+              color: tab === t ? '#1E2B66' : '#94a3b8',
               marginBottom: '-2px',
             }}
           >
@@ -375,8 +375,8 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
           className="text-base font-semibold transition-colors"
           style={{
             padding: '14px 24px',
-            borderBottom: tab === 'history' ? '3px solid #2563eb' : '3px solid transparent',
-            color: tab === 'history' ? '#1d4ed8' : '#94a3b8',
+            borderBottom: tab === 'history' ? '3px solid #26357A' : '3px solid transparent',
+            color: tab === 'history' ? '#1E2B66' : '#94a3b8',
             marginBottom: '-2px',
           }}
         >

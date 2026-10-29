@@ -31,7 +31,7 @@ export default function YardTrackingClient() {
     <div className="flex flex-col gap-4">
       <PageHeader
         icon={<span style={{ fontSize: 22 }}>📋</span>}
-        iconBg="linear-gradient(135deg,#0f172a,#475569)"
+        iconBg="linear-gradient(135deg,#141A2E,#475569)"
         title="מעקב רחבה"
         subtitle="מה שהעובדים רושמים ברחבה — לקוחות שמחכים, השאלות, דוחות ושווי מלאי"
         marginBottom={0}
@@ -46,7 +46,7 @@ export default function YardTrackingClient() {
           return (
             <button key={t.value} role="tab" aria-selected={active} onClick={() => setTab(t.value)}
               className={`flex items-center gap-2 font-bold whitespace-nowrap transition-colors ${active ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'}`}
-              style={{ padding: '10px 16px', fontSize: 16, marginBottom: -2, borderBottom: `3px solid ${active ? '#0f172a' : 'transparent'}` }}>
+              style={{ padding: '10px 16px', fontSize: 16, marginBottom: -2, borderBottom: `3px solid ${active ? '#141A2E' : 'transparent'}` }}>
               <span style={{ fontSize: 18 }}>{t.icon}</span>
               {t.label}
               {n > 0 && (

@@ -439,7 +439,7 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
               {/* Mode toggle */}
               <div className="flex rounded-2xl overflow-hidden border-2 border-slate-200 bg-white">
                 <button className="flex-1 font-bold transition-colors"
-                  style={{ padding: '13px', background: '#1e293b', color: '#fff', fontSize: '14px' }}>
+                  style={{ padding: '13px', background: '#1B2448', color: '#fff', fontSize: '14px' }}>
                   📋 אחד אחד
                 </button>
                 <button onClick={startQuick} className="flex-1 font-bold transition-colors active:brightness-90"

@@ -828,3 +828,20 @@ button:not(:disabled):active {
 .kpi-tile { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
   display: flex; flex-direction: column; gap: 4px; justify-content: center; transition: border-color .15s; }
 .kpi-tile:hover { border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); }
+
+/* ── Redesign palette for Tailwind-built screens (yard terminal, office terminal, receive) ──
+   Tailwind v4 colors are CSS variables, so remapping them inside .yard-theme restyles those
+   screens without touching their markup or behavior: slate → navy-tinted neutrals,
+   blue → brand navy, green / red → the approve / cancel tones. Amber (warnings) stays. */
+.yard-theme {
+  --color-slate-50:  #F7F8FB; --color-slate-100: #EEF0F5; --color-slate-200: #E2E5EE; --color-slate-300: #C9CEDB;
+  --color-slate-400: #98A0B5; --color-slate-500: #6B7490; --color-slate-600: #4E5772; --color-slate-700: #3A4360;
+  --color-slate-800: #1B2448; --color-slate-900: #121A36;
+  --color-blue-50:  #E7EAF6; --color-blue-100: #D5DAEF; --color-blue-200: #B7C0E4; --color-blue-300: #94A2D8;
+  --color-blue-400: #6F80D0; --color-blue-500: #3B4FA8; --color-blue-600: #26357A; --color-blue-700: #1E2B66; --color-blue-800: #172152;
+  --color-green-50: #E3F3EC; --color-green-100: #CDEADD; --color-green-200: #A8D9C3; --color-green-500: #1F8F66;
+  --color-green-600: #137A55; --color-green-700: #0F6446; --color-green-800: #0B4E37;
+  --color-red-50: #F9E6E4; --color-red-100: #F3D0CD; --color-red-200: #E8ABA6; --color-red-400: #D6645D;
+  --color-red-500: #C9413A; --color-red-600: #B9342D; --color-red-700: #9A2A24; --color-red-800: #7A211C;
+  font-family: var(--font-ui), var(--font-heebo), Arial, sans-serif;
+}

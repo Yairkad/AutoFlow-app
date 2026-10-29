@@ -82,8 +82,8 @@ export default function QuickReportsPanel({ variant }: { variant: 'yard' | 'offi
       {error ? <Empty icon="⚠️" text={`שגיאה: ${error}`} /> : !data || !s ? <Empty icon="⏳" text="טוען..." /> : (<>
         <p className="font-black text-slate-700" style={{ fontSize: '17px' }}>🛒 מכרנו (כרטיסי עבודה שנסגרו)</p>
         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' }}>
-          <Stat label="רכבים" value={String(s.cars)} color="#0f172a" sub={money ? `סה״כ ${ils(s.total)}` : undefined} />
-          <Stat label="צמיגים" value={String(s.byType.tire.qty)} color="#2563eb" sub={money ? ils(s.byType.tire.amount) : undefined} />
+          <Stat label="רכבים" value={String(s.cars)} color="#141A2E" sub={money ? `סה״כ ${ils(s.total)}` : undefined} />
+          <Stat label="צמיגים" value={String(s.byType.tire.qty)} color="#26357A" sub={money ? ils(s.byType.tire.amount) : undefined} />
           <Stat label="מוצרים" value={String(s.byType.product.qty)} color="#ea580c" sub={money ? ils(s.byType.product.amount) : undefined} />
           <Stat label="שירותים" value={String(s.byType.service.qty)} color="#16a34a" sub={money ? ils(s.byType.service.amount) : undefined} />
           {s.noStockUnits > 0 && <Stat label="נמכרו ללא מלאי" value={String(s.noStockUnits)} color="#ea580c" sub="לסדר במעקב רחבה" />}
