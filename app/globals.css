@@ -370,6 +370,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 .dash-mobile-bottom { display: none; }
 
+/* Tablets (landscape 10"–12.9"): the stats get two columns so numbers aren't squeezed next to the tasks panel */
+@media (min-width: 641px) and (max-width: 1280px) {
+  .cards-section-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+
 @media (max-width: 640px) {
   /* Stack columns vertically, remove fixed height */
   .dash-layout {
@@ -440,6 +445,13 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   grid-template-columns: 1fr 1px 1fr;
   align-items: center;
 }
+
+/* Each half of a double card: label above, number below (was inline on desktop and ran together) */
+.stat-card-double-col { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; text-align: center; }
+.stat-card-double-sep { align-self: stretch; background: var(--border); }
+/* KPI numbers shrink on narrow tiles (tablets) instead of being clipped */
+.kpi-tile { min-width: 0; overflow: hidden; }
+.kpi-tile .stat-card-value { font-size: clamp(17px, 1.9vw, 24px) !important; white-space: nowrap; }
 
 /* Card slot fills its grid row height */
 .card-slot {
