@@ -21,6 +21,8 @@ interface InventoryItem {
   name: string
   sku: string | null
   barcode: string | null
+  /** Extra barcodes of the same item (migration 110) */
+  alt: string[]
   qty: number
   cost_price: number | null
   sell_price: number | null
@@ -93,16 +95,17 @@ export default function ScanClient() {
   const load = useCallback(async (tenantId: string) => {
     setLoading(true)
     const [{ data: tires }, { data: products }] = await Promise.all([
-      sb.from('tires').select('id,brand,width,profile,rim,sku,qty,cost_price,sell_price').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
-      sb.from('products').select('id,name,sku,barcode,qty,buy_price,sell_price').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+      // '*' so alt_barcodes comes along once migration 110 ran (and nothing breaks before it)
+      sb.from('tires').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+      sb.from('products').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
     ])
     const tireItems: InventoryItem[] = (tires ?? []).map(t => ({
       id: t.id, type: 'tire', name: `${t.brand ?? ''} ${tireSizeText(t) || 'ללא מידה'}`.trim(),
-      sku: t.sku ?? null, barcode: t.sku ?? null, qty: t.qty,
+      sku: t.sku ?? null, barcode: t.sku ?? null, alt: t.alt_barcodes ?? [], qty: t.qty,
       cost_price: t.cost_price ?? null, sell_price: t.sell_price ?? null,
     }))
     const prodItems: InventoryItem[] = (products ?? []).map(p => ({
-      id: p.id, type: 'product', name: p.name, sku: p.sku ?? null, barcode: p.barcode ?? null, qty: p.qty,
+      id: p.id, type: 'product', name: p.name, sku: p.sku ?? null, barcode: p.barcode ?? null, alt: p.alt_barcodes ?? [], qty: p.qty,
       cost_price: p.buy_price ?? null, sell_price: p.sell_price ?? null,
     }))
     setItems([...tireItems, ...prodItems])
@@ -130,7 +133,7 @@ export default function ScanClient() {
 
   // ── Normal scan ───────────────────────────────────────────────────────────
   function findItem(code: string) {
-    return items.find(i => (i.barcode && i.barcode === code) || (i.sku && i.sku === code))
+    return items.find(i => (i.barcode && i.barcode === code) || (i.sku && i.sku === code) || i.alt.includes(code))
   }
 
   function handleScan(code: string) {
@@ -261,8 +264,13 @@ export default function ScanClient() {
   // ── Link barcode ──────────────────────────────────────────────────────────
   async function saveBarcode(item: InventoryItem, code: string) {
     setSavingLink(true)
-    if (item.type === 'tire') await sb.from('tires').update({ sku: code }).eq('id', item.id)
-    else await sb.from('products').update({ barcode: code }).eq('id', item.id)
+    const table = item.type === 'tire' ? 'tires' : 'products'
+    const main  = item.type === 'tire' ? item.sku : item.barcode
+    // Already has a barcode → keep it and add this one as an extra barcode of the same item
+    const { error } = main
+      ? await sb.from(table).update({ alt_barcodes: [...item.alt, code] }).eq('id', item.id)
+      : await sb.from(table).update(item.type === 'tire' ? { sku: code } : { barcode: code }).eq('id', item.id)
+    if (error && main) await sb.from(table).update(item.type === 'tire' ? { sku: code } : { barcode: code }).eq('id', item.id)   // before migration 110
     setSavingLink(false); setNotFoundCode(null); setAction(null)
     showToast(`ברקוד שויך ל-${item.name} ✓`); await load(tenantIdRef.current); refocus()
   }

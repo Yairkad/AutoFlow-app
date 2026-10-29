@@ -41,6 +41,8 @@ interface Tire {
   location: string | null
   notes: string | null
   sku: string | null
+  /** Extra barcodes of the same tire (migration 110) */
+  alt_barcodes?: string[]
   supplier_id: string | null
   condition: 'new' | 'used'
   tire_type: 'regular' | 'reinforced' | 'commercial'
@@ -67,7 +69,7 @@ const SPEED_INDICES = ['B','C','D','E','F','G','H','J','K','L','M','N','P','Q','
 
 const emptyForm = {
   brand: '', width: '', profile: '', rim: '',
-  load_idx: '', speed_idx: '', sku: '',
+  load_idx: '', speed_idx: '', sku: '', alt: '',
   cost_price: '', margin: '', sell_price: '',
   qty: '0', location: '', notes: '', supplier_id: '',
   condition: 'new' as 'new' | 'used',
@@ -317,7 +319,7 @@ export default function TiresClient() {
     setEditId(t.id)
     setForm({
       brand: t.brand || '', width: numStr(t.width), profile: numStr(t.profile), rim: numStr(t.rim),
-      load_idx: t.load_idx || '', speed_idx: t.speed_idx || '', sku: t.sku || '',
+      load_idx: t.load_idx || '', speed_idx: t.speed_idx || '', sku: t.sku || '', alt: (t.alt_barcodes ?? []).join(', '),
       cost_price: t.cost_price != null ? String(t.cost_price) : '',
       margin: t.margin ? String(t.margin) : '',
       sell_price: t.sell_price != null ? String(t.sell_price) : '',
@@ -334,7 +336,7 @@ export default function TiresClient() {
     setEditId(null)
     setForm({
       brand: t.brand || '', width: numStr(t.width), profile: numStr(t.profile), rim: numStr(t.rim),
-      load_idx: t.load_idx || '', speed_idx: t.speed_idx || '', sku: '',
+      load_idx: t.load_idx || '', speed_idx: t.speed_idx || '', sku: '', alt: '',
       cost_price: t.cost_price != null ? String(t.cost_price) : '',
       margin: t.margin ? String(t.margin) : '',
       sell_price: t.sell_price != null ? String(t.sell_price) : '',
@@ -374,6 +376,10 @@ export default function TiresClient() {
       location:    form.location.trim() || null,
       notes:       form.notes.trim() || null,
       sku:         form.sku.trim() || null,
+      // Only once the column exists (migration 110) — tires load with '*' so the field shows up then
+      ...(tires.some(t => Array.isArray(t.alt_barcodes))
+        ? { alt_barcodes: [...new Set(form.alt.split(/[\s,]+/).map(c => c.trim()).filter(c => c && c !== form.sku.trim()))] }
+        : {}),
       supplier_id: form.supplier_id || null,
       condition:   form.condition,
       tire_type:   form.tire_type,
@@ -1040,6 +1046,15 @@ export default function TiresClient() {
                   </svg>
                 </button>
               </div>
+            {tires.some(t => Array.isArray(t.alt_barcodes)) && (
+              <div style={{ marginTop: '10px' }}>
+                <label className="form-label" htmlFor="f-alt">ברקודים נוספים לאותו צמיג</label>
+                <input id="f-alt" className="form-input" value={form.alt} onChange={e => setF('alt', e.target.value)}
+                  placeholder="כשהיצרן מדפיס ברקוד אחר על אותו צמיג — מופרדים בפסיק"
+                  style={{ fontFamily: 'monospace', letterSpacing: '0.5px' }}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); setF('alt', form.alt.trim() ? `${form.alt.trim()}, ` : '') } }} />
+              </div>
+            )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>

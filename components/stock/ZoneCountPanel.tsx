@@ -7,6 +7,7 @@ import { api } from '@/components/yard-hub/ui'
 import TirePickerModal from '@/components/tires/TirePickerModal'
 import StorageMap from './StorageMap'
 import { allShelves, cabinetOf, findCabinet, parseLocation, shelvesOfCabinet, sortShelves, type StorageLayout } from '@/lib/stock/storage'
+import { itemCodes } from '@/lib/stock/barcodes'
 import {
   ROUND_DAYS, buildReview, expandScope, expectedTires, shelfSizeChanges, tireLabel, toSave,
   type CountRound, type OutsideChoice, type ReviewRow, type ZoneEntry, type ZoneTire,
@@ -84,7 +85,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
   const tires = useMemo(() => data?.tires ?? [], [data])
   const skuMap = useMemo(() => {
     const m = new Map<string, ZoneTire>()
-    tires.forEach(t => { if (t.sku) m.set(t.sku.toLowerCase().trim(), t) })
+    tires.forEach(t => { for (const c of itemCodes(t)) m.set(c.toLowerCase(), t) })
     return m
   }, [tires])
   const tireById = useMemo(() => new Map(tires.map(t => [t.id, t])), [tires])

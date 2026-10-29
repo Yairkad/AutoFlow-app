@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth/require'
 import { createServiceClient } from '@/lib/supabase/service'
+import { extraCodes } from '@/lib/stock/barcodes'
 
 type Kind = 'tire' | 'product'
 
@@ -65,7 +66,14 @@ export async function POST(req: NextRequest) {
     const from = sources.find(r => !empty(r[f]))
     if (from) patch[f] = from[f]
   }
-  const { error: upErr } = await sb.from(tbl).update(patch).eq('id', target_id).eq('tenant_id', tenantId)
+  // The sources' barcodes keep working: they become extra barcodes of the kept record
+  const fillCodes = { sku: (patch.sku as string | undefined) ?? target.sku, barcode: (patch.barcode as string | undefined) ?? target.barcode, alt_barcodes: target.alt_barcodes }
+  const extra = extraCodes(fillCodes, sources)
+  let { error: upErr } = await sb.from(tbl).update(extra.length ? { ...patch, alt_barcodes: [...(target.alt_barcodes ?? []), ...extra] } : patch)
+    .eq('id', target_id).eq('tenant_id', tenantId)
+  if (upErr && extra.length && /alt_barcodes|column/i.test(upErr.message)) {
+    ({ error: upErr } = await sb.from(tbl).update(patch).eq('id', target_id).eq('tenant_id', tenantId))   // before migration 110
+  }
   if (upErr) {
     console.error('[stock/merge] update target', upErr.message)
     return NextResponse.json({ error: 'שגיאה בעדכון הרשומה — לא נמחק דבר' }, { status: 500 })

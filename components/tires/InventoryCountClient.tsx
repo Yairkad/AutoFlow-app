@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button'
 import { tireSizeText, parseTireSize } from '@/lib/tires/size'
 import TirePickerModal from '@/components/tires/TirePickerModal'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
+import { itemCodes } from '@/lib/stock/barcodes'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,7 @@ interface TireRow {
   profile: number | null
   rim: number | null
   qty: number
+  alt_barcodes?: string[]
 }
 
 interface ScanEntry {
@@ -98,7 +100,7 @@ export default function InventoryCountClient() {
       tenantId.current = tid
 
       const [{ data: ts }, { data: sessions }] = await Promise.all([
-        sb.from('tires').select('id, sku, brand, width, profile, rim, qty').eq('tenant_id', tid),
+        sb.from('tires').select('*').eq('tenant_id', tid),   // '*' → alt_barcodes when present
         sb.from('tire_inventory_count_sessions')
           .select('id, counted_at, notes, is_first')
           .eq('tenant_id', tid)
@@ -131,7 +133,7 @@ export default function InventoryCountClient() {
 
   const skuMap = useMemo(() => {
     const m = new Map<string, TireRow>()
-    tires.forEach(t => { if (t.sku) m.set(t.sku.toLowerCase().trim(), t) })
+    tires.forEach(t => { for (const c of itemCodes(t)) m.set(c.toLowerCase(), t) })
     return m
   }, [tires])
 

@@ -26,7 +26,7 @@ export async function GET() {
   const [{ layout }, tires, round] = await Promise.all([
     loadLayout(sb, tid),
     selectAll<ZoneTire>((a, b) => sb.from('tires')
-      .select('id, sku, brand, width, profile, rim, qty, location').eq('tenant_id', tid).order('id').range(a, b)),
+      .select('*').eq('tenant_id', tid).order('id').range(a, b)),   // '*' → alt_barcodes when present
     loadRound(sb, tid),
   ])
   if (tires.error) return NextResponse.json({ error: tires.error.message }, { status: 500 })

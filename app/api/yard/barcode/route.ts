@@ -29,12 +29,19 @@ export async function GET(req: NextRequest) {
 
   const sb = createServiceClient()
 
-  const { data: tires, error: tErr } = await sb
+  const TIRE_COLS = 'id,brand,width,profile,rim,speed_idx,load_idx,sell_price,qty,sku,location'
+  const bySkuRes = await sb
     .from('tires')
-    .select('id,brand,width,profile,rim,speed_idx,load_idx,sell_price,qty,sku,location')
+    .select(TIRE_COLS)
     .eq('tenant_id', tenantId)
     .in('sku', codes)
-  if (tErr) console.error('[yard/barcode] tires', tErr.message)
+  if (bySkuRes.error) console.error('[yard/barcode] tires', bySkuRes.error.message)
+  let tires = bySkuRes.data
+  // Extra barcodes of the same tire (a maker may print a different code each batch)
+  if (!tires?.length) {
+    const alt = await sb.from('tires').select(TIRE_COLS).eq('tenant_id', tenantId).overlaps('alt_barcodes', codes)
+    if (!alt.error) tires = alt.data
+  }
 
   if (tires?.length) {
     const tire = best(tires)
@@ -64,7 +71,11 @@ export async function GET(req: NextRequest) {
   ])
   if (byBarcode.error) console.error('[yard/barcode] products', byBarcode.error.message)
   if (bySku.error) console.error('[yard/barcode] products sku', bySku.error.message)
-  const prods = [...new Map([...(byBarcode.data ?? []), ...(bySku.data ?? [])].map(p => [p.id, p])).values()]
+  let prods = [...new Map([...(byBarcode.data ?? []), ...(bySku.data ?? [])].map(p => [p.id, p])).values()]
+  if (!prods.length) {
+    const alt = await sb.from('products').select('id,name,sku,barcode,sell_price,qty').eq('tenant_id', tenantId).overlaps('alt_barcodes', codes)
+    if (!alt.error) prods = alt.data ?? []
+  }
 
   if (prods.length) {
     const prod = best(prods)
