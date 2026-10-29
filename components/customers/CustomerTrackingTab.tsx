@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
-import ExcelMenu from '@/components/ui/ExcelMenu'
+import MoreMenu from '@/components/ui/MoreMenu'
+import Modal from '@/components/ui/Modal'
+import SearchSelect from '@/components/ui/SearchSelect'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { recordCustomerPayment } from '@/lib/debts/reconcileCustomerLedgerPayment'
@@ -184,6 +186,7 @@ export default function CustomerTrackingTab({
   // "Generate this month's charges" — fixed-type recurring items only
   const [genMonth, setGenMonth] = useState(monthISO())
   const [generating, setGenerating] = useState(false)
+  const [genOpen, setGenOpen] = useState(false)   // "צור חיובים לחודש" month picker
 
   // "Log a meter reading" — month-independent, one meter-type item at a time
   const [meterReadItem, setMeterReadItem] = useState<RecurringItem | null>(null)
@@ -724,16 +727,12 @@ export default function CustomerTrackingTab({
       <div>
         <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
           <Button onClick={() => openDebtModal()}>+ הוסף חשבונית/זיכוי</Button>
-          <Button variant="secondary" onClick={() => { setBulkSelectMode(m => !m); setBulkSelectedIds(new Set()) }}>
-            {bulkSelectMode ? '✖ בטל בחירה' : '☑ עריכה מרובה'}
-          </Button>
+          {bulkSelectMode && (
+            <Button variant="secondary" onClick={() => { setBulkSelectMode(false); setBulkSelectedIds(new Set()) }}>✖ בטל בחירה</Button>
+          )}
           {bulkSelectMode && bulkSelectedIds.size > 0 && (
             <Button onClick={startBulkEdit}>✏️ ערוך נבחרים ({bulkSelectedIds.size})</Button>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)} className="form-input" style={{ margin: 0, padding: '7px 8px', fontSize: '12px' }} />
-            <Button variant="secondary" loading={generating} onClick={generateRecurringCharges}>🔄 צור חיובים לחודש</Button>
-          </div>
           <div style={{ display: 'flex', gap: '6px' }}>
             <FilterBtn f="open" label="פתוחים" />
             <FilterBtn f="closed" label="סגורים" />
@@ -741,6 +740,7 @@ export default function CustomerTrackingTab({
           </div>
           <input
             placeholder="חיפוש לקוח / מספר חשבונית / תיאור..."
+            aria-label="חיפוש"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="form-input" style={{ flex: 1, minWidth: '180px', maxWidth: '300px' }}
@@ -748,9 +748,26 @@ export default function CustomerTrackingTab({
           <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
             יתרה כוללת: <strong style={{ color: 'var(--danger)' }}>{fmt(openCustTotal)}</strong>
           </span>
-          <Button variant="secondary" onClick={() => setShowPrintChoice(true)}>🖨️ הדפסה</Button>
-          <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
+          <MoreMenu
+            excel={{ onExport: exportExcel, onImport: importExcel }}
+            actions={[
+              { key: 'bulk', label: 'עריכה מרובה', icon: '☑', onClick: () => { setBulkSelectMode(true); setBulkSelectedIds(new Set()) } },
+              { key: 'gen', label: 'צור חיובים לחודש', icon: '🔄', onClick: () => setGenOpen(true) },
+              { key: 'print', label: 'הדפסה', icon: '🖨️', onClick: () => setShowPrintChoice(true) },
+            ]}
+          />
         </div>
+
+        <Modal open={genOpen} onClose={() => setGenOpen(false)} title="🔄 צור חיובים קבועים לחודש" maxWidth={380}
+          footer={<>
+            <Button variant="secondary" onClick={() => setGenOpen(false)}>ביטול</Button>
+            <Button loading={generating} onClick={async () => { await generateRecurringCharges(); setGenOpen(false) }}>צור חיובים</Button>
+          </>}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 600 }}>
+          חודש
+            <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)} className="form-input" />
+          </label>
+        </Modal>
 
         {(() => {
           const allCustIds = [...new Set(customerDebts.map(d => d.customer_id))]
@@ -850,17 +867,17 @@ export default function CustomerTrackingTab({
                     <span style={{ marginRight: 'auto', fontSize: '14px', fontWeight: 700, color: group.totalBal > 0 ? 'var(--danger)' : '#16a34a' }}>
                       יתרה כוללת: {fmt(group.totalBal)}
                     </span>
-                    <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '6px' }}>
+                    <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      {group.cid && (
+                        <button onClick={() => addDebtForCustomer(group.cid!)}
+                          style={{ padding: '5px 14px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 700 }}>
+                          + הוסף
+                        </button>
+                      )}
                       {group.totalBal > 0 && (
                         <button onClick={() => openPayCustomer(group.cid)}
                           style={{ padding: '4px 12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
                           💰 תשלום
-                        </button>
-                      )}
-                      {group.cid && (
-                        <button onClick={() => addDebtForCustomer(group.cid!)}
-                          style={{ padding: '4px 12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
-                          + הוסף
                         </button>
                       )}
                       {group.cid && (() => {
@@ -1110,10 +1127,8 @@ export default function CustomerTrackingTab({
                   <span>לקוח</span>
                   <button type="button" onClick={() => setShowQuickAddCustomer(true)} style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, padding: 0 }}>+ הוסף לקוח חדש</button>
                 </div>
-                <select value={dCustomer} onChange={e => setDCustomer(e.target.value)} className="form-input">
-                  <option value="">— ללא לקוח ספציפי —</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <SearchSelect value={dCustomer} onChange={setDCustomer} ariaLabel="לקוח" emptyLabel="— ללא לקוח ספציפי —"
+                  options={customers.map(x => ({ value: x.id, label: x.name }))} />
               </label>
 
               {dCustomer && customerActions.some(a => a.customer_id === dCustomer) && (

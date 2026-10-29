@@ -2802,3 +2802,5 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 06:00 | Created lib/stock/duplicates.ts | — | ~945 |
 | 06:01 | Created components/stock/DuplicatesModal.tsx | — | ~1314 |
 | 06:04 | Barcode lookup fix, fuzzy Hebrew search, office receive page, duplicates view+merge (tires & products) | api/yard/barcode, api/yard/search, api/stock/merge, lib/search/fuzzy, lib/stock/duplicates, DuplicatesModal, Tires/Products/Receive/Header | tsc+lint clean, logic tested | ~40000 |
+| 06:25 | Created components/ui/MoreMenu.tsx | — | ~1002 |
+| 06:26 | Created components/ui/SearchSelect.tsx | — | ~1099 |

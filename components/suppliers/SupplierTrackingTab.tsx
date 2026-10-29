@@ -6,7 +6,8 @@ import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { TenantRow } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
-import ExcelMenu from '@/components/ui/ExcelMenu'
+import MoreMenu from '@/components/ui/MoreMenu'
+import SearchSelect from '@/components/ui/SearchSelect'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
@@ -198,6 +199,7 @@ export default function SupplierTrackingTab({
   // "Generate this month's charges" — fixed-type recurring items only
   const [genMonth, setGenMonth] = useState(monthISO())
   const [generating, setGenerating] = useState(false)
+  const [genOpen, setGenOpen] = useState(false)   // "צור חיובים לחודש" month picker
 
   // "Log a meter reading" — month-independent, one meter-type item at a time
   const [meterReadItem, setMeterReadItem] = useState<RecurringItem | null>(null)
@@ -1009,18 +1011,12 @@ export default function SupplierTrackingTab({
       <div>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Button onClick={() => openSuppModal()}>+ הוסף חשבונית/זיכוי</Button>
-            <Button variant="secondary" onClick={() => { setBulkSelectMode(m => !m); setBulkSelectedIds(new Set()) }}>
-              {bulkSelectMode ? '✖ בטל בחירה' : '☑ עריכה מרובה'}
-            </Button>
+            {bulkSelectMode && (
+              <Button variant="secondary" onClick={() => { setBulkSelectMode(false); setBulkSelectedIds(new Set()) }}>✖ בטל בחירה</Button>
+            )}
             {bulkSelectMode && bulkSelectedIds.size > 0 && (
               <Button onClick={startBulkEdit}>✏️ ערוך נבחרים ({bulkSelectedIds.size})</Button>
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)} className="form-input" style={{ margin: 0, padding: '7px 8px', fontSize: '12px' }} />
-              <Button variant="secondary" loading={generating} onClick={generateRecurringCharges}>🔄 צור חיובים לחודש</Button>
-            </div>
-            <Button variant="secondary" onClick={() => setSchedModal(true)}>📝 צ׳ק / סדרה לספק</Button>
-            <Link href="/checks" style={{ padding: '8px 18px', borderRadius: '9px', fontSize: '14px', fontWeight: 500, border: '1.5px solid var(--border)', background: '#fff', color: 'var(--text)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>📅 יומן צ׳קים</Link>
             <div style={{ display: 'flex', gap: '6px' }}>
               <FilterBtn f="open" label="פתוחים" />
               <FilterBtn f="closed" label="סגורים" />
@@ -1028,6 +1024,7 @@ export default function SupplierTrackingTab({
             </div>
             <input
               placeholder="חיפוש ספק / מספר חשבונית / תיאור..."
+              aria-label="חיפוש"
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="form-input" style={{ flex: 1, minWidth: '180px', maxWidth: '300px' }}
@@ -1035,9 +1032,28 @@ export default function SupplierTrackingTab({
             <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
               יתרה כוללת: <strong style={{ color: 'var(--danger)' }}>{fmt(openSuppTotal)}</strong>
             </span>
-            <Button variant="secondary" onClick={() => setShowPrintChoice(true)}>🖨️ הדפסה</Button>
-            <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
+            <MoreMenu
+              excel={{ onExport: exportExcel, onImport: importExcel }}
+              actions={[
+                { key: 'bulk', label: 'עריכה מרובה', icon: '☑', onClick: () => { setBulkSelectMode(true); setBulkSelectedIds(new Set()) } },
+                { key: 'gen', label: 'צור חיובים לחודש', icon: '🔄', onClick: () => setGenOpen(true) },
+              { key: 'sched', label: 'צ׳ק / סדרה לספק', icon: '📝', onClick: () => setSchedModal(true) },
+              { key: 'checks', label: 'יומן צ׳קים', icon: '📅', onClick: () => { window.location.href = '/checks' } },
+                { key: 'print', label: 'הדפסה', icon: '🖨️', onClick: () => setShowPrintChoice(true) },
+              ]}
+            />
           </div>
+
+          <Modal open={genOpen} onClose={() => setGenOpen(false)} title="🔄 צור חיובים קבועים לחודש" maxWidth={380}
+            footer={<>
+              <Button variant="secondary" onClick={() => setGenOpen(false)}>ביטול</Button>
+              <Button loading={generating} onClick={async () => { await generateRecurringCharges(); setGenOpen(false) }}>צור חיובים</Button>
+            </>}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 600 }}>
+            חודש
+              <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)} className="form-input" />
+            </label>
+          </Modal>
 
           {(() => {
             const allSuppIds = [...new Set(supplierDebts.map(d => d.supplier_id))]
@@ -1109,7 +1125,13 @@ export default function SupplierTrackingTab({
                       <span style={{ marginRight: 'auto', fontSize: '14px', fontWeight: 700, color: group.totalBal > 0 ? 'var(--danger)' : '#16a34a' }}>
                         יתרה כוללת: {fmt(group.totalBal)}
                       </span>
-                      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '6px' }}>
+                      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        {group.sid && (
+                          <button onClick={() => addDebtForSupplier(group.sid!)}
+                            style={{ padding: '5px 14px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 700 }}>
+                            + הוסף
+                          </button>
+                        )}
                         {group.totalBal > 0 && (
                           <button onClick={() => openPaySupplier(group.sid)}
                             style={{ padding: '4px 12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
@@ -1117,16 +1139,9 @@ export default function SupplierTrackingTab({
                           </button>
                         )}
                         {group.sid && (
-                          <button onClick={() => addDebtForSupplier(group.sid!)}
-                            style={{ padding: '4px 12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
-                            + הוסף
-                          </button>
-                        )}
-                        {group.sid && (
-                          <button onClick={e => { e.stopPropagation(); setQuickHistorySupplier(group.sid!) }}
-                            style={{ padding: '4px 12px', background: '#fff', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
-                            📜 היסטוריית תשלומים
-                          </button>
+                          <RowActionsMenu actions={[
+                            { key: 'hist', label: 'היסטוריית תשלומים', icon: '📜', onClick: () => setQuickHistorySupplier(group.sid!) },
+                          ]} />
                         )}
                       </div>
                     </div>
@@ -1361,10 +1376,8 @@ export default function SupplierTrackingTab({
                   <span>ספק</span>
                   <button type="button" onClick={() => setShowQuickAddSupplier(true)} style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, padding: 0 }}>+ הוסף ספק חדש</button>
                 </div>
-                <select value={sSupplier} onChange={e => setSSupplier(e.target.value)} className="form-input">
-                  <option value="">— ללא ספק ספציפי —</option>
-                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <SearchSelect value={sSupplier} onChange={setSSupplier} ariaLabel="ספק" emptyLabel="— ללא ספק ספציפי —"
+                  options={suppliers.map(x => ({ value: x.id, label: x.name }))} />
               </label>
 
               <div>

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T06:01:07.938Z
-> Files: 148 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T06:26:48.473Z
+> Files: 155 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -171,6 +171,10 @@
 ## app/(app)/tires/inventory-count/
 
 
+## app/(app)/tires/receive/
+
+- `page.tsx` — office stock receive (ReceiveClient office) — stays in the app, not the yard (~80 tok)
+
 ## app/accessibility/
 
 
@@ -261,6 +265,10 @@
 ## app/api/public/plate/test-status/
 
 - `route.ts` — POST {plates[]} → {plate: {tokef, lastTest}} from data.gov.il (local+imported, chunks of 100, filters array). Used by CarsClient auto-sync on load (~400 tok)
+
+## app/api/stock/merge/
+
+- `route.ts` — POST merge duplicate tires/products into one: moves movements/refs, sums qty, fills missing fields, deletes sources (~1000 tok)
 
 ## app/api/store/
 
@@ -542,13 +550,13 @@
 ## components/stock/
 
 - `DuplicatesModal.tsx` — Default record to keep in a group (~1314 tok)
+- `DuplicatesModal.tsx` — duplicate groups side by side, choose record to keep, merge via /api/stock/merge (~1200 tok)
 - `LocationBadge.tsx` — fetchLayout (~944 tok)
 - `PlacementSheet.tsx` — PlacementSheet (~1232 tok)
 - `StorageClient.tsx` — StorageClient (~3122 tok)
 - `StorageMap.tsx` — CAB_W (~1390 tok)
 - `StorageMapEditor.tsx` — inp (~1814 tok)
 - `ZoneCountPanel.tsx` — DRAFT_KEY (~6881 tok)
-- `DuplicatesModal.tsx` — duplicate groups side by side, choose record to keep, merge via /api/stock/merge (~1200 tok)
 
 ## components/suppliers/
 
@@ -566,6 +574,8 @@
 
 ## components/ui/
 
+- `MoreMenu.tsx` — Excel export / import as menu items (replaces a separate ExcelMenu button) (~1002 tok)
+- `SearchSelect.tsx` — Label of the empty choice (value ''), e.g. "— ללא ספק ספציפי —" (~1099 tok)
 
 ## components/yard-hub/
 
@@ -660,12 +670,13 @@
 ## lib/search/
 
 - `fuzzy.ts` — Lowercase, drop quote/geresh marks, final letters → regular, doubled י/ו → single. (~434 tok)
+- `fuzzy.ts` — Hebrew spelling-tolerant search: normalizeSearch, fuzzyIncludes (client), likePatterns (DB ilike per word) (~500 tok)
 
 ## lib/stock/
 
 - `duplicates.ts` — The record to keep by default: has a sell price, then most stock, then the oldest. (~945 tok)
-- `storage.ts` — "a3, B2 / c10" → ['A3', 'B2', 'C10'] (unique, in order). Free text that isn't a shelf is ignored. (~1559 tok)
 - `duplicates.ts` — findTireDuplicates / findProductDuplicates (union-find on brand+size / name / sku+barcode), pickKeeper (~900 tok)
+- `storage.ts` — "a3, B2 / c10" → ['A3', 'B2', 'C10'] (unique, in order). Free text that isn't a shelf is ignored. (~1559 tok)
 - `zoneCount.ts` — For a tire that was recorded outside the counted shelves: it moved here, or it's in both places. (~1709 tok)
 
 ## lib/supabase/
@@ -734,12 +745,3 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-
-## lib/search/
-- `fuzzy.ts` — Hebrew spelling-tolerant search: normalizeSearch, fuzzyIncludes (client), likePatterns (DB ilike per word) (~500 tok)
-
-## app/api/stock/merge/
-- `route.ts` — POST merge duplicate tires/products into one: moves movements/refs, sums qty, fills missing fields, deletes sources (~1000 tok)
-
-## app/(app)/tires/receive/
-- `page.tsx` — office stock receive (ReceiveClient office) — stays in the app, not the yard (~80 tok)
