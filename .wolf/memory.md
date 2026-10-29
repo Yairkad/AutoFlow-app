@@ -2790,3 +2790,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:50 | Created components/landing/MapEmbed.tsx | — | ~224 |
 | 12:51 | Created app/zz-preview/page.tsx | — | ~180 |
 | 12:52 | Privacy-scan follow-up: Google map is click-to-load (MapEmbed, no Google requests/cookies before click) so no cookie banner needed; privacy/accessibility text updated; privacy+terms links added to /login, /accessibility, own /guide (GuideView legalLinks prop; not on other garages' /guide/<token>). Pre-existing: login green #1a9e5c button contrast 3.44:1 + no <main> | MapEmbed, app/page.tsx, legal pages, login, GuideView | done | ~15k |
+
+## Session: 2026-10-29 05:47
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 05:49 | Investigated stock receive/barcode/duplicates/product search bugs; proposal sent, awaiting approval (no code changes) | api/yard/barcode, api/yard/search, ReceiveClient, TiresClient | proposal | ~15000 |
