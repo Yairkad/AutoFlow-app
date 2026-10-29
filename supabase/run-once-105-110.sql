@@ -1,4 +1,4 @@
--- Run once in the Supabase SQL editor: migrations 105, 106, 107 together (redesign release).
+-- Run once in the Supabase SQL editor: every migration of this release (105–110) together.
 -- Each part is idempotent (IF NOT EXISTS / DROP POLICY IF EXISTS), so running it twice is safe.
 
 -- ═══════════════ 105_supplier_invoice_items.sql ═══════════════
@@ -70,3 +70,26 @@ CREATE POLICY "reminder_updates_tenant" ON reminder_updates
 
 -- Reminders that were marked done now read as closed tasks
 UPDATE reminders SET status = 'closed' WHERE is_done = true AND COALESCE(status, 'open') <> 'closed';
+
+-- ═══════════════ 108_request_no_answer.sql ═══════════════
+-- Yard customer requests: "we called, no answer" marker, independent of the request status
+alter table customer_requests add column if not exists no_answer_count int not null default 0;
+alter table customer_requests add column if not exists no_answer_at timestamptz;
+
+-- ═══════════════ 109_stock_movement_source.sql ═══════════════
+-- Stock movements: where each line came from, so the stock screen can show yard sales, invoice
+-- arrivals and manual corrections side by side.
+alter table tire_sales    add column if not exists source text;          -- yard | manual | invoice | receive
+alter table tire_sales    add column if not exists session_id uuid;      -- yard work card that sold it
+alter table tire_sales    add column if not exists note text;
+alter table product_sales add column if not exists source text;
+alter table product_sales add column if not exists session_id uuid;
+alter table product_sales add column if not exists note text;
+
+-- ═══════════════ 110_alt_barcodes.sql ═══════════════
+-- One item, several barcodes: some makers print a different code on the same tire, so a tire
+-- (or product) keeps extra barcodes besides its main sku/barcode. Scans match any of them.
+alter table tires    add column if not exists alt_barcodes text[] not null default '{}';
+alter table products add column if not exists alt_barcodes text[] not null default '{}';
+create index if not exists idx_tires_alt_barcodes    on tires    using gin (alt_barcodes);
+create index if not exists idx_products_alt_barcodes on products using gin (alt_barcodes);

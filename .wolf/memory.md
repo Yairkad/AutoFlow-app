@@ -2891,3 +2891,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 22:30 | Created components/stock/StockClient.tsx | — | ~5509 |
 | 22:40 | Created components/documents/DriveFilesPanel.tsx | — | ~3374 |
 | 22:50 | Created lib/debts/supplierLedger.ts | — | ~1136 |
+| 23:50 | Preview feedback round: alerts one-line+links, cars 2 tabs, scan field, expenses filters, checks cancel, car-sale payments→debts, urgent tasks red, stock screen (movements+yard sales), no-answer marker, alt barcodes + partial merge, settings (Drive pill/verify, business card, Drive files, backup status), forms gallery + editor fixes, supplier running account, run-once-105-110 | many | done, pushed | ~200k |
