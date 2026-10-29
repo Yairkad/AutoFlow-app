@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useId } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
@@ -10,7 +10,8 @@ import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import RowActionsMenu, { RowMenuAction } from '@/components/ui/RowActionsMenu'
 import PlateInput from '@/components/ui/PlateInput'
-import ExcelMenu from '@/components/ui/ExcelMenu'
+import MoreMenu from '@/components/ui/MoreMenu'
+import FilterBar from '@/components/ui/FilterBar'
 import PageHeader from '@/components/ui/PageHeader'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
@@ -18,7 +19,6 @@ import { VehicleData } from '@/lib/utils/plateApi'
 import { MAX_UPLOAD_BYTES, shrinkForUpload } from '@/lib/utils/uploadCompress'
 import CarContractsPanel from './CarContractsPanel'
 import CarContractEditor, { type ContractPrefill } from './CarContractEditor'
-import { printHtml } from '@/lib/print/printHtml'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -77,47 +77,7 @@ interface Car {
   created_at: string
 }
 
-interface CarRequest {
-  id: string
-  tenant_id: string
-  name: string
-  phone: string | null
-  budget: number | null
-  min_year: number | null
-  max_km: number | null
-  max_hand: number | null
-  seats: string | null
-  car_type: string | null
-  fuel: string | null
-  transmission: string | null
-  make_pref: string | null
-  status: string        // open | handled | closed
-  notes: string | null
-  created_at: string
-}
 
-interface CarSaleRequest {
-  id: string
-  tenant_id: string
-  name: string
-  phone: string | null
-  make: string | null
-  model: string | null
-  year: number | null
-  plate: string | null
-  car_code: string | null
-  key_hanger: string | null
-  km: number | null
-  hand: number | null
-  ownership_type: string | null
-  list_price: number | null
-  commission: number | null
-  commission_type: 'fixed' | 'percent'
-  wait_until: string | null
-  status: string
-  notes: string | null
-  created_at: string
-}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -142,13 +102,6 @@ const STATUSES = [
 ]
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.value, s]))
 
-const REQ_STATUSES = [
-  { value: 'open',    label: 'פתוח',  color: 'var(--primary)' },
-  { value: 'handled', label: 'טופל',  color: '#d97706' },
-  { value: 'closed',  label: 'נסגר',  color: '#64748b' },
-]
-const REQ_STATUS_MAP = Object.fromEntries(REQ_STATUSES.map(s => [s.value, s]))
-
 const PAYMENT_METHODS = ['העברה', 'מזומן', "צ'ק", 'אשראי', 'מימון']
 
 const emptyCarForm = {
@@ -168,20 +121,6 @@ const emptyCarForm = {
   deposit_refund_requested: false,
   deposit_refund_requested_date: '',
   notes: '',
-}
-
-const emptyReqForm = {
-  name: '', phone: '', budget: '', min_year: '',
-  max_km: '', max_hand: '', seats: '', car_type: '', fuel: '',
-  transmission: '', make_pref: '', status: 'open', notes: '',
-}
-
-const emptySaleReqForm = {
-  name: '', phone: '', make: '', model: '', year: '', plate: '',
-  car_code: '', key_hanger: '', km: '', hand: '', ownership_type: '',
-  list_price: '', commission: '',
-  commission_type: 'fixed' as 'fixed' | 'percent',
-  wait_until: '', status: 'open', notes: '',
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -262,16 +201,10 @@ export default function CarsClient() {
   const { confirm } = useConfirm()
 
   const [cars,     setCars]     = useState<Car[]>([])
-  const [requests,      setRequests]      = useState<CarRequest[]>([])
-  const [tenantName,    setTenantName]    = useState('')
-  const [logoBase64,    setLogoBase64]    = useState('')
   const [loading,       setLoading]       = useState(true)
-  const [updatingReqId, setUpdatingReqId] = useState<string | null>(null)
 
-  const [tab, setTab] = useState<'all' | 'inventory' | 'checking' | 'sold' | 'requests'>('inventory')
+  const [tab, setTab] = useState<'all' | 'inventory'>('inventory')
   const [invFilter, setInvFilter] = useState<string>('all')
-  const [reqFilter,    setReqFilter]    = useState<string>('all')
-  const [reqSubTab,    setReqSubTab]    = useState<'buy' | 'sell'>('buy')
 
   // Drive
   const [driveConnected,    setDriveConnected]    = useState(false)
@@ -325,25 +258,10 @@ export default function CarsClient() {
   // Lightbox
   const [lightbox, setLightbox] = useState<{ photos: string[]; idx: number } | null>(null)
 
-  // Request form
-  const [reqModal,      setReqModal]      = useState(false)
-  const [editReqId,     setEditReqId]     = useState<string | null>(null)
-  const [reqForm,       setReqForm]       = useState({ ...emptyReqForm })
-
-  // Sale requests
-  const [saleRequests,  setSaleRequests]  = useState<CarSaleRequest[]>([])
-  const [saleReqModal,  setSaleReqModal]  = useState(false)
-  const [editSaleReqId, setEditSaleReqId] = useState<string | null>(null)
-  const [saleReqForm,   setSaleReqForm]   = useState({ ...emptySaleReqForm })
-
   // ── Load ──────────────────────────────────────────────────────────
 
   const load = useCallback(async (tid: string) => {
-    const [{ data: c }, { data: r }, { data: sr }] = await Promise.all([
-      sb.from('cars').select('*').eq('tenant_id', tid).order('created_at', { ascending: false }),
-      sb.from('car_requests').select('*').eq('tenant_id', tid).order('created_at', { ascending: false }),
-      sb.from('car_sale_requests').select('*').eq('tenant_id', tid).order('created_at', { ascending: false }),
-    ])
+    const { data: c } = await sb.from('cars').select('*').eq('tenant_id', tid).order('created_at', { ascending: false })
 
     setCars((c || []).map(x => ({
       ...x,
@@ -355,8 +273,6 @@ export default function CarsClient() {
       test_passed:   !!x.test_passed,
       doc_names:     Array.isArray(x.doc_names) ? x.doc_names : [],
     })))
-    setRequests(r || [])
-    setSaleRequests(sr || [])
     setLoading(false)
   }, [sb])
 
@@ -364,8 +280,6 @@ export default function CarsClient() {
     if (!profile) return
     tenantId.current = profile.tenantId
     setIsAdmin(profile.isAdmin)
-    setTenantName((profile.tenant?.name as string | undefined) ?? '')
-    setLogoBase64((profile.tenant?.logo_base64 as string | undefined) ?? '')
     if (profile.isAdmin) {
       fetch(`/api/drive/status?tenant_id=${profile.tenantId}`)
         .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => {})
@@ -374,103 +288,6 @@ export default function CarsClient() {
   }, [profile, load])
 
   // ── Print buy request ─────────────────────────────────────────────
-
-  function buildYad2Url(req: CarRequest): string {
-    const base = 'https://www.yad2.co.il/vehicles/cars'
-    const params = new URLSearchParams()
-    const carTypeMap: Record<string, string> = { "פרטי": '2', "ג'יפ / SUV": '5', "ואן": '9', "מסחרי": '7' }
-    const fuelMap:    Record<string, string> = { 'בנזין': '1', 'דיזל': '2', 'היברידי': '5', 'חשמלי': '6' }
-    const gearMap:    Record<string, string> = { 'אוטומט': '102', 'ידני': '101' }
-    if (req.car_type     && carTypeMap[req.car_type])      params.set('carFamilyType', carTypeMap[req.car_type])
-    if (req.fuel         && fuelMap[req.fuel])              params.set('engineType',    fuelMap[req.fuel])
-    if (req.transmission && gearMap[req.transmission])      params.set('gearBox',       gearMap[req.transmission])
-    if (req.min_year)    params.set('year',  `${req.min_year}-${new Date().getFullYear()}`)
-    if (req.max_km)      params.set('km',    `-1-${req.max_km}`)
-    if (req.budget)      params.set('price', `-1-${req.budget}`)
-    if (req.seats)       params.set('seats', req.seats.replace('+', ''))
-    const qs = params.toString()
-    return qs ? `${base}?${qs}` : base
-  }
-
-  function printBuyRequest(req: CarRequest) {
-    const biz  = tenantName || 'בית העסק'
-    const date = new Date().toLocaleDateString('he-IL')
-    const row  = (label: string, value: string | null | undefined) =>
-      value ? `<tr><td class="lbl">${label}</td><td class="val">${value}</td></tr>` : ''
-    const logoHTML = logoBase64
-      ? `<img src="${logoBase64}" style="max-height:18mm;max-width:40mm;object-fit:contain;display:block;margin:0 auto 6pt"/>`
-      : `<div style="width:38mm;height:16mm;border:2px dashed #bbb;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9pt;color:#aaa;margin:0 auto 6pt">לוגו</div>`
-
-    const html = `<!DOCTYPE html>
-<html lang="he" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap');
-  *{box-sizing:border-box;margin:0;padding:0}
-  @page{size:A4;margin:18mm}
-  body{font-family:'Heebo',Arial,sans-serif;direction:rtl;color:#1e293b;background:#fff}
-  .header{text-align:center;border-bottom:3px solid #1a9e5c;padding-bottom:12pt;margin-bottom:16pt}
-  .biz-name{font-size:20pt;font-weight:900;color:#1a9e5c}
-  .form-title{font-size:14pt;font-weight:700;color:#334155;margin-top:4pt}
-  .date{font-size:9pt;color:#64748b;margin-top:3pt}
-  .section-title{font-size:11pt;font-weight:700;color:#1a9e5c;border-right:3px solid #1a9e5c;padding-right:8pt;margin:14pt 0 8pt}
-  table{width:100%;border-collapse:collapse;font-size:10pt}
-  .lbl{font-weight:700;width:38%;padding:6pt 8pt;background:#f8fafc;border:1px solid #e2e8f0;color:#475569}
-  .val{padding:6pt 8pt;border:1px solid #e2e8f0;color:#1e293b}
-  tr:nth-child(even) .val{background:#fafafa}
-  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:0;border-collapse:collapse}
-  .two-col .cell{border:1px solid #e2e8f0;padding:6pt 8pt;font-size:10pt}
-  .two-col .cell-lbl{font-weight:700;background:#f8fafc;color:#475569}
-  .two-col .cell-val{color:#1e293b}
-  .notes-box{margin-top:14pt;border:1px solid #e2e8f0;border-radius:6pt;padding:10pt;min-height:50pt;font-size:10pt;color:#1e293b}
-  .sig-row{display:flex;gap:24pt;margin-top:20pt}
-  .sig-box{flex:1;border-top:1px solid #94a3b8;padding-top:6pt;font-size:9pt;color:#64748b;text-align:center}
-  .footer{margin-top:24pt;border-top:1px solid #e2e8f0;padding-top:10pt;font-size:9pt;color:#94a3b8;text-align:center}
-  @media print{body{padding:0}.footer{position:fixed;bottom:0;width:100%}}
-</style>
-</head>
-<body>
-<div class="header">
-  ${logoHTML}
-  <div class="biz-name">${biz}</div>
-  <div class="form-title">טופס בקשת איתור רכב</div>
-  <div class="date">תאריך: ${date}</div>
-</div>
-
-<div class="section-title">פרטי הלקוח</div>
-<div class="two-col">
-  <div class="cell cell-lbl">שם מלא *</div><div class="cell cell-val">${req.name}</div>
-  <div class="cell cell-lbl">טלפון *</div><div class="cell cell-val">${req.phone || ''}</div>
-</div>
-
-<div class="section-title">דרישות הרכב</div>
-<table>
-  ${row('סוג רכב', req.car_type)}
-  ${row('סוג דלק', req.fuel)}
-  ${row('סוג הילוכים', req.transmission)}
-  ${row('יצרן / דגם מועדף', req.make_pref)}
-  ${row('תקציב מקסימלי', req.budget ? '₪' + req.budget.toLocaleString('he-IL') : null)}
-  ${row('שנת ייצור מינימלית', req.min_year ? String(req.min_year) : null)}
-  ${row('ק"מ מקסימלי', req.max_km ? req.max_km.toLocaleString('he-IL') + ' ק"מ' : null)}
-  ${row('מקסימום יד', req.max_hand ? String(req.max_hand) : null)}
-  ${row('מספר מושבים', req.seats)}
-</table>
-
-${req.notes ? `<div class="section-title">הערות ודגשים</div><div class="notes-box">${req.notes}</div>` : ''}
-
-<div class="sig-row">
-  <div class="sig-box">חתימת הלקוח</div>
-  <div class="sig-box">חתימת נציג העסק</div>
-</div>
-
-<div class="footer">${biz} · נוצר ב-${date} · אוטו ליין</div>
-<script>window.onload=function(){window.print()}<\/script>
-</body>
-</html>`
-
-    printHtml(html)
-  }
 
   // ── Car CRUD ──────────────────────────────────────────────────────
 
@@ -538,17 +355,6 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       seats:     data.seats     ? String(data.seats) : f.seats,
     }))
     if (data.plate && driveConnected) loadCarDriveFiles(String(data.plate))
-  }
-
-  function handleSaleReqApiData(data: Partial<VehicleData>) {
-    setSaleReqForm(f => ({
-      ...f,
-      plate:          data.plate          ? String(data.plate)          : f.plate,
-      make:           data.make           ? String(data.make)           : f.make,
-      model:          data.model          ? String(data.model)          : f.model,
-      year:           data.year           ? String(data.year)           : f.year,
-      ownership_type: data.ownership      ? String(data.ownership)      : f.ownership_type,
-    }))
   }
 
   async function uploadPhoto(idx: number, file: File) {
@@ -915,166 +721,13 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
 
   // ── Requests CRUD ─────────────────────────────────────────────────
 
-  function openReqForm(req?: CarRequest) {
-    if (req) {
-      setEditReqId(req.id)
-      setReqForm({
-        name:         req.name           || '',
-        phone:        req.phone          || '',
-        budget:       req.budget         ? String(req.budget)   : '',
-        min_year:     req.min_year       ? String(req.min_year) : '',
-        max_km:       req.max_km         ? String(req.max_km)   : '',
-        max_hand:     req.max_hand       ? String(req.max_hand) : '',
-        seats:        req.seats          || '',
-        car_type:     req.car_type       || '',
-        fuel:         req.fuel           || '',
-        transmission: req.transmission   || '',
-        make_pref:    req.make_pref      || '',
-        status:       req.status         || 'open',
-        notes:        req.notes          || '',
-      })
-    } else {
-      setEditReqId(null)
-      setReqForm({ ...emptyReqForm })
-    }
-    setReqModal(true)
-  }
-
-  async function saveReq() {
-    if (!reqForm.name.trim())  { toast('יש להזין שם לקוח', 'error');  return }
-    if (!reqForm.phone.trim()) { toast('יש להזין טלפון',    'error');  return }
-    const payload = {
-      tenant_id:    tenantId.current,
-      name:         reqForm.name,
-      phone:        reqForm.phone        || null,
-      budget:       reqForm.budget       ? Number(reqForm.budget)   : null,
-      min_year:     reqForm.min_year     ? Number(reqForm.min_year) : null,
-      max_km:       reqForm.max_km       ? Number(reqForm.max_km)   : null,
-      max_hand:     reqForm.max_hand     ? Number(reqForm.max_hand) : null,
-      seats:        reqForm.seats        || null,
-      car_type:     reqForm.car_type     || null,
-      fuel:         reqForm.fuel         || null,
-      transmission: reqForm.transmission || null,
-      make_pref:    reqForm.make_pref    || null,
-      status:       reqForm.status,
-      notes:        reqForm.notes        || null,
-    }
-    if (editReqId) {
-      const { error } = await sb.from('car_requests').update(payload).eq('id', editReqId)
-      if (error) { toast('שגיאה בעדכון: ' + error.message, 'error'); return }
-      toast('הבקשה עודכנה ✓', 'success')
-    } else {
-      const { error } = await sb.from('car_requests').insert(payload)
-      if (error) { toast('שגיאה בשמירה: ' + error.message, 'error'); return }
-      toast('הבקשה נשמרה ✓', 'success')
-    }
-    setReqModal(false)
-    load(tenantId.current)
-  }
-
-  async function deleteReq(id: string) {
-    const ok = await confirm({ msg: 'למחוק את הבקשה?', variant: 'danger' })
-    if (!ok) return
-    await sb.from('car_requests').delete().eq('id', id)
-    toast('הבקשה נמחקה', 'success')
-    load(tenantId.current)
-  }
-
-  async function changeReqStatus(id: string, status: string) {
-    // optimistic update
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r))
-    setUpdatingReqId(id)
-    await sb.from('car_requests').update({ status }).eq('id', id)
-    setUpdatingReqId(null)
-  }
-
   // ── Sale Requests CRUD ────────────────────────────────────────────
-
-  function openSaleReqForm(req?: CarSaleRequest) {
-    if (req) {
-      setEditSaleReqId(req.id)
-      setSaleReqForm({
-        name:            req.name            || '',
-        phone:           req.phone           || '',
-        make:            req.make            || '',
-        model:           req.model           || '',
-        year:            req.year            ? String(req.year) : '',
-        plate:           req.plate           || '',
-        car_code:        req.car_code        || '',
-        key_hanger:      req.key_hanger      || '',
-        km:              req.km              ? String(req.km)              : '',
-        hand:            req.hand            ? String(req.hand)            : '',
-        ownership_type:  req.ownership_type  || '',
-        list_price:      req.list_price      ? String(req.list_price) : '',
-        commission:      req.commission      ? String(req.commission) : '',
-        commission_type: req.commission_type || 'fixed',
-        wait_until:      req.wait_until      || '',
-        status:          req.status          || 'open',
-        notes:           req.notes           || '',
-      })
-    } else {
-      setEditSaleReqId(null)
-      setSaleReqForm({ ...emptySaleReqForm })
-    }
-    setSaleReqModal(true)
-  }
-
-  async function saveSaleReq() {
-    if (!saleReqForm.name.trim()) { toast('יש להזין שם לקוח', 'error'); return }
-    const payload = {
-      tenant_id:       tenantId.current,
-      name:            saleReqForm.name,
-      phone:           saleReqForm.phone       || null,
-      make:            saleReqForm.make        || null,
-      model:           saleReqForm.model       || null,
-      year:            saleReqForm.year        ? Number(saleReqForm.year)       : null,
-      plate:           saleReqForm.plate       || null,
-      car_code:        saleReqForm.car_code       || null,
-      key_hanger:      saleReqForm.key_hanger     || null,
-      km:              saleReqForm.km             ? Number(saleReqForm.km)   : null,
-      hand:            saleReqForm.hand           ? Number(saleReqForm.hand) : null,
-      ownership_type:  saleReqForm.ownership_type || null,
-      list_price:      saleReqForm.list_price     ? Number(saleReqForm.list_price) : null,
-      commission:      saleReqForm.commission  ? Number(saleReqForm.commission) : null,
-      commission_type: saleReqForm.commission_type,
-      wait_until:      saleReqForm.wait_until  || null,
-      status:          saleReqForm.status,
-      notes:           saleReqForm.notes       || null,
-      updated_at:      new Date().toISOString(),
-    }
-    if (editSaleReqId) {
-      await sb.from('car_sale_requests').update(payload).eq('id', editSaleReqId)
-      toast('הבקשה עודכנה ✓', 'success')
-    } else {
-      await sb.from('car_sale_requests').insert(payload)
-      toast('הבקשה נשמרה ✓', 'success')
-    }
-    setSaleReqModal(false)
-    load(tenantId.current)
-  }
-
-  async function deleteSaleReq(id: string) {
-    const ok = await confirm({ msg: 'למחוק את הבקשה?', variant: 'danger' })
-    if (!ok) return
-    await sb.from('car_sale_requests').delete().eq('id', id)
-    toast('הבקשה נמחקה', 'success')
-    load(tenantId.current)
-  }
-
-  async function changeSaleReqStatus(id: string, status: string) {
-    setSaleRequests(prev => prev.map(r => r.id === id ? { ...r, status } : r))
-    setUpdatingReqId(id)
-    await sb.from('car_sale_requests').update({ status, updated_at: new Date().toISOString() }).eq('id', id)
-    setUpdatingReqId(null)
-  }
 
   // ── Stats ─────────────────────────────────────────────────────────
 
   const invCars     = cars.filter(c => c.status !== 'sold' && c.status !== 'checking' && c.status !== 'declined')
   const checkCars   = cars.filter(c => c.status === 'checking')
-  const declinedCars = cars.filter(c => c.status === 'declined')
   const soldCars    = cars.filter(c => c.status === 'sold')
-  const openReqs    = requests.filter(r => r.status === 'open')
   const totalAsk    = invCars.filter(c => c.status === 'available').reduce((s, c) => s + (c.ask_price || 0), 0)
   const totalProfit = soldCars.reduce((s, c) => s + ((c.sold_price || 0) - (c.buy_price || 0)), 0)
 
@@ -1095,8 +748,10 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       return true
     })
   }
-  const allCars    = applyFlags([...invCars, ...checkCars, ...soldCars])
-  const displayInv = applyFlags(invFilter === 'all' ? invCars : invCars.filter(c => c.status === invFilter))
+  const byStatus   = (list: Car[]) => invFilter === 'all' ? list : list.filter(c => c.status === invFilter)
+  // "הכל": everything incl. sold (greyed, at the end)
+  const allCars    = applyFlags(byStatus([...invCars, ...checkCars, ...soldCars]))
+  const displayInv = applyFlags(byStatus(invCars))
   const viewCar    = viewCarId ? cars.find(c => c.id === viewCarId) ?? null : null
   const CARD_GRID: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(190px, calc(50% - 6px)), 1fr))', gap: 12 }
   const depositedCount = [...invCars, ...checkCars].filter(c => c.license_deposited).length
@@ -1104,34 +759,33 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
   const noTestCount    = [...invCars, ...checkCars].filter(c => { const t = daysUntil(c.test_date); return !c.license_deposited && (t === null || t < 0) }).length
 
   function renderFlagBar() {
-    const chip = (active: boolean): React.CSSProperties => ({
-      padding: '5px 12px', borderRadius: 16, border: '1.5px solid var(--border)',
-      background: active ? '#0f172a' : '#fff', color: active ? '#fff' : 'var(--text-muted)',
+    const sel = (active: boolean): React.CSSProperties => ({
+      padding: '5px 12px', borderRadius: 16, border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+      background: active ? 'var(--primary)' : '#fff', color: active ? '#fff' : 'var(--text-muted)',
       fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
     })
+    const statuses = [{ v: 'all', l: 'כל הסטטוסים' }, { v: 'available', l: 'למכירה' }, { v: 'reserved', l: 'שמור' }, { v: 'business', l: 'בשימוש העסק' },
+      ...(tab === 'all' ? [{ v: 'sold', l: 'נמכר' }] : [])]
+    const flags = [
+      { v: 'deposited', l: `בהפקדה (${depositedCount})` },
+      { v: 'no_refund', l: `בהפקדה – לא הוגש החזר (${noRefundCount})` },
+      { v: 'no_test',   l: `ללא טסט בתוקף (${noTestCount})` },
+      { v: 'expiring',  l: 'טסט/ביטוח עד 30 יום' },
+    ] as const
     return (
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-        <input
-          value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 חיפוש לפי מספר רכב / יצרן / דגם"
-          style={{ ...inp(), width: 'auto', flex: '1 1 220px', maxWidth: 320, padding: '6px 10px', fontSize: 13 }}
-        />
-        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          {([
-            { v: 'all',       l: 'הכל' },
-            { v: 'deposited', l: `🅿️ בהפקדה (${depositedCount})` },
-            { v: 'no_refund', l: `💸 בהפקדה – לא הוגש החזר (${noRefundCount})` },
-            { v: 'no_test',   l: `🔧 ללא טסט בתוקף (${noTestCount})` },
-            { v: 'expiring',  l: '⏳ טסט/ביטוח עד 30 יום' },
-          ] as const).map(f => (
-            <button key={f.v} onClick={() => setFlagFilter(f.v)} style={chip(flagFilter === f.v)}>{f.l}</button>
-          ))}
+      <FilterBar storageKey="cars" search={search} onSearch={setSearch} placeholder="חיפוש לפי מספר רכב / יצרן / דגם"
+        chips={[
+          ...(invFilter !== 'all' ? [{ key: 's', label: statuses.find(x => x.v === invFilter)?.l ?? invFilter, onRemove: () => setInvFilter('all') }] : []),
+          ...(flagFilter !== 'all' ? [{ key: 'f', label: flags.find(x => x.v === flagFilter)?.l ?? '', onRemove: () => setFlagFilter('all') }] : []),
+        ]}
+        onClearAll={() => { setSearch(''); setInvFilter('all'); setFlagFilter('all') }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {statuses.map(f => <button key={f.v} type="button" onClick={() => setInvFilter(f.v)} style={sel(invFilter === f.v)}>{f.l}</button>)}
         </div>
-        {isAdmin && driveConnected && (
-          <button onClick={scanAllDocs} disabled={!!docScan} style={{ ...chip(false), marginInlineStart: 'auto', cursor: docScan ? 'wait' : 'pointer' }}>
-            {docScan ? `⏳ סורק מסמכים ${docScan.done}/${docScan.total}` : '📂 סרוק מסמכים מ-Drive'}
-          </button>
-        )}
-      </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {flags.map(f => <button key={f.v} type="button" onClick={() => setFlagFilter(flagFilter === f.v ? 'all' : f.v)} style={sel(flagFilter === f.v)}>{f.l}</button>)}
+        </div>
+      </FilterBar>
     )
   }
 
@@ -1270,6 +924,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           boxShadow: '0 1px 3px rgba(0,0,0,.08)',
           border: '1px solid var(--border)', borderTop: `3px solid ${st?.color || 'var(--border)'}`,
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          ...(car.status === 'sold' ? { opacity: 0.5, filter: 'grayscale(1)' } : {}),
         }}>
         {/* Photo strip */}
         <div style={{ height: 88, background: '#f1f5f9', position: 'relative', flexShrink: 0 }}>
@@ -1296,33 +951,25 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             {car.hand != null && <span>יד {car.hand}</span>}
           </div>
           {car.ask_price ? <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--primary)' }}>{fmt(car.ask_price)}</div> : null}
+          {/* Only what needs attention: a valid test/insurance or a plain document list adds no tag */}
+          {car.status !== 'sold' && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 'auto', paddingTop: 3 }}>
             {car.license_deposited
-              ? <>
-                  <span style={{ ...tag, background: '#ffedd5', color: '#c2410c' }}>בהפקדה</span>
-                  {car.deposit_refund_requested
-                    ? <span style={{ ...tag, background: 'var(--success-soft)', color: '#166534' }}>הוגש החזר</span>
-                    : <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>לא הוגש החזר</span>}
-                </>
-              : test
-                ? <span style={{ ...tag, background: test.bg, color: test.color }}>🔧 {test.label}</span>
-                : <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>אין טסט</span>
+              ? (car.deposit_refund_requested
+                  ? <span style={{ ...tag, background: '#ffedd5', color: '#c2410c' }}>בהפקדה</span>
+                  : <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>בהפקדה · לא הוגש החזר</span>)
+              : !test
+                ? <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>אין טסט</span>
+                : test.label !== car.test_date && <span style={{ ...tag, background: test.bg, color: test.color }}>טסט {test.label}</span>
             }
-            {!car.license_deposited && inTestRenewal(car) && (
-              car.test_fee_paid && car.test_passed
-                ? <span style={{ ...tag, background: 'var(--success-soft)', color: '#166534' }}>✓ אגרה+מבחן – לעדכן תוקף</span>
-                : <span style={{ ...tag, background: '#ffedd5', color: '#c2410c' }}>חסר: {[!car.test_fee_paid && 'אגרה', !car.test_passed && 'מבחן'].filter(Boolean).join(' + ')}</span>
+            {!car.license_deposited && inTestRenewal(car) && (car.test_fee_paid && car.test_passed
+              ? <span style={{ ...tag, background: '#eff6ff', color: 'var(--primary)' }}>לעדכן תוקף טסט</span>
+              : <span style={{ ...tag, background: '#ffedd5', color: '#c2410c' }}>חסר: {[!car.test_fee_paid && 'אגרה', !car.test_passed && 'מבחן'].filter(Boolean).join(' + ')}</span>
             )}
-            {!car.license_deposited && insur && <span style={{ ...tag, background: insur.bg, color: insur.color }}>🛡️ {insur.label}</span>}
-            {car.interested_buyers.length > 0 && <span style={{ ...tag, background: '#fef9c3', color: '#92400e' }}>👥 {car.interested_buyers.length}</span>}
+            {!car.license_deposited && insur && insur.label !== car.insur_date && <span style={{ ...tag, background: insur.bg, color: insur.color }}>ביטוח {insur.label}</span>}
+            {car.interested_buyers.length > 0 && <span style={{ ...tag, background: '#f1f5f9', color: 'var(--text-muted)' }}>👥 {car.interested_buyers.length}</span>}
+            {car.doc_names.length > 0 && <span title={car.doc_names.join('\n')} style={{ ...tag, background: '#f1f5f9', color: 'var(--text-muted)' }}>📄 {car.doc_names.length}</span>}
           </div>
-          {car.doc_names.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-              {car.doc_names.slice(0, 4).map((n, i) => (
-                <span key={i} title={n} style={{ ...tag, fontWeight: 600, background: '#eef2ff', color: '#3730a3', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>📄 {n}</span>
-              ))}
-              {car.doc_names.length > 4 && <span style={{ ...tag, background: '#eef2ff', color: '#3730a3' }}>+{car.doc_names.length - 4}</span>}
-            </div>
           )}
         </div>
       </div>
@@ -1357,8 +1004,13 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
         iconBg="linear-gradient(135deg,#8b5cf6,#a78bfa)"
         iconShadow="#8b5cf644"
         title="ניהול רכבים"
-        subtitle="מלאי, קנייה, מכירה ובקשות לקוחות"
-        actions={<><ExcelMenu onExportExcel={exportExcel} /><Button onClick={() => openCarForm()}>+ הוסף רכב</Button></>}
+        subtitle="מלאי, קנייה ומכירה"
+        actions={<>
+          <MoreMenu excel={{ onExport: exportExcel }} actions={isAdmin && driveConnected ? [
+            { key: 'scan', label: docScan ? `סורק מסמכים ${docScan.done}/${docScan.total}…` : 'עדכון רשימת מסמכים מ-Drive', icon: '📂', onClick: () => { if (!docScan) scanAllDocs() } },
+          ] : []} />
+          <Button onClick={() => openCarForm()}>+ הוסף רכב</Button>
+        </>}
       />
 
       {/* Stats */}
@@ -1366,8 +1018,6 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
         <StatCard label="במלאי"        value={invCars.length}     />
         <StatCard label="למכירה"       value={invCars.filter(c=>c.status==='available').length} color="var(--primary)" />
         <StatCard label="שמורים"       value={invCars.filter(c=>c.status==='reserved').length}  color="#d97706" />
-        {checkCars.length > 0 && <StatCard label="בבדיקה"  value={checkCars.length} color="#0369a1" />}
-        {openReqs.length  > 0 && <StatCard label="בקשות פתוחות" value={openReqs.length} color="#7c3aed" />}
         <StatCard label="שווי מלאי"    value={fmt(totalAsk)}      color="var(--accent)" />
         <StatCard label="רווח כולל"    value={fmt(totalProfit)}   color={totalProfit >= 0 ? 'var(--primary)' : 'var(--danger)'} />
       </div>
@@ -1375,11 +1025,8 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, overflowX: 'auto', WebkitOverflowScrolling: 'touch', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
         {[
-          { key: 'all',       label: `🚗 הכל (${invCars.length + checkCars.length + soldCars.length})` },
-          { key: 'inventory', label: `📦 מלאי (${invCars.length})` },
-          { key: 'checking',  label: `🔍 בדיקה${checkCars.length ? ` (${checkCars.length})` : ''}` },
-          { key: 'sold',      label: `💰 מכירות (${soldCars.length})` },
-          { key: 'requests',  label: `📋 בקשות${openReqs.length ? ` (${openReqs.length})` : ''}` },
+          { key: 'inventory', label: `במלאי (${invCars.length})` },
+          { key: 'all',       label: `הכל (${invCars.length + checkCars.length + soldCars.length})` },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as typeof tab)} style={{
             padding: '7px 16px', borderRadius: 8, border: 'none',
@@ -1409,16 +1056,6 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
       {/* ── TAB: INVENTORY ── */}
       {tab === 'inventory' && (
         <>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
-            {[{ v: 'all', l: 'הכל' }, { v: 'available', l: '🟢 למכירה' }, { v: 'reserved', l: '🟡 שמור' }, { v: 'business', l: '🟣 בשימוש העסק' }].map(f => (
-              <button key={f.v} onClick={() => setInvFilter(f.v)} style={{
-                padding: '5px 14px', borderRadius: 16, border: '1.5px solid var(--border)',
-                background: invFilter === f.v ? 'var(--primary)' : '#fff',
-                color: invFilter === f.v ? '#fff' : 'var(--text-muted)',
-                fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0,
-              }}>{f.l}</button>
-            ))}
-          </div>
           {renderFlagBar()}
           {displayInv.length === 0
             ? <Empty icon="📦" text={invCars.length === 0 ? 'אין רכבים במלאי' : 'אין רכבים בסינון זה'} action={invCars.length === 0 ? 'הוסף רכב ראשון' : undefined} onAction={invCars.length === 0 ? () => openCarForm() : undefined} />
@@ -1429,277 +1066,6 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
         </>
       )}
 
-      {/* ── TAB: CHECKING ── */}
-      {tab === 'checking' && (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>רכבים שנבדקים לפני קנייה — לחץ "✅ אשר" להעביר למלאי</span>
-            <Button onClick={() => { openCarForm(); setCarForm(f => ({ ...f, status: 'checking' })) }}>+ הוסף לבדיקה</Button>
-          </div>
-          {checkCars.length === 0
-            ? <Empty icon="🔍" text="אין רכבים בבדיקה" />
-            : <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid var(--border)' }}>
-                      {['תאריך','יצרן / דגם','שנה','לוחית','ק"מ','מחיר מבוקש','איש קשר','הערות'].map(h => (
-                        <th key={h} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
-                      ))}
-                      <th style={{ padding: '10px 12px', width: 36 }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {checkCars.map(car => (
-                      <tr key={car.id} style={{ borderBottom: '1px solid var(--border)', background: '#fffbeb' }}>
-                        <td style={td()}>{car.created_at?.slice(0,10) || '—'}</td>
-                        <td style={td()}><strong>{car.make}</strong> {car.model}</td>
-                        <td style={td()}>{car.year || '—'}</td>
-                        <td style={{ ...td(), direction: 'ltr', textAlign: 'right' }}>{car.plate || '—'}</td>
-                        <td style={td()}>{fmtKm(car.km) || '—'}</td>
-                        <td style={{ ...td(), fontWeight: 700, color: 'var(--warning)' }}>{fmt(car.buy_price)}</td>
-                        <td style={td()}>{car.contact || '—'}</td>
-                        <td style={td()}>{car.notes || '—'}</td>
-                        <td style={{ ...td(), textAlign: 'center' }}>
-                          <RowActionsMenu actions={getCarActions(car)} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-          }
-          {declinedCars.length > 0 && (
-            <div style={{ marginTop: 28 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)', marginBottom: 10 }}>נדחו בעבר ({declinedCars.length})</div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, opacity: 0.75 }}>
-                  <tbody>
-                    {declinedCars.map(car => (
-                      <tr key={car.id} style={{ borderBottom: '1px solid var(--border)', background: '#fff5f5' }}>
-                        <td style={td()}><strong>{car.make} {car.model}</strong> {car.year ? `(${car.year})` : ''}</td>
-                        <td style={{ ...td(), direction: 'ltr', textAlign: 'right' }}>{car.plate || '—'}</td>
-                        <td style={td()}>{fmtKm(car.km) || '—'}</td>
-                        <td style={{ ...td(), color: 'var(--danger)', fontSize: 11, maxWidth: 260 }}>{car.notes?.split('\n').filter(l => l.includes('❌')).slice(-1)[0] || '—'}</td>
-                        <td style={td()}>
-                          <button onClick={() => changeCarStatus(car.id, 'checking')} style={{ ...actionBtn('#0369a1', '#fff'), padding: '3px 10px', fontSize: 11 }}>החזר לבדיקה</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* ── TAB: SOLD ── */}
-      {tab === 'sold' && (
-        <>
-          {soldCars.length > 0 && (
-            <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-              <div style={{ background: 'var(--success-soft)', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 18px', fontSize: 13 }}>
-                <span style={{ color: 'var(--text-muted)' }}>סה"כ רכבים נמכרו: </span><strong>{soldCars.length}</strong>
-                <span style={{ margin: '0 12px', color: 'var(--border)' }}>|</span>
-                <span style={{ color: 'var(--text-muted)' }}>רווח כולל: </span>
-                <strong style={{ color: totalProfit >= 0 ? 'var(--primary)' : 'var(--danger)' }}>{fmt(totalProfit)}</strong>
-              </div>
-            </div>
-          )}
-          {soldCars.length === 0
-            ? <Empty icon="💰" text="אין מכירות עדיין" />
-            : <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid var(--border)' }}>
-                      {['תאריך מכירה','יצרן / דגם','שנה','לוחית','מחיר קנייה','מחיר מכירה','רווח','קונה','תשלום'].map(h => (
-                        <th key={h} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {soldCars.map(car => {
-                      const profit = (car.sold_price || 0) - (car.buy_price || 0)
-                      return (
-                        <tr key={car.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td style={td()}>{car.sold_date || '—'}</td>
-                          <td style={td()}><strong>{car.make}</strong> {car.model}</td>
-                          <td style={td()}>{car.year || '—'}</td>
-                          <td style={{ ...td(), direction: 'ltr', textAlign: 'right' }}>{car.plate || '—'}</td>
-                          <td style={td()}>{fmt(car.buy_price)}</td>
-                          <td style={{ ...td(), fontWeight: 700 }}>{fmt(car.sold_price)}</td>
-                          <td style={{ ...td(), fontWeight: 700, color: profit >= 0 ? 'var(--primary)' : 'var(--danger)' }}>{fmt(profit)}</td>
-                          <td style={td()}>{car.buyer_name || '—'}{car.buyer_phone ? <><br /><small style={{ color: 'var(--text-muted)' }}>{car.buyer_phone}</small></> : ''}</td>
-                          <td style={td()}>{car.buyer_payment || '—'}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-          }
-        </>
-      )}
-
-      {/* ── TAB: REQUESTS ── */}
-      {tab === 'requests' && (() => {
-        const displayReq  = reqFilter === 'all' ? requests      : requests.filter(r => r.status === reqFilter)
-        const displaySale = reqFilter === 'all' ? saleRequests  : saleRequests.filter(r => r.status === reqFilter)
-
-        function ReqActions({ curStatus, onEdit, onDelete, onStatus }: {
-          curStatus: string; onEdit: () => void; onDelete: () => void
-          onStatus: (s: string) => void
-        }) {
-          return (
-            <div style={{ display: 'flex', gap: 6, padding: '6px 12px 12px', alignItems: 'center', justifyContent: 'flex-end' }}>
-              <select className="form-input" aria-label="סטטוס" value={curStatus} onChange={e => onStatus(e.target.value)}
-                style={{ width: 'auto', margin: 0, padding: '4px 8px', fontSize: 12 }}>
-                {REQ_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
-              <RowActionsMenu align="end" actions={[
-                { key: 'edit', label: 'ערוך', icon: '✏️', onClick: onEdit },
-                { key: 'del', label: 'מחק', icon: '🗑', danger: true, onClick: onDelete },
-              ]} />
-            </div>
-          )
-        }
-
-        return (
-          <>
-            {/* Sub-tabs */}
-            <div style={{ display: 'inline-flex', gap: 4, marginBottom: 16, padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
-              {([{ v: 'buy', l: '🛒 בקשת קנייה', count: requests.filter(r=>r.status==='open').length },
-                 { v: 'sell', l: '🏷️ בקשת מכירה', count: saleRequests.filter(r=>r.status==='open').length }] as const).map(t => (
-                <button key={t.v} onClick={() => setReqSubTab(t.v)} style={{
-                  padding: '7px 16px', border: 'none', cursor: 'pointer',
-                  fontFamily: 'inherit', fontWeight: reqSubTab === t.v ? 600 : 400, fontSize: 13,
-                  color: reqSubTab === t.v ? 'var(--text)' : 'var(--text-muted)',
-                  background: reqSubTab === t.v ? '#fff' : 'transparent',
-                  borderRadius: '8px', whiteSpace: 'nowrap',
-                  boxShadow: reqSubTab === t.v ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-                  transition: 'all .15s',
-                }}>
-                  {t.l}{t.count > 0 ? <span style={{ marginRight: 5, background: 'var(--success-soft)', color: 'var(--success)', borderRadius: 10, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{t.count}</span> : ''}
-                </button>
-              ))}
-            </div>
-
-            {/* Status filters + add button */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {[{ v: 'all', l: 'הכל' }, { v: 'open', l: 'פתוח' }, { v: 'handled', l: 'טופל' }, { v: 'closed', l: 'נסגר' }].map(f => (
-                  <button key={f.v} onClick={() => setReqFilter(f.v)} style={{
-                    padding: '5px 14px', borderRadius: 16, border: '1.5px solid var(--border)',
-                    background: reqFilter === f.v ? 'var(--primary)' : '#fff',
-                    color: reqFilter === f.v ? '#fff' : 'var(--text-muted)',
-                    fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-                  }}>{f.l}</button>
-                ))}
-              </div>
-              {reqFilter === 'all' && (
-                reqSubTab === 'buy'
-                  ? <Button onClick={() => openReqForm()}>+ בקשת קנייה</Button>
-                  : <Button onClick={() => openSaleReqForm()}>+ בקשת מכירה</Button>
-              )}
-            </div>
-
-            {/* BUY requests */}
-            {reqSubTab === 'buy' && (
-              displayReq.length === 0
-                ? <Empty icon="🛒" text="אין בקשות קנייה" action={reqFilter === 'all' ? 'הוסף בקשה ראשונה' : undefined} onAction={reqFilter === 'all' ? () => openReqForm() : undefined} />
-                : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(290px,1fr))', gap: 18 }}>
-                    {displayReq.map(req => {
-                      const st = REQ_STATUS_MAP[req.status]
-                      return (
-                        <div key={req.id} style={{ background: '#fff', borderRadius: 12, border: `2px solid ${st?.color || 'var(--border)'}`, boxShadow: '0 1px 3px rgba(0,0,0,.08)', display: 'flex', flexDirection: 'column' }}>
-                          <div style={{ padding: '14px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                              <div style={{ fontWeight: 800, fontSize: 15 }}>{req.name}</div>
-                              <span style={{ background: st?.color, color: '#fff', padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{st?.label}</span>
-                            </div>
-                            {req.phone    && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>📞 {req.phone}</div>}
-                            {req.budget   && <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--primary)' }}>עד {fmt(req.budget)}</div>}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 2 }}>
-                              {req.car_type     && <Chip>{req.car_type}</Chip>}
-                              {req.fuel         && <Chip>⛽ {req.fuel}</Chip>}
-                              {req.transmission && <Chip>⚙️ {req.transmission}</Chip>}
-                              {req.make_pref    && <Chip>🚘 {req.make_pref}</Chip>}
-                              {req.min_year     && <Chip>משנת {req.min_year}</Chip>}
-                              {req.max_km       && <Chip>עד {req.max_km.toLocaleString('he-IL')} ק"מ</Chip>}
-                              {req.max_hand     && <Chip>עד יד {req.max_hand}</Chip>}
-                              {req.seats        && <Chip>🪑 {req.seats}</Chip>}
-                            </div>
-                            {req.notes && <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>{req.notes}</div>}
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{req.created_at?.slice(0,10)}</div>
-                          </div>
-                          <div style={{ display: 'flex', gap: 6, padding: '0 12px 12px' }}>
-            <button
-              onClick={e => { e.stopPropagation(); printBuyRequest(req) }}
-              style={{ flex: 1, padding: '7px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: '1.5px solid #bbf7d0', background: 'var(--success-soft)', color: 'var(--success)', cursor: 'pointer', fontFamily: 'inherit' }}>
-              הדפס טופס
-            </button>
-            <a
-              href={buildYad2Url(req)}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
-              style={{ flex: 1, padding: '7px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: '1.5px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'none', textAlign: 'center', display: 'block' }}>
-              🔍 חפש ביד2
-            </a>
-          </div>
-          {ReqActions({ curStatus: req.status, onEdit: () => openReqForm(req), onDelete: () => deleteReq(req.id), onStatus: (s) => changeReqStatus(req.id, s) })}
-                        </div>
-                      )
-                    })}
-                  </div>
-            )}
-
-            {/* SELL requests */}
-            {reqSubTab === 'sell' && (
-              displaySale.length === 0
-                ? <Empty icon="🏷️" text="אין בקשות מכירה" action={reqFilter === 'all' ? 'הוסף בקשה ראשונה' : undefined} onAction={reqFilter === 'all' ? () => openSaleReqForm() : undefined} />
-                : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(290px,1fr))', gap: 18 }}>
-                    {displaySale.map(req => {
-                      const st = REQ_STATUS_MAP[req.status]
-                      const commission = req.commission
-                        ? req.commission_type === 'percent' ? `${req.commission}%` : fmt(req.commission)
-                        : null
-                      return (
-                        <div key={req.id} style={{ background: '#fff', borderRadius: 12, border: `2px solid ${st?.color || 'var(--border)'}`, boxShadow: '0 1px 3px rgba(0,0,0,.08)', display: 'flex', flexDirection: 'column' }}>
-                          <div style={{ padding: '14px 16px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                              <div>
-                                <div style={{ fontWeight: 800, fontSize: 15 }}>{req.name}</div>
-                                {req.phone && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>📞 {req.phone}</div>}
-                              </div>
-                              <span style={{ background: st?.color, color: '#fff', padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{st?.label}</span>
-                            </div>
-                            <div style={{ fontWeight: 700, fontSize: 14 }}>
-                              {[req.make, req.model, req.year].filter(Boolean).join(' ')}
-                              {req.plate && <span style={{ fontSize: 12, color: 'var(--text-muted)', marginRight: 6 }}>• {req.plate}</span>}
-                            </div>
-                            {req.list_price && <div style={{ fontSize: 18, fontWeight: 900, color: '#0369a1' }}>מחירון: {fmt(req.list_price)}</div>}
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 2 }}>
-                              {req.km             && <Chip>{fmtKm(req.km)}</Chip>}
-                              {req.hand           && <Chip>יד {req.hand}</Chip>}
-                              {req.ownership_type && <Chip>{req.ownership_type}</Chip>}
-                              {commission         && <Chip color="#7c3aed">עמלה: {commission}</Chip>}
-                              {req.wait_until     && <Chip>עד: {req.wait_until}</Chip>}
-                              {req.car_code       && <Chip>קוד: {req.car_code}</Chip>}
-                              {req.key_hanger     && <Chip>מתלה: {req.key_hanger}</Chip>}
-                            </div>
-                            {req.notes && <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>{req.notes}</div>}
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{req.created_at?.slice(0,10)}</div>
-                          </div>
-                          {ReqActions({ curStatus: req.status, onEdit: () => openSaleReqForm(req), onDelete: () => deleteSaleReq(req.id), onStatus: (s) => changeSaleReqStatus(req.id, s) })}
-                        </div>
-                      )
-                    })}
-                  </div>
-            )}
-          </>
-        )
-      })()}
 
       {/* ── LIGHTBOX ── */}
       {/* ── Car detail view ── */}
@@ -1881,7 +1247,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             <Grid cols={3}>
               <Field label="סטטוס">
                 <select value={carForm.status} onChange={e => setCarForm(f=>({...f,status:e.target.value}))} style={inp()}>
-                  {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  {STATUSES.filter(s => (s.value !== 'checking' && s.value !== 'declined') || s.value === carForm.status).map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
               </Field>
               <Field label="💰 מחיר קנייה (₪)"><input type="number" value={carForm.buy_price} onChange={e => setCarForm(f=>({...f,buy_price:e.target.value}))} style={inp()} /></Field>
@@ -2097,163 +1463,11 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
         </div>
       </Modal>
 
-      {/* ── REQUEST FORM MODAL ── */}
-      {/* ── Sale request modal ── */}
-      <Modal open={saleReqModal} onClose={() => setSaleReqModal(false)} title={editSaleReqId ? 'עריכת בקשת מכירה' : '🏷️ בקשת מכירה חדשה'} maxWidth={620}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Grid cols={2}>
-            <Field label="שם לקוח *"><input value={saleReqForm.name} onChange={e => setSaleReqForm(f=>({...f,name:e.target.value}))} style={inp()} autoFocus /></Field>
-            <Field label="טלפון"><input type="tel" value={saleReqForm.phone} onChange={e => setSaleReqForm(f=>({...f,phone:e.target.value}))} style={inp()} /></Field>
-          </Grid>
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 14px' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', marginBottom: 8 }}>פרטי הרכב למכירה</div>
-            <PlateInput module="cars" onFill={handleSaleReqApiData} />
-            <div style={{ marginTop: 10 }} />
-            <Grid cols={4}>
-              <Field label="יצרן"><input value={saleReqForm.make} onChange={e => setSaleReqForm(f=>({...f,make:e.target.value}))} style={inp()} /></Field>
-              <Field label="דגם"><input value={saleReqForm.model} onChange={e => setSaleReqForm(f=>({...f,model:e.target.value}))} style={inp()} /></Field>
-              <Field label="שנה"><input type="number" value={saleReqForm.year} onChange={e => setSaleReqForm(f=>({...f,year:e.target.value}))} style={inp()} placeholder="2019" /></Field>
-              <Field label="יד"><input type="number" value={saleReqForm.hand} onChange={e => setSaleReqForm(f=>({...f,hand:e.target.value}))} style={inp()} placeholder="1" min="1" max="9" /></Field>
-            </Grid>
-            <Grid cols={3}>
-              <Field label="ק״מ"><input type="number" value={saleReqForm.km} onChange={e => setSaleReqForm(f=>({...f,km:e.target.value}))} style={inp()} placeholder="80000" /></Field>
-              <Field label="סוג בעלות"><input value={saleReqForm.ownership_type} onChange={e => setSaleReqForm(f=>({...f,ownership_type:e.target.value}))} style={inp()} placeholder="פרטי / ליסינג..." /></Field>
-              <Field label="קוד רכב"><input value={saleReqForm.car_code} onChange={e => setSaleReqForm(f=>({...f,car_code:e.target.value}))} style={inp()} placeholder="אם יש" /></Field>
-            </Grid>
-            <Grid cols={2}>
-              <Field label="לוחית רישוי"><input inputMode="numeric" value={saleReqForm.plate} onChange={e => setSaleReqForm(f=>({...f,plate:e.target.value}))} style={inp()} /></Field>
-              <Field label="מספר מתלה / מפתח"><input value={saleReqForm.key_hanger} onChange={e => setSaleReqForm(f=>({...f,key_hanger:e.target.value}))} style={inp()} placeholder="לדוגמה: A12" /></Field>
-            </Grid>
-          </div>
-          <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: 10, padding: '12px 14px' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', marginBottom: 8 }}>מחיר ועמלה</div>
-            <Grid cols={2}>
-              <Field label="מחיר מחירון (₪)"><input type="number" value={saleReqForm.list_price} onChange={e => setSaleReqForm(f=>({...f,list_price:e.target.value}))} style={inp()} /></Field>
-              <Field label="עמלת מכירה">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 8, padding: 3, gap: 3 }}>
-                    {([{ v: 'fixed', l: '₪ סכום קבוע' }, { v: 'percent', l: '% אחוזים' }] as const).map(opt => (
-                      <button key={opt.v} type="button"
-                        onClick={() => setSaleReqForm(f => ({ ...f, commission_type: opt.v }))}
-                        style={{
-                          flex: 1, padding: '5px 0', borderRadius: 6, border: 'none', cursor: 'pointer',
-                          fontFamily: 'inherit', fontSize: 12, fontWeight: 600,
-                          background: saleReqForm.commission_type === opt.v ? '#fff' : 'transparent',
-                          color: saleReqForm.commission_type === opt.v ? '#7c3aed' : 'var(--text-muted)',
-                          boxShadow: saleReqForm.commission_type === opt.v ? '0 1px 3px rgba(0,0,0,.12)' : 'none',
-                          transition: 'all .15s',
-                        }}
-                      >{opt.l}</button>
-                    ))}
-                  </div>
-                  <input
-                    type="number"
-                    value={saleReqForm.commission}
-                    onChange={e => setSaleReqForm(f => ({ ...f, commission: e.target.value }))}
-                    placeholder={saleReqForm.commission_type === 'percent' ? 'לדוגמה: 5' : 'לדוגמה: 1500'}
-                    style={inp()}
-                  />
-                </div>
-              </Field>
-            </Grid>
-            <Field label="⏳ המתנה — עד תאריך"><input type="date" value={saleReqForm.wait_until} onChange={e => setSaleReqForm(f=>({...f,wait_until:e.target.value}))} style={inp()} /></Field>
-          </div>
-          <Grid cols={2}>
-            <Field label="סטטוס">
-              <select value={saleReqForm.status} onChange={e => setSaleReqForm(f=>({...f,status:e.target.value}))} style={inp()}>
-                <option value="open">פתוח</option>
-                <option value="handled">טופל</option>
-                <option value="closed">נסגר</option>
-              </select>
-            </Field>
-          </Grid>
-          <Field label="הערות"><textarea value={saleReqForm.notes} onChange={e => setSaleReqForm(f=>({...f,notes:e.target.value}))} rows={2} style={{...inp(),resize:'vertical'}} /></Field>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-            <Button variant="secondary" onClick={() => setSaleReqModal(false)}>ביטול</Button>
-            <Button onClick={saveSaleReq}>שמור</Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal open={reqModal} onClose={() => setReqModal(false)} title={editReqId ? 'עריכת בקשת קנייה' : '🛒 בקשת קנייה חדשה'} maxWidth={620}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <Grid cols={2}>
-            <Field label="שם לקוח *"><input value={reqForm.name} onChange={e => setReqForm(f=>({...f,name:e.target.value}))} style={inp()} autoFocus /></Field>
-            <Field label="טלפון *"><input type="tel" value={reqForm.phone} onChange={e => setReqForm(f=>({...f,phone:e.target.value}))} style={inp()} /></Field>
-          </Grid>
-          <Grid cols={3}>
-            <Field label="סוג רכב">
-              <select value={reqForm.car_type} onChange={e => setReqForm(f=>({...f,car_type:e.target.value}))} style={inp()}>
-                <option value="">לא משנה</option>
-                {["פרטי","ג'יפ / SUV","ואן","מסחרי","אחר"].map(t => <option key={t}>{t}</option>)}
-              </select>
-            </Field>
-            <Field label="סוג דלק">
-              <select value={reqForm.fuel} onChange={e => setReqForm(f=>({...f,fuel:e.target.value}))} style={inp()}>
-                <option value="">לא משנה</option>
-                {['בנזין','דיזל','היברידי','חשמלי'].map(t => <option key={t}>{t}</option>)}
-              </select>
-            </Field>
-            <Field label="סוג הילוכים">
-              <select value={reqForm.transmission} onChange={e => setReqForm(f=>({...f,transmission:e.target.value}))} style={inp()}>
-                <option value="">לא משנה</option>
-                <option value="אוטומט">אוטומט</option>
-                <option value="ידני">ידני</option>
-              </select>
-            </Field>
-          </Grid>
-          <div style={{ background: 'var(--success-soft)', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 14px' }}>
-            <Grid cols={2}>
-              <Field label="💰 תקציב מקסימלי (₪)"><input type="number" value={reqForm.budget} onChange={e => setReqForm(f=>({...f,budget:e.target.value}))} style={inp()} /></Field>
-              <Field label="📅 שנת ייצור מינימלית"><input type="number" value={reqForm.min_year} onChange={e => setReqForm(f=>({...f,min_year:e.target.value}))} style={inp()} placeholder="2015" /></Field>
-            </Grid>
-          </div>
-          <Grid cols={3}>
-            <Field label="ק״מ מקסימלי"><input type="number" value={reqForm.max_km} onChange={e => setReqForm(f=>({...f,max_km:e.target.value}))} style={inp()} placeholder="150000" /></Field>
-            <Field label="מקס׳ יד"><input type="number" value={reqForm.max_hand} onChange={e => setReqForm(f=>({...f,max_hand:e.target.value}))} style={inp()} placeholder="3" min="1" max="9" /></Field>
-            <Field label="מס׳ מושבים">
-              <select value={reqForm.seats} onChange={e => setReqForm(f=>({...f,seats:e.target.value}))} style={inp()}>
-                <option value="">לא משנה</option>
-                {['2','4','5','7','8+'].map(n => <option key={n}>{n}</option>)}
-              </select>
-            </Field>
-          </Grid>
-          <Grid cols={2}>
-            <Field label="מותג מועדף"><input value={reqForm.make_pref} onChange={e => setReqForm(f=>({...f,make_pref:e.target.value}))} style={inp()} placeholder="טויוטה, יונדאי..." /></Field>
-            <Field label="סטטוס">
-              <select value={reqForm.status} onChange={e => setReqForm(f=>({...f,status:e.target.value}))} style={inp()}>
-                <option value="open">פתוח</option>
-                <option value="handled">טופל</option>
-                <option value="closed">נסגר</option>
-              </select>
-            </Field>
-          </Grid>
-          <Field label="הערות"><textarea value={reqForm.notes} onChange={e => setReqForm(f=>({...f,notes:e.target.value}))} rows={2} style={{...inp(),resize:'vertical'}} /></Field>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-            <Button variant="secondary" onClick={() => setReqModal(false)}>ביטול</Button>
-            <Button onClick={saveReq}>שמור</Button>
-          </div>
-        </div>
-      </Modal>
     </div>
   )
 }
 
 // ── Mini UI helpers ───────────────────────────────────────────────────────────
-
-function MenuItem({ icon, label, onClick, color }: { icon: string; label: string; onClick: () => void; color?: string }) {
-  const [hover, setHover] = useState(false)
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 14px', border: 'none', background: hover ? '#f8fafc' : 'transparent', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, color: color || 'var(--text)', textAlign: 'right' }}
-    >
-      <span>{icon}</span><span>{label}</span>
-    </button>
-  )
-}
 
 function StatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
@@ -2261,14 +1475,6 @@ function StatCard({ label, value, color }: { label: string; value: string | numb
       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>
       <div style={{ fontSize: 22, fontWeight: 900, color: color || 'var(--text)' }}>{value}</div>
     </div>
-  )
-}
-
-function Chip({ children, color, muted }: { children: React.ReactNode; color?: string; muted?: boolean }) {
-  return (
-    <span style={{ background: '#f1f5f9', padding: '3px 9px', borderRadius: 10, fontSize: 11, fontWeight: 600, color: color || (muted ? 'var(--text-muted)' : 'var(--text)') }}>
-      {children}
-    </span>
   )
 }
 
@@ -2309,12 +1515,6 @@ function Field({ label, children, required, error }: { label: string; children: 
 
 function inp(err?: boolean): React.CSSProperties {
   return { width: '100%', padding: '8px 10px', border: `1.5px solid ${err ? '#dc2626' : 'var(--border)'}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 13, outline: 'none', boxSizing: 'border-box', background: err ? '#fff5f5' : '#fff' }
-}
-function td(): React.CSSProperties {
-  return { padding: '9px 12px', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' }
-}
-function actionBtn(bg = '#fff', color = 'var(--text)'): React.CSSProperties {
-  return { flex: 1, padding: '7px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: '1.5px solid var(--border)', background: bg, color, cursor: 'pointer', fontFamily: 'inherit', minWidth: 36 }
 }
 function lbBtn(): React.CSSProperties {
   return { background: 'rgba(255,255,255,.15)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontSize: 18, fontFamily: 'inherit' }

@@ -60,7 +60,7 @@ interface Stats {
   activeEmployees:        number
   inventoryItems:         number
   carsInInventory:        number
-  openCarRequests:        number
+  carsReserved:           number
   tiresInStock:           number
   totalInspections:       number
 }
@@ -68,7 +68,7 @@ interface Stats {
 const EMPTY: Stats = {
   expensesMonth: 0, incomeMonth: 0, customerDebts: 0, supplierDebts: 0,
   custDebtCount: 0, suppDebtCount: 0, activeEmployees: 0, inventoryItems: 0,
-  carsInInventory: 0, openCarRequests: 0, tiresInStock: 0,
+  carsInInventory: 0, carsReserved: 0, tiresInStock: 0,
   totalInspections: 0,
 }
 
@@ -126,7 +126,7 @@ function DebtCard({ customerDebts, supplierDebts, custCount, suppCount, href }: 
   )
 }
 
-function CarsCard({ inInventory, openRequests, href }: { inInventory: number; openRequests: number; href: string }) {
+function CarsCard({ inInventory, reserved, href }: { inInventory: number; reserved: number; href: string }) {
   const router = useRouter()
   return (
     <div
@@ -144,8 +144,8 @@ function CarsCard({ inInventory, openRequests, href }: { inInventory: number; op
         </div>
         <div className="stat-card-double-sep" />
         <div className="stat-card-double-col">
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>בקשות פתוחות</span>
-          <span style={{ fontSize: '15px', fontWeight: 800, color: openRequests > 0 ? 'var(--purple)' : 'var(--text-muted)' }}>{openRequests}</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>שמורים</span>
+          <span className="num" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>{reserved}</span>
         </div>
       </div>
     </div>
@@ -185,7 +185,7 @@ export default function DashboardStats() {
     const to   = `${y}-${m}-31`
 
     // Only fetch data the user is allowed to see
-    const [expenses, incomeRes, custDebts, suppDebts, custLedgerDebts, custLedgerPayments, emps, products, tires, cars, carReqs, inspections] = await Promise.all([
+    const [expenses, incomeRes, custDebts, suppDebts, custLedgerDebts, custLedgerPayments, emps, products, tires, cars, inspections] = await Promise.all([
       canMod('expenses')                   ? supabase.from('expenses').select('amount').gte('date', from).lte('date', to)                                        : Promise.resolve({ data: [] }),
       canMod('income', 'expenses')         ? supabase.from('income').select('amount').gte('date', from).lte('date', to)                                          : Promise.resolve({ data: [] }),
       canMod('debts')                      ? supabase.from('customer_debts').select('amount,paid').eq('is_closed', false)                                         : Promise.resolve({ data: [] }),
@@ -196,7 +196,6 @@ export default function DashboardStats() {
       canMod('products', 'products_view')  ? supabase.from('products').select('qty')                                                                             : Promise.resolve({ data: [] }),
       canMod('tires', 'tires_view')        ? supabase.from('tires').select('qty')                                                                                : Promise.resolve({ data: [] }),
       canMod('cars')                       ? supabase.from('cars').select('status').neq('status', 'sold')                                                        : Promise.resolve({ data: [] }),
-      canMod('cars')                       ? supabase.from('car_requests').select('id').eq('status', 'open')                                                     : Promise.resolve({ data: [] }),
       canMod('inspections')               ? supabase.from('car_inspections').select('id')                                                                        : Promise.resolve({ data: [] }),
     ])
 
@@ -237,7 +236,7 @@ export default function DashboardStats() {
       activeEmployees:  (emps.data ?? []).length,
       inventoryItems:   invCount,
       carsInInventory:  (cars.data ?? []).filter((c: { status: string }) => c.status === 'available').length,
-      openCarRequests:  (carReqs.data ?? []).length,
+      carsReserved:     (cars.data ?? []).filter((c: { status: string }) => c.status === 'reserved').length,
       tiresInStock:     (tires.data ?? []).filter((r: { qty: number }) => r.qty > 0).length,
       totalInspections:    (inspections.data ?? []).length,
     }
@@ -266,7 +265,7 @@ export default function DashboardStats() {
 
     const tables = ['expenses', 'income', 'customer_debts', 'supplier_debts',
       'customer_ledger_debts', 'customer_ledger_payments',
-      'employees', 'products', 'tires', 'cars', 'car_requests',
+      'employees', 'products', 'tires', 'cars',
       'car_inspections']
     let ch = supabase.channel('dashboard-stats')
     for (const table of tables) {
@@ -303,7 +302,7 @@ export default function DashboardStats() {
     { id: 'products',   show: can('products','products_view'), node: <StatCard label="פריטים במלאי" value={stats.inventoryItems}  icon="📦" color="#7c3aed" gradient="linear-gradient(135deg,#7c3aed,#a78bfa)" href="/products" /> },
     { id: 'employees',  show: can('employees'),         node: <StatCard label="עובדים פעילים" value={stats.activeEmployees} icon="👷" color="#2563eb" gradient="linear-gradient(135deg,#2563eb,#60a5fa)" href="/employees" /> },
     { id: 'tires',      show: can('tires','tires_view'),node: <StatCard label="סוגי צמיג במלאי" value={stats.tiresInStock} icon="🔘" color="#0891b2" gradient="linear-gradient(135deg,#0891b2,#22d3ee)" href="/tires" /> },
-    { id: 'cars',       show: can('cars'),              node: <CarsCard inInventory={stats.carsInInventory} openRequests={stats.openCarRequests} href="/cars" /> },
+    { id: 'cars',       show: can('cars'),              node: <CarsCard inInventory={stats.carsInInventory} reserved={stats.carsReserved} href="/cars" /> },
     { id: 'inspections',show: can('inspections'),       node: <StatCard label="בדיקות קניה" value={stats.totalInspections} icon="📝" color="#6366f1" gradient="linear-gradient(135deg,#6366f1,#a5b4fc)" href="/inspections" /> },
   ]
 
