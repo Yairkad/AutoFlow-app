@@ -475,7 +475,7 @@ function printWarranty(copies: number, bizNameStr: string, logoBase64: string, s
         <li>מומלץ לבדוק את מקוריות הרכב במשרד הרישוי.</li>
       </ul>
       <div class="pp-warn">
-        <h4>⚠️ חשוב ביותר!!!</h4>
+        <h4>חשוב ביותר!!!</h4>
         עם גילוי ליקויים שלא נתגלו בבדיקה – אין אנו אחראים אם התיקון ו/או הבדיקה בוצעו במקום אחר לפני שהרכב נבדק על ידינו שנית.<br/>
         החברה אינה אחראית על ליקויים או מגרעות אשר לא נתגלו בבדיקה זו כתוצאה מהעלמת ליקויים במתכוון.<br/>
         דו"ח זה יפה כוחו לגבי מזמין הבדיקה בלבד.
@@ -1335,7 +1335,7 @@ export default function DocumentsClient() {
                           <div style={{ fontSize: 12, fontWeight: 600, wordBreak: 'break-word', lineHeight: 1.3 }}>{item.name}</div>
                           {item.size && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{(parseInt(item.size)/1024).toFixed(0)} KB</div>}
                           <div style={{ display: 'flex', gap: 5, marginTop: 4 }}>
-                            <a href={item.webViewLink} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center', fontSize: 11, padding: '4px 0', background: 'var(--bg)', borderRadius: 6, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>🔗 פתח</a>
+                            <a href={item.webViewLink} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center', fontSize: 11, padding: '4px 0', background: 'var(--bg)', borderRadius: 6, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>פתח</a>
                             <button onClick={() => deleteDriveFile(item.id, item.name)} disabled={driveDeletingId === item.id}
                               style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--danger)', borderRadius: 6, color: 'var(--danger)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
                               {driveDeletingId === item.id ? '...' : '🗑️'}

@@ -90,7 +90,7 @@ function ChangePasswordModal({ onClose, userEmail }: { onClose: () => void; user
         background: 'var(--bg-card)', borderRadius: '14px', padding: '28px',
         width: 'min(340px, calc(100vw - 32px))', zIndex: 300, direction: 'rtl', boxShadow: '0 20px 60px rgba(0,0,0,.25)',
       }}>
-        <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '20px' }}>🔑 שינוי סיסמא</div>
+        <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '20px' }}>שינוי סיסמא</div>
         {success ? (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{ fontSize: '36px', marginBottom: '8px' }}>✅</div>

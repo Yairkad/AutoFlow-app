@@ -1046,7 +1046,7 @@ function PriceListOverlay({ products, onClose }: { products: Product[]; onClose:
       }}>
         {/* Toolbar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
-          <span style={{ fontWeight: 700, fontSize: '16px' }}>🖨️ מחירון מוצרים</span>
+          <span style={{ fontWeight: 700, fontSize: '16px' }}>מחירון מוצרים</span>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={doPrint}

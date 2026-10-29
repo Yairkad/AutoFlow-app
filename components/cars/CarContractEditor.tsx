@@ -476,7 +476,7 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
       {d.checksOn && (
         <div className="csc-payline" style={{ display: 'block' }}>
           <div style={{ marginBottom: 4 }}>
-            <span className="csc-paykind">🧾 שיקים</span>
+            <span className="csc-paykind">שיקים</span>
             {checksTotal(d) > 0 && <>סך <b>{fmtAmount(checksTotal(d))}</b> ש&quot;ח </>}ב-{d.checks.length} {d.checks.length === 1 ? 'שיק' : 'שיקים'} מעותדים המשוכים מחשבונו של הקונה, כדלקמן:
           </div>
           {/* one line per check, like the original contract */}
@@ -515,7 +515,7 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
           </div>
           {scanDevices ? (
             <>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>📠 מאיזה סורק לסרוק? <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--text-muted)' }}>(הבחירה תישמר במחשב הזה)</span></div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>מאיזה סורק לסרוק? <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--text-muted)' }}>(הבחירה תישמר במחשב הזה)</span></div>
               {scanDevices.map(dev => (
                 <Button key={dev.id} variant="secondary" onClick={() => { saveScanner(dev.id); scanWithDevice(dev.id) }}>
                   {dev.name}{getSavedScanner() === dev.id ? ' ✓' : ''}
@@ -549,11 +549,11 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
       {/* Toolbar */}
       <div className="csc-bar">
         <button type="button" onClick={handleClose} style={{ ...iconBtn, fontSize: 20, color: 'var(--text)' }} aria-label="סגור">✕</button>
-        <div style={{ fontWeight: 800, fontSize: 15, whiteSpace: 'nowrap' }}>📝 חוזה מכירת רכב</div>
+        <div style={{ fontWeight: 800, fontSize: 15, whiteSpace: 'nowrap' }}>חוזה מכירת רכב</div>
         <span className={`csc-status ${status}`}>{status === 'signed' ? '✅ נחתם' : 'טיוטה'}</span>
         {dirty && <span style={{ fontSize: 12, color: '#b45309' }}>● לא נשמר</span>}
-        {d?.signedFile && <a href={signedFileUrl(d.signedFile)} target="_blank" rel="noreferrer" className="csc-chip" style={{ textDecoration: 'none' }}>📎 חוזה חתום</a>}
-        {uploading && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>⏳ מעלה לדרייב...</span>}
+        {d?.signedFile && <a href={signedFileUrl(d.signedFile)} target="_blank" rel="noreferrer" className="csc-chip" style={{ textDecoration: 'none' }}>חוזה חתום</a>}
+        {uploading && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>מעלה לדרייב...</span>}
         <div style={{ flex: 1 }} />
         <Button size="sm" variant="secondary" onClick={toggleSigned} disabled={!d || saving}>{status === 'signed' ? 'החזר לטיוטה' : 'סמן כנחתם'}</Button>
         <Button size="sm" variant="secondary" onClick={handlePrint} disabled={!d || saving}>הדפס / PDF</Button>

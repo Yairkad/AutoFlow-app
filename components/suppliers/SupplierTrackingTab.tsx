@@ -1211,7 +1211,7 @@ export default function SupplierTrackingTab({
                       return (
                         <div style={{ background: '#fafaf9', borderBottom: '1px solid var(--border)', padding: '10px 16px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: items.length ? '8px' : 0 }}>
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>🔁 חיובים חוזרים</span>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>חיובים חוזרים</span>
                             <button onClick={() => openRecItemModal(group.sid!)} style={{ padding: '3px 10px', background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>+ הוסף חיוב חוזר</button>
                           </div>
                           {items.length > 0 && (
@@ -1367,7 +1367,7 @@ export default function SupplierTrackingTab({
 
                           {!monthCollapsed && monthPayments.length > 0 && (
                             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px 12px' }}>
-                              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', marginBottom: '7px' }}>📅 תשלומים מתוזמנים:</div>
+                              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', marginBottom: '7px' }}>תשלומים מתוזמנים:</div>
                               {monthPayments.map((p, pi) => {
                                 const days = daysUntilDate(p.due_date)
                                 return (
@@ -1474,7 +1474,7 @@ export default function SupplierTrackingTab({
                         <input type="date" value={inv.date} onChange={e => updateInvoiceLine(i, 'date', e.target.value)} className="form-input" style={{ margin: 0 }} />
                       </div>
                       {isDuplicateInvoiceNumber(i) && (
-                        <div style={{ fontSize: '11px', color: 'var(--danger)', fontWeight: 600 }}>⚠ מספר חשבונית זה כבר קיים אצל ספק זה</div>
+                        <div style={{ fontSize: '11px', color: 'var(--danger)', fontWeight: 600 }}>מספר חשבונית זה כבר קיים אצל ספק זה</div>
                       )}
                       <input value={inv.notes} onChange={e => updateInvoiceLine(i, 'notes', e.target.value)} placeholder="הערות לשורה זו (אופציונלי)..." className="form-input" style={{ margin: 0 }} />
                       {inv.direction === 'charge' && (() => {
@@ -1563,7 +1563,7 @@ export default function SupplierTrackingTab({
       {scannerPicker && (
         <div onClick={() => setScannerPicker(null)} style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div onClick={e => e.stopPropagation()} role="dialog" aria-label="בחירת סורק" style={{ background: 'var(--bg-card)', borderRadius: 14, padding: 18, width: 'min(420px, 100%)', boxShadow: '0 10px 40px rgba(0,0,0,.25)', direction: 'rtl' }}>
-            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>📠 מאיזה סורק לסרוק?</div>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>מאיזה סורק לסרוק?</div>
             <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 12 }}>הבחירה תישמר במחשב הזה. אפשר לשנות אותה בכל רגע דרך &quot;החלף סורק&quot;.</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {scannerPicker.devices.map(d => (
@@ -1710,14 +1710,14 @@ export default function SupplierTrackingTab({
       {waModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setWaModal(null))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', width: 'min(420px, calc(100vw - 32px))', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', direction: 'rtl' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>💬 שלח הודעת ווצאפ</h3>
+            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>שלח הודעת ווצאפ</h3>
             <p style={{ margin: '0 0 12px', fontSize: '12px', color: 'var(--text-muted)' }}>ערוך את הטקסט לפני השליחה</p>
             <textarea value={waModal.text} onChange={e => setWaModal(m => m ? { ...m, text: e.target.value } : m)} rows={5} className="form-input" style={{ resize: 'vertical', fontSize: '13px', lineHeight: 1.6 }} />
             <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
               <Button variant="secondary" onClick={() => setWaModal(null)}>ביטול</Button>
               <a href={waUrl(waModal.phone, waModal.text)} target="_blank" rel="noopener noreferrer" onClick={() => setWaModal(null)}
                 style={{ padding: '8px 18px', background: 'var(--success)', color: '#fff', border: '1.5px solid #16a34a', borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >📲 פתח ווצאפ</a>
+              >פתח ווצאפ</a>
             </div>
           </div>
         </div>
@@ -1995,7 +1995,7 @@ export default function SupplierTrackingTab({
       {meterReadItem && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setMeterReadItem(null))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '440px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>📊 הזן קריאת מונה — {meterReadItem.name}</h3>
+            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>הזן קריאת מונה — {meterReadItem.name}</h3>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>קריאה קודמת: <strong>{meterPrevReading}</strong></div>
             <div style={{ display: 'grid', gap: '14px' }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
@@ -2028,7 +2028,7 @@ export default function SupplierTrackingTab({
       {showPrintChoice && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowPrintChoice(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '420px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700 }}>🖨️ מה להדפיס?</h3>
+            <h3 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700 }}>מה להדפיס?</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
                 <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>כרטסת ספק (חשבוניות/זיכויים + מאזן)</div>

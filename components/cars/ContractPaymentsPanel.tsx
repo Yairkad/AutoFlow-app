@@ -132,7 +132,7 @@ export default function ContractPaymentsPanel() {
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>💰 תשלומים צפויים מחוזי רכב</div>
+      <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>תשלומים צפויים מחוזי רכב</div>
       <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>
         מחוזים שסומנו כנחתמו. כל תשלום מסמנים כשהכסף באמת נכנס — שיק כשנפרע או כשהוחלף במזומן.
       </div>

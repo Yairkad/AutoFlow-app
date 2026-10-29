@@ -479,7 +479,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
       <div className="text-slate-600" style={{ fontSize: 14 }}>מדפים: {scope.join(', ')}</div>
 
       {warn.length > 0 && box(`⚠ לבדיקה (${warn.length})`, '#b91c1c', warn.map(r => line(r, <>
-        {r.split && <div className="text-red-700 font-bold" style={{ fontSize: 13 }}>⚠ נמצא בשני מקומות לא צמודים — כדאי לרכז במקום אחד</div>}
+        {r.split && <div className="text-red-700 font-bold" style={{ fontSize: 13 }}>נמצא בשני מקומות לא צמודים — כדאי לרכז במקום אחד</div>}
         {r.kind === 'moved' && r.tire && (
           <div className="flex flex-col gap-1.5" style={{ fontSize: 13 }}>
             <span className="text-amber-800 font-bold">היה רשום ב-{r.outside.join(', ')} (מחוץ לספירה)</span>

@@ -555,7 +555,7 @@ export default function DebtsClient() {
       {showTransferModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowTransferModal(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '420px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>🏦 הוסף העברה לבדיקה</h3>
+            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>הוסף העברה לבדיקה</h3>
             <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--text-muted)' }}>רישום חשבונית/העברה שצריך לוודא שהתקבלה בחשבון הבנק</p>
 
             <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
@@ -616,7 +616,7 @@ export default function DebtsClient() {
       {waModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setWaModal(null))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', width: 'min(420px, calc(100vw - 32px))', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', direction: 'rtl' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>💬 שלח הודעת ווצאפ</h3>
+            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>שלח הודעת ווצאפ</h3>
             <p style={{ margin: '0 0 12px', fontSize: '12px', color: 'var(--text-muted)' }}>ערוך את הטקסט לפני השליחה</p>
             <textarea
               value={waModal.text}

@@ -28,9 +28,9 @@ export default function UiDemo() {
       <section>
         <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '14px', color: 'var(--text-muted)' }}>Buttons</h2>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <Button variant="primary">💾 שמור</Button>
+          <Button variant="primary">שמור</Button>
           <Button variant="secondary">ביטול</Button>
-          <Button variant="danger">🗑️ מחק</Button>
+          <Button variant="danger">מחק</Button>
           <Button variant="outline">ייצוא Excel</Button>
           <Button variant="ghost">פרטים נוספים</Button>
           <Button variant="primary" size="sm">קטן</Button>
@@ -127,7 +127,7 @@ export default function UiDemo() {
           footer={
             <>
               <Button variant="secondary" onClick={() => setModalOpen(false)}>ביטול</Button>
-              <Button variant="primary" onClick={() => { setModalOpen(false); showToast('נשמר!') }}>💾 שמור</Button>
+              <Button variant="primary" onClick={() => { setModalOpen(false); showToast('נשמר!') }}>שמור</Button>
             </>
           }
         >
@@ -142,7 +142,7 @@ export default function UiDemo() {
       {/* Confirm */}
       <section>
         <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '14px', color: 'var(--text-muted)' }}>Confirm Dialog</h2>
-        <Button variant="danger" onClick={handleDelete}>🗑️ מחק רשומה</Button>
+        <Button variant="danger" onClick={handleDelete}>מחק רשומה</Button>
       </section>
 
       {/* Empty State */}

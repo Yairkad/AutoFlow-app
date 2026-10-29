@@ -324,7 +324,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
 
                 {/* Small details sit right above the button, pinned to the bottom */}
                 <div className="text-slate-500 flex flex-wrap gap-x-2" style={{ fontSize: 12, marginTop: 'auto' }}>
-                  {r.supplier_name && <span>📦 ספק: {r.supplier_name}</span>}
+                  {r.supplier_name && <span>ספק: {r.supplier_name}</span>}
                   {r.plate && <span>🚗 {r.plate}</span>}
                   {r.notes && <span style={{ whiteSpace: 'pre-line' }}>📝 {r.notes}</span>}
                   {r.created_by_name && <span className="text-slate-400">· {r.created_by_name}</span>}

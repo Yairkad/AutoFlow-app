@@ -223,7 +223,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
             style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', maxWidth: '560px', width: '100%', margin: '16px', maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto', direction: 'rtl' }}
             onClick={e => e.stopPropagation()}
           >
-            <h3 style={{ margin: '0 0 20px', fontSize: '16px', fontWeight: 700 }}>✏️ עריכת פרטי עסק</h3>
+            <h3 style={{ margin: '0 0 20px', fontSize: '16px', fontWeight: 700 }}>עריכת פרטי עסק</h3>
 
             {/* Logo row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
@@ -252,7 +252,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {/* פרטי העסק */}
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>🏢 פרטי העסק</div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>פרטי העסק</div>
               <div className="settings-grid-3">
                 {field('שם עסק *', <input className="form-input" value={tenant.name} onChange={e => setTenant(t => t ? { ...t, name: e.target.value } : t)} placeholder="שם העסק" />)}
                 {field('כותרת משנה', <input className="form-input" value={tenant.sub_title ?? ''} onChange={e => setTenant(t => t ? { ...t, sub_title: e.target.value } : t)} placeholder="מוסך ופנצריה" />)}
@@ -264,7 +264,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
               {field('אימייל (ליצירת קשר)', <input className="form-input" dir="ltr" type="email" value={tenant.public_info?.email ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, email: e.target.value } } : t)} placeholder="info@example.com" />)}
 
               {/* דף ציבורי */}
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginTop: '4px' }}>🌐 דף ציבורי</div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginTop: '4px' }}>דף ציבורי</div>
               {field('שעות פעילות', <input className="form-input" value={tenant.public_info?.hours ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, hours: e.target.value } } : t)} placeholder="א׳-ה׳ 08:00–18:00 | ו׳ 08:00–13:00" />)}
               <div className="settings-grid-2">
                 {field('קישור Waze', <input className="form-input" dir="ltr" value={tenant.public_info?.waze_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, waze_url: e.target.value } } : t)} placeholder="https://waze.com/ul/..." />)}
@@ -403,7 +403,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
 
       {/* Add user button */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontWeight: 600, fontSize: '14px' }}>👥 משתמשים</div>
+        <div style={{ fontWeight: 600, fontSize: '14px' }}>משתמשים</div>
         <Button size="sm" onClick={() => setCreateOpen(v => !v)}>
           {createOpen ? '✕ ביטול' : '+ הוסף משתמש'}
         </Button>
@@ -422,8 +422,8 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
           </div>
           {field('תפקיד', (
             <select className="form-input" value={createForm.role} onChange={e => setCreateForm(f => ({ ...f, role: e.target.value }))}>
-              <option value="admin">👑 מנהל</option>
-              <option value="employee">👤 עובד</option>
+              <option value="admin">מנהל</option>
+              <option value="employee">עובד</option>
             </select>
           ))}
           {createForm.role === 'employee' && (
@@ -470,9 +470,9 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
 
               {field('תפקיד', (
                 <select className="form-input" value={editData.role} onChange={e => setEditData(d => ({ ...d, role: e.target.value }))}>
-                  <option value="super_admin">🔧 מפתח</option>
-                  <option value="admin">👑 מנהל</option>
-                  <option value="employee">👤 עובד</option>
+                  <option value="super_admin">מפתח</option>
+                  <option value="admin">מנהל</option>
+                  <option value="employee">עובד</option>
                 </select>
               ))}
 
@@ -622,7 +622,7 @@ function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType
   return (
     <div style={{ marginBottom: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div style={{ fontWeight: 600, fontSize: '14px' }}>🔗 הזמנת עובד חדש</div>
+        <div style={{ fontWeight: 600, fontSize: '14px' }}>הזמנת עובד חדש</div>
         <Button size="sm" onClick={() => setOpen(v => !v)}>
           {open ? '✕ ביטול' : '+ צור קישור'}
         </Button>
@@ -888,7 +888,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
           {/* Form window: a click outside must not close it (typed details would be lost) */}
           <div aria-hidden="true" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 299 }} />
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'var(--bg-card)', borderRadius: '14px', padding: '28px', width: 'min(320px, calc(100vw - 32px))', zIndex: 300, direction: 'rtl', boxShadow: '0 20px 60px rgba(0,0,0,.25)' }}>
-            <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '20px' }}>🔑 שינוי קוד כספת</div>
+            <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '20px' }}>שינוי קוד כספת</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <label className="form-label">קוד נוכחי</label>
@@ -1633,7 +1633,7 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
 
       {/* Drive */}
       <div style={cardSt}>
-        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>☁️ גיבוי לגוגל דרייב</div>
+        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>גיבוי לגוגל דרייב</div>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.6 }}>
           {driveConnected
             ? <>כל לילה נשמר אוטומטית גיבוי מלא בתיקייה &quot;גיבויים&quot; בדרייב של העסק (נשמרים 30 הגיבויים האחרונים). הקבצים פרטיים – רק לבעל הדרייב.</>
@@ -1655,7 +1655,7 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
 
       {/* Export */}
       <div style={cardSt}>
-        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>📤 ייצוא גיבוי מלא</div>
+        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>ייצוא גיבוי מלא</div>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
           מוריד קובץ JSON עם כל הנתונים של העסק — צמיגים, מוצרים, הוצאות, חובות, לקוחות, ספקים, בנק, מסוף רחבה, בדיקות קנייה ועוד.
           לא כולל את הכספת (סיסמאות) ואת הקבצים שבדרייב.
@@ -1676,7 +1676,7 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
 
       {/* Restore */}
       <div style={{ ...cardSt, borderColor: '#fca5a5' }}>
-        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>📥 שחזור גיבוי</div>
+        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>שחזור גיבוי</div>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
           מעלה קובץ גיבוי ומשחזר את הנתונים. ידרש אימות סיסמת מנהל. נתונים קיימים עם אותו מזהה יידרסו.
         </div>
@@ -1702,7 +1702,7 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
             background: 'var(--bg-card)', borderRadius: '14px', padding: '28px',
             width: '90%', maxWidth: '380px', direction: 'rtl',
           }}>
-            <div style={{ fontWeight: 700, fontSize: '17px', marginBottom: '8px' }}>🔒 אימות מנהל</div>
+            <div style={{ fontWeight: 700, fontSize: '17px', marginBottom: '8px' }}>אימות מנהל</div>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
               הזן את סיסמתך כדי לאשר את שחזור הגיבוי:
               <br /><strong style={{ color: '#ef4444' }}>{restoreFile?.name}</strong>

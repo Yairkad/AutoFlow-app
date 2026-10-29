@@ -643,7 +643,7 @@ export default function CustomerTrackingTab({
     if (debt.direction === 'credit')
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>זיכוי</span>
     if (debt.is_closed)
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f5f3ff', color: '#7c3aed', fontWeight: 600 }}>🏷 מכוסה</span>
+      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f5f3ff', color: '#7c3aed', fontWeight: 600 }}>מכוסה</span>
     return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>חיוב</span>
   }
 
@@ -1080,7 +1080,7 @@ export default function CustomerTrackingTab({
       {meterReadItem && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setMeterReadItem(null))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '440px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>📊 הזן קריאת מונה — {meterReadItem.name}</h3>
+            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>הזן קריאת מונה — {meterReadItem.name}</h3>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>קריאה קודמת: <strong>{meterPrevReading}</strong></div>
             <div style={{ display: 'grid', gap: '14px' }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
@@ -1133,7 +1133,7 @@ export default function CustomerTrackingTab({
 
               {dCustomer && customerActions.some(a => a.customer_id === dCustomer) && (
                 <div>
-                  <span style={{ fontSize: '13px', fontWeight: 600 }}>⚡ פעולות מהירות</span>
+                  <span style={{ fontSize: '13px', fontWeight: 600 }}>פעולות מהירות</span>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
                     {customerActions.filter(a => a.customer_id === dCustomer).map(a => {
                       const active = selectedActionIds.includes(a.id)
@@ -1280,7 +1280,7 @@ export default function CustomerTrackingTab({
 
             {payDebtsByMonth.length > 0 && (
               <div style={{ marginTop: '18px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>🏷 תייג אילו חשבוניות תשלום זה מכסה <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(אופציונלי, לצורך מעקב בלבד — לא משפיע על הסכום)</span></div>
+                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>תייג אילו חשבוניות תשלום זה מכסה <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(אופציונלי, לצורך מעקב בלבד — לא משפיע על הסכום)</span></div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
                   {payDebtsByMonth.map(([mk, debts]) => (
                     <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
@@ -1318,14 +1318,14 @@ export default function CustomerTrackingTab({
       {waModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setWaModal(null))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', width: 'min(420px, calc(100vw - 32px))', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', direction: 'rtl' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>💬 שלח הודעת ווצאפ</h3>
+            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>שלח הודעת ווצאפ</h3>
             <p style={{ margin: '0 0 12px', fontSize: '12px', color: 'var(--text-muted)' }}>ערוך את הטקסט לפני השליחה</p>
             <textarea value={waModal.text} onChange={e => setWaModal(m => m ? { ...m, text: e.target.value } : m)} rows={5} className="form-input" style={{ resize: 'vertical', fontSize: '13px', lineHeight: 1.6 }} />
             <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
               <Button variant="secondary" onClick={() => setWaModal(null)}>ביטול</Button>
               <a href={waUrl(waModal.phone, waModal.text)} target="_blank" rel="noopener noreferrer" onClick={() => setWaModal(null)}
                 style={{ padding: '8px 18px', background: 'var(--success)', color: '#fff', border: '1.5px solid #16a34a', borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >📲 פתח ווצאפ</a>
+              >פתח ווצאפ</a>
             </div>
           </div>
         </div>
@@ -1347,7 +1347,7 @@ export default function CustomerTrackingTab({
       {showPrintChoice && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowPrintChoice(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '420px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700 }}>🖨️ הדפסת כרטסת לקוח</h3>
+            <h3 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700 }}>הדפסת כרטסת לקוח</h3>
             <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
               <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>כרטסת לקוח (חשבוניות/זיכויים + מאזן)</div>
               <select

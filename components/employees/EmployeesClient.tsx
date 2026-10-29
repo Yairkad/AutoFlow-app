@@ -829,7 +829,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
     const active = employees.filter(e => e.is_active)
     return (
       <div>
-        <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>📒 ספר טלפונים – עובדים</h2>
+        <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '16px' }}>ספר טלפונים – עובדים</h2>
         {active.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>אין עובדים פעילים</div>
         )}
@@ -1188,7 +1188,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
           פריטים אלו מתווספים / מנוכים מהנטו שהוזן בתלוש — לא כולל בתלוש עצמו.
         </p>
 
-        <p style={sectionTitle}>➕ תוספות חוץ תלוש</p>
+        <p style={sectionTitle}>תוספות חוץ תלוש</p>
         {adjAdditions.map((a, i) => (
           <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px', alignItems: 'center' }}>
             <input className="form-input" style={{ flex: 1 }} placeholder="בונוס, נסיעות..." value={a.label}
@@ -1201,7 +1201,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
         ))}
         <Button size="sm" variant="secondary" onClick={() => setAdjAdditions(prev => [...prev, { label: '', amount: 0 }])}>+ הוסף תוספת</Button>
 
-        <p style={{ ...sectionTitle, marginTop: '20px' }}>➖ ניכויים חוץ תלוש</p>
+        <p style={{ ...sectionTitle, marginTop: '20px' }}>ניכויים חוץ תלוש</p>
         {adjDeductions.map((d, i) => (
           <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px', alignItems: 'center' }}>
             <input className="form-input" style={{ flex: 1 }} placeholder="ניכוי, קנס..." value={d.label}
@@ -1346,9 +1346,9 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
                       <td style={tdSt}>{s.paid_date ? new Date(s.paid_date).toLocaleDateString('he-IL') : '—'}</td>
                       <td style={tdSt}>
                         {s.is_paid ? (
-                          <span style={{ background: 'var(--success-soft)', color: 'var(--success)', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>✅ שולם</span>
+                          <span style={{ background: 'var(--success-soft)', color: 'var(--success)', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>שולם</span>
                         ) : (
-                          <span style={{ background: '#fff7ed', color: 'var(--warning)', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>⏳ ממתין</span>
+                          <span style={{ background: '#fff7ed', color: 'var(--warning)', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>ממתין</span>
                         )}
                       </td>
                       <td style={tdSt}>
@@ -1376,7 +1376,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>🏦 פרטי בנק ואישי – {bankViewEmp.full_name}</h3>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>פרטי בנק ואישי – {bankViewEmp.full_name}</h3>
               <button onClick={() => setBankViewEmp(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
             </div>
 

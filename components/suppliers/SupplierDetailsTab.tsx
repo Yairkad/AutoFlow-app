@@ -373,19 +373,19 @@ export default function SupplierDetailsTab({
               ))}
               {selected.notes && (
                 <div style={{ background: '#fffbeb', borderRadius: '8px', padding: '10px 14px', gridColumn: '1 / -1' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>📝 הערות</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>הערות</div>
                   <div style={{ fontSize: '13px' }}>{selected.notes}</div>
                 </div>
               )}
               {!!selected.opening_balance && (
                 <div style={{ background: 'var(--bg)', borderRadius: '8px', padding: '10px 14px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>📒 יתרת פתיחה</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>יתרת פתיחה</div>
                   <div style={{ fontSize: '13px', fontWeight: 600 }}>{selected.opening_balance.toLocaleString('he-IL')} ₪</div>
                 </div>
               )}
               {(selected.bank_name || selected.bank_account) && (
                 <div style={{ background: '#f0f9ff', borderRadius: '8px', padding: '10px 14px', gridColumn: '1 / -1', border: '1px solid #bae6fd' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '5px' }}>🏦 פרטי בנק לתשלום</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '5px' }}>פרטי בנק לתשלום</div>
                   <div style={{ fontSize: '13px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                     {selected.bank_name && <span><strong>בנק:</strong> {selected.bank_name}</span>}
                     {selected.bank_branch && <span><strong>סניף:</strong> {selected.bank_branch}</span>}

@@ -552,7 +552,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
         }}>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-muted)', padding: 4, lineHeight: 1 }}>✕</button>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 14 }}>📋 ממצאי בדיקה — <span style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{inspection.plate}</span></div>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>ממצאי בדיקה — <span style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{inspection.plate}</span></div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
               {[inspection.make, inspection.model, inspection.year].filter(Boolean).join(' ')}
               {inspection.owner_name ? ` · ${inspection.owner_name}` : ''}

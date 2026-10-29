@@ -80,7 +80,7 @@ export default function QuickReportsPanel({ variant }: { variant: 'yard' | 'offi
       )}
 
       {error ? <Empty icon="⚠️" text={`שגיאה: ${error}`} /> : !data || !s ? <Empty icon="⏳" text="טוען..." /> : (<>
-        <p className="font-black text-slate-700" style={{ fontSize: '17px' }}>🛒 מכרנו (כרטיסי עבודה שנסגרו)</p>
+        <p className="font-black text-slate-700" style={{ fontSize: '17px' }}>מכרנו (כרטיסי עבודה שנסגרו)</p>
         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' }}>
           <Stat label="רכבים" value={String(s.cars)} color="#141A2E" sub={money ? `סה״כ ${ils(s.total)}` : undefined} />
           <Stat label="צמיגים" value={String(s.byType.tire.qty)} color="#26357A" sub={money ? ils(s.byType.tire.amount) : undefined} />
@@ -89,7 +89,7 @@ export default function QuickReportsPanel({ variant }: { variant: 'yard' | 'offi
           {s.noStockUnits > 0 && <Stat label="נמכרו ללא מלאי" value={String(s.noStockUnits)} color="#ea580c" sub="לסדר במעקב רחבה" />}
         </div>
 
-        <p className="font-black text-slate-700 mt-2" style={{ fontSize: '17px' }}>📦 קיבלנו (קליטות מלאי)</p>
+        <p className="font-black text-slate-700 mt-2" style={{ fontSize: '17px' }}>קיבלנו (קליטות מלאי)</p>
         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' }}>
           <Stat label="צמיגים שנקלטו" value={String(data.received.tires)} color="#7c3aed" />
           <Stat label="מוצרים שנקלטו" value={String(data.received.products)} color="#db2777" />

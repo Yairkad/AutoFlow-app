@@ -435,13 +435,13 @@ export default function CustomerDetailsTab({
               ))}
               {selected.notes && (
                 <div style={{ background: '#fffbeb', borderRadius: '8px', padding: '10px 14px', gridColumn: '1 / -1' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>📝 הערות</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>הערות</div>
                   <div style={{ fontSize: '13px' }}>{selected.notes}</div>
                 </div>
               )}
               {!!selected.opening_balance && (
                 <div style={{ background: 'var(--bg)', borderRadius: '8px', padding: '10px 14px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>📒 יתרת פתיחה</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>יתרת פתיחה</div>
                   <div style={{ fontSize: '13px', fontWeight: 600 }}>{selected.opening_balance.toLocaleString('he-IL')} ₪</div>
                 </div>
               )}
@@ -466,7 +466,7 @@ export default function CustomerDetailsTab({
               return (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>🔁 חיובים חוזרים</h3>
+                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>חיובים חוזרים</h3>
                     <button onClick={() => openRecItemModal()} style={{ padding: '4px 10px', background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>+ הוסף</button>
                   </div>
                   {recItems.length === 0 ? (
@@ -491,7 +491,7 @@ export default function CustomerDetailsTab({
                   )}
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>⚡ פעולות מהירות</h3>
+                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>פעולות מהירות</h3>
                     <button onClick={() => openActionModal()} style={{ padding: '4px 10px', background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>+ הוסף</button>
                   </div>
                   {actionItems.length === 0 ? (

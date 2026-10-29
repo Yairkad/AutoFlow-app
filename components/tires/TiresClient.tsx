@@ -294,7 +294,7 @@ export default function TiresClient() {
   tbody tr:nth-child(even){background:#f9fafb}
   @media screen{body{background:#f0f0f0;padding:20px}table{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);border-radius:8px;overflow:hidden}}
 </style></head><body>
-<h1>🔘 מחירון צמיגים</h1>
+<h1>מחירון צמיגים</h1>
 <p>${new Date().toLocaleDateString('he-IL')} · ${rows.length} פריטים</p>
 <table>
   <thead><tr><th>מידה</th><th>יצרן</th><th style="text-align:center">מדדים</th><th style="text-align:center">מיקום</th><th style="text-align:center">מחיר מכירה</th></tr></thead>
@@ -746,7 +746,7 @@ export default function TiresClient() {
             <select className="form-input" aria-label="נתונים חסרים" style={{ flex: '1 1 110px', minWidth: 0, margin: 0, borderColor: filterMissing ? 'var(--warning)' : undefined }}
               value={filterMissing} onChange={e => setFilterMissing(e.target.value as typeof filterMissing)}>
               <option value=''>כל הנתונים</option>
-              <option value='any'>⚠ חסר משהו</option>
+              <option value='any'>חסר משהו</option>
               <option value='details'>חסרה מידה / מותג</option>
               <option value='price'>חסר מחיר מכירה</option>
             </select>

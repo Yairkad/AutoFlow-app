@@ -280,7 +280,7 @@ export default function DocumentScannerModal({ onComplete, onClose }: Props) {
 
             {/* Brightness slider */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 13, color: '#aaa', whiteSpace: 'nowrap' }}>☀️ בהירות</span>
+              <span style={{ fontSize: 13, color: '#aaa', whiteSpace: 'nowrap' }}>בהירות</span>
               <input
                 type="range" min={50} max={200} step={5} value={brightness}
                 onChange={e => applyBrightness(Number(e.target.value))}

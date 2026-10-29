@@ -122,7 +122,7 @@ export default function MyProfilePage() {
 
   return (
     <div style={{ maxWidth: '560px', direction: 'rtl' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '4px' }}>👤 הפרופיל שלי</h1>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '4px' }}>הפרופיל שלי</h1>
         {emp && <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>{emp.full_name}</div>}
 
         {/* Personal */}

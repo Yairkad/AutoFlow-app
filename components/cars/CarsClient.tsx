@@ -1227,7 +1227,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             {isMobile && <button onClick={() => setShowCarScanner(true)} style={btn}>סרוק</button>}
             <label style={{ cursor: 'pointer' }}>
               <input type="file" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) { setPendingDoc(f); setDocName('') } e.target.value = '' }} />
-              <span style={btn}>📤 הוסף מסמך</span>
+              <span style={btn}>הוסף מסמך</span>
             </label>
           </div>
         )}
@@ -1299,14 +1299,14 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 'auto', paddingTop: 3 }}>
             {car.license_deposited
               ? <>
-                  <span style={{ ...tag, background: '#ffedd5', color: '#c2410c' }}>🅿️ בהפקדה</span>
+                  <span style={{ ...tag, background: '#ffedd5', color: '#c2410c' }}>בהפקדה</span>
                   {car.deposit_refund_requested
-                    ? <span style={{ ...tag, background: 'var(--success-soft)', color: '#166534' }}>💸 הוגש החזר</span>
-                    : <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>💸 לא הוגש החזר</span>}
+                    ? <span style={{ ...tag, background: 'var(--success-soft)', color: '#166534' }}>הוגש החזר</span>
+                    : <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>לא הוגש החזר</span>}
                 </>
               : test
                 ? <span style={{ ...tag, background: test.bg, color: test.color }}>🔧 {test.label}</span>
-                : <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>🔧 אין טסט</span>
+                : <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>אין טסט</span>
             }
             {!car.license_deposited && inTestRenewal(car) && (
               car.test_fee_paid && car.test_passed
@@ -1470,7 +1470,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           }
           {declinedCars.length > 0 && (
             <div style={{ marginTop: 28 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)', marginBottom: 10 }}>❌ נדחו בעבר ({declinedCars.length})</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--danger)', marginBottom: 10 }}>נדחו בעבר ({declinedCars.length})</div>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, opacity: 0.75 }}>
                   <tbody>
@@ -1624,9 +1624,9 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
                               {req.fuel         && <Chip>⛽ {req.fuel}</Chip>}
                               {req.transmission && <Chip>⚙️ {req.transmission}</Chip>}
                               {req.make_pref    && <Chip>🚘 {req.make_pref}</Chip>}
-                              {req.min_year     && <Chip>📅 משנת {req.min_year}</Chip>}
-                              {req.max_km       && <Chip>📍 עד {req.max_km.toLocaleString('he-IL')} ק"מ</Chip>}
-                              {req.max_hand     && <Chip>🤝 עד יד {req.max_hand}</Chip>}
+                              {req.min_year     && <Chip>משנת {req.min_year}</Chip>}
+                              {req.max_km       && <Chip>עד {req.max_km.toLocaleString('he-IL')} ק"מ</Chip>}
+                              {req.max_hand     && <Chip>עד יד {req.max_hand}</Chip>}
                               {req.seats        && <Chip>🪑 {req.seats}</Chip>}
                             </div>
                             {req.notes && <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>{req.notes}</div>}
@@ -1683,10 +1683,10 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
                               {req.km             && <Chip>{fmtKm(req.km)}</Chip>}
                               {req.hand           && <Chip>יד {req.hand}</Chip>}
                               {req.ownership_type && <Chip>{req.ownership_type}</Chip>}
-                              {commission         && <Chip color="#7c3aed">💰 עמלה: {commission}</Chip>}
-                              {req.wait_until     && <Chip>⏳ עד: {req.wait_until}</Chip>}
-                              {req.car_code       && <Chip>🔖 קוד: {req.car_code}</Chip>}
-                              {req.key_hanger     && <Chip>🗝️ מתלה: {req.key_hanger}</Chip>}
+                              {commission         && <Chip color="#7c3aed">עמלה: {commission}</Chip>}
+                              {req.wait_until     && <Chip>עד: {req.wait_until}</Chip>}
+                              {req.car_code       && <Chip>קוד: {req.car_code}</Chip>}
+                              {req.key_hanger     && <Chip>מתלה: {req.key_hanger}</Chip>}
                             </div>
                             {req.notes && <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>{req.notes}</div>}
                             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{req.created_at?.slice(0,10)}</div>
@@ -1724,15 +1724,15 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             ['תוקף ביטוח', c.insur_date ? <span style={{ color: insur?.color, fontWeight: 700 }}>{c.insur_date}{insur && insur.label !== c.insur_date ? ` (${insur.label})` : ''}</span> : null],
             ['אגרת טסט', c.license_deposited ? null : c.test_fee_paid
               ? <span style={{ color: '#166534' }}>✅ שולמה{c.test_fee_paid_date ? ` (${c.test_fee_paid_date})` : ''}</span>
-              : <span style={{ color: '#dc2626' }}>❌ לא שולמה</span>],
+              : <span style={{ color: '#dc2626' }}>לא שולמה</span>],
             ['מבחן אחרון (משרד התחבורה)', c.gov_last_test_date],
             ['מבחן במסלול', c.license_deposited ? null : c.test_passed
               ? <span style={{ color: '#166534' }}>✅ עבר{c.test_passed_date ? ` (${c.test_passed_date})` : ''}</span>
-              : <span style={{ color: '#dc2626' }}>❌ לא עבר</span>],
+              : <span style={{ color: '#dc2626' }}>לא עבר</span>],
             ['הפקדת רישיון', c.license_deposited ? `🅿️ מופקד${c.license_deposit_date ? ' מ-' + c.license_deposit_date : ''}` : null],
             ['הוגשה בקשה להחזר?', !c.license_deposited ? null : c.deposit_refund_requested
               ? <span style={{ color: '#166534' }}>✅ כן{c.deposit_refund_requested_date ? ` (${c.deposit_refund_requested_date})` : ''}</span>
-              : <span style={{ color: '#dc2626' }}>❌ לא</span>],
+              : <span style={{ color: '#dc2626' }}>לא</span>],
             ['מיקום', c.current_location], ['בעלים', c.owner_name], ['איש קשר', c.contact],
             ['שמור עבור', c.status === 'reserved' ? c.reserved_for : null],
             ['קונה', c.buyer_name ? `${c.buyer_name}${c.buyer_phone ? ' · ' + c.buyer_phone : ''}` : null],
@@ -1743,7 +1743,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
               {/* Status + actions */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                 <span style={{ background: st?.color || '#64748b', color: '#fff', padding: '3px 12px', borderRadius: 12, fontSize: 12, fontWeight: 700 }}>{st?.label}</span>
-                {c.license_deposited && <span style={{ background: '#ffedd5', color: '#c2410c', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700 }}>🅿️ בהפקדה</span>}
+                {c.license_deposited && <span style={{ background: '#ffedd5', color: '#c2410c', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 700 }}>בהפקדה</span>}
                 <div style={{ flex: 1 }} />
                 {getCarActions(c).map(a => (
                   <button key={a.key} onClick={() => { setViewCarId(null); a.onClick() }} style={{
@@ -1782,7 +1782,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
 
               {c.interested_buyers.length > 0 && (
                 <div style={{ background: '#fef9c3', borderRadius: 10, padding: '8px 12px', fontSize: 12 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 4 }}>🟡 מתעניינים ({c.interested_buyers.length})</div>
+                  <div style={{ fontWeight: 700, marginBottom: 4 }}>מתעניינים ({c.interested_buyers.length})</div>
                   {c.interested_buyers.map(b => (
                     <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                       <span><strong>{b.name}</strong>{b.phone ? ' · ' + b.phone : ''}{b.offered_price ? ` · 💰 ${fmt(b.offered_price)}` : ''}</span>
@@ -1794,13 +1794,13 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
 
               {/* Sale contracts */}
               <div>
-                <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 8 }}>📝 חוזי מכירה</div>
+                <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 8 }}>חוזי מכירה</div>
                 <CarContractsPanel carId={c.id} onOpen={id => { setViewCarId(null); setContractEd({ carId: c.id, id }) }} />
               </div>
 
               {/* Documents */}
               <div>
-                <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 8 }}>📁 מסמכי רכב</div>
+                <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 8 }}>מסמכי רכב</div>
                 {!isAdmin
                   ? <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>מסמכים זמינים למנהל בלבד</div>
                   : !driveConnected

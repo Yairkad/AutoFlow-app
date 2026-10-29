@@ -129,7 +129,7 @@ export default function CarContractsPanel({ carId, prefill, onOpen }: Props) {
                   </span>
                   {r.signed_file && (
                     <a href={signedFileUrl(r.signed_file)} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
-                      style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>📎 חוזה חתום</a>
+                      style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>חוזה חתום</a>
                   )}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>

@@ -105,7 +105,7 @@ export default function StorageClient() {
     <div style={{ direction: 'rtl', maxWidth: 900, margin: '0 auto', padding: 20 }}>
       <div className="flex justify-between items-start gap-3 flex-wrap" style={{ marginBottom: 16 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>🗄 ארונות וספירה לפי אזור</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>ארונות וספירה לפי אזור</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '6px 0 0' }}>מיקום = אות הארון + מספר המדף מלמעלה (B3 = ארון B, מדף שלישי)</p>
         </div>
         <button onClick={() => router.push('/tires')} style={{ padding: '8px 16px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>
