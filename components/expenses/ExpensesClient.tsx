@@ -7,7 +7,8 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import Input from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
-import ExcelMenu from '@/components/ui/ExcelMenu'
+import MoreMenu from '@/components/ui/MoreMenu'
+import FilterBar from '@/components/ui/FilterBar'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/lib/supabase/client'
@@ -867,7 +868,6 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
             <button onClick={() => shiftMonth(-1)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '2px 6px', lineHeight: 1 }}>‹</button>
           </div>
           <Button onClick={openAdd}>+ הוסף {tab === 'expenses' ? 'הוצאה' : 'הכנסה'}</Button>
-          <Button variant="secondary" onClick={() => setQuickAddOpen(true)}>⚡ הוספה מהירה</Button>
         </> : undefined}
       />
 
@@ -911,82 +911,41 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           ))}
         </div>
 
-        {/* Action buttons – far left (RTL) */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-          {/* Scheduled payments button */}
-          <button
-            onClick={() => setSchedModal(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              border: '1px solid var(--border)', borderRadius: '8px',
-              padding: '6px 12px', background: '#fff', cursor: 'pointer',
-              fontSize: '13px', color: 'var(--text-muted)',
-            }}
-          >
-            📅 תשלומים
-          </button>
-
-          {/* Recurring button */}
-          <button
-            onClick={() => setRecListModal(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              border: '1px solid var(--border)', borderRadius: '8px',
-              padding: '6px 12px', background: '#fff', cursor: 'pointer',
-              fontSize: '13px', color: 'var(--text-muted)',
-            }}
-          >
-            🔁 קבועות
-            {activeRec.length > 0 && (
-              <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: '10px', padding: '0 6px', fontSize: '11px' }}>
-                {activeRec.length}
-              </span>
-            )}
-          </button>
-          <ExcelMenu
-            onExportExcel={exportExcel}
-            onImportExcel={tab !== 'summary' ? importExcel : undefined}
-          />
-        </div>
+        {/* Secondary actions – far left (RTL) */}
+        <MoreMenu
+          excel={{ onExport: exportExcel, onImport: tab !== 'summary' ? importExcel : undefined }}
+          actions={[
+            ...(tab !== 'summary' ? [{ key: 'quick', label: 'הוספה מהירה', icon: '⚡', onClick: () => setQuickAddOpen(true) }] : []),
+            { key: 'sched', label: 'תשלומים', icon: '📅', onClick: () => setSchedModal(true) },
+            { key: 'rec', label: `קבועות${activeRec.length ? ` (${activeRec.length})` : ''}`, icon: '🔁', onClick: () => setRecListModal(true) },
+          ]}
+        />
       </div>
 
       {/* ── Search / filter bar ───────────────────────────────────────────────── */}
       {(tab === 'expenses' || tab === 'income') && (
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-            <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: '14px' }}>🔍</span>
-            <input
-              type="text"
-              placeholder="חיפוש לפי תיאור, קטגוריה, ספק..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="form-input" style={{ paddingRight: '32px' }}
-            />
-          </div>
-          <select value={filterCat} onChange={e => setFilterCat(e.target.value)} className="form-input" style={{ minWidth: '130px', width: 'auto' }}>
+        <FilterBar storageKey="expenses" search={search} onSearch={setSearch} placeholder="חיפוש לפי תיאור, קטגוריה, ספק..."
+          chips={[
+            ...(filterCat ? [{ key: 'c', label: filterCat, onRemove: () => setFilterCat('') }] : []),
+            ...(filterSup ? [{ key: 's', label: suppliers.find(x => x.id === filterSup)?.name ?? 'ספק', onRemove: () => setFilterSup('') }] : []),
+          ]}
+          onClearAll={() => { setSearch(''); setFilterCat(''); setFilterSup('') }}>
+          <select value={filterCat} onChange={e => setFilterCat(e.target.value)} aria-label="קטגוריה" className="form-input" style={{ minWidth: '130px', width: 'auto', margin: 0 }}>
             <option value="">כל הקטגוריות</option>
             {cats.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           {tab === 'expenses' && suppliers.length > 0 && (
-            <select value={filterSup} onChange={e => setFilterSup(e.target.value)} className="form-input" style={{ minWidth: '130px', width: 'auto' }}>
+            <select value={filterSup} onChange={e => setFilterSup(e.target.value)} aria-label="ספק" className="form-input" style={{ minWidth: '130px', width: 'auto', margin: 0 }}>
               <option value="">כל הספקים</option>
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           )}
-          {(search || filterCat || filterSup) && (
-            <button
-              onClick={() => { setSearch(''); setFilterCat(''); setFilterSup('') }}
-              style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 12px', background: '#fff', cursor: 'pointer', fontSize: '13px', color: 'var(--danger)', whiteSpace: 'nowrap' }}
-            >
-              ✕ נקה
-            </button>
-          )}
-          <div style={{ display: 'flex', gap: '2px', padding: '3px', background: '#f1f5f9', borderRadius: '9px' }}>
+          <div role="group" aria-label="תצוגה" style={{ display: 'flex', gap: '2px', padding: '3px', background: '#f1f5f9', borderRadius: '9px' }}>
             {([
               [true,  '📁 מקובץ'],
               [false, '📋 רשימה'],
             ] as [boolean, string][]).map(([v, label]) => (
-              <button key={String(v)} onClick={() => setGroupedView(v)} style={{
+              <button key={String(v)} onClick={() => setGroupedView(v)} aria-pressed={groupedView === v} style={{
                 border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '5px 12px', fontSize: '12px',
                 fontWeight: groupedView === v ? 600 : 400,
                 color: groupedView === v ? 'var(--text)' : 'var(--text-muted)',
@@ -995,7 +954,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               }}>{label}</button>
             ))}
           </div>
-        </div>
+        </FilterBar>
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
@@ -1066,7 +1025,6 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                 <label style={{ fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>עד תאריך</label>
                 <input type="date" value={sumDateTo} onChange={e => setSumDateTo(e.target.value)} className="form-input" style={{ width: 'auto' }} />
               </div>
-              <Button size="sm" onClick={fetchSummary}>רענן</Button>
             </div>
           )}
 

@@ -166,6 +166,11 @@ export default function ScanClient() {
     refocus()
   }
 
+  // /scan?count=1 (from the "ספירת מלאי" page) opens straight in count mode
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('count') === '1') startCount()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   function cancelCount() {
     setMode('scan')
     setShowConfirm(false)

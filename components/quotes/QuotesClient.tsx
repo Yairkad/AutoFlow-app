@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
@@ -1033,8 +1034,10 @@ export default function QuotesClient() {
                           >
                             {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                           </select>
-                          <button title="ערוך" onClick={() => openEdit(q)} style={iconBtn('var(--accent)', 'white')}>✏️</button>
-                          <button title="מחק" onClick={() => del(q.id)} style={iconBtn('var(--danger)', 'white')}>🗑️</button>
+                          <RowActionsMenu align="end" actions={[
+                            { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openEdit(q) },
+                            { key: 'del', label: 'מחק', icon: '🗑️', danger: true, onClick: () => del(q.id) },
+                          ]} />
                         </div>
                       </td>
                     )}

@@ -717,8 +717,7 @@ export default function TiresClient() {
                 excel={{ onExport: exportExcel, onImport: importExcel }}
                 actions={[
                   { key: 'price', label: 'מחירון', icon: '🖨️', onClick: printPriceList },
-                  { key: 'count', label: 'ספירת מלאי', icon: '📦', onClick: () => { window.location.href = '/tires/inventory-count' } },
-                  { key: 'storage', label: 'ארונות וספירה לפי אזור', icon: '🗄', onClick: () => { window.location.href = '/tires/storage' } },
+                  { key: 'count', label: 'ספירת מלאי', icon: '📦', onClick: () => { window.location.href = '/stock-count' } },
                   { key: 'dups', label: `כפילויות${dupGroups.length ? ` (${dupGroups.length})` : ''}`, icon: '🔁', onClick: () => setDupsOpen(true) },
                   { key: 'brands', label: 'שמות חברות בעברית', icon: '🔤', onClick: () => setBrandsOpen(true) },
                 ]}

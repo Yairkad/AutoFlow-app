@@ -8,7 +8,8 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import * as XLSX from 'xlsx'
-import ExcelMenu from '@/components/ui/ExcelMenu'
+import MoreMenu from '@/components/ui/MoreMenu'
+import FilterBar from '@/components/ui/FilterBar'
 import PageHeader from '@/components/ui/PageHeader'
 import { progressStart, progressDone } from '@/components/ui/RouteProgress'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
@@ -454,7 +455,7 @@ export default function ProductsClient() {
         iconShadow="#ec489944"
         title="מוצרים"
         subtitle={viewOnly ? 'מצב צפיה בלבד' : undefined}
-        actions={<><Button variant="outline" onClick={() => setShowPricelist(true)}>🖨️ מחירון</Button>{!viewOnly && <Button onClick={openAdd}>➕ מוצר חדש</Button>}</>}
+        actions={!viewOnly ? <Button onClick={openAdd}>➕ מוצר חדש</Button> : <Button variant="outline" onClick={() => setShowPricelist(true)}>🖨️ מחירון</Button>}
       />
 
       {/* Stats */}
@@ -484,32 +485,37 @@ export default function ProductsClient() {
       {/* ══════════ TAB: PRODUCTS ══════════ */}
       {tab === 'products' && (
         <>
-          {/* Filters + edit mode toggle */}
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
-            <div style={{ position: 'relative', maxWidth: '260px', display: 'flex', alignItems: 'center' }}>
-              <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 10, pointerEvents: 'none', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input className="form-input" style={{ paddingRight: 30 }} placeholder="חיפוש..."
-                value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <select className="form-input" style={{ width: 'auto' }} value={filterCat} onChange={e => setFilterCat(e.target.value)}>
+          {/* Search always visible; filters open from "סינון"; secondary actions in ⋯ */}
+          <FilterBar storageKey="products" search={search} onSearch={setSearch} placeholder="חיפוש שם / מק״ט / ברקוד..."
+            chips={[
+              ...(filterCat ? [{ key: 'c', label: filterCat, onRemove: () => setFilterCat('') }] : []),
+              ...(filterStock ? [{ key: 's', label: filterStock === 'out' ? 'אזל' : 'מלאי נמוך', onRemove: () => setFilterStock('') }] : []),
+            ]}
+            onClearAll={() => { setSearch(''); setFilterCat(''); setFilterStock('') }}
+            end={!viewOnly ? <>
+              {dupGroups.length > 0 && (
+                <Button variant="outline" onClick={() => setDupsOpen(true)} style={{ fontSize: '13px', borderColor: 'var(--warning)', color: '#92400e' }}>
+                  🔁 {dupGroups.length} כפילויות
+                </Button>
+              )}
+              <MoreMenu
+                excel={{ onExport: exportExcel, onImport: importExcel }}
+                actions={[
+                  { key: 'price', label: 'מחירון', icon: '🖨️', onClick: () => setShowPricelist(true) },
+                  { key: 'dups', label: `כפילויות${dupGroups.length ? ` (${dupGroups.length})` : ''}`, icon: '🔁', onClick: () => setDupsOpen(true) },
+                ]}
+              />
+            </> : undefined}>
+            <select className="form-input" aria-label="קטגוריה" style={{ width: 'auto', margin: 0 }} value={filterCat} onChange={e => setFilterCat(e.target.value)}>
               <option value=''>כל הקטגוריות</option>
               {cats.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <select className="form-input" style={{ width: 'auto' }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
+            <select className="form-input" aria-label="מלאי" style={{ width: 'auto', margin: 0 }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
               <option value=''>כל המלאי</option>
               <option value='low'>מלאי נמוך</option>
               <option value='out'>אזל</option>
             </select>
-            <div style={{ marginRight: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {!viewOnly && (
-                <Button variant="outline" onClick={() => setDupsOpen(true)}
-                  style={{ fontSize: '13px', ...(dupGroups.length ? { borderColor: 'var(--warning)', color: '#92400e' } : {}) }}>
-                  🔁 כפילויות{dupGroups.length ? ` (${dupGroups.length})` : ''}
-                </Button>
-              )}
-              {!viewOnly && <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />}
-            </div>
-          </div>
+          </FilterBar>
 
           {/* Products table */}
           <div className="products-table-wrap" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>

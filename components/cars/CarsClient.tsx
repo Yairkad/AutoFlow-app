@@ -1553,12 +1553,15 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
           onStatus: (s: string) => void
         }) {
           return (
-            <div style={{ display: 'flex', gap: 6, padding: '6px 12px 12px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <Button size="sm" variant="secondary" onClick={onEdit}>✏️ ערוך</Button>
-              {REQ_STATUSES.filter(s => s.value !== curStatus).map(s => (
-                <Button key={s.value} size="sm" variant="secondary" onClick={() => onStatus(s.value)}>{s.label}</Button>
-              ))}
-              <Button size="sm" variant="danger" onClick={onDelete}>🗑</Button>
+            <div style={{ display: 'flex', gap: 6, padding: '6px 12px 12px', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <select className="form-input" aria-label="סטטוס" value={curStatus} onChange={e => onStatus(e.target.value)}
+                style={{ width: 'auto', margin: 0, padding: '4px 8px', fontSize: 12 }}>
+                {REQ_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+              <RowActionsMenu align="end" actions={[
+                { key: 'edit', label: 'ערוך', icon: '✏️', onClick: onEdit },
+                { key: 'del', label: 'מחק', icon: '🗑', danger: true, onClick: onDelete },
+              ]} />
             </div>
           )
         }

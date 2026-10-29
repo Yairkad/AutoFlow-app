@@ -11,7 +11,9 @@ import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import Input from '@/components/ui/Input'
-import ExcelMenu from '@/components/ui/ExcelMenu'
+import MoreMenu from '@/components/ui/MoreMenu'
+import FilterBar from '@/components/ui/FilterBar'
+import { fuzzyIncludes } from '@/lib/search/fuzzy'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -440,6 +442,7 @@ export default function AlignmentClient() {
   const [saving,       setSaving]       = useState(false)
   const [plateLoading, setPlateLoading] = useState(false)
   const [statusFilter, setStatusFilter] = useState<JobStatus | 'all'>('all')
+  const [search, setSearch] = useState('')
 
 
   // ── Load ──────────────────────────────────────────────────────────────────────
@@ -618,9 +621,8 @@ export default function AlignmentClient() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
-  const visibleJobs = statusFilter === 'all'
-    ? jobs
-    : jobs.filter(j => j.status === statusFilter)
+  const visibleJobs = (statusFilter === 'all' ? jobs : jobs.filter(j => j.status === statusFilter))
+    .filter(j => !search.trim() || fuzzyIncludes([j.plate, j.customer_name, j.customer_phone, j.make, j.model, j.job_type, j.technician].filter(Boolean).join(' '), search))
 
   const activeCount = jobs.filter(j => j.status !== 'delivered').length
 
@@ -638,10 +640,12 @@ export default function AlignmentClient() {
         title="כיוון פרונט"
         subtitle={`${activeCount} עבודות פעילות`}
         actions={<>
-          <ExcelMenu onExportExcel={exportExcel} />
           <Button onClick={openAdd}>+ עבודה חדשה</Button>
+          <MoreMenu actions={[]} excel={{ onExport: exportExcel }} />
         </>}
       />
+
+      <FilterBar storageKey="alignment" search={search} onSearch={setSearch} placeholder="חיפוש רכב / לקוח / טלפון..." />
 
       {/* Status filter */}
       <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', flexWrap: 'wrap' }}>

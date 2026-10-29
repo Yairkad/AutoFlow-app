@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import MoreMenu from '@/components/ui/MoreMenu'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import PageHeader from '@/components/ui/PageHeader'
@@ -1112,6 +1113,8 @@ export default function DocumentsClient() {
           ? <div style={{ display: 'flex', gap: 8 }}>
               <input
                 ref={htmlUploadRef}
+                id="doc-html-upload"
+                aria-label="העלאת קובץ HTML"
                 type="file"
                 accept=".html,.htm"
                 style={{ display: 'none' }}
@@ -1120,9 +1123,11 @@ export default function DocumentsClient() {
                   e.currentTarget.value = ''
                 }}
               />
-              <Button variant="secondary" onClick={() => htmlUploadRef.current?.click()}>📤 העלה HTML</Button>
-              <Button variant="secondary" onClick={() => setHtmlPasteOpen(true)}>📋 הדבק קוד HTML</Button>
-              <Button variant="primary" onClick={openAdd}>➕ תבנית חדשה</Button>
+              <MoreMenu label="➕ תבנית ▾" actions={[
+                { key: 'new', label: 'תבנית חדשה', icon: '➕', onClick: openAdd },
+                { key: 'upload', label: 'העלה קובץ HTML', icon: '📤', onClick: () => document.getElementById('doc-html-upload')?.click() },
+                { key: 'paste', label: 'הדבק קוד HTML', icon: '📋', onClick: () => setHtmlPasteOpen(true) },
+              ]} />
             </div>
           : docTab === 'drive' && driveConnected
             ? <>

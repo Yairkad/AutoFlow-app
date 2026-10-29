@@ -43,6 +43,7 @@ const ROUTE_MODULES: [string, string[] | null][] = [
   ['/debts',       ['debts']],
   ['/products',    ['products', 'products_view']],
   ['/tires',       ['tires', 'tires_view']],
+  ['/stock-count', ['products', 'tires']],
   ['/cars',        ['cars']],
   ['/quotes',      ['quotes']],
   ['/suppliers',   ['suppliers']],

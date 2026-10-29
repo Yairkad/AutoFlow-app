@@ -8,7 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import ExcelMenu from '@/components/ui/ExcelMenu'
+import MoreMenu from '@/components/ui/MoreMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { DEFAULT_YARD_MODULES, YARD_MONEY_KEY, YARD_SECTIONS } from '@/lib/yard/access'
@@ -840,16 +840,16 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
 
                   {/* פעולות */}
                   <td style={tdSt}>
-                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       {!isPaid && (
                         <Button size="sm" onClick={() => openPay(e.id)} disabled={!net && !sal?.base}>
                           ✅ שלם
                         </Button>
                       )}
-                      {isPaid && (
-                        <Button size="sm" variant="secondary" onClick={() => { if (sal) unpay(sal) }} title="בטל תשלום">↩️ בטל</Button>
-                      )}
-                      <Button size="sm" variant="ghost" onClick={() => openHistory(e)} title="היסטוריה">📋</Button>
+                      <RowActionsMenu align="end" actions={[
+                        ...(isPaid && sal ? [{ key: 'unpay', label: 'בטל תשלום', icon: '↩️', onClick: () => unpay(sal) }] : []),
+                        { key: 'hist', label: 'היסטוריה', icon: '📋', onClick: () => openHistory(e) },
+                      ]} />
                     </div>
                   </td>
 
@@ -976,8 +976,8 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
       {tab === 'employees' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '16px' }}>
-            <ExcelMenu onExportExcel={exportExcel} />
             <Button onClick={openAdd}>+ הוסף עובד</Button>
+            <MoreMenu actions={[]} excel={{ onExport: exportExcel }} />
           </div>
           {renderEmpCards()}
         </div>
@@ -1000,22 +1000,12 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
               </select>
             </div>
             {renderSalarySummary()}
-            <Button variant="secondary" size="sm" onClick={printAdjustments} title="הדפס את כל התוספות והניכויים חוץ תלוש של החודש הנבחר">
-              🖨️ הדפס תוספות/ניכויים
-            </Button>
-            <button
-              onClick={initPeriodRecords}
-              disabled={initingPeriod}
-              title="צור רשומות שכר לכל העובדים הפעילים לחודש זה"
-              style={{
-                padding: '7px 14px', borderRadius: '8px', border: '1.5px solid #bbf7d0',
-                cursor: initingPeriod ? 'default' : 'pointer', fontSize: '13px', fontWeight: 600,
-                fontFamily: 'inherit', background: '#f0fdf4', color: '#16a34a',
-                opacity: initingPeriod ? 0.6 : 1,
-              }}
-            >
-              {initingPeriod ? '⏳ יוצר...' : '🔄 אתחל חודש'}
-            </button>
+            <div style={{ marginInlineStart: 'auto' }}>
+              <MoreMenu actions={[
+                { key: 'init', label: initingPeriod ? 'יוצר...' : 'אתחל חודש (רשומות שכר לכל העובדים)', icon: '🔄', disabled: initingPeriod, onClick: initPeriodRecords },
+                { key: 'print', label: 'הדפס תוספות/ניכויים', icon: '🖨️', onClick: printAdjustments },
+              ]} />
+            </div>
           </div>
 
           {/* Salary tip */}
