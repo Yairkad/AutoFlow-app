@@ -76,7 +76,9 @@ function fmt(n: number) {
   return '₪' + n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
-function StatCard({ label, value, icon, color, gradient, isCurrency = false, href, sub }: {
+// Redesign: a KPI tile — label, big number, optional colored note. No icons or color bars;
+// `icon` / `gradient` are kept in the props for existing callers.
+function StatCard({ label, value, color, isCurrency = false, href, sub }: {
   label: string; value: number; icon: string; color: string; gradient?: string
   isCurrency?: boolean; href?: string; sub?: string
 }) {
@@ -84,37 +86,14 @@ function StatCard({ label, value, icon, color, gradient, isCurrency = false, hre
   return (
     <div
       onClick={() => href && router.push(href)}
-      className="stat-card"
-      style={{
-        background: '#fff',
-        borderRadius: 'var(--radius)',
-        boxShadow: 'var(--shadow)',
-        padding: '20px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '14px',
-        borderTop: `3px solid ${color}`,
-        cursor: href ? 'pointer' : 'default',
-        transition: 'transform .15s, box-shadow .15s',
-      }}
-      onMouseEnter={e => { if (href) { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,0,0,.1)' }}}
-      onMouseLeave={e => { if (href) { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow)' }}}
+      className="stat-card kpi-tile"
+      style={{ cursor: href ? 'pointer' : 'default' }}
     >
-      <div className="stat-card-icon" style={{
-        width: 44, height: 44,
-        borderRadius: '10px',
-        background: gradient || color + '18',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '22px', flexShrink: 0,
-        boxShadow: gradient ? '0 2px 8px rgba(0,0,0,.1)' : undefined,
-      }}>{icon}</div>
-      <div>
-        <div className="stat-card-value" style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text)', lineHeight: 1.2 }}>
-          {isCurrency ? fmt(value) : value.toLocaleString('he-IL')}
-        </div>
-        <div className="stat-card-label" style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{label}</div>
-        {sub && <div style={{ fontSize: '11px', color, fontWeight: 600, marginTop: '2px' }}>{sub}</div>}
+      <div className="stat-card-label" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>{label}</div>
+      <div className="stat-card-value num" style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text)', lineHeight: 1.2 }}>
+        {isCurrency ? fmt(value) : value.toLocaleString('he-IL')}
       </div>
+      {sub && <div style={{ fontSize: '12px', color, fontWeight: 600 }}>{sub}</div>}
     </div>
   )
 }
@@ -126,40 +105,21 @@ function DebtCard({ customerDebts, supplierDebts, custCount, suppCount, href }: 
   return (
     <div
       onClick={() => router.push(href)}
-      className="stat-card stat-card-double"
-      style={{
-        background: '#fff',
-        borderRadius: 'var(--radius)',
-        boxShadow: 'var(--shadow)',
-        padding: '14px 16px',
-        borderTop: '3px solid var(--danger)',
-        cursor: 'pointer',
-        transition: 'transform .15s, box-shadow .15s',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        justifyContent: 'center',
-      }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,0,0,.1)' }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow)' }}
+      className="stat-card stat-card-double kpi-tile"
+      style={{ cursor: 'pointer' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg,#ef4444,#f87171)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,.1)' }}>
-          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
-          </svg>
-        </div>
         <div className="stat-card-double-title" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>חובות</div>
       </div>
       <div className="stat-card-double-body">
         <div className="stat-card-double-col">
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>💳 לקוחות <span style={{ color: 'var(--danger)', fontWeight: 600 }}>({custCount})</span></span>
-          <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text)' }}>{fmt(customerDebts)}</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>לקוחות <span style={{ color: 'var(--danger)', fontWeight: 600 }}>({custCount})</span></span>
+          <span className="num" style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>{fmt(customerDebts)}</span>
         </div>
         <div className="stat-card-double-sep" />
         <div className="stat-card-double-col">
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>🏭 ספקים <span style={{ color: 'var(--warning)', fontWeight: 600 }}>({suppCount})</span></span>
-          <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text)' }}>{fmt(supplierDebts)}</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ספקים <span style={{ color: 'var(--warning)', fontWeight: 600 }}>({suppCount})</span></span>
+          <span className="num" style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)' }}>{fmt(supplierDebts)}</span>
         </div>
       </div>
     </div>
@@ -171,32 +131,20 @@ function CarsCard({ inInventory, openRequests, href }: { inInventory: number; op
   return (
     <div
       onClick={() => router.push(href)}
-      className="stat-card stat-card-double"
-      style={{
-        background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)',
-        padding: '14px 16px', borderTop: '3px solid var(--sky)', cursor: 'pointer',
-        transition: 'transform .15s, box-shadow .15s',
-        display: 'flex', flexDirection: 'column', gap: '8px', justifyContent: 'center',
-      }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,0,0,.1)' }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow)' }}
+      className="stat-card stat-card-double kpi-tile"
+      style={{ cursor: 'pointer' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg,#10b981,#34d399)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,.1)' }}>
-          <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v4h-7V8Z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
-          </svg>
-        </div>
         <div className="stat-card-double-title" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>רכבים</div>
       </div>
       <div className="stat-card-double-body">
         <div className="stat-card-double-col">
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>📦 למכירה</span>
-          <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--sky)' }}>{inInventory}</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>למכירה</span>
+          <span className="num" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>{inInventory}</span>
         </div>
         <div className="stat-card-double-sep" />
         <div className="stat-card-double-col">
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>📋 בקשות פתוחות</span>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>בקשות פתוחות</span>
           <span style={{ fontSize: '15px', fontWeight: 800, color: openRequests > 0 ? 'var(--purple)' : 'var(--text-muted)' }}>{openRequests}</span>
         </div>
       </div>
@@ -350,7 +298,7 @@ export default function DashboardStats() {
   const allCards: { id: CardId; show: boolean; node: React.ReactNode }[] = [
     { id: 'income',     show: can('income','expenses'), node: <StatCard label="הכנסות החודש" value={stats.incomeMonth}   icon="💰" color="#16a34a" gradient="linear-gradient(135deg,#16a34a,#4ade80)" isCurrency href="/income" /> },
     { id: 'expenses',   show: can('expenses'),          node: <StatCard label="הוצאות החודש" value={stats.expensesMonth} icon="📤" color="#dc2626" gradient="linear-gradient(135deg,#dc2626,#f87171)" isCurrency href="/expenses" /> },
-    { id: 'profit',     show: can('income','expenses'), node: <StatCard label="רווח החודש"   value={profit}              icon="📈" color={profit >= 0 ? '#16a34a' : '#dc2626'} gradient={profit >= 0 ? 'linear-gradient(135deg,#16a34a,#4ade80)' : 'linear-gradient(135deg,#dc2626,#f87171)'} isCurrency href="/income" /> },
+    { id: 'profit',     show: can('income','expenses'), node: <StatCard label="רווח החודש"   value={profit}              icon="📈" color={profit >= 0 ? 'var(--success)' : '#dc2626'} gradient={profit >= 0 ? 'linear-gradient(135deg,#16a34a,#4ade80)' : 'linear-gradient(135deg,#dc2626,#f87171)'} isCurrency href="/income" /> },
     { id: 'debts',      show: can('debts'),             node: <DebtCard customerDebts={stats.customerDebts} supplierDebts={stats.supplierDebts} custCount={stats.custDebtCount} suppCount={stats.suppDebtCount} href="/debts" /> },
     { id: 'products',   show: can('products','products_view'), node: <StatCard label="פריטים במלאי" value={stats.inventoryItems}  icon="📦" color="#7c3aed" gradient="linear-gradient(135deg,#7c3aed,#a78bfa)" href="/products" /> },
     { id: 'employees',  show: can('employees'),         node: <StatCard label="עובדים פעילים" value={stats.activeEmployees} icon="👷" color="#2563eb" gradient="linear-gradient(135deg,#2563eb,#60a5fa)" href="/employees" /> },
@@ -400,7 +348,7 @@ export default function DashboardStats() {
 
         {/* Cards grid */}
         <div className="cards-section-grid" style={{ ...cardGrid, minHeight: editLayout && cards.length === 0 ? 70 : undefined,
-          background: editLayout && cards.length === 0 ? '#f0fdf4' : undefined,
+          background: editLayout && cards.length === 0 ? 'var(--success-soft)' : undefined,
           borderRadius: editLayout && cards.length === 0 ? 10 : undefined,
           border: editLayout && cards.length === 0 ? '2px dashed var(--primary)' : undefined,
         }}>
@@ -446,7 +394,7 @@ export default function DashboardStats() {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
           marginBottom: 12, padding: '6px 12px',
-          background: '#f0fdf4', borderRadius: 8, border: '1px solid var(--primary)',
+          background: 'var(--success-soft)', borderRadius: 8, border: '1px solid var(--primary)',
         }}>
           <span style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600, flex: 1 }}>
             ✦ מצב עריכה — גרור כרטיסים בין קטגוריות
@@ -461,7 +409,7 @@ export default function DashboardStats() {
             אפס
           </button>
           <button onClick={() => setEditLayout(false)}
-            style={{ fontSize: 12, padding: '3px 12px', borderRadius: 6, border: '1.5px solid #bbf7d0', background: '#f0fdf9', color: '#15803d', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+            style={{ fontSize: 12, padding: '3px 12px', borderRadius: 6, border: '1.5px solid #bbf7d0', background: 'var(--bg-soft)', color: 'var(--success)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
             ✓ סיום
           </button>
         </div>

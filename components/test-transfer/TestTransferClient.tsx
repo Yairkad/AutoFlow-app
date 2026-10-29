@@ -43,9 +43,9 @@ const STATUS_COLOR: Record<TransferStatus, { bg: string; text: string }> = {
   'ממתין':  { bg: '#f1f5f9', text: '#475569' },
   'בדרך':   { bg: '#eff6ff', text: '#2563eb' },
   'בטסט':   { bg: '#fefce8', text: '#b45309' },
-  'עבר':    { bg: '#f0fdf4', text: '#15803d' },
+  'עבר':    { bg: 'var(--success-soft)', text: 'var(--success)' },
   'נכשל':   { bg: '#fef2f2', text: '#dc2626' },
-  'הושלם':  { bg: '#f0fdf4', text: '#059669' },
+  'הושלם':  { bg: 'var(--success-soft)', text: '#059669' },
 }
 
 const emptyForm = {

@@ -298,8 +298,8 @@ export default function DebtsClient() {
       {label}
       {count != null && count > 0 && (
         <span style={{
-          background: tab === t ? '#dcfce7' : '#e2e8f0',
-          color: tab === t ? '#15803d' : 'var(--text-muted)',
+          background: tab === t ? 'var(--success-soft)' : '#e2e8f0',
+          color: tab === t ? 'var(--success)' : 'var(--text-muted)',
           borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: 700,
         }}>{count}</span>
       )}
@@ -310,7 +310,7 @@ export default function DebtsClient() {
     <button onClick={() => setFilter(f)} style={{
       padding: '5px 14px', border: '1px solid',
       borderColor: filter === f ? 'var(--primary)' : 'var(--border)',
-      background: filter === f ? '#f0fdf6' : 'transparent',
+      background: filter === f ? 'var(--success-soft)' : 'transparent',
       color: filter === f ? 'var(--primary)' : 'var(--text-muted)',
       borderRadius: '20px', fontSize: '12px', fontWeight: filter === f ? 600 : 400,
       cursor: 'pointer', transition: 'all .12s',
@@ -319,7 +319,7 @@ export default function DebtsClient() {
 
   const StatusChip = ({ debt }: { debt: CustomerDebt }) => {
     if (debt.is_closed)
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>שולם ✓</span>
+      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>שולם ✓</span>
     if (Number(debt.paid) > 0)
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef3c7', color: 'var(--warning)', fontWeight: 600 }}>חלקי</span>
     return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>פתוח</span>
@@ -434,8 +434,8 @@ export default function DebtsClient() {
                             : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                         </td>
                         <td style={{ ...tdSt, fontWeight: 600 }}>{fmt(d.amount)}</td>
-                        <td style={{ ...tdSt, color: '#16a34a' }}>{fmt(d.paid)}</td>
-                        <td style={{ ...tdSt, fontWeight: 700, color: bal(d) > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(bal(d))}</td>
+                        <td style={{ ...tdSt, color: 'var(--success)' }}>{fmt(d.paid)}</td>
+                        <td style={{ ...tdSt, fontWeight: 700, color: bal(d) > 0 ? 'var(--danger)' : 'var(--success)' }}>{fmt(bal(d))}</td>
                         <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
                         <td style={{ ...tdSt, whiteSpace: 'nowrap', color: isOverdue ? 'var(--danger)' : 'var(--text-muted)', fontWeight: isOverdue ? 700 : 400 }}>
                           {d.due_date ? (isOverdue ? `⚠ ${d.due_date}` : d.due_date) : '—'}
@@ -509,7 +509,7 @@ export default function DebtsClient() {
                           {!p.transfer_verified && (
                             <button
                               onClick={() => verifyTransfer(p.id)}
-                              style={{ padding: '4px 10px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}
+                              style={{ padding: '4px 10px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}
                             >✓ אומת בחשבון</button>
                           )}
                         </td>
@@ -562,13 +562,13 @@ export default function DebtsClient() {
               <button type="button" onClick={() => setTrMode('existing')} style={{
                 flex: 1, padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
                 border: `1px solid ${trMode === 'existing' ? 'var(--primary)' : 'var(--border)'}`,
-                background: trMode === 'existing' ? '#f0fdf4' : '#f8fafc',
+                background: trMode === 'existing' ? 'var(--success-soft)' : '#f8fafc',
                 color: trMode === 'existing' ? 'var(--primary)' : 'var(--text-muted)',
               }}>לקוח קיים</button>
               <button type="button" onClick={() => setTrMode('new')} style={{
                 flex: 1, padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
                 border: `1px solid ${trMode === 'new' ? 'var(--primary)' : 'var(--border)'}`,
-                background: trMode === 'new' ? '#f0fdf4' : '#f8fafc',
+                background: trMode === 'new' ? 'var(--success-soft)' : '#f8fafc',
                 color: trMode === 'new' ? 'var(--primary)' : 'var(--text-muted)',
               }}>חשבונית / לקוח חדש</button>
             </div>
@@ -631,7 +631,7 @@ export default function DebtsClient() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setWaModal(null)}
-                style={{ padding: '8px 18px', background: '#16a34a', color: '#fff', border: '1.5px solid #16a34a', borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                style={{ padding: '8px 18px', background: 'var(--success)', color: '#fff', border: '1.5px solid #16a34a', borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
                 📲 פתח ווצאפ
               </a>

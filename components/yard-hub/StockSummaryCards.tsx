@@ -9,7 +9,7 @@ const ils = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`
 // Freshness colour: green ≤ 7 days, amber ≤ 30, red beyond / never
 function freshColor(days: number | null): string {
   if (days === null) return '#dc2626'
-  if (days <= 7) return '#16a34a'
+  if (days <= 7) return 'var(--success)'
   if (days <= 30) return '#d97706'
   return '#dc2626'
 }

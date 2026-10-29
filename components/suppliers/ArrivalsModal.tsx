@@ -98,7 +98,7 @@ export default function ArrivalsModal({ open, onClose, title, drafts, onDraftsCh
         <section aria-label="נקלט כבר" style={{ marginBottom: '14px' }}>
           <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>✓ נקלט למלאי</div>
           {saved.map(s => (
-            <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', background: '#f0fdf4', borderRadius: '8px', marginBottom: '4px', fontSize: '13px' }}>
+            <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '6px 10px', background: 'var(--success-soft)', borderRadius: '8px', marginBottom: '4px', fontSize: '13px' }}>
               <span aria-hidden="true">{s.item_type === 'tire' ? '🏁' : '📦'}</span>
               <span style={{ flex: 1 }}>{s.description}</span>
               <span>× {s.qty}</span>
@@ -142,8 +142,8 @@ export default function ArrivalsModal({ open, onClose, title, drafts, onDraftsCh
                       onFocus={() => setFocus(d.key)}
                       onBlur={() => setTimeout(() => setFocus(f => f === d.key ? null : f), 150)}
                       onChange={e => set(d.key, { text: e.target.value, ref_id: null })}
-                      style={{ width: '100%', borderColor: d.ref_id ? '#16a34a' : undefined }} />
-                    {d.ref_id && <span style={{ fontSize: '11px', color: '#16a34a' }}>✓ פריט קיים</span>}
+                      style={{ width: '100%', borderColor: d.ref_id ? 'var(--success)' : undefined }} />
+                    {d.ref_id && <span style={{ fontSize: '11px', color: 'var(--success)' }}>✓ פריט קיים</span>}
                     {!d.ref_id && d.text.trim().length >= 2 && focus !== d.key && (
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>אם לא קיים — ייווצר חדש</span>
                     )}

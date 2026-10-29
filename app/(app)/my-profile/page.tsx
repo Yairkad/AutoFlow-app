@@ -198,7 +198,7 @@ export default function MyProfilePage() {
                   <div key={s.id} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '10px 12px', borderRadius: '8px',
-                    background: s.is_paid ? '#f0fdf4' : 'var(--bg)',
+                    background: s.is_paid ? 'var(--success-soft)' : 'var(--bg)',
                     border: `1px solid ${s.is_paid ? '#bbf7d0' : 'var(--border)'}`,
                     fontSize: '13px',
                   }}>
@@ -209,7 +209,7 @@ export default function MyProfilePage() {
                     </span>
                     <span style={{
                       fontSize: '12px', fontWeight: 600, padding: '3px 10px', borderRadius: '20px',
-                      background: s.is_paid ? '#16a34a' : '#f59e0b',
+                      background: s.is_paid ? 'var(--success)' : '#f59e0b',
                       color: '#fff',
                     }}>
                       {s.is_paid

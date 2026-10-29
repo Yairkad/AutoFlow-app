@@ -823,3 +823,8 @@ button:not(:disabled):active {
   :root { --drawer-w: 0px !important; }
   .yard-drawer { display: none; }
 }
+
+/* KPI tile (dashboard) */
+.kpi-tile { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 4px; justify-content: center; transition: border-color .15s; }
+.kpi-tile:hover { border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); }

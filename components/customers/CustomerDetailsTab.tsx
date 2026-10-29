@@ -340,7 +340,7 @@ export default function CustomerDetailsTab({
                           <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(debt)}</div>
                         </div>
                       ) : (
-                        <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, flexShrink: 0 }}>✓ נקי</span>
+                        <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 600, flexShrink: 0 }}>✓ נקי</span>
                       )}
 
                       {/* Actions area */}
@@ -355,7 +355,7 @@ export default function CustomerDetailsTab({
                             target="_blank"
                             rel="noopener noreferrer"
                             title="שלח הודעה בווצאפ"
-                            style={{ padding: '5px 9px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '7px', fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}
+                            style={{ padding: '5px 9px', background: 'var(--success-soft)', color: 'var(--success)', border: '1px solid #bbf7d0', borderRadius: '7px', fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}
                           >
                             💬
                           </a>
@@ -408,7 +408,7 @@ export default function CustomerDetailsTab({
                   href={waUrl(selected.phone, `שלום ${selected.name}, `)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ padding: '8px 14px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ padding: '8px 14px', background: 'var(--success-soft)', color: 'var(--success)', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   💬 ווצאפ
                 </a>
@@ -475,7 +475,7 @@ export default function CustomerDetailsTab({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '18px' }}>
                       {recItems.map(it => (
                         <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', flexWrap: 'wrap', background: 'var(--bg)', borderRadius: '6px', padding: '6px 10px' }}>
-                          <span style={{ padding: '1px 7px', borderRadius: '4px', fontWeight: 600, background: it.type === 'meter' ? '#eff6ff' : '#f0fdf6', color: it.type === 'meter' ? '#1d4ed8' : '#16a34a' }}>
+                          <span style={{ padding: '1px 7px', borderRadius: '4px', fontWeight: 600, background: it.type === 'meter' ? '#eff6ff' : 'var(--success-soft)', color: it.type === 'meter' ? '#1d4ed8' : 'var(--success)' }}>
                             {it.type === 'meter' ? 'מונה' : 'קבוע'}
                           </span>
                           <span style={{ fontWeight: 600, flex: 1, minWidth: '80px' }}>{it.name}</span>

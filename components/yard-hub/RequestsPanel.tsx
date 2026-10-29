@@ -349,7 +349,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
           <Toggle value={payStatus} onChange={setPayStatus} options={[
             { value: 'unpaid',  label: 'לא שולם',    color: '#dc2626' },
             { value: 'partial', label: 'שולם חלקית', color: '#d97706' },
-            { value: 'paid',    label: 'שולם',       color: '#16a34a' },
+            { value: 'paid',    label: 'שולם',       color: 'var(--success)' },
           ]} />
           {payStatus === 'partial' && (
             <Field label={`כמה שולם (₪)${payFor.quoted_price != null ? ` — מתוך ₪${payFor.quoted_price}` : ''}`}>
@@ -409,7 +409,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
       {form && (
         <Sheet title={editId ? 'עריכת בקשה' : 'לקוח חדש'} onClose={() => setForm(null)}>
           <Toggle value={form.kind} onChange={v => f('kind', v)} options={[
-            { value: 'order',   label: '📦 מחכה לצמיג', color: '#15803d' },
+            { value: 'order',   label: '📦 מחכה לצמיג', color: 'var(--success)' },
             { value: 'inquiry', label: '❓ צריך לברר',  color: '#7c3aed' },
           ]} />
           <Field label="שם לקוח *">

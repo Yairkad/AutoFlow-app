@@ -237,7 +237,7 @@ export default function LoginPage() {
               </p>
             )}
             {resetMsg && (
-              <p style={{ fontSize: '13px', color: '#16a34a', textAlign: 'center', margin: 0, background: '#f0fdf4', padding: '10px', borderRadius: '8px' }}>
+              <p style={{ fontSize: '13px', color: 'var(--success)', textAlign: 'center', margin: 0, background: 'var(--success-soft)', padding: '10px', borderRadius: '8px' }}>
                 ✅ {resetMsg}
               </p>
             )}

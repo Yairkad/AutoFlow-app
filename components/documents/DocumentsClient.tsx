@@ -1146,7 +1146,7 @@ export default function DocumentsClient() {
                 </button>}
                 <label htmlFor="doc-drive-upload" style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
-                  background: '#f0fdf9', color: '#15803d', borderRadius: 9,
+                  background: 'var(--bg-soft)', color: 'var(--success)', borderRadius: 9,
                   border: '1.5px solid #bbf7d0',
                   padding: '8px 16px', fontSize: 14, fontWeight: 600,
                   cursor: uploadProgress ? 'default' : 'pointer',
@@ -1236,7 +1236,7 @@ export default function DocumentsClient() {
                       placeholder="שם תיקיה..."
                       style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', width: 140 }}
                     />
-                    <button onClick={createDriveFolder} disabled={creatingFolder || !newFolderName.trim()} style={{ padding: '6px 12px', background: '#f0fdf9', color: '#15803d', border: '1.5px solid #bbf7d0', borderRadius: 9, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+                    <button onClick={createDriveFolder} disabled={creatingFolder || !newFolderName.trim()} style={{ padding: '6px 12px', background: 'var(--bg-soft)', color: 'var(--success)', border: '1.5px solid #bbf7d0', borderRadius: 9, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
                       {creatingFolder ? '...' : '✓'}
                     </button>
                     <button onClick={() => { setNewFolderMode(false); setNewFolderName('') }} style={{ padding: '6px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
@@ -1316,7 +1316,7 @@ export default function DocumentsClient() {
             </div>
             <span style={{
               fontSize: 11, fontWeight: 600, padding: '2px 8px',
-              borderRadius: 99, background: '#f0fdf4', color: 'var(--primary)',
+              borderRadius: 99, background: 'var(--success-soft)', color: 'var(--primary)',
               border: '1px solid var(--primary)',
             }}>מובנה</span>
           </div>
@@ -1354,7 +1354,7 @@ export default function DocumentsClient() {
             </div>
             <span style={{
               fontSize: 11, fontWeight: 600, padding: '2px 8px',
-              borderRadius: 99, background: '#f0fdf4', color: 'var(--primary)',
+              borderRadius: 99, background: 'var(--success-soft)', color: 'var(--primary)',
               border: '1px solid var(--primary)',
             }}>מובנה</span>
           </div>
@@ -1390,7 +1390,7 @@ export default function DocumentsClient() {
             <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
               📄 דף כותרת ריק
             </div>
-            <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: '#f0fdf4', color: 'var(--primary)', border: '1px solid var(--primary)' }}>מובנה</span>
+            <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: 'var(--success-soft)', color: 'var(--primary)', border: '1px solid var(--primary)' }}>מובנה</span>
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             לוגו + פרטי עסק + שטח ריק לכתיבה ידנית
@@ -1419,7 +1419,7 @@ export default function DocumentsClient() {
             <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
               🤝 הסרת אחריות מוכר
             </div>
-            <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: '#f0fdf4', color: 'var(--primary)', border: '1px solid var(--primary)' }}>מובנה</span>
+            <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: 'var(--success-soft)', color: 'var(--primary)', border: '1px solid var(--primary)' }}>מובנה</span>
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             פרטי רכב · מוכר · קונה · הצהרה משפטית · חתימות

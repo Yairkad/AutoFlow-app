@@ -360,7 +360,7 @@ export default function InventoryCountClient() {
 
       {/* Banners */}
       {isFirst && (
-        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#15803d' }}>
+        <div style={{ background: 'var(--success-soft)', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: 'var(--success)' }}>
           🟢 <strong>ספירה ראשונה:</strong> תוצאות יישמרו כנקודת בסיס. ספירות עתידיות ישוו מולה בהתחשב בתנועות מלאי אוטומטיות.
         </div>
       )}

@@ -471,7 +471,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
     )
     const box = (title: string, color: string, rows: React.ReactNode) => (
       <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: color }}>
-        <div className="font-black" style={{ padding: '10px 12px', fontSize: 15, color, background: color + '14' }}>{title}</div>
+        <div className="font-black" style={{ padding: '10px 12px', fontSize: 15, color, background: `color-mix(in srgb, ${color} 8%, transparent)` }}>{title}</div>
         {rows}
       </div>
     )

@@ -141,9 +141,9 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
         <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700 }}>📜 היסטוריית תשלומים — {debt.name}</h3>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
           <span>סכום חוב: <strong>{fmt(debt.amount)}</strong></span>
-          <span>שולם: <strong style={{ color: '#16a34a' }}>{fmt(debt.paid)}</strong></span>
-          <span>יתרה: <strong style={{ color: balance > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(balance)}</strong></span>
-          {debt.is_closed && <span style={{ color: '#16a34a', fontWeight: 600 }}>סגור ✓</span>}
+          <span>שולם: <strong style={{ color: 'var(--success)' }}>{fmt(debt.paid)}</strong></span>
+          <span>יתרה: <strong style={{ color: balance > 0 ? 'var(--danger)' : 'var(--success)' }}>{fmt(balance)}</strong></span>
+          {debt.is_closed && <span style={{ color: 'var(--success)', fontWeight: 600 }}>סגור ✓</span>}
         </div>
 
         <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>{editingId ? '✏️ עריכת תשלום' : '+ הוספת תשלום'}</div>
@@ -163,7 +163,7 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
                 <button key={m} type="button" onClick={() => setMethod(m)} style={{
                   padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
                   border: `1px solid ${method === m ? 'var(--primary)' : 'var(--border)'}`,
-                  background: method === m ? '#f0fdf4' : '#f8fafc',
+                  background: method === m ? 'var(--success-soft)' : '#f8fafc',
                   color: method === m ? 'var(--primary)' : 'var(--text-muted)',
                 }}>
                   {methodIcon(m)} {m}
@@ -216,7 +216,7 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
         <div className="sticky-actions" style={{ marginBottom: payments.length ? '16px' : 0 }}>
           {editingId && <Button variant="secondary" onClick={resetForm}>ביטול עריכה</Button>}
           <Button variant="secondary" onClick={close}>סגור</Button>
-          <Button loading={saving} onClick={save} style={{ background: '#16a34a', borderColor: '#16a34a' }}>
+          <Button loading={saving} onClick={save} style={{ background: 'var(--success)', borderColor: 'var(--success)' }}>
             💾 {editingId ? 'שמור שינויים' : 'שמור תשלום'}
           </Button>
         </div>
@@ -226,7 +226,7 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
             <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>היסטוריה ({payments.length})</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '260px', overflowY: 'auto' }}>
               {sorted.map(p => (
-                <div key={p.id} style={{ padding: '8px 10px', background: editingId === p.id ? '#f0fdf4' : 'var(--bg)', borderRadius: '8px', fontSize: '12px', border: editingId === p.id ? '1px solid var(--primary)' : '1px solid transparent' }}>
+                <div key={p.id} style={{ padding: '8px 10px', background: editingId === p.id ? 'var(--success-soft)' : 'var(--bg)', borderRadius: '8px', fontSize: '12px', border: editingId === p.id ? '1px solid var(--primary)' : '1px solid transparent' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontWeight: 700 }}>{fmt(p.amount)}</span>
                     <span style={{ color: 'var(--text-muted)' }}>{p.payment_date}</span>
@@ -241,7 +241,7 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
                       {p.reference && <span>אסמכתא: {p.reference}</span>}
                       {p.receipt_issued && <span>🧾 קבלה{p.receipt_number ? ` #${p.receipt_number}` : ''}</span>}
                       {p.payment_method === 'העברה' && (
-                        <span style={{ color: p.transfer_verified ? '#16a34a' : 'var(--warning)' }}>
+                        <span style={{ color: p.transfer_verified ? 'var(--success)' : 'var(--warning)' }}>
                           {p.transfer_verified ? '✓ ההעברה אומתה' : 'ממתין לאימות העברה'}
                         </span>
                       )}

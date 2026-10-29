@@ -64,7 +64,7 @@ export default function DuplicatesModal<T extends { id: string }>({ open, onClos
                       </thead>
                       <tbody>
                         {g.items.map(it => (
-                          <tr key={it.id} style={{ borderTop: '1px solid var(--border)', background: it.id === keepId ? '#f0fdf4' : undefined }}>
+                          <tr key={it.id} style={{ borderTop: '1px solid var(--border)', background: it.id === keepId ? 'var(--success-soft)' : undefined }}>
                             <td style={{ padding: '6px 10px' }}>
                               <input type="radio" name={`keep-${gKey}`} checked={it.id === keepId}
                                 aria-label="השאר רשומה זו"

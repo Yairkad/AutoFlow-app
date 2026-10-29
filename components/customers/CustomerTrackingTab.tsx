@@ -630,7 +630,7 @@ export default function CustomerTrackingTab({
     <button onClick={() => setFilter(f)} style={{
       padding: '5px 14px', border: '1px solid',
       borderColor: filter === f ? 'var(--primary)' : 'var(--border)',
-      background: filter === f ? '#f0fdf6' : 'transparent',
+      background: filter === f ? 'var(--success-soft)' : 'transparent',
       color: filter === f ? 'var(--primary)' : 'var(--text-muted)',
       borderRadius: '20px', fontSize: '12px', fontWeight: filter === f ? 600 : 400,
       cursor: 'pointer', transition: 'all .12s',
@@ -641,7 +641,7 @@ export default function CustomerTrackingTab({
   // only (kept out of the green/"paid" color family on purpose, see lib/debts/ledger.ts).
   const StatusChip = ({ debt }: { debt: CustomerLedgerDebt }) => {
     if (debt.direction === 'credit')
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>זיכוי</span>
+      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>זיכוי</span>
     if (debt.is_closed)
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f5f3ff', color: '#7c3aed', fontWeight: 600 }}>🏷 מכוסה</span>
     return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>חיוב</span>
@@ -864,7 +864,7 @@ export default function CustomerTrackingTab({
                     <span style={{ display: 'inline-block', transition: 'transform .15s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--text-muted)' }}>›</span>
                     <span style={{ fontWeight: 700, fontSize: '15px' }}>💳 {group.cust?.name ?? 'ללא לקוח'}</span>
                     {group.cust?.phone && <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{group.cust.phone}</span>}
-                    <span style={{ marginRight: 'auto', fontSize: '14px', fontWeight: 700, color: group.totalBal > 0 ? 'var(--danger)' : '#16a34a' }}>
+                    <span style={{ marginRight: 'auto', fontSize: '14px', fontWeight: 700, color: group.totalBal > 0 ? 'var(--danger)' : 'var(--success)' }}>
                       יתרה כוללת: {fmt(group.totalBal)}
                     </span>
                     <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -876,7 +876,7 @@ export default function CustomerTrackingTab({
                       )}
                       {group.totalBal > 0 && (
                         <button onClick={() => openPayCustomer(group.cid)}
-                          style={{ padding: '4px 12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                          style={{ padding: '4px 12px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
                           💰 תשלום
                         </button>
                       )}
@@ -930,7 +930,7 @@ export default function CustomerTrackingTab({
                         >
                           <span style={{ display: 'inline-block', transition: 'transform .15s', transform: monthCollapsed ? 'rotate(0deg)' : 'rotate(90deg)', color: 'var(--text-muted)', fontSize: '12px' }}>›</span>
                           <span style={{ fontWeight: 700, fontSize: '14px', color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
-                          <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthSettled ? '#16a34a' : 'var(--danger)' }}>
+                          <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthSettled ? 'var(--success)' : 'var(--danger)' }}>
                             נטו לחודש: {fmt(monthNetTotal)}
                           </span>
                         </div>
@@ -977,7 +977,7 @@ export default function CustomerTrackingTab({
                                     </td>
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
                                     <td style={tdSt}><StatusChip debt={d} /></td>
-                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? '#16a34a' : 'var(--danger)' }}>
+                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? 'var(--success)' : 'var(--danger)' }}>
                                       {d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}
                                     </td>
                                     <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -1023,7 +1023,7 @@ export default function CustomerTrackingTab({
                                   <tr
                                     key={`pay-${p.id}`}
                                     onClick={merging ? toggleGroup : undefined}
-                                    style={{ background: selected ? '#ddd6fe' : '#f0fdf6', cursor: merging ? 'pointer' : undefined }}
+                                    style={{ background: selected ? '#ddd6fe' : 'var(--success-soft)', cursor: merging ? 'pointer' : undefined }}
                                   >
                                     {bulkSelectMode && <td style={tdSt}></td>}
                                     <td style={tdSt}>
@@ -1031,8 +1031,8 @@ export default function CustomerTrackingTab({
                                       {p.receipt_issued ? `🧾 קבלה #${p.receipt_number || '—'}` : '💰 תשלום'}
                                     </td>
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{paymentDateOf(p)}</td>
-                                    <td style={tdSt}><span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#dcfce7', color: '#16a34a', fontWeight: 600 }}>{p.payment_method}</span></td>
-                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: '#16a34a' }}>−{fmt(total)}</td>
+                                    <td style={tdSt}><span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>{p.payment_method}</span></td>
+                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: 'var(--success)' }}>−{fmt(total)}</td>
                                     <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>
                                       {!merging && (
                                         <button
@@ -1056,7 +1056,7 @@ export default function CustomerTrackingTab({
                                   <span>סה&quot;כ חיוב: <strong style={{ color: 'var(--text)' }}>{fmt(monthChargeTotal)}</strong></span>
                                   {monthCreditTotal > 0 && <span>סה&quot;כ זיכוי: <strong style={{ color: 'var(--danger)' }}>{fmt(monthCreditTotal)}</strong></span>}
                                   <span>נטו: <strong style={{ color: 'var(--text)' }}>{fmt(monthNetTotal)}</strong></span>
-                                  {monthPaidTotal > 0 && <span>שולם בחודש זה: <strong style={{ color: '#16a34a' }}>{fmt(monthPaidTotal)}</strong></span>}
+                                  {monthPaidTotal > 0 && <span>שולם בחודש זה: <strong style={{ color: 'var(--success)' }}>{fmt(monthPaidTotal)}</strong></span>}
                                 </div>
                               </td>
                             </tr>
@@ -1167,9 +1167,9 @@ export default function CustomerTrackingTab({
                           {(['charge', 'credit'] as const).map(dir => (
                             <button key={dir} type="button" onClick={() => updateInvoiceLine(i, 'direction', dir)} style={{
                               padding: '4px 10px', border: '1px solid', borderRadius: '5px', fontSize: '11px', cursor: 'pointer', fontWeight: 600,
-                              borderColor: inv.direction === dir ? (dir === 'credit' ? '#16a34a' : 'var(--danger)') : 'var(--border)',
-                              background: inv.direction === dir ? (dir === 'credit' ? '#f0fdf6' : '#fef2f2') : 'transparent',
-                              color: inv.direction === dir ? (dir === 'credit' ? '#16a34a' : 'var(--danger)') : 'var(--text-muted)',
+                              borderColor: inv.direction === dir ? (dir === 'credit' ? 'var(--success)' : 'var(--danger)') : 'var(--border)',
+                              background: inv.direction === dir ? (dir === 'credit' ? 'var(--success-soft)' : '#fef2f2') : 'transparent',
+                              color: inv.direction === dir ? (dir === 'credit' ? 'var(--success)' : 'var(--danger)') : 'var(--text-muted)',
                             }}>{dir === 'charge' ? 'חיוב' : 'זיכוי'}</button>
                           ))}
                         </div>
@@ -1235,7 +1235,7 @@ export default function CustomerTrackingTab({
                   <button key={m} type="button" onClick={() => setPayMethod(m)} style={{
                     padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
                     border: `1px solid ${payMethod === m ? 'var(--primary)' : 'var(--border)'}`,
-                    background: payMethod === m ? '#f0fdf4' : '#f8fafc',
+                    background: payMethod === m ? 'var(--success-soft)' : '#f8fafc',
                     color: payMethod === m ? 'var(--primary)' : 'var(--text-muted)',
                   }}>
                     {m === 'מזומן' ? '💵' : m === 'אשראי' ? '💳' : m === "צ'ק" ? '📝' : '🏦'} {m}
@@ -1306,7 +1306,7 @@ export default function CustomerTrackingTab({
 
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowPayModal(false)}>ביטול</Button>
-              <Button loading={paySaving} onClick={submitPayment} style={{ background: '#16a34a', borderColor: '#16a34a' }}>
+              <Button loading={paySaving} onClick={submitPayment} style={{ background: 'var(--success)', borderColor: 'var(--success)' }}>
                 ✓ אשר תשלום
               </Button>
             </div>
@@ -1324,7 +1324,7 @@ export default function CustomerTrackingTab({
             <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
               <Button variant="secondary" onClick={() => setWaModal(null)}>ביטול</Button>
               <a href={waUrl(waModal.phone, waModal.text)} target="_blank" rel="noopener noreferrer" onClick={() => setWaModal(null)}
-                style={{ padding: '8px 18px', background: '#16a34a', color: '#fff', border: '1.5px solid #16a34a', borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                style={{ padding: '8px 18px', background: 'var(--success)', color: '#fff', border: '1.5px solid #16a34a', borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >📲 פתח ווצאפ</a>
             </div>
           </div>

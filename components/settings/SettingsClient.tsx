@@ -436,7 +436,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
                     <button key={m.key} onClick={() => toggleCreateModule(m.key)} style={{
                       padding: '4px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
                       border: active ? '1px solid var(--primary)' : '1px solid var(--border)',
-                      background: active ? '#f0fdf4' : 'transparent',
+                      background: active ? 'var(--success-soft)' : 'transparent',
                       color: active ? 'var(--primary)' : 'var(--text-muted)',
                       fontWeight: active ? 600 : 400,
                     }}>{m.label}</button>
@@ -489,7 +489,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
                           style={{
                             padding: '5px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
                             border: active ? '1px solid var(--primary)' : '1px solid var(--border)',
-                            background: active ? '#f0fdf4' : 'transparent',
+                            background: active ? 'var(--success-soft)' : 'transparent',
                             color: active ? 'var(--primary)' : 'var(--text-muted)',
                             fontWeight: active ? 600 : 400,
                           }}
@@ -640,7 +640,7 @@ function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType
                   <button key={m.key} onClick={() => toggleMod(m.key)} style={{
                     padding: '4px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
                     border: active ? '1px solid var(--primary)' : '1px solid var(--border)',
-                    background: active ? '#f0fdf4' : 'transparent',
+                    background: active ? 'var(--success-soft)' : 'transparent',
                     color: active ? 'var(--primary)' : 'var(--text-muted)',
                     fontWeight: active ? 600 : 400,
                   }}>{m.label}</button>
@@ -1295,7 +1295,7 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
                 {i.start_date && `מ-${i.start_date}`}{i.end_date && ` עד ${i.end_date}`}
               </div>
             </div>
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? '#dcfce7' : '#f1f5f9', color: i.is_active ? '#16a34a' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? 'var(--success-soft)' : '#f1f5f9', color: i.is_active ? 'var(--success)' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
             <Button variant="secondary" size="sm" onClick={() => openEdit(i)}>✏️</Button>
             <Button variant="danger" size="sm" onClick={() => del(i.id)}>🗑</Button>
           </div>
@@ -1401,7 +1401,7 @@ function FaqSection({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
               <div style={{ fontWeight: 600, fontSize: '13px' }}>{i.question}</div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{i.answer.slice(0, 80)}{i.answer.length > 80 ? '...' : ''}</div>
             </div>
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? '#dcfce7' : '#f1f5f9', color: i.is_active ? '#16a34a' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? 'var(--success-soft)' : '#f1f5f9', color: i.is_active ? 'var(--success)' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
             <Button variant="secondary" size="sm" onClick={() => openEdit(i)}>✏️</Button>
             <Button variant="danger" size="sm" onClick={() => del(i.id)}>🗑</Button>
           </div>
@@ -1619,7 +1619,7 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
     <div>
       {/* Status */}
       {last && (
-        <div style={{ ...cardSt, padding: '14px 20px', background: last.at && Date.now() - new Date(last.at).getTime() < 7 * 86_400_000 ? '#f0fdf6' : '#fffbeb' }}>
+        <div style={{ ...cardSt, padding: '14px 20px', background: last.at && Date.now() - new Date(last.at).getTime() < 7 * 86_400_000 ? 'var(--success-soft)' : '#fffbeb' }}>
           <div style={{ fontWeight: 700, fontSize: '14px' }}>
             {last.at
               ? `גיבוי אחרון: ${fmtBackupDate(last.at)} (${last.kind === 'auto' ? 'אוטומטי לדרייב' : last.kind === 'drive' ? 'ידני לדרייב' : 'הורדה למחשב'})`
@@ -1840,7 +1840,7 @@ export default function SettingsClient() {
         <div style={{
           // wraps on phones: the buttons drop below the text instead of squeezing it to one word per line
           display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', marginBottom: '20px',
-          background: driveConnected ? '#f0fdf6' : '#fffbeb',
+          background: driveConnected ? 'var(--success-soft)' : '#fffbeb',
           border: `1px solid ${driveConnected ? '#bbf7d0' : '#fcd34d'}`,
           borderRadius: '10px', padding: '12px 16px',
         }}>

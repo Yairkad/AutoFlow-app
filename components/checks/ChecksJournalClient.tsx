@@ -408,7 +408,7 @@ export default function ChecksJournalClient() {
               <button key={f} onClick={() => setFStatus(f)} style={{
                 padding: '7px 14px', border: '1px solid',
                 borderColor: fStatus === f ? 'var(--primary)' : 'var(--border)',
-                background: fStatus === f ? '#f0fdf6' : 'transparent',
+                background: fStatus === f ? 'var(--success-soft)' : 'transparent',
                 color: fStatus === f ? 'var(--primary)' : 'var(--text-muted)',
                 borderRadius: '20px', fontSize: '12px', fontWeight: fStatus === f ? 600 : 400,
                 cursor: 'pointer', transition: 'all .12s',
@@ -441,7 +441,7 @@ export default function ChecksJournalClient() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)' }}>סה״כ ששולם (לפי הסינון)</span>
-              <span style={{ fontSize: '20px', fontWeight: 800, color: '#16a34a' }}>{fmt(grandPaidTotal)}</span>
+              <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--success)' }}>{fmt(grandPaidTotal)}</span>
             </div>
           </div>
 
@@ -480,12 +480,12 @@ export default function ChecksJournalClient() {
                           <span style={{ fontSize: '13px', flex: 1, textDecoration: p.is_paid ? 'line-through' : 'none' }}>{p.description}</span>
                           <span style={{ fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{fmtDMY(p.due_date)}</span>
                           <span style={{ fontWeight: 700, minWidth: '90px', textAlign: 'left' }}>{fmt(p.amount)}</span>
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: p.is_paid ? '#16a34a' : days < 0 ? 'var(--danger)' : days <= 7 ? 'var(--warning)' : '#2563eb', whiteSpace: 'nowrap', minWidth: 80 }}>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: p.is_paid ? 'var(--success)' : days < 0 ? 'var(--danger)' : days <= 7 ? 'var(--warning)' : '#2563eb', whiteSpace: 'nowrap', minWidth: 80 }}>
                             {p.is_paid ? `שולם ${p.paid_date ? fmtDMY(p.paid_date) : ''}` : days < 0 ? `באיחור ${Math.abs(days)} ימים` : days === 0 ? 'היום!' : `עוד ${days} ימים`}
                           </span>
                           <div style={{ display: 'flex', gap: 4 }}>
                             {!p.is_paid && (
-                              <button onClick={() => openPay(p)} title="סמן כנפרע" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', borderRadius: '6px', padding: '3px 8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✓</button>
+                              <button onClick={() => openPay(p)} title="סמן כנפרע" style={{ background: 'var(--success-soft)', border: '1px solid #bbf7d0', color: 'var(--success)', borderRadius: '6px', padding: '3px 8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✓</button>
                             )}
                             <RowActionsMenu align="end" actions={[
                               { key: 'edit', label: 'עריכה', icon: '✏️', onClick: () => setEditItem(p) },
@@ -532,7 +532,7 @@ export default function ChecksJournalClient() {
       >
         {payItem && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ padding: '12px 16px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+            <div style={{ padding: '12px 16px', background: 'var(--success-soft)', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
               <div style={{ fontSize: '14px', fontWeight: 700 }}>{payItem.description}</div>
               <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary)', marginTop: '4px' }}>{fmt(Number(payItem.amount))}</div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>פירעון {fmtDMY(payItem.due_date)}</div>

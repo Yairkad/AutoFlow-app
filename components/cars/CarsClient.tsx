@@ -128,12 +128,12 @@ const CONDITIONS = [
   { value: 'poor',     label: 'לשיפוץ' },
 ]
 const COND_COLOR: Record<string, string> = {
-  'new': '#166534', 'like-new': '#0369a1', 'good': '#1a9e5c', 'fair': '#b45309', 'poor': '#dc2626',
+  'new': '#166534', 'like-new': '#0369a1', 'good': 'var(--primary)', 'fair': '#b45309', 'poor': '#dc2626',
 }
 
 const STATUSES = [
   { value: 'checking',  label: '🔍 בדיקה',         color: '#0369a1' },
-  { value: 'available', label: '🟢 למכירה',         color: '#1a9e5c' },
+  { value: 'available', label: '🟢 למכירה',         color: 'var(--primary)' },
   { value: 'reserved',  label: '🟡 שמור',           color: '#d97706' },
   { value: 'business',  label: '🟣 בשימוש העסק',     color: '#7c3aed' },
   { value: 'sold',      label: '⚫ נמכר',           color: '#64748b' },
@@ -142,7 +142,7 @@ const STATUSES = [
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.value, s]))
 
 const REQ_STATUSES = [
-  { value: 'open',    label: 'פתוח',  color: '#1a9e5c' },
+  { value: 'open',    label: 'פתוח',  color: 'var(--primary)' },
   { value: 'handled', label: 'טופל',  color: '#d97706' },
   { value: 'closed',  label: 'נסגר',  color: '#64748b' },
 ]
@@ -215,7 +215,7 @@ function dateChipStyle(dateStr: string | null): { bg: string; color: string; lab
   const days = Math.floor((d.getTime() - Date.now()) / 86400000)
   if (days < 0)   return { bg: '#fee2e2', color: '#dc2626', label: `פג ${Math.abs(days)}י׳` }
   if (days <= 30) return { bg: '#fef9c3', color: '#92400e', label: `${days} ימים` }
-  return { bg: '#dcfce7', color: '#166534', label: dateStr }
+  return { bg: 'var(--success-soft)', color: '#166534', label: dateStr }
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -1199,7 +1199,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
         </div>
 
         {pendingDoc ? (
-          <div style={{ border: '1.5px solid var(--primary)', borderRadius: 10, padding: 10, background: '#f0fdf4' }}>
+          <div style={{ border: '1.5px solid var(--primary)', borderRadius: 10, padding: 10, background: 'var(--success-soft)' }}>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>📎 {pendingDoc.name}</div>
             <label style={{ fontSize: 12, fontWeight: 700 }}>שם המסמך</label>
             <input
@@ -1303,7 +1303,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
               ? <>
                   <span style={{ ...tag, background: '#ffedd5', color: '#c2410c' }}>🅿️ בהפקדה</span>
                   {car.deposit_refund_requested
-                    ? <span style={{ ...tag, background: '#dcfce7', color: '#166534' }}>💸 הוגש החזר</span>
+                    ? <span style={{ ...tag, background: 'var(--success-soft)', color: '#166534' }}>💸 הוגש החזר</span>
                     : <span style={{ ...tag, background: '#fee2e2', color: '#dc2626' }}>💸 לא הוגש החזר</span>}
                 </>
               : test
@@ -1312,7 +1312,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
             }
             {!car.license_deposited && inTestRenewal(car) && (
               car.test_fee_paid && car.test_passed
-                ? <span style={{ ...tag, background: '#dcfce7', color: '#166534' }}>✓ אגרה+מבחן – לעדכן תוקף</span>
+                ? <span style={{ ...tag, background: 'var(--success-soft)', color: '#166534' }}>✓ אגרה+מבחן – לעדכן תוקף</span>
                 : <span style={{ ...tag, background: '#ffedd5', color: '#c2410c' }}>חסר: {[!car.test_fee_paid && 'אגרה', !car.test_passed && 'מבחן'].filter(Boolean).join(' + ')}</span>
             )}
             {!car.license_deposited && insur && <span style={{ ...tag, background: insur.bg, color: insur.color }}>🛡️ {insur.label}</span>}
@@ -1500,7 +1500,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
         <>
           {soldCars.length > 0 && (
             <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 18px', fontSize: 13 }}>
+              <div style={{ background: 'var(--success-soft)', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 18px', fontSize: 13 }}>
                 <span style={{ color: 'var(--text-muted)' }}>סה"כ רכבים נמכרו: </span><strong>{soldCars.length}</strong>
                 <span style={{ margin: '0 12px', color: 'var(--border)' }}>|</span>
                 <span style={{ color: 'var(--text-muted)' }}>רווח כולל: </span>
@@ -1581,7 +1581,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
                   boxShadow: reqSubTab === t.v ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
                   transition: 'all .15s',
                 }}>
-                  {t.l}{t.count > 0 ? <span style={{ marginRight: 5, background: '#dcfce7', color: '#15803d', borderRadius: 10, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{t.count}</span> : ''}
+                  {t.l}{t.count > 0 ? <span style={{ marginRight: 5, background: 'var(--success-soft)', color: 'var(--success)', borderRadius: 10, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>{t.count}</span> : ''}
                 </button>
               ))}
             </div>
@@ -1637,7 +1637,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
                           <div style={{ display: 'flex', gap: 6, padding: '0 12px 12px' }}>
             <button
               onClick={e => { e.stopPropagation(); printBuyRequest(req) }}
-              style={{ flex: 1, padding: '7px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: '1.5px solid #bbf7d0', background: '#f0fdf4', color: '#15803d', cursor: 'pointer', fontFamily: 'inherit' }}>
+              style={{ flex: 1, padding: '7px', fontSize: 12, fontWeight: 600, borderRadius: 8, border: '1.5px solid #bbf7d0', background: 'var(--success-soft)', color: 'var(--success)', cursor: 'pointer', fontFamily: 'inherit' }}>
               🖨️ הדפס טופס
             </button>
             <a
@@ -2204,7 +2204,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
               </select>
             </Field>
           </Grid>
-          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 14px' }}>
+          <div style={{ background: 'var(--success-soft)', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 14px' }}>
             <Grid cols={2}>
               <Field label="💰 תקציב מקסימלי (₪)"><input type="number" value={reqForm.budget} onChange={e => setReqForm(f=>({...f,budget:e.target.value}))} style={inp()} /></Field>
               <Field label="📅 שנת ייצור מינימלית"><input type="number" value={reqForm.min_year} onChange={e => setReqForm(f=>({...f,min_year:e.target.value}))} style={inp()} placeholder="2015" /></Field>

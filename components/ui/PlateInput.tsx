@@ -89,7 +89,7 @@ export default function PlateInput({ module, onFill }: Props) {
       {/* Filled fields preview */}
       {data && Object.keys(data).length > 0 && (
         <div style={{
-          background: '#f0fdf6',
+          background: 'var(--success-soft)',
           border: '1px solid #bbf7d0',
           borderRadius: '8px',
           padding: '10px 14px',
@@ -98,7 +98,7 @@ export default function PlateInput({ module, onFill }: Props) {
           gap: '8px 16px',
         }}>
           {Object.entries(data).map(([key, val]) => (
-            <span key={key} style={{ fontSize: '12px', color: '#15803d' }}>
+            <span key={key} style={{ fontSize: '12px', color: 'var(--success)' }}>
               <strong>{FIELD_LABELS[key as keyof VehicleData]}:</strong> {String(val)}
             </span>
           ))}

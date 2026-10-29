@@ -782,7 +782,7 @@ export default function TiresClient() {
                     const isOut = t.qty === 0
                     const isLow = t.qty > 0 && t.qty <= 2
                     const qtyColor = isOut ? 'var(--danger)' : isLow ? 'var(--warning)' : 'var(--primary)'
-                    const qtyBg   = isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#f0fdf4'
+                    const qtyBg   = isOut ? '#fef2f2' : isLow ? '#fffbeb' : 'var(--success-soft)'
                     const marginPct = t.margin
                       ? t.margin + '%'
                       : (t.cost_price && t.sell_price ? Math.round((t.sell_price / t.cost_price - 1) * 100) + '%' : '—')
@@ -803,7 +803,7 @@ export default function TiresClient() {
                                 onClick={() => setCell(t.id, 'condition', (e.condition ?? t.condition) === 'used' ? 'new' : 'used')}
                                 style={{
                                   fontSize: '11px', fontWeight: 700, border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px 6px',
-                                  background: (e.condition ?? t.condition) === 'used' ? '#fef3c7' : '#f0fdf4',
+                                  background: (e.condition ?? t.condition) === 'used' ? '#fef3c7' : 'var(--success-soft)',
                                   color:      (e.condition ?? t.condition) === 'used' ? '#92400e' : 'var(--primary)',
                                 }}>
                                 {(e.condition ?? t.condition) === 'used' ? '♻ משומש' : '✓ חדש'}
@@ -1022,7 +1022,7 @@ export default function TiresClient() {
                         </td>
                         <td style={{ padding: '10px 12px' }}>
                           <span style={{
-                            background: isSale ? '#f0fdf4' : '#eff6ff',
+                            background: isSale ? 'var(--success-soft)' : '#eff6ff',
                             color: isSale ? 'var(--primary)' : 'var(--accent)',
                             borderRadius: '6px', padding: '3px 10px', fontWeight: 600, fontSize: '12px',
                           }}>
@@ -1214,7 +1214,7 @@ export default function TiresClient() {
                   <button key={c} type="button" onClick={() => setF('condition', c)} style={{
                     flex: 1, padding: '8px', border: `2px solid ${form.condition === c ? (c === 'used' ? '#f59e0b' : 'var(--primary)') : 'var(--border)'}`,
                     borderRadius: '8px', cursor: 'pointer', fontWeight: form.condition === c ? 700 : 400, fontSize: '13px',
-                    background: form.condition === c ? (c === 'used' ? '#fef3c7' : '#f0fdf4') : 'var(--bg)',
+                    background: form.condition === c ? (c === 'used' ? '#fef3c7' : 'var(--success-soft)') : 'var(--bg)',
                     color: form.condition === c ? (c === 'used' ? '#92400e' : 'var(--primary)') : 'var(--text-muted)',
                     fontFamily: 'inherit',
                   }}>

@@ -119,7 +119,7 @@ const ICON_BTN: React.CSSProperties = { background: 'none', border: 'none', curs
 function SummaryCard({ label, value, color, icon }: { label: string; value: number; color: string; icon: string }) {
   return (
     <div style={{ background: '#fff', borderRadius: 'var(--radius)', border: '1px solid var(--border)', borderTop: `3px solid ${color}`, boxShadow: 'var(--shadow)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-      <div style={{ width: 40, height: 40, borderRadius: '10px', background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>{icon}</div>
+      <div style={{ width: 40, height: 40, borderRadius: '10px', background: `color-mix(in srgb, ${color} 9%, transparent)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>{icon}</div>
       <div>
         <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)' }}>{fmt(value)}</div>
         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{label}</div>
@@ -179,7 +179,7 @@ function CategorySelect({
             onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') setAdding(false) }}
             className="form-input" style={{ flex: 1 }}
           />
-          <button onClick={submit} style={{ padding: '7px 12px', borderRadius: '9px', border: '1.5px solid #bbf7d0', background: '#f0fdf9', color: '#15803d', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>הוסף</button>
+          <button onClick={submit} style={{ padding: '7px 12px', borderRadius: '9px', border: '1.5px solid #bbf7d0', background: 'var(--bg-soft)', color: 'var(--success)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>הוסף</button>
           <button onClick={() => setAdding(false)} style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '13px', color: 'var(--text-muted)' }}>✕</button>
         </div>
       ) : managing ? (
@@ -746,7 +746,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         const exp = row as Expense
         const pm  = exp.payment_method
         const pmColors: Record<string, { color: string; bg: string }> = {
-          'מזומן':   { color: '#16a34a', bg: '#f0fdf4' },
+          'מזומן':   { color: 'var(--success)', bg: 'var(--success-soft)' },
           'אשראי':   { color: '#2563eb', bg: '#eff6ff' },
           "צ'ק":    { color: '#92400e', bg: '#fef9c3' },
           'העברה':   { color: '#6d28d9', bg: '#f5f3ff' },
@@ -1052,7 +1052,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                       <tr
                         key={r.month}
                         className={!isCurrent ? 'tr-hover' : undefined}
-                        style={{ borderBottom: '1px solid var(--border)', background: isCurrent ? '#f0fdf4' : '' }}
+                        style={{ borderBottom: '1px solid var(--border)', background: isCurrent ? 'var(--success-soft)' : '' }}
                       >
                         <td style={{ ...TD, fontWeight: isCurrent ? 700 : 400 }}>
                           {monthLabel(r.month)}
@@ -1095,7 +1095,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           <>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
             {(search || filterCat || filterSup) && (
-              <div style={{ padding: '8px 14px', background: '#f0fdf4', borderBottom: '1px solid var(--border)', fontSize: '13px', color: 'var(--primary)' }}>
+              <div style={{ padding: '8px 14px', background: 'var(--success-soft)', borderBottom: '1px solid var(--border)', fontSize: '13px', color: 'var(--primary)' }}>
                 {filteredRows.length} תוצאות מתוך {baseRows.length}
               </div>
             )}
@@ -1192,7 +1192,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                   display: 'flex', alignItems: 'center', gap: '5px',
                   border: `1px solid ${fVatMode === 'with' ? 'var(--primary)' : 'var(--border)'}`,
                   borderRadius: '6px', padding: '3px 10px', cursor: 'pointer',
-                  background: fVatMode === 'with' ? '#f0fdf4' : '#f8fafc',
+                  background: fVatMode === 'with' ? 'var(--success-soft)' : '#f8fafc',
                   fontSize: '12px', fontWeight: 500,
                   color: fVatMode === 'with' ? 'var(--primary)' : 'var(--text-muted)',
                   transition: 'all .15s',
@@ -1224,7 +1224,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                   <button key={m} type="button" onClick={() => setFPayMethod(m)} style={{
                     padding: '7px 4px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 500,
                     border: `1px solid ${fPayMethod === m ? 'var(--primary)' : 'var(--border)'}`,
-                    background: fPayMethod === m ? '#f0fdf4' : '#f8fafc',
+                    background: fPayMethod === m ? 'var(--success-soft)' : '#f8fafc',
                     color: fPayMethod === m ? 'var(--primary)' : 'var(--text-muted)',
                     textAlign: 'center',
                   }}>
@@ -1313,7 +1313,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                           <button key={f} type="button" onClick={() => setFRecurFreq(f)} style={{
                             padding: '5px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
                             border: `1px solid ${fRecurFreq === f ? 'var(--primary)' : 'var(--border)'}`,
-                            background: fRecurFreq === f ? '#f0fdf4' : '#f8fafc',
+                            background: fRecurFreq === f ? 'var(--success-soft)' : '#f8fafc',
                             color: fRecurFreq === f ? 'var(--primary)' : 'var(--text-muted)',
                           }}>{f === 'monthly' ? 'חודשי' : 'דו-חודשי'}</button>
                         ))}
@@ -1395,7 +1395,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               <button key={f} type="button" onClick={() => setRfFreq(f)} style={{
                 padding: '5px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
                 border: `1px solid ${rfFreq === f ? 'var(--primary)' : 'var(--border)'}`,
-                background: rfFreq === f ? '#f0fdf4' : '#f8fafc',
+                background: rfFreq === f ? 'var(--success-soft)' : '#f8fafc',
                 color: rfFreq === f ? 'var(--primary)' : 'var(--text-muted)',
               }}>{f === 'monthly' ? 'חודשי' : 'דו-חודשי'}</button>
             ))}

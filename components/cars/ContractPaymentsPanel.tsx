@@ -111,12 +111,12 @@ export default function ContractPaymentsPanel() {
   const section = (title: string, color: string, list: ExpectedPayment[], tone: 'late' | 'soon' | 'later' | 'done', collapsed = false) => {
     if (!list.length) return null
     const head = <><span>{title} ({list.length})</span><span style={{ marginRight: 'auto', fontWeight: 800 }}>₪{total(list)}</span></>
-    const headStyle: React.CSSProperties = { display: 'flex', gap: 8, padding: '10px 12px', fontWeight: 700, fontSize: 14, color, background: color + '12', cursor: collapsed ? 'pointer' : undefined }
+    const headStyle: React.CSSProperties = { display: 'flex', gap: 8, padding: '10px 12px', fontWeight: 700, fontSize: 14, color, background: `color-mix(in srgb, ${color} 7%, transparent)`, cursor: collapsed ? 'pointer' : undefined }
     return collapsed
-      ? <details style={{ border: `1px solid ${color}55`, borderRadius: 10, overflow: 'hidden' }}>
+      ? <details style={{ border: `1px solid color-mix(in srgb, ${color} 33%, transparent)`, borderRadius: 10, overflow: 'hidden' }}>
           <summary style={headStyle}>{head}</summary>{list.map(p => row(p, tone))}
         </details>
-      : <div style={{ border: `1px solid ${color}55`, borderRadius: 10, overflow: 'hidden' }}>
+      : <div style={{ border: `1px solid color-mix(in srgb, ${color} 33%, transparent)`, borderRadius: 10, overflow: 'hidden' }}>
           <div style={headStyle}>{head}</div>{list.map(p => row(p, tone))}
         </div>
   }
@@ -140,7 +140,7 @@ export default function ContractPaymentsPanel() {
         {section('⚠ באיחור / להיום', '#dc2626', groups.late, 'late')}
         {section(`📅 ב-${SOON_DAYS} הימים הקרובים`, '#d97706', groups.soon, 'soon')}
         {section('🗓 בהמשך', '#2563eb', groups.later, 'later', true)}
-        {section('✓ התקבלו', '#16a34a', groups.done, 'done', true)}
+        {section('✓ התקבלו', 'var(--success)', groups.done, 'done', true)}
         {!groups.late.length && !groups.soon.length && !groups.later.length && (
           <div style={{ fontSize: 13, color: 'var(--success)' }}>✓ אין תשלומים פתוחים</div>
         )}

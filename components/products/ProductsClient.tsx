@@ -559,7 +559,7 @@ export default function ProductsClient() {
                     const isLow = p.min_qty > 0 && p.qty <= p.min_qty && p.qty > 0
                     const isOut = p.qty === 0
                     const qtyColor = isOut ? 'var(--danger)' : isLow ? 'var(--warning)' : 'var(--primary)'
-                    const qtyBg   = isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#f0fdf4'
+                    const qtyBg   = isOut ? '#fef2f2' : isLow ? '#fffbeb' : 'var(--success-soft)'
                     const marginPct = p.margin ? p.margin + '%'
                       : (p.buy_price && p.sell_price ? Math.round((p.sell_price / p.buy_price - 1) * 100) + '%' : '—')
                     const suppName = suppliers.find(s => s.id === p.supplier_id)?.name || '—'
@@ -667,7 +667,7 @@ export default function ProductsClient() {
                     <button key={t} onClick={() => setMvType(t)} style={{
                       flex: 1, padding: '8px', border: `2px solid ${mvType === t ? (t === 'sale' ? 'var(--primary)' : 'var(--accent)') : 'var(--border)'}`,
                       borderRadius: '8px', cursor: 'pointer', fontWeight: mvType === t ? 700 : 400,
-                      fontSize: '13px', background: mvType === t ? (t === 'sale' ? '#f0fdf4' : '#eff6ff') : 'var(--bg)',
+                      fontSize: '13px', background: mvType === t ? (t === 'sale' ? 'var(--success-soft)' : '#eff6ff') : 'var(--bg)',
                       color: mvType === t ? (t === 'sale' ? 'var(--primary)' : 'var(--accent)') : 'var(--text-muted)',
                     }}>{label}</button>
                   ))}
@@ -800,7 +800,7 @@ export default function ProductsClient() {
                         </td>
                         <td style={{ padding: '10px 12px' }}>
                           <span style={{
-                            background: isSale ? '#f0fdf4' : '#eff6ff',
+                            background: isSale ? 'var(--success-soft)' : '#eff6ff',
                             color: isSale ? 'var(--primary)' : 'var(--accent)',
                             borderRadius: '6px', padding: '3px 10px', fontWeight: 600, fontSize: '12px',
                           }}>
@@ -1122,7 +1122,7 @@ function StatCard({ label, value, color }: { label: string; value: string | numb
   const colors = { blue: 'var(--accent)', orange: 'var(--warning)', red: 'var(--danger)' }
   const bgs    = { blue: '#eff6ff',       orange: '#fffbeb',        red: '#fef2f2' }
   return (
-    <div style={{ background: color ? bgs[color] : '#f0fdf4', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+    <div style={{ background: color ? bgs[color] : 'var(--success-soft)', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
       <div style={{ fontSize: '20px', fontWeight: 900, color: color ? colors[color] : 'var(--primary)' }}>{value}</div>
       <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{label}</div>
     </div>

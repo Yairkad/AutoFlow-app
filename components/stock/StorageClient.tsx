@@ -133,7 +133,7 @@ export default function StorageClient() {
               cabinetTint={Object.fromEntries(cabinetCodes(map.layout).map(c => [c, countFreshness(map.lastCount[c])]))} />
             <div className="flex flex-wrap gap-3 text-slate-600" style={{ fontSize: 12, marginTop: 10 }}>
               <span>צבע הארון = מתי נספר:</span>
-              <span style={{ color: '#15803d', fontWeight: 700 }}>■ עד 30 יום</span>
+              <span style={{ color: 'var(--success)', fontWeight: 700 }}>■ עד 30 יום</span>
               <span style={{ color: '#b45309', fontWeight: 700 }}>■ עד 90 יום</span>
               <span style={{ color: '#b91c1c', fontWeight: 700 }}>■ מעל / לא נספר</span>
             </div>

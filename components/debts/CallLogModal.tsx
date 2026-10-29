@@ -92,7 +92,7 @@ export default function CallLogModal({ open, onClose, debtId, debtName, calls, t
               {[...calls].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(c => (
                 <div key={c.id} style={{ padding: '8px 10px', background: 'var(--bg)', borderRadius: '8px', fontSize: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, color: c.answered ? '#16a34a' : 'var(--danger)' }}>{c.answered ? '✓ ענה' : '✕ לא ענה'}</span>
+                    <span style={{ fontWeight: 600, color: c.answered ? 'var(--success)' : 'var(--danger)' }}>{c.answered ? '✓ ענה' : '✕ לא ענה'}</span>
                     <span style={{ color: 'var(--text-muted)' }}>{fmtDT(c.created_at)}</span>
                   </div>
                   {c.notes && <div style={{ marginTop: '4px', color: 'var(--text)' }}>{c.notes}</div>}

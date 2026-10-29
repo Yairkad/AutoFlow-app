@@ -5,7 +5,7 @@ interface Props {
 }
 
 const COLORS = {
-  green:  { text: 'var(--primary)', bg: '#f0fdf4' },
+  green:  { text: 'var(--primary)', bg: 'var(--success-soft)' },
   blue:   { text: 'var(--accent)',  bg: '#eff6ff'  },
   red:    { text: 'var(--danger)',  bg: '#fef2f2'  },
   orange: { text: 'var(--warning)', bg: '#fffbeb'  },

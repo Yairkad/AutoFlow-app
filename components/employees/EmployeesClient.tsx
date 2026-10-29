@@ -611,8 +611,8 @@ export default function EmployeesClient() {
                 <span style={{
                   fontSize: '11px', fontWeight: 700, padding: '2px 8px',
                   borderRadius: '10px', whiteSpace: 'nowrap',
-                  background: e.is_active ? '#dcfce7' : '#f1f5f9',
-                  color: e.is_active ? '#16a34a' : 'var(--text-muted)',
+                  background: e.is_active ? 'var(--success-soft)' : '#f1f5f9',
+                  color: e.is_active ? 'var(--success)' : 'var(--text-muted)',
                 }}>
                   {e.is_active ? 'פעיל' : 'לא פעיל'}
                 </span>
@@ -746,7 +746,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
               const hasAdj = adds > 0 || deds > 0
 
               return (
-                <tr key={e.id} style={{ background: isPaid ? '#f0fdf4' : undefined }}>
+                <tr key={e.id} style={{ background: isPaid ? 'var(--success-soft)' : undefined }}>
 
                   {/* עובד */}
                   <td style={tdSt}>
@@ -817,7 +817,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
                   <td style={tdSt}>
                     {isPaid ? (
                       <div>
-                        <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>
+                        <span style={{ background: 'var(--success-soft)', color: 'var(--success)', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>
                           ✅ שולם
                         </span>
                         {sal?.payment_method && (
@@ -1183,7 +1183,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
                           style={{
                             padding: '9px 12px', cursor: 'pointer', fontSize: '13px',
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            background: form.bank_name === b.name ? '#f0fdf4' : undefined,
+                            background: form.bank_name === b.name ? 'var(--success-soft)' : undefined,
                           }}
                         >
                           <span>{b.name}</span>
@@ -1302,7 +1302,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
           const dedTotal = adjDeductions.reduce((s, d) => s + (Number(d.amount) || 0), 0)
           const preview = calcTotal(net, adjAdditions, adjDeductions)
           return net > 0 ? (
-            <div style={{ marginTop: '16px', background: '#f0fdf4', borderRadius: '8px', padding: '12px 14px', fontSize: '13px' }}>
+            <div style={{ marginTop: '16px', background: 'var(--success-soft)', borderRadius: '8px', padding: '12px 14px', fontSize: '13px' }}>
               <div style={{ color: 'var(--text-muted)', marginBottom: '4px' }}>
                 נטו תלוש: {fmt(net)}
                 {addTotal > 0 && <> + תוספות: {fmt(addTotal)}</>}
@@ -1362,7 +1362,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
             const deds = (sal?.deductions || []).reduce((s, d) => s + (Number(d.amount) || 0), 0)
             const total = calcTotal(net, sal?.additions || [], sal?.deductions || [])
             return (
-              <div style={{ background: '#f0fdf4', padding: '12px 14px', borderRadius: '8px', fontSize: '13px' }}>
+              <div style={{ background: 'var(--success-soft)', padding: '12px 14px', borderRadius: '8px', fontSize: '13px' }}>
                 <div style={{ color: 'var(--text-muted)', marginBottom: '6px' }}>נטו תלוש: <strong>{fmt(net)}</strong></div>
                 {adds > 0 && <div style={{ color: 'var(--primary)', marginBottom: '4px' }}>+ תוספות חוץ תלוש: {fmt(adds)}</div>}
                 {deds > 0 && <div style={{ color: 'var(--danger)', marginBottom: '4px' }}>− ניכויים חוץ תלוש: {fmt(deds)}</div>}
@@ -1405,7 +1405,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
                   const adds = (s.additions || []).reduce((sum, a) => sum + (Number(a.amount) || 0), 0)
                   const deds = (s.deductions || []).reduce((sum, d) => sum + (Number(d.amount) || 0), 0)
                   return (
-                    <tr key={s.id} style={{ background: s.is_paid ? '#f0fdf4' : undefined }}>
+                    <tr key={s.id} style={{ background: s.is_paid ? 'var(--success-soft)' : undefined }}>
                       <td style={tdSt}><strong>{periodLabel(s.month)}</strong></td>
                       <td style={tdSt}>{fmt(s.base || 0)}</td>
                       <td style={tdSt}>
@@ -1421,7 +1421,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
                       <td style={tdSt}>{s.paid_date ? new Date(s.paid_date).toLocaleDateString('he-IL') : '—'}</td>
                       <td style={tdSt}>
                         {s.is_paid ? (
-                          <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>✅ שולם</span>
+                          <span style={{ background: 'var(--success-soft)', color: 'var(--success)', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>✅ שולם</span>
                         ) : (
                           <span style={{ background: '#fff7ed', color: 'var(--warning)', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 700 }}>⏳ ממתין</span>
                         )}
@@ -1520,7 +1520,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
             <div style={{ marginTop: '16px', textAlign: 'center' }}>
               <button
                 onClick={() => { openEdit(bankViewEmp); setBankViewEmp(null) }}
-                style={{ padding: '8px 20px', background: '#f0fdf9', color: '#15803d', border: '1.5px solid #bbf7d0', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                style={{ padding: '8px 20px', background: 'var(--bg-soft)', color: 'var(--success)', border: '1.5px solid #bbf7d0', borderRadius: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
               >✏️ עריכה מלאה</button>
             </div>
           </div>

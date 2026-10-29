@@ -409,7 +409,7 @@ export default function ScanClient() {
                         {!isMobile && <td style={tdSt}>{BADGE(e.item.type)}</td>}
                         <td style={{ ...tdSt, textAlign: 'center', fontWeight: 800, fontSize: '16px', color: '#d97706' }}>{e.counted}</td>
                         <td style={{ ...tdSt, textAlign: 'center', color: '#64748b' }}>{e.item.qty}</td>
-                        <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: diff > 0 ? '#16a34a' : diff < 0 ? '#ef4444' : '#94a3b8' }}>
+                        <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: diff > 0 ? 'var(--success)' : diff < 0 ? '#ef4444' : '#94a3b8' }}>
                           {diff > 0 ? `+${diff}` : diff === 0 ? '—' : diff}
                         </td>
                       </tr>
@@ -457,7 +457,7 @@ export default function ScanClient() {
                         {item.name}
                         {isMobile && <span style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{item.type === 'tire' ? 'צמיג' : 'מוצר'}{item.sku ? ` · ${item.sku}` : ''}</span>}
                       </td>
-                      <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: item.qty === 0 ? '#ef4444' : item.qty <= 2 ? '#f59e0b' : '#16a34a' }}>{item.qty}</td>
+                      <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: item.qty === 0 ? '#ef4444' : item.qty <= 2 ? '#f59e0b' : 'var(--success)' }}>{item.qty}</td>
                       <td style={tdSt}>
                         <button onClick={() => openEdit(item)} className="text-blue-600 font-bold hover:underline" style={{ fontSize: '12px' }}>ערוך ←</button>
                       </td>
@@ -494,7 +494,7 @@ export default function ScanClient() {
                       <td style={{ ...tdSt, fontWeight: 600 }}>{e.item.name}</td>
                       <td style={{ ...tdSt, textAlign: 'center', color: '#64748b' }}>{e.item.qty}</td>
                       <td style={{ ...tdSt, textAlign: 'center', fontWeight: 800, color: '#d97706' }}>{e.counted}</td>
-                      <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: diff > 0 ? '#16a34a' : diff < 0 ? '#ef4444' : '#94a3b8' }}>
+                      <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: diff > 0 ? 'var(--success)' : diff < 0 ? '#ef4444' : '#94a3b8' }}>
                         {diff > 0 ? `+${diff}` : diff === 0 ? '—' : diff}
                       </td>
                     </tr>
@@ -525,7 +525,7 @@ export default function ScanClient() {
           <div className="flex items-center gap-2 mb-3">{BADGE(foundItem.type)}<span className="text-green-600 font-bold text-sm">✓ נמצא</span></div>
           <p className="font-black text-slate-800 text-xl mb-1">{foundItem.name}</p>
           {foundItem.sku && <p className="text-slate-400 text-sm mb-1">מק״ט: {foundItem.sku}</p>}
-          <p className="text-slate-500 text-sm mb-1">כמות: <span style={{ fontWeight: 700, color: foundItem.qty === 0 ? '#ef4444' : '#16a34a' }}>{foundItem.qty}</span></p>
+          <p className="text-slate-500 text-sm mb-1">כמות: <span style={{ fontWeight: 700, color: foundItem.qty === 0 ? '#ef4444' : 'var(--success)' }}>{foundItem.qty}</span></p>
           <div className="flex gap-4 mb-5">
             <p className="text-slate-500 text-sm">מחיר קנייה: <span style={{ fontWeight: 700, color: '#1e293b' }}>{foundItem.cost_price != null ? `₪${foundItem.cost_price}` : '—'}</span></p>
             <p className="text-slate-500 text-sm">מחיר מכירה: <span style={{ fontWeight: 700, color: '#1e293b' }}>{foundItem.sell_price != null ? `₪${foundItem.sell_price}` : '—'}</span></p>
@@ -634,8 +634,8 @@ export default function ScanClient() {
                       <button key={c} type="button" onClick={() => ntf('condition', c)} style={{
                         flex: 1, padding: '8px', border: `2px solid ${newTireForm.condition === c ? (c === 'used' ? '#f59e0b' : '#16a34a') : '#e2e8f0'}`,
                         borderRadius: '8px', cursor: 'pointer', fontWeight: newTireForm.condition === c ? 700 : 400, fontSize: '13px',
-                        background: newTireForm.condition === c ? (c === 'used' ? '#fef3c7' : '#f0fdf4') : '#fff',
-                        color: newTireForm.condition === c ? (c === 'used' ? '#92400e' : '#16a34a') : '#64748b',
+                        background: newTireForm.condition === c ? (c === 'used' ? '#fef3c7' : 'var(--success-soft)') : '#fff',
+                        color: newTireForm.condition === c ? (c === 'used' ? '#92400e' : 'var(--success)') : '#64748b',
                       }}>
                         {c === 'new' ? '✓ חדש' : '♻ משומש'}
                       </button>
@@ -722,8 +722,8 @@ export default function ScanClient() {
                   <button key={c} type="button" onClick={() => setEF('condition', c)} style={{
                     flex: 1, padding: '8px', border: `2px solid ${editForm.condition === c ? (c === 'used' ? '#f59e0b' : '#16a34a') : '#e2e8f0'}`,
                     borderRadius: '8px', cursor: 'pointer', fontWeight: editForm.condition === c ? 700 : 400, fontSize: '13px',
-                    background: editForm.condition === c ? (c === 'used' ? '#fef3c7' : '#f0fdf4') : '#fff',
-                    color: editForm.condition === c ? (c === 'used' ? '#92400e' : '#16a34a') : '#64748b',
+                    background: editForm.condition === c ? (c === 'used' ? '#fef3c7' : 'var(--success-soft)') : '#fff',
+                    color: editForm.condition === c ? (c === 'used' ? '#92400e' : 'var(--success)') : '#64748b',
                   }}>
                     {c === 'new' ? '✓ חדש' : '♻ משומש'}
                   </button>

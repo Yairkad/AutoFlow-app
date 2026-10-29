@@ -275,7 +275,7 @@ export default function SupplierDetailsTab({
                           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{openCnt} חובות</div>
                         </div>
                       ) : (
-                        <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, flexShrink: 0 }}>✓ נקי</span>
+                        <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 600, flexShrink: 0 }}>✓ נקי</span>
                       )}
 
                       {/* Actions area */}
@@ -290,7 +290,7 @@ export default function SupplierDetailsTab({
                             target="_blank"
                             rel="noopener noreferrer"
                             title="שלח הודעה בווצאפ"
-                            style={{ padding: '5px 9px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '7px', fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}
+                            style={{ padding: '5px 9px', background: 'var(--success-soft)', color: 'var(--success)', border: '1px solid #bbf7d0', borderRadius: '7px', fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}
                           >
                             💬
                           </a>
@@ -346,7 +346,7 @@ export default function SupplierDetailsTab({
                   href={waUrl(selected.phone, `שלום ${selected.name}, `)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ padding: '8px 14px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ padding: '8px 14px', background: 'var(--success-soft)', color: 'var(--success)', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   💬 ווצאפ
                 </a>
@@ -472,7 +472,7 @@ export default function SupplierDetailsTab({
                               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{d.date}</div>
                             </div>
                             <div style={{ textAlign: 'left', flexShrink: 0 }}>
-                              <div style={{ fontWeight: 700, color: d.is_closed ? '#16a34a' : 'var(--danger)' }}>
+                              <div style={{ fontWeight: 700, color: d.is_closed ? 'var(--success)' : 'var(--danger)' }}>
                                 {d.is_closed ? '✓ שולם' : `יתרה: ${fmt(bal(d))}`}
                               </div>
                               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -601,7 +601,7 @@ export default function SupplierDetailsTab({
                               <div
                                 key={b.code + b.name}
                                 onMouseDown={e => { e.preventDefault(); setFBankName(b.name); setShowBankDrop(false) }}
-                                style={{ padding: '9px 12px', cursor: 'pointer', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: fBankName === b.name ? '#f0fdf4' : undefined }}
+                                style={{ padding: '9px 12px', cursor: 'pointer', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: fBankName === b.name ? 'var(--success-soft)' : undefined }}
                               >
                                 <span>{b.name}</span>
                                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>{b.code}</span>

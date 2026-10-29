@@ -88,7 +88,7 @@ export default function UiDemo() {
         <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '14px', color: 'var(--text-muted)' }}>Toast</h2>
         <div style={{ display: 'flex', gap: '10px' }}>
           {[
-            { label: '✅ הצלחה', msg: 'נשמר בהצלחה!', type: 'success' as const, bg: '#16a34a' },
+            { label: '✅ הצלחה', msg: 'נשמר בהצלחה!', type: 'success' as const, bg: 'var(--success)' },
             { label: '❌ שגיאה', msg: 'אירעה שגיאה', type: 'error' as const, bg: '#dc2626' },
             { label: 'ℹ️ מידע', msg: 'נא לשים לב', type: 'info' as const, bg: '#2563eb' },
           ].map(t => (

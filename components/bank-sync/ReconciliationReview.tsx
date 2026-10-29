@@ -185,7 +185,7 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
             <button key={f} onClick={() => setFStatus(f)} style={{
               padding: '7px 14px', border: '1px solid', borderRadius: '20px', fontSize: '12px', cursor: 'pointer',
               borderColor: fStatus === f ? 'var(--primary)' : 'var(--border)',
-              background: fStatus === f ? '#f0fdf6' : 'transparent',
+              background: fStatus === f ? 'var(--success-soft)' : 'transparent',
               color: fStatus === f ? 'var(--primary)' : 'var(--text-muted)',
               fontWeight: fStatus === f ? 600 : 400,
             }}>{f === 'unmatched' ? 'ללא התאמה' : 'הצג הכל'}</button>
@@ -200,7 +200,7 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
       <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', fontSize: '13px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 16px' }}>
         <span>סה״כ <b>{counts.total}</b></span>
         <span style={{ color: 'var(--warning)' }}>ללא התאמה <b>{counts.unmatched}</b></span>
-        <span style={{ color: '#16a34a' }}>הותאמו <b>{counts.matched}</b></span>
+        <span style={{ color: 'var(--success)' }}>הותאמו <b>{counts.matched}</b></span>
         <span style={{ color: '#2563eb' }}>נוצרו <b>{counts.created}</b></span>
         <span style={{ color: 'var(--text-muted)' }}>הותעלמו <b>{counts.ignored}</b></span>
       </div>
@@ -219,7 +219,7 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
             return (
               <div key={line.id} style={{ padding: '10px 14px', borderTop: i > 0 ? '1px solid #f1f5f9' : 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, background: line.direction === 'debit' ? '#fee2e2' : '#dcfce7', color: line.direction === 'debit' ? '#dc2626' : '#16a34a' }}>
+                  <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, background: line.direction === 'debit' ? '#fee2e2' : 'var(--success-soft)', color: line.direction === 'debit' ? '#dc2626' : 'var(--success)' }}>
                     {line.direction === 'debit' ? 'חובה' : 'זכות'}
                   </span>
                   <span style={{ fontSize: '13px', flex: 1 }}>{line.description}</span>
@@ -238,7 +238,7 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
                 {line.status === 'unmatched' && (
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                     {candidates.length === 1 && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '6px 10px', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--success-soft)', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '6px 10px', fontSize: '12px' }}>
                         <span>הצעה: {fmtDMY(candidates[0].date)} · {candidates[0].category} · {candidates[0].description}</span>
                         <Button size="sm" onClick={() => doConfirm(line, candidates[0])} loading={busyLine === line.id}>✓ אשר</Button>
                       </div>
