@@ -2,7 +2,8 @@
 
 export type IntakeStatus = 'link_sent' | 'submitted' | 'arrived'
 
-export type IntakeFileKind = 'buyer_id' | 'seller_id' | 'car_license'
+// office_doc = scanned / uploaded in the office (not part of the customer's link form)
+export type IntakeFileKind = 'buyer_id' | 'seller_id' | 'car_license' | 'office_doc'
 
 export interface IntakeFile {
   kind: IntakeFileKind
@@ -24,7 +25,7 @@ export const INTAKE_FILE_KINDS: { kind: IntakeFileKind; label: string; hint: str
 ]
 
 export const intakeFileLabel = (kind: IntakeFileKind) =>
-  INTAKE_FILE_KINDS.find(k => k.kind === kind)?.office ?? kind
+  kind === 'office_doc' ? 'מסמך לקוח' : INTAKE_FILE_KINDS.find(k => k.kind === kind)?.office ?? kind
 
 /** Optional data the customer didn't provide — must be completed when they arrive. */
 export function intakeMissing(row: {

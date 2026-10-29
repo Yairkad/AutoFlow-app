@@ -961,7 +961,7 @@ export default function InspectionsClient() {
                       <RowActionsMenu actions={[
                         { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openEdit(ins) },
                         { key: 'print', label: 'הדפס', icon: '🖨️', onClick: () => handlePrint(ins) },
-                        ...(ins.intake_files?.length ? [{ key: 'docs', label: 'מסמכי לקוח', icon: '📎', onClick: () => setFilesIns(ins) }] : []),
+                        { key: 'docs', label: `מסמכי לקוח${ins.intake_files?.length ? ` (${ins.intake_files.length})` : ''} / סריקה`, icon: '📎', onClick: () => setFilesIns(ins) },
                         { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => handleDelete(ins.id) },
                       ]} />
                     </div>
@@ -1086,7 +1086,8 @@ export default function InspectionsClient() {
       )}
 
       {filesIns && (
-        <IntakeFilesModal inspectionId={filesIns.id} title={filesIns.owner_name || filesIns.plate} onClose={() => setFilesIns(null)} />
+        <IntakeFilesModal inspectionId={filesIns.id} title={filesIns.owner_name || filesIns.plate} onClose={() => setFilesIns(null)}
+          onChanged={() => loadInspections()} />
       )}
 
       {/* ── Edit Modal ── */}
@@ -1122,11 +1123,11 @@ export default function InspectionsClient() {
               <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>
                 {editingInspection && isPendingIntake(editingInspection) ? 'קליטת לקוח מטופס' : 'עריכת בדיקה'}
               </span>
-              {!!editingInspection?.intake_files?.length && (
+              {editingInspection?.id && (
                 <button onClick={() => setFilesIns(editingInspection)} style={{
                   marginInlineStart: 'auto', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700,
                   border: '1px solid var(--border)', background: 'var(--bg)', cursor: 'pointer', fontFamily: 'inherit',
-                }}>📎 מסמכים ({editingInspection.intake_files.length})</button>
+                }}>📎 מסמכי לקוח{editingInspection.intake_files?.length ? ` (${editingInspection.intake_files.length})` : ''}</button>
               )}
             </div>
 
