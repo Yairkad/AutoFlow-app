@@ -72,6 +72,9 @@ function monthLabel(ym: string) {
   return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })
 }
 
+function fmtDay(iso: string) {
+  const [y, m, d] = iso.split('-'); return `${d}/${m}/${y.slice(2)}`
+}
 function fmt(n: number) {
   return '₪' + Number(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
@@ -230,6 +233,11 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   const [search,    setSearch]    = useState('')
   const [filterCat, setFilterCat] = useState('')
   const [filterSup, setFilterSup] = useState('')
+  // Amount (±1₪) and date range; a date range replaces the month view so it can span months
+  const [filterAmt,  setFilterAmt]  = useState('')
+  const [filterFrom, setFilterFrom] = useState('')
+  const [filterTo,   setFilterTo]   = useState('')
+  const rangeActive = !!(filterFrom || filterTo)
 
   // Summary tab
   const [sumPreset,      setSumPreset]      = useState<SumPreset>('6m')
@@ -368,9 +376,9 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     const tenantId = await resolveTenant()
 
     const [y, m] = month.split('-')
-    const from    = `${y}-${m}-01`
     const lastDay = new Date(Number(y), Number(m), 0).getDate()
-    const to      = `${y}-${m}-${String(lastDay).padStart(2, '0')}`
+    const from    = rangeActive ? (filterFrom || '2000-01-01') : `${y}-${m}-01`
+    const to      = rangeActive ? (filterTo || '2999-12-31') : `${y}-${m}-${String(lastDay).padStart(2, '0')}`
 
     const [expRes, incRes, supRes, recRes] = await Promise.all([
       supabase.from('expenses').select('*').gte('date', from).lte('date', to).order('date', { ascending: false }),
@@ -397,7 +405,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         setExpenses(fresh.data ?? [])
       }
     }
-  }, [month, profile]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [month, profile, filterFrom, filterTo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -706,6 +714,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     }
     if (filterCat && row.category !== filterCat) return false
     if (filterSup && tab === 'expenses' && (row as Expense).supplier_id !== filterSup) return false
+    if (filterAmt && Math.abs(Number(row.amount) - Number(filterAmt)) > 1) return false
     return true
   })
 
@@ -864,7 +873,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         actions={tab !== 'summary' ? <>
           <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: '#f1f5f9', borderRadius: '10px', padding: '4px 6px' }}>
             <button onClick={() => shiftMonth(1)}  style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '2px 6px', lineHeight: 1 }}>›</button>
-            <span style={{ fontSize: '14px', fontWeight: 600, minWidth: '130px', textAlign: 'center' }}>{monthLabel(month)}</span>
+            <span style={{ fontSize: '14px', fontWeight: 600, minWidth: '130px', textAlign: 'center' }}>{rangeActive ? 'טווח מסונן' : monthLabel(month)}</span>
             <button onClick={() => shiftMonth(-1)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '2px 6px', lineHeight: 1 }}>‹</button>
           </div>
           <Button onClick={openAdd}>+ הוסף {tab === 'expenses' ? 'הוצאה' : 'הכנסה'}</Button>
@@ -928,8 +937,10 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           chips={[
             ...(filterCat ? [{ key: 'c', label: filterCat, onRemove: () => setFilterCat('') }] : []),
             ...(filterSup ? [{ key: 's', label: suppliers.find(x => x.id === filterSup)?.name ?? 'ספק', onRemove: () => setFilterSup('') }] : []),
+            ...(filterAmt ? [{ key: 'a', label: `סכום ${Number(filterAmt).toLocaleString()}₪`, onRemove: () => setFilterAmt('') }] : []),
+            ...(rangeActive ? [{ key: 'd', label: `${filterFrom ? fmtDay(filterFrom) : '…'} – ${filterTo ? fmtDay(filterTo) : '…'}`, onRemove: () => { setFilterFrom(''); setFilterTo('') } }] : []),
           ]}
-          onClearAll={() => { setSearch(''); setFilterCat(''); setFilterSup('') }}>
+          onClearAll={() => { setSearch(''); setFilterCat(''); setFilterSup(''); setFilterAmt(''); setFilterFrom(''); setFilterTo('') }}>
           <select value={filterCat} onChange={e => setFilterCat(e.target.value)} aria-label="קטגוריה" className="form-input" style={{ minWidth: '130px', width: 'auto', margin: 0 }}>
             <option value="">כל הקטגוריות</option>
             {cats.map(c => <option key={c} value={c}>{c}</option>)}
@@ -940,6 +951,16 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           )}
+          <input type="number" inputMode="decimal" min="0" value={filterAmt} onChange={e => setFilterAmt(e.target.value)}
+            aria-label="סכום" placeholder="סכום ₪" className="form-input" style={{ width: '110px', margin: 0 }} />
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
+            מתאריך
+            <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} className="form-input" style={{ width: 'auto', margin: 0 }} />
+          </label>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
+            עד
+            <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} className="form-input" style={{ width: 'auto', margin: 0 }} />
+          </label>
           <div role="group" aria-label="תצוגה" style={{ display: 'flex', gap: '2px', padding: '3px', background: '#f1f5f9', borderRadius: '9px' }}>
             {([
               [true,  '📁 מקובץ'],

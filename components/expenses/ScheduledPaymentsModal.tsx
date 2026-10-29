@@ -292,10 +292,19 @@ export default function ScheduledPaymentsModal({
     setFormOpen(true)
   }
 
+  // Opened straight into the form (checks journal, supplier tracking) → cancelling the form closes
+  // everything instead of falling back to the list behind it.
+  const directOpen = useRef(false)
+  const closeForm = () => {
+    setFormOpen(false); setSeriesPreview(null)
+    if (directOpen.current) onClose()
+  }
+
   // Auto-open the add form (pre-filled to the given supplier) or the edit form for a
   // specific row when opened this way (e.g. from the checks journal page or supplier-tracking).
   useEffect(() => {
     if (!open) return
+    directOpen.current = !!(initialEditItem || initialSupplierId || initialOpenAdd)
     if (initialEditItem) { openEdit(initialEditItem); return }
     if (initialSupplierId || initialOpenAdd) {
       pendingInitialAllocRef.current = initialSupplierId && initialSelectedDebtIds && initialSelectedDebtIds.length > 0
@@ -757,7 +766,7 @@ export default function ScheduledPaymentsModal({
       <Modal
         open={open && !formOpen && !payOpen}
         onClose={onClose}
-        title="📅 תשלומים מתוזמנים"
+        title="📅 צ׳קים ותשלומים עתידיים"
         maxWidth={780}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -909,8 +918,8 @@ export default function ScheduledPaymentsModal({
       {/* ── Add / Edit form modal ─────────────────────────────────────────────── */}
       <Modal
         open={formOpen}
-        onClose={() => { setFormOpen(false); setSeriesPreview(null) }}
-        title={seriesPreview ? 'סיכום סדרת צ׳קים' : editItem ? 'עריכת תשלום מתוזמן' : fSeriesMode ? 'סדרת צ׳קים חדשה' : 'תשלום מתוזמן חדש'}
+        onClose={closeForm}
+        title={seriesPreview ? 'סיכום סדרת צ׳קים' : editItem ? 'עריכת צ׳ק / תשלום' : fSeriesMode ? 'סדרת צ׳קים חדשה' : 'צ׳ק / תשלום חדש'}
         maxWidth={520}
         footer={
           seriesPreview ? (
@@ -920,7 +929,7 @@ export default function ScheduledPaymentsModal({
             </>
           ) : (
             <>
-              <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
+              <Button variant="secondary" onClick={closeForm}>ביטול</Button>
               <Button onClick={save} loading={saving}>שמור</Button>
             </>
           )
