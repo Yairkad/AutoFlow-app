@@ -148,6 +148,21 @@ export default function DebtsClient() {
   // Reset filter on tab change
   useEffect(() => { setFilter('open'); setSearch('') }, [tab])
 
+  // Deep link from a dashboard alert: /debts?focus=<id> → scroll to that row and highlight it
+  const [focusId, setFocusId] = useState<string | null>(null)
+  useEffect(() => {
+    if (loading) return
+    const id = new URLSearchParams(window.location.search).get('focus')
+    if (!id) return
+    const t = setTimeout(() => {
+      setFocusId(id)
+      document.getElementById(`debt-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      window.history.replaceState(null, '', window.location.pathname)
+    }, 50)
+    const clear = setTimeout(() => setFocusId(null), 4000)
+    return () => { clearTimeout(t); clearTimeout(clear) }
+  }, [loading])
+
   // ── Realtime ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -415,10 +430,12 @@ export default function DebtsClient() {
                     return (
                       <tr
                         key={d.id}
+                        id={`debt-${d.id}`}
                         onClick={() => setHistoryDebtId(d.id)}
                         style={{
                           borderBottom: '1px solid var(--border)',
-                          background: d.is_closed ? '#fafafa' : i % 2 === 0 ? '#fff' : '#fdfefe',
+                          transition: 'background .4s',
+                          background: focusId === d.id ? 'color-mix(in srgb, var(--highlight) 22%, #fff)' : d.is_closed ? '#fafafa' : i % 2 === 0 ? '#fff' : '#fdfefe',
                           opacity: d.is_closed ? 0.65 : 1,
                           cursor: 'pointer',
                         }}
