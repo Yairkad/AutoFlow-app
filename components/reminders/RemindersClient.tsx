@@ -12,7 +12,6 @@ import FilterBar from '@/components/ui/FilterBar'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 import { fuzzyIncludes } from '@/lib/search/fuzzy'
-import ContractPaymentsPanel from '@/components/cars/ContractPaymentsPanel'
 
 // One list of tasks (the old "reminders" and "tasks" merged, 2026-10). Every task has a status —
 // פתוח / בטיפול / בוצע — and stays in the list with that tag; progress is logged as updates.
@@ -182,8 +181,6 @@ export default function RemindersClient() {
         actions={<Button onClick={openAdd}>+ משימה חדשה</Button>}
       />
 
-      <ContractPaymentsPanel />
-
       <FilterBar storageKey="tasks" search={search} onSearch={setSearch} placeholder="חיפוש משימה, הערה, טלפון..."
         chips={[
           ...(due ? [{ key: 'd', label: dueLabel[due], onRemove: () => setDue('') }] : []),
@@ -222,17 +219,19 @@ export default function RemindersClient() {
           {shown.map(t => {
             const st = statusOf(t), ups = updatesOf(t.id), open = openId === t.id
             const overdue = t.due_date && t.due_date < today && st !== 'closed'
+            // Urgent / overdue: the whole card in soft red, like late payments (no dot)
+            const hot = st !== 'closed' && (t.priority === 'high' || !!overdue)
             return (
-              <article key={t.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+              <article key={t.id} style={{ background: hot ? 'var(--danger-soft)' : 'var(--bg-card)', border: `1px solid ${hot ? 'color-mix(in srgb, var(--danger) 25%, transparent)' : 'var(--border)'}`, borderRadius: 'var(--radius)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
                   <input type="checkbox" checked={st === 'closed'} aria-label={st === 'closed' ? 'סמן כלא בוצע' : 'סמן כבוצע'}
                     onChange={() => setStatus(t, st === 'closed' ? 'open' : 'closed')}
                     style={{ width: 18, height: 18, accentColor: 'var(--success)', flexShrink: 0, cursor: 'pointer' }} />
                   <button type="button" onClick={() => setOpenId(open ? null : t.id)} aria-expanded={open}
                     style={{ flex: 1, minWidth: 0, textAlign: 'right', background: 'none', border: 0, padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'inherit' }}>
-                    <div style={{ fontWeight: 600, fontSize: 14.5, textDecoration: st === 'closed' ? 'line-through' : 'none', color: st === 'closed' ? 'var(--text-muted)' : 'var(--text)' }}>
-                      {t.priority === 'high' && st !== 'closed' && <span style={{ color: 'var(--danger)', marginInlineEnd: 6 }}>●</span>}
+                    <div style={{ fontWeight: 600, fontSize: 14.5, textDecoration: st === 'closed' ? 'line-through' : 'none', color: st === 'closed' ? 'var(--text-muted)' : hot ? 'var(--danger)' : 'var(--text)' }}>
                       {t.title}
+                      {t.priority === 'high' && st !== 'closed' && <span style={{ color: 'var(--danger)', fontSize: 11.5, fontWeight: 700, marginInlineStart: 8 }}>דחוף</span>}
                     </div>
                     <div style={{ fontSize: 12.5, color: overdue ? 'var(--danger)' : 'var(--text-muted)', display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 2 }}>
                       {t.due_date && <span>יעד {fmtDate(t.due_date)}{t.due_time ? ` ${t.due_time}` : ''}{overdue ? ' · באיחור' : ''}</span>}

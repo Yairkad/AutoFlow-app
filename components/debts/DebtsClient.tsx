@@ -14,6 +14,7 @@ import PaymentHistoryModal, { CustomerDebtPayment } from './PaymentHistoryModal'
 import { insertCustomerDebtPayment } from '@/lib/debts/customerDebtPayments'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
+import ContractPaymentsPanel from '@/components/cars/ContractPaymentsPanel'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ interface CustomerDebt {
   date: string; due_date: string | null; is_closed: boolean; created_at: string
 }
 
-type Tab    = 'customers' | 'transfers'
+type Tab    = 'customers' | 'transfers' | 'cars'
 type Filter = 'open' | 'closed' | 'all'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -148,11 +149,18 @@ export default function DebtsClient() {
   // Reset filter on tab change
   useEffect(() => { setFilter('open'); setSearch('') }, [tab])
 
-  // Deep link from a dashboard alert: /debts?focus=<id> → scroll to that row and highlight it
-  const [focusId, setFocusId] = useState<string | null>(null)
+  // Deep link from a dashboard alert: /debts?focus=<id> → scroll to that row and highlight it;
+  // /debts?tab=cars&focus=<contractId> → car-sales tab with that contract's payments opened
+  const [focusId, setFocusId]   = useState<string | null>(null)
+  const [carFocus, setCarFocus] = useState<string | null>(null)
   useEffect(() => {
     if (loading) return
-    const id = new URLSearchParams(window.location.search).get('focus')
+    const q  = new URLSearchParams(window.location.search)
+    const id = q.get('focus')
+    if (q.get('tab') === 'cars') {
+      const t = setTimeout(() => { setTab('cars'); setCarFocus(id); window.history.replaceState(null, '', window.location.pathname) }, 0)
+      return () => clearTimeout(t)
+    }
     if (!id) return
     const t = setTimeout(() => {
       setFocusId(id)
@@ -403,6 +411,7 @@ export default function DebtsClient() {
         <div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
           <TabBtn t="customers" label="💳 לקוחות מזדמנים" count={customerDebts.filter(d => !d.is_closed).length} />
           <TabBtn t="transfers" label="🏦 העברות לאימות" count={pendingTransfers.length} />
+          <TabBtn t="cars" label="🚗 תשלומי מכירות רכב" />
         </div>
       </div>
 
@@ -477,6 +486,9 @@ export default function DebtsClient() {
           )}
         </div>
       )}
+
+      {/* ── CAR SALES TAB — buyers' payments on signed sale contracts ── */}
+      {tab === 'cars' && <ContractPaymentsPanel focusContractId={carFocus} />}
 
       {/* ── TRANSFERS TAB — bank-transfer payments pending verification ── */}
       {tab === 'transfers' && (

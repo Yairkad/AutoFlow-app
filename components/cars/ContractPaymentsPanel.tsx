@@ -13,7 +13,7 @@ import {
   type ExpectedPayment, type Receipt, type ReceiptStatus,
 } from '@/lib/cars/contractPayments'
 
-// Reminders page: money buyers still owe on signed car sale contracts (cash / transfer lines + checks).
+// Debts page, "car sales" tab: money buyers still owe on signed car sale contracts (cash / transfer lines + checks).
 // Each one is confirmed by hand — "at signing" lines too; a check only once it cleared, or swapped for cash.
 
 const SOON_DAYS = 30
@@ -28,7 +28,7 @@ function dueLabel(p: ExpectedPayment) {
   return `${fmtDate(p.due)} · עוד ${days} ימים`
 }
 
-export default function ContractPaymentsPanel() {
+export default function ContractPaymentsPanel({ focusContractId }: { focusContractId?: string | null } = {}) {
   const { profile } = useProfile()
   const { showToast } = useToast()
   const sb = useRef(createClient()).current
@@ -74,7 +74,8 @@ export default function ContractPaymentsPanel() {
     load()
   }
 
-  if (!loaded || (!missing && items.length === 0)) return null
+  if (!loaded) return <div style={{ padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>טוען...</div>
+  if (!missing && items.length === 0) return <div style={{ padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>אין תשלומים צפויים מחוזי רכב</div>
   if (missing) return (
     <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 10, padding: 12, fontSize: 13, marginBottom: 20 }}>
       כדי לעקוב אחרי תשלומים מחוזי רכב יש להריץ את מיגרציה 103 (car_contract_receipts) ב-Supabase.
@@ -86,7 +87,7 @@ export default function ContractPaymentsPanel() {
   const row = (p: ExpectedPayment, tone: 'late' | 'soon' | 'later' | 'done') => (
     <div key={p.contractId + p.key} style={{
       display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderBottom: '1px solid var(--border)',
-      background: tone === 'late' ? '#fef2f2' : undefined,
+      background: p.contractId === focusContractId ? 'color-mix(in srgb, var(--highlight) 22%, #fff)' : tone === 'late' ? '#fef2f2' : undefined,
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>
@@ -108,17 +109,17 @@ export default function ContractPaymentsPanel() {
     </div>
   )
 
-  const section = (title: string, color: string, list: ExpectedPayment[], tone: 'late' | 'soon' | 'later' | 'done', collapsed = false) => {
+  // Every section starts collapsed (one line: count + total); the one holding a deep-linked contract opens
+  const section = (title: string, color: string, list: ExpectedPayment[], tone: 'late' | 'soon' | 'later' | 'done') => {
     if (!list.length) return null
     const head = <><span>{title} ({list.length})</span><span style={{ marginRight: 'auto', fontWeight: 800 }}>₪{total(list)}</span></>
-    const headStyle: React.CSSProperties = { display: 'flex', gap: 8, padding: '10px 12px', fontWeight: 700, fontSize: 14, color, background: `color-mix(in srgb, ${color} 7%, transparent)`, cursor: collapsed ? 'pointer' : undefined }
-    return collapsed
-      ? <details style={{ border: `1px solid color-mix(in srgb, ${color} 33%, transparent)`, borderRadius: 10, overflow: 'hidden' }}>
-          <summary style={headStyle}>{head}</summary>{list.map(p => row(p, tone))}
-        </details>
-      : <div style={{ border: `1px solid color-mix(in srgb, ${color} 33%, transparent)`, borderRadius: 10, overflow: 'hidden' }}>
-          <div style={headStyle}>{head}</div>{list.map(p => row(p, tone))}
-        </div>
+    const headStyle: React.CSSProperties = { display: 'flex', gap: 8, padding: '10px 12px', fontWeight: 700, fontSize: 14, color, background: `color-mix(in srgb, ${color} 7%, transparent)`, cursor: 'pointer' }
+    const focused = !!focusContractId && list.some(p => p.contractId === focusContractId)
+    return (
+      <details key={`${tone}-${focused}`} open={focused || undefined} style={{ border: `1px solid color-mix(in srgb, ${color} 33%, transparent)`, borderRadius: 10, overflow: 'hidden' }}>
+        <summary style={headStyle}>{head}</summary>{list.map(p => row(p, tone))}
+      </details>
+    )
   }
 
   const options: { status: ReceiptStatus; how?: 'cash' | 'transfer'; label: string }[] = mark?.kind === 'check'
@@ -139,8 +140,8 @@ export default function ContractPaymentsPanel() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {section('⚠ באיחור / להיום', '#dc2626', groups.late, 'late')}
         {section(`📅 ב-${SOON_DAYS} הימים הקרובים`, '#d97706', groups.soon, 'soon')}
-        {section('🗓 בהמשך', '#2563eb', groups.later, 'later', true)}
-        {section('✓ התקבלו', 'var(--success)', groups.done, 'done', true)}
+        {section('🗓 בהמשך', '#2563eb', groups.later, 'later')}
+        {section('✓ התקבלו', 'var(--success)', groups.done, 'done')}
         {!groups.late.length && !groups.soon.length && !groups.later.length && (
           <div style={{ fontSize: 13, color: 'var(--success)' }}>✓ אין תשלומים פתוחים</div>
         )}
