@@ -19,7 +19,7 @@ const NAV_ITEMS = [
   { href: '/products',    label: 'מוצרים',                  color: '#f97316,#fb923c', module: ['products', 'products_view'] },
   { href: '/tires',       label: 'צמיגים',                  color: '#6b7280,#9ca3af', module: ['tires', 'tires_view'] },
   { href: '/scan',        label: 'סריקת ברקוד',             color: '#0f172a,#334155', module: ['products', 'tires'] },
-  { href: '/stock-count', label: 'ספירת מלאי',              color: '#334155,#64748b', module: ['products', 'tires'] },
+  { href: '/stock-count', label: 'מלאי',                    color: '#334155,#64748b', module: ['products', 'tires'] },
   { href: '/yard-tracking', label: 'מעקב רחבה',             color: '#475569,#94a3b8', module: 'yard_tracking' },
   { href: '/cars',        label: 'רכבים',                   color: '#10b981,#34d399', module: 'cars' },
   { href: '/suppliers',   label: 'ספקים',                   color: '#64748b,#94a3b8', module: 'suppliers' },

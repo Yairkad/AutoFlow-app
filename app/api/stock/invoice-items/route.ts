@@ -91,9 +91,11 @@ export async function POST(req: NextRequest) {
     }).eq('id', refId).eq('tenant_id', tenantId)
     if (upErr) { console.error('[invoice-items] stock', upErr.message); failed++; continue }
 
-    const mv = it.item_type === 'tire'
-      ? await sb.from('tire_sales').insert({ tenant_id: tenantId, tire_id: refId, qty: it.qty, movement_type: 'order', sold_date: debt.date }).select('id').single()
-      : await sb.from('product_sales').insert({ tenant_id: tenantId, product_id: refId, qty: it.qty, movement_type: 'order', sold_date: debt.date }).select('id').single()
+    const [mvTable, mvCol] = it.item_type === 'tire' ? ['tire_sales', 'tire_id'] : ['product_sales', 'product_id']
+    const mvRow = { tenant_id: tenantId, [mvCol]: refId, qty: it.qty, movement_type: 'order', sold_date: debt.date }
+    let mv = await sb.from(mvTable).insert({ ...mvRow, source: 'invoice' }).select('id').single()
+    // Before migration 109 there is no source column — record the arrival without it
+    if (mv.error && /source|column/i.test(mv.error.message)) mv = await sb.from(mvTable).insert(mvRow).select('id').single()
     if (mv.error) console.error('[invoice-items] movement', mv.error.message)
 
     const { error: insErr } = await sb.from('supplier_invoice_items').insert({

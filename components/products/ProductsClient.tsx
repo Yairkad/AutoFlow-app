@@ -68,7 +68,6 @@ function fmtPrice(n: number | null) {
   if (!n) return '—'
   return '₪' + n.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
-function todayISO() { return new Date().toISOString().slice(0, 10) }
 function thisMonthStart() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
@@ -91,7 +90,8 @@ export default function ProductsClient() {
   const [movements, setMovements] = useState<Movement[]>([])
 
   // Tabs
-  const [tab, setTab] = useState<'products' | 'movements'>('products')
+  // Stock movements live on the stock screen (/stock-count) now
+  const tab = 'products' as const
 
   // Filters
   const [search, setSearch] = useState('')
@@ -107,17 +107,7 @@ export default function ProductsClient() {
   const [editingProductId,  setEditingProductId]  = useState<string | null>(null)
   const [editMap, setEditMap] = useState<Record<string, Partial<Product>>>({})
 
-  // Movement form
-  const [mvProductId, setMvProductId] = useState('')
-  const [mvProductSearch, setMvProductSearch] = useState('')
-  const [mvDropOpen, setMvDropOpen] = useState(false)
-  const [mvType, setMvType] = useState<'sale' | 'order'>('sale')
-  const [mvQty, setMvQty] = useState('')
-  const [mvDate, setMvDate] = useState(todayISO())
-  const [mvSaving, setMvSaving] = useState(false)
-
   const [isLoading,    setIsLoading]    = useState(true)
-  const [deletingMvId, setDeletingMvId] = useState<string | null>(null)
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -323,63 +313,6 @@ export default function ProductsClient() {
 
   // ── Stock movement ──────────────────────────────────────────────────────────
 
-  async function saveMovement() {
-    if (!mvProductId) return showToast('יש לבחור מוצר', 'error')
-    const qty = parseFloat(mvQty)
-    if (!qty || qty <= 0) return showToast('יש להזין כמות', 'error')
-
-    const prod = products.find(p => p.id === mvProductId)
-    if (!prod) return
-
-    const newQty = mvType === 'order' ? prod.qty + qty : Math.max(0, prod.qty - qty)
-    const tempId = `temp-${Date.now()}`
-    const optimisticMv: Movement = { id: tempId, product_id: mvProductId, qty, sold_date: mvDate, movement_type: mvType }
-
-    setProducts(prev => prev.map(p => p.id === mvProductId ? { ...p, qty: newQty } : p))
-    setMovements(prev => [optimisticMv, ...prev])
-    setMvQty(''); setMvProductId(''); setMvProductSearch('')
-
-    setMvSaving(true)
-    const [{ error: mvErr }, { error: qtyErr }] = await Promise.all([
-      sb.from('product_sales').insert({ tenant_id: tenantId.current, product_id: mvProductId, qty, sold_date: mvDate, movement_type: mvType }),
-      sb.from('products').update({ qty: newQty }).eq('id', mvProductId),
-    ])
-    setMvSaving(false)
-
-    if (mvErr || qtyErr) {
-      setProducts(prev => prev.map(p => p.id === mvProductId ? { ...p, qty: prod.qty } : p))
-      setMovements(prev => prev.filter(m => m.id !== tempId))
-      showToast('שגיאה בשמירה', 'error')
-    } else {
-      showToast(mvType === 'sale' ? `נרשמה מכירה של ${qty} יח׳ ✓` : `נרשמה הזמנה של ${qty} יח׳ ✓`, 'success')
-      load()
-    }
-  }
-
-  async function deleteMovement(mv: Movement) {
-    const prod = products.find(p => p.id === mv.product_id)
-    if (!prod) return
-    const revertedQty = mv.movement_type === 'order' ? Math.max(0, prod.qty - mv.qty) : prod.qty + mv.qty
-
-    setDeletingMvId(mv.id)
-    setMovements(prev => prev.filter(m => m.id !== mv.id))
-    setProducts(prev => prev.map(p => p.id === mv.product_id ? { ...p, qty: revertedQty } : p))
-
-    const [{ error: e1 }, { error: e2 }] = await Promise.all([
-      sb.from('product_sales').delete().eq('id', mv.id),
-      sb.from('products').update({ qty: revertedQty }).eq('id', mv.product_id),
-    ])
-    setDeletingMvId(null)
-
-    if (e1 || e2) {
-      setMovements(prev => [mv, ...prev])
-      setProducts(prev => prev.map(p => p.id === mv.product_id ? { ...p, qty: prod.qty } : p))
-      showToast('שגיאה במחיקה', 'error')
-    } else {
-      showToast('נמחק ✓', 'success')
-    }
-  }
-
   // ── Excel ────────────────────────────────────────────────────────────────────
 
   function exportExcel() {
@@ -469,19 +402,6 @@ export default function ProductsClient() {
         <StatCard label='הכנסות החודש'     value={fmt(revenueMonth)}   color='blue' />
       </div>
 
-      {/* Tabs */}
-      <div className="scroll-x" style={{ marginBottom: '16px' }}><div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
-        {([['products', '📋 מוצרים'], ['movements', '📊 תנועות מלאי']] as const).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)} style={{
-            padding: '7px 16px', border: 'none', borderRadius: '8px',
-            cursor: 'pointer', fontWeight: tab === t ? 600 : 400, fontSize: '13px',
-            background: tab === t ? '#fff' : 'transparent',
-            color: tab === t ? 'var(--text)' : 'var(--text-muted)',
-            boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-            transition: 'all .15s', fontFamily: 'inherit', whiteSpace: 'nowrap',
-          }}>{label}</button>
-        ))}
-      </div></div>
 
       {/* ══════════ TAB: PRODUCTS ══════════ */}
       {tab === 'products' && (
@@ -652,189 +572,6 @@ export default function ProductsClient() {
         </>
       )}
 
-      {/* ══════════ TAB: MOVEMENTS ══════════ */}
-      {tab === 'movements' && (
-        <>
-          {/* Quick entry form */}
-          <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '16px', marginBottom: '16px' }}>
-            <h3 style={{ margin: '0 0 14px', fontSize: '15px', fontWeight: 700 }}>רישום תנועה</h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'end' }}>
-
-              {/* Type toggle */}
-              <div style={{ minWidth: '160px' }}>
-                <div className="form-label">סוג תנועה</div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {([['sale', '💰 מכירה'], ['order', '📦 הזמנה']] as const).map(([t, label]) => (
-                    <button key={t} onClick={() => setMvType(t)} style={{
-                      flex: 1, padding: '8px', border: `2px solid ${mvType === t ? (t === 'sale' ? 'var(--primary)' : 'var(--accent)') : 'var(--border)'}`,
-                      borderRadius: '8px', cursor: 'pointer', fontWeight: mvType === t ? 700 : 400,
-                      fontSize: '13px', background: mvType === t ? (t === 'sale' ? 'var(--success-soft)' : '#eff6ff') : 'var(--bg)',
-                      color: mvType === t ? (t === 'sale' ? 'var(--primary)' : 'var(--accent)') : 'var(--text-muted)',
-                    }}>{label}</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Product */}
-              <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '200px' }}>
-                <label className="form-label">מוצר {mvProductId && <span style={{ color: 'var(--primary)', fontWeight: 700 }}>✓</span>}</label>
-                <input
-                  className="form-input" style={{ borderColor: mvProductId ? 'var(--primary)' : undefined }}
-                  placeholder="חפש לפי שם או מק״ט..."
-                  value={mvProductSearch}
-                  autoComplete="off"
-                  onFocus={() => setMvDropOpen(true)}
-                  onBlur={() => setTimeout(() => setMvDropOpen(false), 150)}
-                  onChange={e => {
-                    const val = e.target.value
-                    setMvProductSearch(val)
-                    setMvDropOpen(true)
-                    setMvQty('')
-                    // exact match → auto-select
-                    const exact = products.find(p =>
-                      p.name.toLowerCase() === val.toLowerCase() ||
-                      (p.sku != null && p.sku.toLowerCase() === val.toLowerCase())
-                    )
-                    setMvProductId(exact?.id ?? '')
-                  }}
-                />
-                {/* Top-3 dropdown */}
-                {mvDropOpen && mvProductSearch.trim() !== '' && (() => {
-                  const q = mvProductSearch.toLowerCase()
-                  const matches = products
-                    .filter(p => p.name.toLowerCase().includes(q) || (p.sku ?? '').toLowerCase().includes(q))
-                    .slice(0, 3)
-                  if (matches.length === 0) return null
-                  return (
-                    <div style={{
-                      position: 'absolute', top: '100%', right: 0, left: 0, zIndex: 50,
-                      background: 'var(--bg-card)', border: '1px solid var(--border)',
-                      borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.12)', marginTop: '2px',
-                    }}>
-                      {matches.map(p => (
-                        <div key={p.id}
-                          onMouseDown={() => {
-                            setMvProductSearch(p.name)
-                            setMvProductId(p.id)
-                            setMvDropOpen(false)
-                            setMvQty('')
-                          }}
-                          className="tr-hover"
-                          style={{
-                            padding: '9px 12px', borderBottom: '1px solid var(--border)',
-                            fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          }}
-                        >
-                          <span>
-                            {p.sku && <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '6px' }}>[{p.sku}]</span>}
-                            <strong>{p.name}</strong>
-                          </span>
-                          <span style={{ fontSize: '11px', color: p.qty === 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
-                            מלאי: {p.qty} {p.unit}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
-                {mvProductId && !mvDropOpen && (() => {
-                  const prod = products.find(x => x.id === mvProductId)
-                  return prod ? (
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
-                      מלאי נוכחי: <strong style={{ color: prod.qty === 0 ? 'var(--danger)' : 'var(--primary)' }}>{prod.qty} {prod.unit}</strong>
-                    </div>
-                  ) : null
-                })()}
-              </div>
-
-              {/* Qty */}
-              <div style={{ width: '90px' }}>
-                <label className="form-label">כמות</label>
-                <input className="form-input" type="number" min="1" step="1" placeholder="1"
-                  value={mvQty} onChange={e => setMvQty(e.target.value)} />
-              </div>
-
-              {/* Date */}
-              <div style={{ width: '150px' }}>
-                <label className="form-label">תאריך</label>
-                <input className="form-input" type="date" value={mvDate} onChange={e => setMvDate(e.target.value)} />
-              </div>
-
-              {/* Save */}
-              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <Button onClick={saveMovement} loading={mvSaving} style={{ width: '100%' }}>
-                  רשום
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Movements table */}
-          <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '14px' }}>
-              היסטוריית תנועות ({movements.length})
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                    {['תאריך', 'מוצר', 'סוג', 'כמות', 'השפעה על מלאי', ''].map((h, i) => (
-                      <th key={i} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '12px' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {movements.length === 0 ? (
-                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                      אין תנועות עדיין
-                    </td></tr>
-                  ) : movements.map(mv => {
-                    const prod = products.find(p => p.id === mv.product_id)
-                    const isSale = mv.movement_type === 'sale'
-                    return (
-                      <tr key={mv.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>
-                          {new Date(mv.sold_date).toLocaleDateString('he-IL')}
-                        </td>
-                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>
-                          {prod?.name || '—'}
-                        </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span style={{
-                            background: isSale ? 'var(--success-soft)' : '#eff6ff',
-                            color: isSale ? 'var(--primary)' : 'var(--accent)',
-                            borderRadius: '6px', padding: '3px 10px', fontWeight: 600, fontSize: '12px',
-                          }}>
-                            {isSale ? '💰 מכירה' : '📦 הזמנה'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 12px', fontWeight: 700 }}>{Number(mv.qty)}</td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span style={{ color: isSale ? 'var(--danger)' : 'var(--primary)', fontWeight: 600 }}>
-                            {isSale ? `−${mv.qty}` : `+${mv.qty}`}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <button
-                            title="מחק תנועה"
-                            disabled={deletingMvId === mv.id}
-                            onClick={() => deleteMovement(mv)}
-                            style={{ background: 'none', border: 'none', cursor: deletingMvId === mv.id ? 'not-allowed' : 'pointer', fontSize: '15px', color: 'var(--danger)', opacity: deletingMvId === mv.id ? 0.4 : 1, display: 'inline-flex', alignItems: 'center' }}
-                          >
-                            {deletingMvId === mv.id
-                              ? <span style={{ width: 14, height: 14, border: '2px solid #fca5a5', borderTopColor: 'var(--danger)', borderRadius: '50%', display: 'inline-block', animation: 'spin .6s linear infinite' }} />
-                              : '🗑️'}
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
 
       {/* ── Add / Edit Modal ── */}
       <Modal open={formOpen} onClose={() => setFormOpen(false)}

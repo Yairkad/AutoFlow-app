@@ -123,7 +123,8 @@ export default function TiresClient() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [loading, setLoading]     = useState(true)
 
-  const [tab, setTab] = useState<'tires' | 'movements'>('tires')
+  // Stock movements live on the stock screen (/stock-count) now
+  const tab = 'tires' as const
 
   // Receiving order modal
   const [recvOpen,    setRecvOpen]    = useState(false)
@@ -665,30 +666,11 @@ export default function TiresClient() {
         <StatCard label="יח' נמכרו החודש"   value={soldThisMonth} />
         <StatCard label='הכנסות החודש'       value={fmt(revenueMonth)}    color='blue' />
         {missingCount > 0 && (
-          <button onClick={() => { setTab('tires'); setFilterMissing('any') }} title="הצג צמיגים להשלמת פרטים"
+          <button onClick={() => setFilterMissing('any')} title="הצג צמיגים להשלמת פרטים"
             style={{ border: 'none', padding: 0, cursor: 'pointer', background: 'none', fontFamily: 'inherit', textAlign: 'inherit' }}>
             <StatCard label='חסרי נתונים / מחיר' value={missingCount} color='orange' />
           </button>
         )}
-      </div>
-
-      {/* Tabs – movements tab only for admins */}
-      <div className="scroll-x" style={{ marginBottom: '16px' }}>
-      <div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
-        {(['tires', ...(isAdmin ? ['movements'] : [])] as ('tires' | 'movements')[]).map(t => {
-          const label = t === 'tires' ? '🔘 מלאי' : '📊 תנועות מלאי'
-          return (
-            <button key={t} onClick={() => setTab(t)} style={{
-              padding: '7px 16px', border: 'none', borderRadius: '8px',
-              cursor: 'pointer', fontWeight: tab === t ? 600 : 400, fontSize: '13px',
-              background: tab === t ? '#fff' : 'transparent',
-              color: tab === t ? 'var(--text)' : 'var(--text-muted)',
-              boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-              transition: 'all .15s', fontFamily: 'inherit', whiteSpace: 'nowrap',
-            }}>{label}</button>
-          )
-        })}
-      </div>
       </div>
 
       {/* ══════════ TAB: TIRES ══════════ */}
@@ -974,70 +956,6 @@ export default function TiresClient() {
               <datalist id="brand-list-inline">
                 {[...new Set(tires.map(t => t.brand).filter(Boolean) as string[])].sort().map(b => <option key={b} value={b} />)}
               </datalist>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ══════════ TAB: MOVEMENTS ══════════ */}
-      {tab === 'movements' && isAdmin && (
-        <>
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#1d4ed8' }}>
-            📋 תנועות מלאי מוצגות בקריאה בלבד. קליטת סחורה — דרך כפתור <strong>קבלת סחורה</strong>. מכירות — נקלטות אוטומטית מהמסוף ברחבה.
-          </div>
-
-          <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '14px' }}>
-              היסטוריית תנועות ({movements.length})
-            </div>
-            <div style={{ overflowX: 'auto', scrollbarWidth: 'thin' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                    {['תאריך', 'צמיג', 'מקור', 'כמות', 'השפעה על מלאי'].map((h, i) => (
-                      <th key={i} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '12px' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {movements.length === 0 ? (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>אין תנועות עדיין</td></tr>
-                  ) : movements.map(mv => {
-                    const tire = tires.find(t => t.id === mv.tire_id)
-                    const isSale = mv.movement_type === 'sale'
-                    return (
-                      <tr key={mv.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>
-                          {new Date(mv.sold_date).toLocaleDateString('he-IL')}
-                        </td>
-                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>
-                          {tire ? (
-                            <span>
-                              {tire.brand && <span style={{ color: 'var(--text-muted)', fontSize: '12px', marginLeft: '4px' }}>{tire.brand}</span>}
-                              <span style={{ color: 'var(--accent)' }}>{tireSize(tire)}</span>
-                            </span>
-                          ) : '—'}
-                        </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span style={{
-                            background: isSale ? 'var(--success-soft)' : '#eff6ff',
-                            color: isSale ? 'var(--primary)' : 'var(--accent)',
-                            borderRadius: '6px', padding: '3px 10px', fontWeight: 600, fontSize: '12px',
-                          }}>
-                            {isSale ? '🏪 מכירה מהמסוף' : '📦 קליטת סחורה'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 12px', fontWeight: 700 }}>{mv.qty}</td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span style={{ color: isSale ? 'var(--danger)' : 'var(--primary)', fontWeight: 600 }}>
-                            {isSale ? `−${mv.qty}` : `+${mv.qty}`}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
             </div>
           </div>
         </>
