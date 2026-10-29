@@ -2808,3 +2808,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 06:29 | Created components/suppliers/ArrivalsModal.tsx | — | ~2959 |
 | 06:32 | Created components/tires/BrandNamesModal.tsx | — | ~1016 |
 | 06:32 | Created components/ui/FilterBar.tsx | — | ~1229 |
+| 06:44 | Modal guard, suppliers/customers toolbar+SearchSelect, invoice 'מה הגיע', Hebrew tire brands, FilterBar/MoreMenu across screens, /stock-count hub | many | tsc+lint clean, UI checked in preview | ~120000 |

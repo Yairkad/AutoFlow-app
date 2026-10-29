@@ -752,3 +752,30 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
+
+## components/ui/ (2026-10-29 additions)
+- `MoreMenu.tsx` — toolbar "⋯ עוד" dropdown (actions + optional Excel export/import) (~900 tok)
+- `FilterBar.tsx` — always-visible search + "סינון" toggle panel + removable chips + end slot (~1200 tok)
+- `SearchSelect.tsx` — typeable select (fuzzy filter, keyboard) for suppliers/customers (~900 tok)
+- `Modal.tsx` — typed-in modal ignores backdrop clicks, ✕/Esc confirm; guard={false} opt-out (~900 tok)
+
+## lib/ui/
+- `backdrop.ts` — guardedBackdrop(onClose): hand-built overlay closes on outside click only while untouched (~150 tok)
+
+## lib/tires/brands.ts
+- Hebrew brand names (tire_brands): brandMap, brandHe, brandSearchText, brandsMatchingHe, sameBrand (~500 tok)
+
+## components/suppliers/ArrivalsModal.tsx
+- "📦 מה הגיע?" lines for a supplier invoice (drafts + saved), toArrivalInputs (~2200 tok)
+
+## components/tires/BrandNamesModal.tsx
+- edit Hebrew name per tire brand (~900 tok)
+
+## app/api/stock/invoice-items/
+- `route.ts` — POST add invoice lines to stock (cost from invoice, movement, match/create item), DELETE reverse (~1500 tok)
+
+## app/(app)/stock-count/
+- `page.tsx` — hub: scan count / full tire count / count by cabinets (~500 tok)
+
+## supabase/migrations (2026-10-29)
+- `105_supplier_invoice_items.sql`, `106_tire_brands.sql`

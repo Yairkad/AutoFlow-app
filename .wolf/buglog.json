@@ -1541,5 +1541,21 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-29T06:04:01.257225Z"
+  },
+  {
+    "id": "bug-081",
+    "timestamp": "2026-10-29T06:44:26.892805+00:00",
+    "error_message": "Invoice (and other) popups close on a stray outside click and lose everything typed",
+    "file": "components/ui/Modal.tsx",
+    "root_cause": "Shared Modal and ~25 hand-built overlays closed on any backdrop click; inspections/test-transfer backdrops even called clearForm",
+    "fix": "Modal: onInput marks dirty → backdrop ignored, ✕/Esc confirm. lib/ui/backdrop.guardedBackdrop() for hand-built wrappers; sibling-backdrop forms no longer close on click",
+    "tags": [
+      "modal",
+      "ux",
+      "data-loss"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-29T06:44:26.892805+00:00"
   }
 ]
