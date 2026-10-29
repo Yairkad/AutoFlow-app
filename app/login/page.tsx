@@ -2,6 +2,9 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { LANDING_TENANT_ID } from '@/lib/landingTenant'
 import LoginClient from './LoginClient'
 
+// Re-read the business name / logo at most every 5 minutes (not frozen at build time)
+export const revalidate = 300
+
 // The login screen shows the business's own name and logo (falls back to AutoFlow)
 export default async function LoginPage() {
   let brand: { name: string; logo: string | null } = { name: 'AutoFlow', logo: null }
