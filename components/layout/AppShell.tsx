@@ -6,7 +6,8 @@ import Header from './Header'
 import Sidebar from './Sidebar'
 import Footer from './Footer'
 import BackupReminder from './BackupReminder'
-import { ProfileProvider } from '@/lib/contexts/ProfileContext'
+import YardDrawer from './YardDrawer'
+import { ProfileProvider, useProfile } from '@/lib/contexts/ProfileContext'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -28,6 +29,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <main style={{
         marginTop: 'var(--header-h)',
         marginRight: 'var(--sidebar-w)',
+        marginLeft: 'var(--drawer-w, 0px)',
+        transition: 'margin-left .2s',
         padding: '24px',
         height: 'calc(100vh - var(--header-h))',
         overflowY: 'auto',
@@ -37,6 +40,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       {pathname !== '/dashboard' && <Footer />}
+      <AdminYardDrawer />
     </ProfileProvider>
   )
+}
+
+// The drawer closes yard cards (office work) — shown to admins, like the office screen
+function AdminYardDrawer() {
+  const { profile } = useProfile()
+  return profile?.isAdmin ? <YardDrawer /> : null
 }

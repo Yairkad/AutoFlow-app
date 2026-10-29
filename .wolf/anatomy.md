@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T13:29:15.155Z
-> Files: 168 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T13:45:29.926Z
+> Files: 169 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -533,6 +533,7 @@
 - `AppShell.tsx` — Wraps Header+Sidebar+children in ProfileProvider; <main> margin-right:var(--sidebar-w) (~200 tok)
 - `Header.tsx` — Clock, global search (Ctrl+K) w/ category-filter chips (CategoryChips), notification bell, user dropdown; search now also covers `customers`, invoice number (`doc_number`) on `customer_ledger_debts`/`supplier_debts` (2026-09-17); hamburger+search-icon shown at <=900px (~10343 tok)
 - `Sidebar.tsx` — NAV_ITEMS/SECTIONS, module-gated nav (isModuleVisible); at <=900px sidebar is a hamburger-triggered 240px drawer (--sidebar-w:0, aside slides via data-mobile-open, globals.css) — NOT an icon-only rail, that approach was tried+reverted (bug-036/037); yard quick-launch gated by isAdmin||modules.includes('yard') (~5622 tok)
+- `YardDrawer.tsx` — OPEN_KEY (~1844 tok)
 
 ## components/products/
 

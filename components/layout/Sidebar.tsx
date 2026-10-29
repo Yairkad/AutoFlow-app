@@ -116,55 +116,30 @@ function NavItem({
   const isActive      = pathname === item.href
   const isPending     = pendingHref === item.href && !isActive
   const isHighlighted = isActive || isPending
-  const [from, to]    = item.color.split(',')
 
+  // Redesign: every tab is its own tile; the active one is filled with the brand color
   return (
     <Link
       href={item.href}
       title={item.label}
+      aria-current={isActive ? 'page' : undefined}
       onMouseDown={() => onDown(item.href)}
       onMouseUp={onUp}
       onMouseLeave={onLeave}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        padding: '5px 10px',
-        margin: '1px 6px',
-        borderRadius: '9px',
-        fontSize: '13px',
-        fontWeight: isHighlighted ? 600 : 400,
-        color: 'var(--text)',
-        background: isHighlighted ? 'var(--bg-hover, #f3faf6)' : 'transparent',
-        boxShadow: isHighlighted ? 'inset 3px 0 0 var(--primary)' : 'none',
-        textDecoration: 'none',
-        transition: 'all .15s, transform .1s',
-        transform: pressed === item.href ? 'scale(0.95)' : 'scale(1)',
-        opacity: isPending ? 0.75 : 1,
-        cursor: 'pointer',
-      }}
+      className="nav-tile"
+      data-active={isHighlighted ? 'true' : undefined}
+      style={{ opacity: isPending ? 0.8 : 1, transform: pressed === item.href ? 'scale(0.98)' : undefined }}
     >
-      <span style={{
-        width: 30, height: 30,
-        borderRadius: '8px',
-        background: `linear-gradient(135deg, ${from}, ${to})`,
-        boxShadow: `0 2px 5px ${from}55`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-        transition: 'transform .15s',
-        transform: isHighlighted ? 'scale(1.05)' : 'scale(1)',
-      }}>
-        <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          {ICONS[item.href]}
-        </svg>
-      </span>
+      <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+        {ICONS[item.href]}
+      </svg>
 
       <span style={{ flex: 1 }}>{item.label}</span>
 
       {isPending && (
         <span style={{
           width: 8, height: 8, borderRadius: '50%',
-          border: '2px solid var(--primary)',
+          border: '2px solid currentColor',
           borderTopColor: 'transparent',
           display: 'inline-block',
           animation: 'spin .6s linear infinite',
@@ -260,8 +235,8 @@ export default function Sidebar({
           right: 0,
           bottom: 0,
           width: 'var(--sidebar-w)',
-          background: 'var(--bg-card)',
-          borderLeft: '1px solid var(--border)',
+          background: 'var(--rail)',
+          borderLeft: '1px solid var(--rail-line)',
           overflowY: 'auto',
           overflowX: 'hidden',
           zIndex: 90,
@@ -277,9 +252,7 @@ export default function Sidebar({
           onMouseLeave={() => setBrandPressed(false)}
           style={{
             display: 'flex', alignItems: 'center', gap: '10px',
-            padding: '12px 14px',
-            borderBottom: '1px solid var(--border)',
-            marginBottom: '4px',
+            padding: '14px 16px 10px',
             textDecoration: 'none', color: 'var(--text)',
             transition: 'transform .1s, opacity .1s',
             transform: brandPressed ? 'scale(0.94)' : 'scale(1)',
@@ -302,7 +275,7 @@ export default function Sidebar({
         {!loaded && <SkeletonNav />}
 
         {loaded && (
-          <div style={{ padding: '4px 0 8px' }}>
+          <div style={{ padding: '4px 12px 10px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             {activeSections.map((section, si) => {
               const sectionItems = section.hrefs
                 .filter(h => visibleHrefs.has(h))
@@ -312,15 +285,14 @@ export default function Sidebar({
               if (sectionItems.length === 0) return null
 
               return (
-                <div key={si}>
+                <div key={si} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {section.label && (
                     <div style={{
-                      fontSize: '9px',
-                      letterSpacing: '1.3px',
-                      textTransform: 'uppercase',
-                      color: 'var(--text-muted)',
-                      padding: '10px 16px 3px',
-                      opacity: 0.6,
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      letterSpacing: '.04em',
+                      color: '#7A8399',
+                      padding: '0 6px 1px',
                     }}>
                       {section.label}
                     </div>
@@ -345,21 +317,21 @@ export default function Sidebar({
 
         {/* Yard terminal quick-launch */}
         {loaded && (isAdmin || modules.some(m => ALL_YARD_KEYS.includes(m))) && (
-          <div style={{ display: 'flex', gap: '6px', padding: '8px 10px 4px', borderTop: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', gap: '6px', padding: '10px 12px 4px', borderTop: '1px solid var(--rail-line)' }}>
             {([
               { href: '/yard',        icon: '🔧', label: 'רחבה', title: 'מסוף רחבה' },
               // מסוף משרד is admin-only (proxy.ts) — don't show a link that bounces
               ...(isAdmin ? [{ href: '/yard-office', icon: '🖥', label: 'משרד', title: 'מסוף משרד' }] : []),
             ]).map(({ href, icon, label, title }) => (
               <a key={href} href={href} target="_blank" rel="noopener noreferrer" title={title} style={{
-                flex: 1, textAlign: 'center', padding: '5px 4px',
-                fontSize: '11px', fontWeight: 600,
-                borderRadius: '7px', border: '1px solid var(--border)',
-                background: 'var(--bg)', color: 'var(--text-muted)',
-                textDecoration: 'none', transition: 'all .15s',
+                flex: 1, textAlign: 'center', padding: '7px 4px',
+                fontSize: '12px', fontWeight: 600,
+                borderRadius: '8px', border: '1px solid var(--rail-line)',
+                background: 'var(--bg-card)', color: 'var(--text-muted)',
+                textDecoration: 'none', transition: 'color .15s, border-color .15s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover, #f3faf6)'; e.currentTarget.style.color = 'var(--text)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg)'; e.currentTarget.style.color = 'var(--text-muted)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--primary)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--rail-line)' }}
               >{icon} <span>{label}</span></a>
             ))}
           </div>
@@ -372,7 +344,6 @@ export default function Sidebar({
             style={{
               display: 'block', width: '100%',
               padding: '10px 0', marginTop: '4px',
-              borderTop: '1px solid var(--border)',
               background: 'none', border: 'none',
               fontSize: '11px', color: 'var(--text-muted)', cursor: 'pointer',
               opacity: 0.4, transition: 'opacity .15s',

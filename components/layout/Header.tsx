@@ -461,7 +461,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
       {/* Clock */}
       <div className="header-clock" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-        <div className="header-clock-time" style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '0.06em', color: 'var(--text)', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{timeStr}</div>
+        <div className="header-clock-time num" style={{ fontSize: '17px', fontWeight: 600, color: 'var(--text)', lineHeight: 1 }}>{timeStr}</div>
         <div className="header-clock-date" style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dateStr}</div>
       </div>
 
@@ -473,7 +473,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
           className="header-search-mobile-btn"
           onClick={() => { setMobileSearchOpen(true); setTimeout(() => mobileInputRef.current?.focus(), 50) }}
           aria-label="חיפוש"
-        >🔍</button>
+        ><svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
 
         {/* Desktop / tablet: full inline search */}
         <div ref={searchRef} className="header-search-desktop" style={{ position: 'relative' }}>
@@ -481,7 +481,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
             <span style={{ position: 'absolute', right: '10px', fontSize: '15px', pointerEvents: 'none', zIndex: 1 }}>
               {loading ? (
                 <span style={{ width: 14, height: 14, border: '2px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', display: 'inline-block', animation: 'spin .6s linear infinite' }} />
-              ) : '🔍'}
+              ) : <span style={{ color: 'var(--text-muted)', display: 'flex' }}><svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>}
             </span>
             <input
               type="search"
@@ -495,12 +495,13 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
               spellCheck={false}
               data-lpignore="true"
               data-1p-ignore="true"
-              placeholder="חיפוש..."
+              placeholder="חיפוש בכל המערכת — לקוח, רכב, חשבונית, צמיג"
+              aria-label="חיפוש בכל המערכת"
               style={{
-                paddingRight: '34px', paddingLeft: q ? '10px' : '62px', height: '36px',
+                paddingRight: '34px', paddingLeft: q ? '10px' : '62px', height: '38px',
                 border: `1px solid ${focused ? 'var(--primary)' : 'var(--border)'}`,
                 borderRadius: showDropdownResults ? '8px 8px 0 0' : '8px',
-                background: 'var(--bg)', fontSize: '13px', width: '240px',
+                background: 'var(--bg-card)', fontSize: '13.5px', width: 'min(420px, 34vw)',
                 outline: 'none', direction: 'rtl', color: 'var(--text)',
                 transition: 'border-color .15s',
               }}

@@ -6,6 +6,7 @@ import type { YardSession, YardSessionItem, YardService } from '@/lib/yard/types
 import { sessionTotal, minutesSince, formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
 import SessionItemsEditor from '@/components/yard/SessionItemsEditor'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 const VAT = 1.18
@@ -472,22 +473,11 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                   <div className="flex items-center justify-between border-t-2 border-slate-100" style={{ padding: '14px 20px', background: '#f8fafc' }}>
                     <div className="font-black" style={{ fontSize: '18px' }}>סה״כ: {total.toLocaleString()}₪</div>
                     <div className="flex items-center" style={{ gap: '8px' }}>
-                      <button
-                        onClick={() => setEditingId(id => id === s.id ? null : s.id)}
-                        aria-pressed={editingId === s.id}
-                        className="bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold transition-colors"
-                        style={{ padding: '10px 18px', fontSize: '14px' }}
-                      >
-                        {editingId === s.id ? '✓ סיום עריכה' : '✏️ עריכת נתונים'}
-                      </button>
-                      <button
-                        onClick={() => sendBackToYard(s.id)}
-                        disabled={sendingBack === s.id}
-                        className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl font-bold transition-colors"
-                        style={{ padding: '10px 18px', fontSize: '14px' }}
-                      >
-                        {sendingBack === s.id ? '...' : '🔄 החזרה לרחבה'}
-                      </button>
+                      {editingId === s.id && (
+                        <button onClick={() => setEditingId(null)}
+                          className="bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold transition-colors"
+                          style={{ padding: '10px 18px', fontSize: '14px' }}>✓ סיום עריכה</button>
+                      )}
                       <button
                         onClick={() => closeSession(s.id)}
                         disabled={closing === s.id}
@@ -496,6 +486,10 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                       >
                         {closing === s.id ? '...' : '✓ סגור כרטיס'}
                       </button>
+                      <RowActionsMenu align="end" actions={[
+                        { key: 'edit', label: editingId === s.id ? 'סיום עריכה' : 'עריכת נתונים', icon: '✏️', onClick: () => setEditingId(id => id === s.id ? null : s.id) },
+                        { key: 'back', label: sendingBack === s.id ? 'מחזיר...' : 'החזרה לרחבה', icon: '🔄', disabled: sendingBack === s.id, onClick: () => sendBackToYard(s.id) },
+                      ]} />
                     </div>
                   </div>
                 </div>
