@@ -379,11 +379,13 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
         )}
       </div>
 
-      <form onSubmit={e => { e.preventDefault(); scan(code) }} className="flex gap-2">
-        <input ref={inputRef} value={code} onChange={e => setCode(e.target.value)} autoComplete="off"
-          placeholder={`סרוק ברקוד — מדף ${active}`} aria-label="ברקוד"
-          className="flex-1 border-2 border-blue-600 rounded-xl outline-none font-bold" style={{ padding: '12px 14px', fontSize: 17, minWidth: 0 }} />
-        <button type="submit" className={`${btn} bg-blue-700 text-white`} style={{ padding: '0 18px', fontSize: 16 }}>הוסף</button>
+      <form onSubmit={e => { e.preventDefault(); scan(code) }} className="flex gap-2" style={{ margin: '8px 0' }}>
+        <div className="scan-field" style={{ flex: 1 }}>
+          <svg aria-hidden="true" viewBox="0 0 28 22" width="22" height="17" fill="currentColor"><rect x="0" y="0" width="2" height="22"/><rect x="4" y="0" width="1" height="22"/><rect x="7" y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/><rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/><rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/></svg>
+          <input ref={inputRef} value={code} onChange={e => setCode(e.target.value)} autoComplete="off"
+            placeholder={`סרוק ברקוד — מדף ${active}`} aria-label="ברקוד" />
+        </div>
+        <button type="submit" className={`${btn} bg-blue-700 text-white`} style={{ padding: '0 20px', fontSize: 16, borderRadius: 16 }}>הוסף</button>
       </form>
       {flash && (
         <div className={`rounded-xl font-bold ${flash.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-amber-50 text-amber-900 border border-amber-300'}`}

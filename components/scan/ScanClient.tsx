@@ -331,7 +331,7 @@ export default function ScanClient() {
       )}
 
       {/* Header */}
-      <div className={`flex mb-5 ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`}>
+      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`} style={{ marginBottom: 28 }}>
         <div className="flex items-center gap-3">
           {isMobile && (
             <button onClick={() => router.back()} className="text-slate-500 font-bold active:text-slate-800 transition-colors" style={{ fontSize: '20px', lineHeight: 1 }}>←</button>
@@ -339,11 +339,8 @@ export default function ScanClient() {
           <svg viewBox="0 0 28 22" width="22" height="17" fill="#334155"><rect x="0" y="0" width="2" height="22"/><rect x="4" y="0" width="1" height="22"/><rect x="7" y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/><rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/><rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/></svg>
           <h1 className="font-black text-slate-800" style={{ fontSize: isMobile ? '20px' : '24px' }}>{mode === 'count' ? '📦 ספירת מלאי' : 'סריקת ברקוד'}</h1>
         </div>
-        {mode === 'scan' ? (
-          <button onClick={startCount} className={`bg-slate-800 text-white font-bold rounded-xl active:brightness-90 transition-all ${isMobile ? 'w-full' : ''}`} style={{ padding: '10px 18px', fontSize: '14px' }}>
-            התחל ספירת מלאי
-          </button>
-        ) : (
+        {/* Stock counts start from the stock screen (/stock-count → ?count=1); plain scanning stays here */}
+        {mode === 'scan' ? null : (
           <div className={`flex gap-2 ${isMobile ? 'w-full' : ''}`}>
             <button onClick={() => setShowConfirm(true)} disabled={countEntries.length === 0}
               className="flex-1 bg-green-700 text-white font-bold rounded-xl active:brightness-90 disabled:opacity-40 transition-all" style={{ padding: '10px 14px', fontSize: isMobile ? '13px' : '14px' }}>
@@ -357,24 +354,26 @@ export default function ScanClient() {
       </div>
 
       {/* Scan input */}
-      <div className={`rounded-2xl shadow-md mb-6 border-2 ${mode === 'count' ? 'border-amber-400 bg-amber-50' : 'border-blue-400 bg-white'}`} style={{ padding: '16px 20px' }}>
-        <label className={`block text-sm font-bold mb-2 ${mode === 'count' ? 'text-amber-700' : 'text-blue-700'}`}>
-          {mode === 'count' ? '📦 סורק לספירה — סרוק כל פריט בזה אחר זה' : 'סרוק ברקוד'}
+      <div className="scan-field-wrap" data-mode={mode} style={{ marginBottom: 32 }}>
+        <label htmlFor="scan-input" className="scan-field-label">
+          {mode === 'count' ? 'ספירה — סרוק כל פריט בזה אחר זה' : 'סרוק או הקלד ברקוד'}
         </label>
-        <input
-          ref={scanRef}
-          type="text" inputMode="none"
-          value={barcodeInput}
-          onChange={e => setBarcodeInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) { setBarcodeInput(''); if (modeRef.current === 'count') handleCountScan(v); else handleScan(v) } } }}
-          placeholder={mode === 'count' ? 'פוקוס כאן — סרוק...' : 'הכנס פוקוס כאן וסרוק...'}
-          className={`w-full border-2 rounded-xl font-bold outline-none transition-colors ${mode === 'count' ? 'border-amber-300 bg-amber-100 focus:border-amber-500' : 'border-slate-200 bg-blue-50 focus:border-blue-500'}`}
-          style={{ padding: '12px 16px', fontSize: '18px', letterSpacing: '3px', direction: 'ltr' }}
-        />
-        {mode === 'count' && lastScanned && (
-          <p className="text-sm font-semibold mt-2 text-amber-800">↳ נסרק: {lastScanned}</p>
-        )}
-        {mode !== 'count' && <p className="text-xs text-slate-400 mt-2">הסורק מזהה אוטומטית · אפשר גם להקליד ולחוץ Enter</p>}
+        <div className="scan-field">
+          <svg aria-hidden="true" viewBox="0 0 28 22" width="22" height="17" fill="currentColor"><rect x="0" y="0" width="2" height="22"/><rect x="4" y="0" width="1" height="22"/><rect x="7" y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/><rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/><rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/></svg>
+          <input
+            id="scan-input"
+            ref={scanRef}
+            type="text" inputMode="none" autoComplete="off"
+            value={barcodeInput}
+            onChange={e => setBarcodeInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) { setBarcodeInput(''); if (modeRef.current === 'count') handleCountScan(v); else handleScan(v) } } }}
+            placeholder="ממתין לסריקה…"
+          />
+          <kbd>Enter</kbd>
+        </div>
+        {mode === 'count' && lastScanned
+          ? <p className="scan-field-hint" style={{ color: 'var(--warning)', fontWeight: 600 }}>↳ נסרק: {lastScanned}</p>
+          : <p className="scan-field-hint">הסורק מזהה אוטומטית · אפשר גם להקליד וללחוץ Enter</p>}
       </div>
 
       {/* COUNT MODE — running list */}
