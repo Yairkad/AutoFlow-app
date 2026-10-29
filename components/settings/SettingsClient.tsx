@@ -8,6 +8,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import GuideEditor from '@/components/settings/GuideEditor'
+import DriveFilesPanel from '@/components/documents/DriveFilesPanel'
 import { BACKUP_TABLES, CHILD_TABLES } from '@/lib/backup/backup'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
 
@@ -68,7 +69,7 @@ interface InviteToken {
   expires_at: string | null
 }
 
-type Tab = 'business' | 'users' | 'vault' | 'landing' | 'backup'
+type Tab = 'users' | 'vault' | 'landing' | 'backup' | 'drive'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -113,12 +114,14 @@ function field(label: string, el: React.ReactNode) {
 
 // ── BusinessTab ────────────────────────────────────────────────────────────
 
-function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
-  const [tenant,     setTenant]     = useState<Tenant | null>(null)
-  const [origTenant, setOrigTenant] = useState<Tenant | null>(null)
+function BusinessTab({ supabase, tenantId, showToast, initial }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn; initial?: Tenant | null }) {
+  // Shown at once from the tenant row the app already loaded; refreshed in the background
+  const seed = initial ? { ...initial, public_info: initial.public_info ?? {} } : null
+  const [tenant,     setTenant]     = useState<Tenant | null>(seed)
+  const [origTenant, setOrigTenant] = useState<Tenant | null>(seed)
   const [saving,     setSaving]     = useState(false)
   const [editing,    setEditing]    = useState(false)
-  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(initial?.logo_base64 ?? null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
@@ -867,7 +870,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
 
   // ── Unlocked vault ──
   return (
-    <div style={{ maxWidth: '720px' }}>
+    <div style={{ width: '100%', maxWidth: '1100px' }}>
       {/* Header row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1024,9 +1027,9 @@ function LandingTab({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
   ]
 
   return (
-    <div style={{ maxWidth: '720px' }}>
+    <div style={{ width: '100%', maxWidth: '1100px' }}>
       <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-        ניהול תוכן דף הנחיתה הציבורי. פרטי העסק (שם, טלפון, כתובת) מנוהלים בטאב &quot;פרטי עסק&quot;.
+        מה שמוצג באתר הציבורי של העסק. פרטי העסק (שם, טלפון, כתובת) נערכים בכרטיס פרטי העסק בראש העמוד.
       </p>
       <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid var(--border)', overflowX: 'auto', whiteSpace: 'nowrap' }}>
         {subTabs.map(t => (
@@ -1519,9 +1522,12 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
   const [restoring, setRestoring] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const [lastFile, setLastFile] = useState<string | null>(null)
   const loadLast = useCallback(async () => {
-    const { data } = await supabase.from('tenants').select('last_backup_at, last_backup_kind, last_backup_error').eq('id', tenantId).maybeSingle()
-    if (data) setLast({ at: data.last_backup_at, kind: data.last_backup_kind, error: data.last_backup_error })
+    const { data, error } = await supabase.from('tenants').select('last_backup_at, last_backup_kind, last_backup_error').eq('id', tenantId).maybeSingle()
+    if (error) console.error('backup status', error.message)
+    // Keep a status we just set locally if the read fails or lags behind
+    if (data) setLast(prev => prev?.at && (!data.last_backup_at || prev.at > data.last_backup_at) ? prev : { at: data.last_backup_at, kind: data.last_backup_kind, error: data.last_backup_error })
   }, [supabase, tenantId])
   useEffect(() => { loadLast() }, [loadLast])
 
@@ -1549,8 +1555,10 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
     try {
       const res = await fetch('/api/backup/drive', { method: 'POST' })
       const j = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(j.error ?? `HTTP ${res.status}`)
+      if (!res.ok) throw new Error(j.error ?? (res.status === 504 ? 'הגיבוי לקח יותר מדי זמן — נסה שוב' : `HTTP ${res.status}`))
       showToast('הגיבוי נשמר בדרייב ✓', 'success')
+      setLast({ at: j.at ?? new Date().toISOString(), kind: 'drive', error: null })
+      setLastFile(j.name ?? null)
       loadLast()
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'שגיאה בגיבוי לדרייב', 'error')
@@ -1625,6 +1633,7 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
               ? `גיבוי אחרון: ${fmtBackupDate(last.at)} (${last.kind === 'auto' ? 'אוטומטי לדרייב' : last.kind === 'drive' ? 'ידני לדרייב' : 'הורדה למחשב'})`
               : '⚠️ עדיין לא בוצע גיבוי'}
           </div>
+          {lastFile && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 4 }}>נשמר בדרייב בתיקייה &quot;גיבויים&quot;: {lastFile}</div>}
           {last.error && (
             <div style={{ fontSize: '12px', color: 'var(--danger)', marginTop: 4 }}>הגיבוי האוטומטי האחרון נכשל: {last.error}</div>
           )}
@@ -1637,7 +1646,7 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.6 }}>
           {driveConnected
             ? <>כל לילה נשמר אוטומטית גיבוי מלא בתיקייה &quot;גיבויים&quot; בדרייב של העסק (נשמרים 30 הגיבויים האחרונים). הקבצים פרטיים – רק לבעל הדרייב.</>
-            : <>חבר את Google Drive (למעלה בעמוד) כדי שיישמר גיבוי אוטומטי כל לילה – גם אם המערכת לא זמינה, הגיבוי נשאר אצלך.</>}
+            : <>חבר את Google Drive (בכפתור &quot;Drive&quot; בראש העמוד) כדי שיישמר גיבוי אוטומטי כל לילה – גם אם המערכת לא זמינה, הגיבוי נשאר אצלך.</>}
         </div>
         <button
           onClick={doDriveBackup}
@@ -1756,14 +1765,14 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
 // ── Main ───────────────────────────────────────────────────────────────────
 
 export default function SettingsClient() {
-  const supabase      = useRef(createClient()).current
+  const [supabase]    = useState(createClient)
   const { showToast } = useToast()
   const { profile, loading } = useProfile()
   const [tab,            setTab]            = useState<Tab | null>(null)
   // Deep link, e.g. the "no recent backup" reminder → /settings?tab=backup
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('tab')
-    if (t === 'backup' || t === 'business' || t === 'users' || t === 'landing' || t === 'vault') setTab(t)
+    if (t === 'backup' || t === 'drive' || t === 'users' || t === 'landing' || t === 'vault') setTab(t)
   }, [])
 
   const tenantId  = profile?.tenantId ?? null
@@ -1775,36 +1784,22 @@ export default function SettingsClient() {
   const canVault = myRole === 'super_admin'
 
   const [driveConnected, setDriveConnected] = useState<boolean | null>(null)
-  const [driveMerging, setDriveMerging] = useState(false)
+  const [driveExpired, setDriveExpired] = useState(false)
 
   useEffect(() => {
     if (!isAdmin || !tenantId) return
-    fetch(`/api/drive/status?tenant_id=${tenantId}`)
-      .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => setDriveConnected(false))
+    fetch(`/api/drive/status?tenant_id=${tenantId}&verify=1`)
+      .then(r => r.json()).then(d => { setDriveConnected(d.connected); setDriveExpired(!!d.expired) }).catch(() => setDriveConnected(false))
     const params = new URLSearchParams(window.location.search)
     if (params.get('drive') === 'connected') { setDriveConnected(true); window.history.replaceState({}, '', '/settings') }
     if (params.get('drive') === 'error') { showToast('שגיאה בחיבור Drive', 'error'); window.history.replaceState({}, '', '/settings') }
   }, [isAdmin, tenantId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleDriveMerge() {
-    if (!tenantId || driveMerging) return
-    setDriveMerging(true)
-    try {
-      const res = await fetch('/api/drive/merge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant_id: tenantId }) })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      showToast(`✅ מוזג! הועברו ${data.moved} קבצים, נמחקו ${data.deleted} תיקיות כפולות`, 'success')
-    } catch {
-      showToast('שגיאה באיחוד תיקיות', 'error')
-    } finally {
-      setDriveMerging(false)
-    }
-  }
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
-    { key: 'business', label: 'פרטי עסק',    icon: '🏢' },
-    { key: 'users',    label: 'משתמשים',      icon: '👥' },
-    { key: 'landing',  label: 'דף נחיתה',     icon: '🌐' },
+    { key: 'users',    label: 'משתמשים',          icon: '👥' },
+    { key: 'landing',  label: 'תוכן אתר ציבורי',  icon: '🌐' },
+    { key: 'drive',    label: 'קבצים ב-Drive',    icon: '📂' },
     ...(canVault ? [{ key: 'vault' as Tab, label: 'כספת סיסמאות', icon: '🔒' }] : []),
     ...(isAdmin ? [{ key: 'backup' as Tab, label: 'גיבוי', icon: '🗄️' }] : []),
   ]
@@ -1817,7 +1812,7 @@ export default function SettingsClient() {
   }
 
   const tabContent: Record<Tab, React.ReactNode> = {
-    business: <BusinessTab supabase={supabase} tenantId={tenantId} showToast={showToast} />,
+    drive:    <DriveFilesPanel />,
     users:    <UsersTab    supabase={supabase} tenantId={tenantId} myId={myId} showToast={showToast} />,
     landing:  <LandingTab  supabase={supabase} tenantId={tenantId} showToast={showToast} />,
     vault:    canVault ? <VaultTab supabase={supabase} tenantId={tenantId} showToast={showToast} /> : null,
@@ -1833,58 +1828,20 @@ export default function SettingsClient() {
         title="הגדרות"
         subtitle="ניהול עסק, משתמשים והרשאות"
         marginBottom={24}
+        actions={isAdmin && driveConnected !== null && tenantId ? (
+          // Small Drive indicator; the status is verified with Google, not just "a token is saved"
+          <a href={`/api/drive/auth?tenant_id=${tenantId}`} className="drive-pill" data-ok={String(driveConnected)}
+            title={driveConnected ? 'Google Drive מחובר — לחץ לחיבור מחדש' : driveExpired ? 'החיבור ל-Drive פג — לחץ לחיבור מחדש' : 'לחץ לחיבור Google Drive'}>
+            <span className="dot" aria-hidden="true" />
+            Drive · {driveConnected ? 'מחובר' : driveExpired ? 'החיבור פג — חבר מחדש' : 'לא מחובר — חבר'}
+          </a>
+        ) : undefined}
       />
 
-      {/* Google Drive status — admins only */}
-      {isAdmin && driveConnected !== null && (
-        <div style={{
-          // wraps on phones: the buttons drop below the text instead of squeezing it to one word per line
-          display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', marginBottom: '20px',
-          background: driveConnected ? 'var(--success-soft)' : '#fffbeb',
-          border: `1px solid ${driveConnected ? '#bbf7d0' : '#fcd34d'}`,
-          borderRadius: '10px', padding: '12px 16px',
-        }}>
-          <span style={{ fontSize: '22px' }}>📂</span>
-          <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: '13px' }}>
-              Google Drive — {driveConnected ? '✓ מחובר' : 'לא מחובר'}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              {driveConnected ? 'תמונות ומסמכים מועלים ישירות לדרייב של העסק' : 'חבר כדי להעלות תמונות ומסמכים ישירות מהמערכת'}
-            </div>
-          </div>
-          {tenantId && (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', marginInlineStart: 'auto' }}>
-              {driveConnected && (
-                <button
-                  onClick={handleDriveMerge}
-                  disabled={driveMerging}
-                  style={{
-                    padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
-                    cursor: driveMerging ? 'wait' : 'pointer', border: '1px solid var(--border)',
-                    background: 'transparent', color: 'var(--text-muted)', whiteSpace: 'nowrap',
-                  }}
-                >
-                  {driveMerging ? 'ממזג...' : 'מזג תיקיות כפולות'}
-                </button>
-              )}
-              <a
-                href={`/api/drive/auth?tenant_id=${tenantId}`}
-                style={{
-                  padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
-                  textDecoration: 'none',
-                  background: driveConnected ? 'transparent' : 'var(--primary)',
-                  color: driveConnected ? 'var(--text-muted)' : '#fff',
-                  border: driveConnected ? '1px solid var(--border)' : 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {driveConnected ? '🔄 חבר מחדש' : 'חבר Drive →'}
-              </a>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Business details: always visible (read-only, with an edit button) */}
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 20px', marginBottom: 20 }}>
+        <BusinessTab supabase={supabase} tenantId={tenantId} showToast={showToast} initial={profile?.tenant as Tenant | null | undefined} />
+      </div>
 
       {/* Desktop: horizontal scrollable tabs */}
       <div className="settings-desktop-tabs scrollable-tabs" style={{ marginBottom: '24px', display: 'flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px', width: 'fit-content' }}>
@@ -1937,7 +1894,7 @@ export default function SettingsClient() {
 
       {/* Desktop content */}
       <div className="settings-desktop-content">
-        {tab === 'business' && tabContent.business}
+        {tab === 'drive'    && tabContent.drive}
         {tab === 'users'    && tabContent.users}
         {tab === 'landing'  && tabContent.landing}
         {tab === 'backup'   && tabContent.backup}

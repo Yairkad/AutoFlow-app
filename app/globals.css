@@ -877,3 +877,37 @@ button:not(:disabled):active {
 .scan-field-wrap[data-mode="count"] .scan-field { border-color: color-mix(in srgb, var(--warning) 45%, transparent); }
 .scan-field-wrap[data-mode="count"] .scan-field:focus-within { border-color: var(--warning); box-shadow: 0 0 0 4px color-mix(in srgb, var(--warning) 14%, transparent); color: var(--warning); }
 @media (max-width: 640px) { .scan-field kbd { display: none; } .scan-field { height: 56px; } }
+
+/* Sidebar footer links (terminals, menu editor) */
+.sidebar-foot-link { padding: 4px 8px; border-radius: 6px; color: var(--text-muted); text-decoration: none; background: none; border: 0; cursor: pointer; font: inherit; white-space: nowrap; }
+.sidebar-foot-link:hover { color: var(--text); background: color-mix(in srgb, var(--primary) 7%, transparent); }
+
+/* Settings: small Google Drive status pill */
+.drive-pill { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; text-decoration: none; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); white-space: nowrap; }
+.drive-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+.drive-pill[data-ok="false"] { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); background: var(--danger-soft); }
+.drive-pill[data-ok="false"] .dot { background: var(--danger); }
+.drive-pill:hover { border-color: var(--primary); }
+
+/* ── Forms gallery (documents): every form as a same-size A4 sheet ── */
+.doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 18px; }
+.doc-tile { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.doc-sheet {
+  position: relative; aspect-ratio: 1 / 1.414; width: 100%; padding: 14px 14px 12px; cursor: pointer; font: inherit; text-align: right;
+  background: #fff; border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(27,33,64,.05), 0 10px 22px -16px rgba(27,33,64,.35);
+  display: flex; flex-direction: column; gap: 10px; transition: transform .15s, box-shadow .15s, border-color .15s;
+}
+.doc-sheet:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); box-shadow: 0 2px 4px rgba(27,33,64,.06), 0 16px 30px -18px rgba(27,33,64,.45); }
+.doc-sheet:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.doc-sheet-head { display: flex; align-items: center; justify-content: flex-start; padding-bottom: 8px; border-bottom: 2px solid color-mix(in srgb, var(--primary) 18%, transparent); font-size: 22px; }
+.doc-sheet-lines { display: flex; flex-direction: column; gap: 9px; padding-top: 4px; }
+.doc-sheet-lines i { display: block; height: 4px; border-radius: 2px; background: #EDEFF5; }
+.doc-sheet-lines i:nth-child(2) { width: 85%; } .doc-sheet-lines i:nth-child(4) { width: 70%; } .doc-sheet-lines i:nth-child(5) { width: 45%; }
+.doc-sheet-kind { position: absolute; bottom: 10px; left: 10px; font-size: 10.5px; font-weight: 600; color: var(--text-muted); background: var(--bg-soft); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+.doc-tile-foot { display: flex; align-items: flex-start; gap: 4px; }
+.doc-tile-title { font-size: 13.5px; font-weight: 700; color: var(--text); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-tile-sub { font-size: 11.5px; color: var(--text-muted); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-back { padding: 6px 12px; border: 1px solid var(--border); background: var(--bg-card); border-radius: 8px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; color: var(--text); }
+.doc-back:hover { border-color: var(--primary); }
+@media (max-width: 640px) { .doc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }

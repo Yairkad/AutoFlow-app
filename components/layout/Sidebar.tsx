@@ -27,7 +27,7 @@ const NAV_ITEMS = [
   { href: '/inspections',   label: 'בדיקות קניה',  color: '#22c55e,#4ade80', module: 'inspections' },
   { href: '/test-transfer', label: 'שינוע לטסטים', color: '#d97706,#f59e0b', module: 'test_transfer' },
   { href: '/reminders',   label: 'משימות',                  color: '#f59e0b,#fde68a', module: 'reminders' },
-  { href: '/documents',   label: 'מסמכים',                  color: '#3b82f6,#93c5fd', module: 'documents' },
+  { href: '/documents',   label: 'טפסים',                   color: '#3b82f6,#93c5fd', module: 'documents' },
   { href: '/settings',    label: 'הגדרות',                  color: '#6b7280,#d1d5db', module: 'settings' },
   { href: '/my-profile',  label: 'הפרופיל שלי',             color: '#a855f7,#c084fc', module: 'my_profile' },
 ]
@@ -242,6 +242,7 @@ export default function Sidebar({
           zIndex: 90,
           padding: '0',
           transition: 'transform .25s ease',
+          display: 'flex', flexDirection: 'column',
         }}
       >
         {/* Business branding */}
@@ -315,44 +316,23 @@ export default function Sidebar({
           </div>
         )}
 
-        {/* Yard terminal quick-launch */}
-        {loaded && (isAdmin || modules.some(m => ALL_YARD_KEYS.includes(m))) && (
-          <div style={{ display: 'flex', gap: '6px', padding: '10px 12px 4px', borderTop: '1px solid var(--rail-line)' }}>
-            {([
-              { href: '/yard',        icon: '🔧', label: 'רחבה', title: 'מסוף רחבה' },
-              // מסוף משרד is admin-only (proxy.ts) — don't show a link that bounces
-              ...(isAdmin ? [{ href: '/yard-office', icon: '🖥', label: 'משרד', title: 'מסוף משרד' }] : []),
-            ]).map(({ href, icon, label, title }) => (
-              <a key={href} href={href} target="_blank" rel="noopener noreferrer" title={title} style={{
-                flex: 1, textAlign: 'center', padding: '7px 4px',
-                fontSize: '12px', fontWeight: 600,
-                borderRadius: '8px', border: '1px solid var(--rail-line)',
-                background: 'var(--bg-card)', color: 'var(--text-muted)',
-                textDecoration: 'none', transition: 'color .15s, border-color .15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--primary)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--rail-line)' }}
-              >{icon} <span>{label}</span></a>
-            ))}
-          </div>
-        )}
-
-        {/* Hidden edit button */}
+        {/* Footer: terminal launchers + menu editing, small and pinned to the bottom */}
         {loaded && (
-          <button
-            onClick={() => setEditorOpen(true)}
-            style={{
-              display: 'block', width: '100%',
-              padding: '10px 0', marginTop: '4px',
-              background: 'none', border: 'none',
-              fontSize: '11px', color: 'var(--text-muted)', cursor: 'pointer',
-              opacity: 0.4, transition: 'opacity .15s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '0.4')}
-          >
-            ערוך סידור תפריט
-          </button>
+          <div style={{
+            marginTop: 'auto', position: 'sticky', bottom: 0, background: 'var(--rail)',
+            display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap',
+            padding: '8px 12px', borderTop: '1px solid var(--rail-line)', fontSize: '11.5px',
+          }}>
+            {(isAdmin || modules.some(m => ALL_YARD_KEYS.includes(m))) && ([
+              { href: '/yard',        label: 'מסוף רחבה' },
+              // מסוף משרד is admin-only (proxy.ts) — don't show a link that bounces
+              ...(isAdmin ? [{ href: '/yard-office', label: 'מסוף משרד' }] : []),
+            ]).map(({ href, label }) => (
+              <a key={href} href={href} target="_blank" rel="noopener noreferrer" className="sidebar-foot-link">{label} ↗</a>
+            ))}
+            <button type="button" onClick={() => setEditorOpen(true)} className="sidebar-foot-link" style={{ marginInlineStart: 'auto' }}
+              title="ערוך סידור תפריט" aria-label="ערוך סידור תפריט">⚙︎</button>
+          </div>
         )}
       </aside>
 

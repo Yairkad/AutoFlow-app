@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sessionTenant } from '@/lib/auth/sessionTenant'
+import { getAccessToken } from '@/lib/drive'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -18,8 +19,17 @@ export async function GET(req: Request) {
     .eq('id', tenantId)
     .single()
 
+  // ?verify=1 (settings screen): ask Google whether the saved permission still works — a saved
+  // token alone said "connected" even after Google revoked it.
+  let connected = !!data?.drive_refresh_token
+  let expired = false
+  if (connected && searchParams.get('verify') === '1') {
+    try { await getAccessToken(data!.drive_refresh_token) }
+    catch { connected = false; expired = true }
+  }
   return NextResponse.json({
-    connected: !!(data?.drive_refresh_token),
+    connected,
+    expired,
     rootFolderId: data?.drive_root_folder_id ?? null,
   })
 }

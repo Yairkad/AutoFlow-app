@@ -22,6 +22,7 @@ export interface FreeDocContent { boxes: FreeBox[]; letterhead: boolean }
 export interface BizHeader { name: string; sub: string; phone: string; address: string; logo: string; license?: string }
 
 export const PAGE_W = 595, PAGE_H = 842
+const MARGIN = 40, SNAP = 6
 const COLORS = ['#141A2E', '#26357A', '#B9342D', '#137A55', '#5B6478']
 const SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 40]
 const newBox = (y: number): FreeBox => ({ id: crypto.randomUUID(), x: 48, y, w: 300, h: 40, text: 'טקסט חדש', size: 16, color: '#141A2E', align: 'right' })
@@ -51,7 +52,7 @@ export function letterheadHtml(b: BizHeader) {
 /** Opens a print window with the page laid out exactly as in the editor */
 export function printFreeDoc(name: string, content: FreeDocContent, biz: BizHeader) {
   const mm = 210 / PAGE_W
-  const boxes = content.boxes.map(b => `<div style="position:absolute;top:${b.y}px;left:${b.x}px;width:${b.w}px;min-height:${b.h}px;font-size:${b.size}px;
+  const boxes = content.boxes.map(b => `<div style="position:absolute;top:${b.y}px;left:${b.x}px;width:${b.w}px;font-size:${b.size}px;
     font-weight:${b.bold ? 700 : 400};font-style:${b.italic ? 'italic' : 'normal'};text-decoration:${b.underline ? 'underline' : 'none'};
     color:${b.color};text-align:${b.align};white-space:pre-wrap;line-height:1.5;padding:4px 6px">${esc(b.text)}</div>`).join('')
   const html = `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>${esc(name)}</title>
@@ -75,6 +76,7 @@ export default function FreeDocEditor({ initialName, initialContent, biz, onSave
   const [letterhead, setLetterhead] = useState(initialContent?.letterhead ?? true)
   const [selId, setSelId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [guide, setGuide]   = useState<'center' | 'margin' | null>(null)
   const pageRef = useRef<HTMLDivElement>(null)
   const sel = boxes.find(b => b.id === selId) ?? null
 
@@ -91,13 +93,17 @@ export default function FreeDocEditor({ initialName, initialContent, biz, onSave
     let moved = false
     const mv = (ev: PointerEvent) => {
       moved = true
-      patch(b.id, {
-        x: Math.max(0, Math.min(PAGE_W - b.w, x0 + ev.clientX - sx)),
-        y: Math.max(0, Math.min(PAGE_H - 20, y0 + ev.clientY - sy)),
-      })
+      let x = Math.max(0, Math.min(PAGE_W - b.w, x0 + ev.clientX - sx))
+      // Snap to the page centre and to the side margins (a guide line shows while snapped)
+      const centre = (PAGE_W - b.w) / 2
+      const snapTo = [centre, MARGIN, PAGE_W - MARGIN - b.w].find(t => Math.abs(x - t) < SNAP)
+      if (snapTo !== undefined) x = snapTo
+      setGuide(snapTo === centre ? 'center' : snapTo !== undefined ? 'margin' : null)
+      patch(b.id, { x, y: Math.max(0, Math.min(PAGE_H - 20, y0 + ev.clientY - sy)) })
     }
     const up = () => {
       document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up)
+      setGuide(null)
       if (!moved) el.focus()
     }
     document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up)
@@ -112,7 +118,7 @@ export default function FreeDocEditor({ initialName, initialContent, biz, onSave
       for (const en of entries) {
         const el = en.target as HTMLElement, id = el.dataset.id
         if (!id) continue
-        setBoxes(bs => bs.map(b => b.id === id && (b.w !== el.offsetWidth || b.h !== el.offsetHeight) ? { ...b, w: el.offsetWidth, h: el.offsetHeight } : b))
+        setBoxes(bs => bs.map(b => b.id === id && b.w !== el.offsetWidth ? { ...b, w: el.offsetWidth } : b))
       }
     })
     page.querySelectorAll<HTMLElement>('[data-id]').forEach(el => ro.observe(el))
@@ -156,9 +162,22 @@ export default function FreeDocEditor({ initialName, initialContent, biz, onSave
             style={{ width: 22, height: 22, borderRadius: '50%', background: c, cursor: 'pointer', border: '2px solid var(--bg-card)', boxShadow: sel?.color === c ? '0 0 0 2px var(--primary)' : '0 0 0 1px var(--border)' }} />
         ))}
         <span style={{ width: 1, height: 22, background: 'var(--border)' }} />
+        <span style={{ fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 600 }}>טקסט</span>
         {(['right', 'center', 'left'] as const).map(a => (
           <button key={a} type="button" style={{ ...tool, padding: '0 10px', fontSize: 12.5, ...on(sel?.align === a) }} disabled={!sel} aria-pressed={sel?.align === a}
-            onClick={() => sel && patch(sel.id, { align: a })}>{a === 'right' ? 'ימין' : a === 'center' ? 'מרכז' : 'שמאל'}</button>
+            aria-label={`יישור טקסט ל${a === 'right' ? 'ימין' : a === 'center' ? 'מרכז' : 'שמאל'}`}
+            onClick={() => sel && patch(sel.id, { align: a })}>{a === 'right' ? '⇥' : a === 'center' ? '≡' : '⇤'}</button>
+        ))}
+        <span style={{ width: 1, height: 22, background: 'var(--border)' }} />
+        <span style={{ fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 600 }}>מיקום בדף</span>
+        {([
+          ['ימין', (b: FreeBox) => ({ x: PAGE_W - MARGIN - b.w })],
+          ['מרכז', (b: FreeBox) => ({ x: Math.round((PAGE_W - b.w) / 2) })],
+          ['שמאל', () => ({ x: MARGIN })],
+          ['רוחב מלא', () => ({ x: MARGIN, w: PAGE_W - 2 * MARGIN })],
+        ] as const).map(([label, fn]) => (
+          <button key={label} type="button" style={{ ...tool, padding: '0 10px', fontSize: 12.5 }} disabled={!sel}
+            onClick={() => sel && patch(sel.id, fn(sel))}>{label}</button>
         ))}
         <Button size="sm" variant="danger" disabled={!sel} onClick={() => { if (sel) { setBoxes(bs => bs.filter(b => b.id !== sel.id)); setSelId(null) } }}>מחק תיבה</Button>
         <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, marginInlineStart: 'auto' }}>
@@ -171,18 +190,20 @@ export default function FreeDocEditor({ initialName, initialContent, biz, onSave
         <div ref={pageRef} aria-label="דף A4" style={{ position: 'relative', width: PAGE_W, height: PAGE_H, margin: '0 auto', background: '#fff', color: '#141A2E', boxShadow: '0 4px 24px rgba(20,26,46,.18)' }}
           onPointerDown={e => { if (e.target === e.currentTarget) setSelId(null) }}>
           {letterhead && <div aria-hidden="true" style={{ pointerEvents: 'none' }} dangerouslySetInnerHTML={{ __html: letterheadHtml(biz) }} />}
+          {guide === 'center' && <div aria-hidden="true" style={{ position: 'absolute', top: 0, bottom: 0, left: PAGE_W / 2, width: 1, background: '#B9342D', opacity: .6, pointerEvents: 'none' }} />}
           {boxes.map(b => (
             <div key={b.id} data-id={b.id} contentEditable suppressContentEditableWarning role="textbox" aria-multiline="true" aria-label="תיבת טקסט"
               onPointerDown={e => startDrag(e, b)}
-              onBlur={e => patch(b.id, { text: e.currentTarget.innerText })}
+              // drop the empty line an Enter + delete leaves behind, so the box shrinks back
+              onBlur={e => patch(b.id, { text: e.currentTarget.innerText.replace(/\n+$/, '') })}
               style={{
-                position: 'absolute', left: b.x, top: b.y, width: b.w, minHeight: b.h, padding: '4px 6px',
+                position: 'absolute', left: b.x, top: b.y, width: b.w, minHeight: b.size * 1.5 + 10, padding: '4px 6px',
                 fontSize: b.size, fontWeight: b.bold ? 700 : 400, fontStyle: b.italic ? 'italic' : 'normal',
                 textDecoration: b.underline ? 'underline' : 'none', color: b.color, textAlign: b.align,
                 whiteSpace: 'pre-wrap', lineHeight: 1.5, outline: 0, cursor: selId === b.id ? 'text' : 'move',
                 border: `1px dashed ${selId === b.id ? '#26357A' : 'transparent'}`, borderRadius: 4,
                 boxShadow: selId === b.id ? '0 0 0 3px rgba(38,53,122,.12)' : 'none',
-                resize: selId === b.id ? 'both' : 'none', overflow: 'hidden', direction: 'rtl',
+                resize: selId === b.id ? 'horizontal' : 'none', overflow: 'hidden', direction: 'rtl',
               }}>
               {b.text}
             </div>
@@ -190,7 +211,7 @@ export default function FreeDocEditor({ initialName, initialContent, biz, onSave
         </div>
       </div>
       <p style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
-        גוררים תיבה כדי להזיז אותה, מושכים את הפינה התחתונה כדי לשנות גודל, ולוחצים פנימה כדי לכתוב.
+        גוררים תיבה כדי להזיז אותה (היא נצמדת למרכז ולשוליים), מושכים את הפינה כדי לשנות רוחב, ולוחצים פנימה כדי לכתוב. הגובה מתאים את עצמו לטקסט.
       </p>
     </div>
   )
