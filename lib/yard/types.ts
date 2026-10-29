@@ -82,4 +82,5 @@ export interface SearchResult {
   size?:     string
   brand?:    string
   location?: string   // tires only — warehouse shelf location
+  dup_count?: number  // barcode lookup: how many records share this barcode (>1 = duplicates)
 }

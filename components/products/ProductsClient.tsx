@@ -12,6 +12,9 @@ import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import { progressStart, progressDone } from '@/components/ui/RouteProgress'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
+import { fuzzyIncludes } from '@/lib/search/fuzzy'
+import DuplicatesModal from '@/components/stock/DuplicatesModal'
+import { findProductDuplicates, pickKeeper } from '@/lib/stock/duplicates'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -164,13 +167,28 @@ export default function ProductsClient() {
 
   const cats = [...new Set(products.map(p => p.category).filter(Boolean) as string[])].sort()
 
+  // Duplicates view: same name or same barcode/SKU, merged group by group
+  const [dupsOpen, setDupsOpen] = useState(false)
+  const dupGroups = findProductDuplicates(products)
+
+  async function mergeGroup(targetId: string, sourceIds: string[]): Promise<boolean> {
+    const res = await fetch('/api/stock/merge', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'product', target_id: targetId, source_ids: sourceIds }),
+    })
+    const out = await res.json().catch(() => ({}))
+    showToast(res.ok ? `מוזג ✓ (${sourceIds.length + 1} → 1)` : out.error ?? 'שגיאה במיזוג', res.ok ? 'success' : 'error')
+    await load()
+    return res.ok
+  }
+
   const filtered = products.filter(p => {
     if (filterCat && p.category !== filterCat) return false
     if (filterStock === 'out' && p.qty !== 0) return false
     if (filterStock === 'low' && !(p.min_qty > 0 && p.qty <= p.min_qty && p.qty > 0)) return false
     if (search) {
-      const hay = [p.name, p.category, p.sku, p.barcode, p.notes, p.unit].join(' ').toLowerCase()
-      if (!hay.includes(search.toLowerCase())) return false
+      const hay = [p.name, p.category, p.sku, p.barcode, p.notes, p.unit].join(' ')
+      if (!fuzzyIncludes(hay, search)) return false
     }
     return true
   })
@@ -483,6 +501,12 @@ export default function ProductsClient() {
               <option value='out'>אזל</option>
             </select>
             <div style={{ marginRight: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {!viewOnly && (
+                <Button variant="outline" onClick={() => setDupsOpen(true)}
+                  style={{ fontSize: '13px', ...(dupGroups.length ? { borderColor: 'var(--warning)', color: '#92400e' } : {}) }}>
+                  🔁 כפילויות{dupGroups.length ? ` (${dupGroups.length})` : ''}
+                </Button>
+              )}
               {!viewOnly && <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />}
             </div>
           </div>
@@ -890,6 +914,21 @@ export default function ProductsClient() {
           </div>
         </div>
       </Modal>
+
+      <DuplicatesModal<Product>
+        open={dupsOpen} onClose={() => setDupsOpen(false)} title="🔁 כפילויות מוצרים"
+        groups={dupGroups} keeperOf={pickKeeper} onMerge={mergeGroup}
+        columns={[
+          { label: 'שם', render: p => p.name },
+          { label: 'קטגוריה', render: p => p.category || '—' },
+          ...(isAdmin ? [{ label: 'מחיר קנייה', render: (p: Product) => p.buy_price ? `₪${p.buy_price}` : '—' }] : []),
+          { label: 'מחיר מכירה', render: p => p.sell_price ? `₪${p.sell_price}` : <span style={{ color: 'var(--danger)' }}>חסר</span> },
+          { label: 'מק״ט', render: p => p.sku || '—' },
+          { label: 'ברקוד', render: p => p.barcode || '—' },
+          { label: 'כמות', render: p => p.qty },
+          { label: 'נוצר', render: p => p.created_at?.slice(0, 10) },
+        ]}
+      />
 
       {/* ── Price List Overlay ─────────────────────────────────────────────── */}
       {showPricelist && (

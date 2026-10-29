@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { tireSizeText } from '@/lib/tires/size'
+import { likePatterns } from '@/lib/search/fuzzy'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 
 // ── Hebrew numeral conversion ──────────────────────────────────────────────
@@ -279,7 +280,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
       supabase.from('car_inspections').select('id, plate, owner_name, owner_phone').or(`plate.ilike.${like},owner_name.ilike.${like},owner_phone.ilike.${like}`).limit(4),
       supabase.from('cars').select('id, plate, make, model, owner_name, buyer_name').or(`plate.ilike.${like},make.ilike.${like},model.ilike.${like},owner_name.ilike.${like},buyer_name.ilike.${like}`).limit(4),
       supabase.from('expenses').select('id, description, amount').ilike('description', like).limit(4),
-      supabase.from('products').select('id, name, sku').or(`name.ilike.${like},sku.ilike.${like}`).limit(3),
+      likePatterns(term).reduce((q, w) => q.or(`name.ilike.${w},sku.ilike.${w},barcode.ilike.${w}`), supabase.from('products').select('id, name, sku')).limit(3),
       supabase.from('tires').select('id, brand, width, profile, rim, sku').or(`brand.ilike.${like},sku.ilike.${like}`).limit(3),
       supabase.from('customers').select('id, name, phone').or(`name.ilike.${like},phone.ilike.${like}`).limit(4),
       supabase.from('customer_ledger_debts').select('customer_id, doc_number, amount, customers(name)').ilike('doc_number', like).limit(4),

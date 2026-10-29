@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createServiceClient } from '@/lib/supabase/service'
 import { tireSizeText } from '@/lib/tires/size'
+import { likePatterns } from '@/lib/search/fuzzy'
 
 export interface SearchResult {
   id:         string
@@ -13,6 +14,7 @@ export interface SearchResult {
   size?:      string   // tires only
   brand?:     string   // tires only
   location?:  string   // tires only — warehouse shelf location
+  dup_count?: number   // barcode lookup: how many records share this barcode (>1 = duplicates)
 }
 
 // GET /api/yard/search?q=TEXT&type=all|tire|product|service[&include_empty=1]
@@ -33,7 +35,8 @@ export async function GET(req: NextRequest) {
   const supabase = createServiceClient()
   const results: SearchResult[] = []
 
-  const search = `%${q}%`
+  // One spelling-tolerant pattern per word, all must match ("ספריי פנצר" finds "פנצ'ר ספרי")
+  const patterns = likePatterns(q)
 
   // Tires
   if (type === 'all' || type === 'tire') {
@@ -60,7 +63,7 @@ export async function GET(req: NextRequest) {
       } else if (nums.length === 1) {
         tireQuery = tireQuery.eq('width', Number(nums[0]))
       } else {
-        tireQuery = tireQuery.or(`brand.ilike.${search},sku.ilike.${search}`)
+        for (const w of patterns) tireQuery = tireQuery.or(`brand.ilike.${w},sku.ilike.${w}`)
       }
     }
 
@@ -90,8 +93,8 @@ export async function GET(req: NextRequest) {
       .eq('tenant_id', profile.tenant_id)
     if (!includeEmpty) prodQuery = prodQuery.gt('qty', 0)
 
-    if (q) {
-      prodQuery = prodQuery.or(`name.ilike.${search},sku.ilike.${search},barcode.ilike.${search}`)
+    for (const w of patterns) {
+      prodQuery = prodQuery.or(`name.ilike.${w},sku.ilike.${w},barcode.ilike.${w}`)
     }
 
     const { data: products } = await prodQuery.order('name').limit(30)
@@ -110,14 +113,13 @@ export async function GET(req: NextRequest) {
 
   // Services
   if (type === 'all' || type === 'service') {
-    const { data: services } = await supabase
+    let svcQuery = supabase
       .from('yard_services')
       .select('id, name, sku, price')
       .eq('tenant_id', profile.tenant_id)
       .eq('is_active', true)
-      .ilike('name', search)
-      .order('sort_order')
-      .limit(20)
+    for (const w of patterns) svcQuery = svcQuery.ilike('name', w)
+    const { data: services } = await svcQuery.order('sort_order').limit(20)
 
     for (const s of services ?? []) {
       results.push({

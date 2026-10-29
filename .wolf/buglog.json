@@ -1490,5 +1490,56 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-26T18:00:00Z"
+  },
+  {
+    "id": "bug-078",
+    "timestamp": "2026-10-29T06:04:01.257225Z",
+    "error_message": "Yard receive doesn't recognize a barcode that the search finds",
+    "file": "app/api/yard/barcode/route.ts",
+    "root_cause": "Tire lookup used .eq('sku').maybeSingle() — two tires with the same SKU make maybeSingle error → null → 'not found'. Products matched only the barcode column, not sku.",
+    "fix": "Query with .in() over code variants (case, leading zero), products by barcode OR sku, pick best (has price, then qty), return dup_count so the receive screen warns.",
+    "tags": [
+      "barcode",
+      "duplicates",
+      "maybeSingle",
+      "yard",
+      "receive"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-29T06:04:01.257225Z"
+  },
+  {
+    "id": "bug-079",
+    "timestamp": "2026-10-29T06:04:01.257225Z",
+    "error_message": "Searching 'ספריי' / 'פנצ'ר' doesn't find puncture spray; SKU does",
+    "file": "app/api/yard/search/route.ts",
+    "root_cause": "Plain ilike substring: spelling variants (יי/י, ' vs ׳ vs none) never match",
+    "fix": "lib/search/fuzzy.ts: likePatterns (per word, quotes→%, doubled י/ו collapsed, ANDed .or()) for DB; fuzzyIncludes for client filters (Tires/Products/Header)",
+    "tags": [
+      "search",
+      "hebrew",
+      "fuzzy",
+      "products"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-29T06:04:01.257225Z"
+  },
+  {
+    "id": "bug-080",
+    "timestamp": "2026-10-29T06:04:01.257225Z",
+    "error_message": "'קבלת סחורה' in office tires screen jumps to the yard terminal",
+    "file": "components/tires/TiresClient.tsx",
+    "root_cause": "Button hard-linked to /yard/receive",
+    "fix": "New app/(app)/tires/receive page renders ReceiveClient office; also link-to-existing-tire search now include_empty=1 (out-of-stock tires were unfindable while receiving)",
+    "tags": [
+      "receive",
+      "navigation",
+      "office"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-10-29T06:04:01.257225Z"
   }
 ]

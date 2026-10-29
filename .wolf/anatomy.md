@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T12:51:23.320Z
-> Files: 143 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T06:01:07.938Z
+> Files: 148 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -273,6 +273,7 @@
 
 ## app/api/yard/barcode/
 
+- `route.ts` — Same barcode as the scanner may read it: case, a dropped/added leading zero (EAN-13 vs UPC-A) (~940 tok)
 
 ## app/api/yard/receive/
 
@@ -540,12 +541,14 @@
 
 ## components/stock/
 
+- `DuplicatesModal.tsx` — Default record to keep in a group (~1314 tok)
 - `LocationBadge.tsx` — fetchLayout (~944 tok)
 - `PlacementSheet.tsx` — PlacementSheet (~1232 tok)
 - `StorageClient.tsx` — StorageClient (~3122 tok)
 - `StorageMap.tsx` — CAB_W (~1390 tok)
 - `StorageMapEditor.tsx` — inp (~1814 tok)
 - `ZoneCountPanel.tsx` — DRAFT_KEY (~6881 tok)
+- `DuplicatesModal.tsx` — duplicate groups side by side, choose record to keep, merge via /api/stock/merge (~1200 tok)
 
 ## components/suppliers/
 
@@ -575,6 +578,7 @@
 
 ## components/yard/
 
+- `ReceiveClient.tsx` — office: opened from the management app (/tires/receive) instead of the yard terminal (~9794 tok)
 - `SearchSheet.tsx` — 'numeric' opens the phone's number pad (tire sizes); 'search' the normal keyboard (~1753 tok)
 - `TireLookupClient.tsx` — normalizeTireSize (~1660 tok)
 - `YardDashboard.tsx` — YardDashboard (~1826 tok)
@@ -653,9 +657,15 @@
 ## lib/scannerAgent.ts
 
 
+## lib/search/
+
+- `fuzzy.ts` — Lowercase, drop quote/geresh marks, final letters → regular, doubled י/ו → single. (~434 tok)
+
 ## lib/stock/
 
+- `duplicates.ts` — The record to keep by default: has a sell price, then most stock, then the oldest. (~945 tok)
 - `storage.ts` — "a3, B2 / c10" → ['A3', 'B2', 'C10'] (unique, in order). Free text that isn't a shelf is ignored. (~1559 tok)
+- `duplicates.ts` — findTireDuplicates / findProductDuplicates (union-find on brand+size / name / sku+barcode), pickKeeper (~900 tok)
 - `zoneCount.ts` — For a tire that was recorded outside the counted shelves: it moved here, or it's in both places. (~1709 tok)
 
 ## lib/supabase/
@@ -724,3 +734,12 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
+
+## lib/search/
+- `fuzzy.ts` — Hebrew spelling-tolerant search: normalizeSearch, fuzzyIncludes (client), likePatterns (DB ilike per word) (~500 tok)
+
+## app/api/stock/merge/
+- `route.ts` — POST merge duplicate tires/products into one: moves movements/refs, sums qty, fills missing fields, deletes sources (~1000 tok)
+
+## app/(app)/tires/receive/
+- `page.tsx` — office stock receive (ReceiveClient office) — stays in the app, not the yard (~80 tok)

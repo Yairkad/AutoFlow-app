@@ -15,6 +15,9 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import TirePickerModal from '@/components/tires/TirePickerModal'
 import { tireSizeText, hasTireSize, isTireMissingDetails, isTireMissingPrice, parseTireSize } from '@/lib/tires/size'
 import LocationBadge from '@/components/stock/LocationBadge'
+import { fuzzyIncludes } from '@/lib/search/fuzzy'
+import DuplicatesModal from '@/components/stock/DuplicatesModal'
+import { findTireDuplicates, pickKeeper } from '@/lib/stock/duplicates'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -154,6 +157,8 @@ export default function TiresClient() {
 
   // Merge a duplicate (e.g. a misread barcode saved as a new tire) into the right tire
   const [mergeSource, setMergeSource] = useState<Tire | null>(null)
+  // Duplicates view: same brand+size or same barcode, merged group by group
+  const [dupsOpen, setDupsOpen] = useState(false)
 
   // Quick SKU inline edit (click directly on SKU cell)
   const [editingSkuId,    setEditingSkuId]    = useState<string | null>(null)
@@ -202,6 +207,19 @@ export default function TiresClient() {
 
   // ── Filtered tires ────────────────────────────────────────────────────────────
 
+  const dupGroups = findTireDuplicates(tires)
+
+  async function mergeGroup(targetId: string, sourceIds: string[]): Promise<boolean> {
+    const res = await fetch('/api/stock/merge', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'tire', target_id: targetId, source_ids: sourceIds }),
+    })
+    const out = await res.json().catch(() => ({}))
+    showToast(res.ok ? `מוזג ✓ (${sourceIds.length + 1} → 1)` : out.error ?? 'שגיאה במיזוג', res.ok ? 'success' : 'error')
+    await load()
+    return res.ok
+  }
+
   const filtered = tires
     .filter(t => {
       if (filterWidth && t.width   !== parseInt(filterWidth)) return false
@@ -214,9 +232,8 @@ export default function TiresClient() {
       if (filterMissing === 'price'   && !isTireMissingPrice(t))   return false
       if (filterMissing === 'any'     && !isTireMissingDetails(t) && !isTireMissingPrice(t)) return false
       if (search) {
-        const hay = [t.brand, tireSize(t), t.location, t.notes, t.load_idx, t.speed_idx, t.sku]
-          .join(' ').toLowerCase()
-        if (!hay.includes(search.toLowerCase())) return false
+        const hay = [t.brand, tireSize(t), t.location, t.notes, t.load_idx, t.speed_idx, t.sku].join(' ')
+        if (!fuzzyIncludes(hay, search)) return false
       }
       return true
     })
@@ -624,7 +641,7 @@ export default function TiresClient() {
         title="צמיגים"
         subtitle={viewOnly ? 'מצב צפיה בלבד' : undefined}
         actions={!viewOnly ? <>
-          <Button variant="outline" onClick={() => window.location.href = '/yard/receive'}>📦 קבלת סחורה</Button>
+          <Button variant="outline" onClick={() => window.location.href = '/tires/receive'}>📦 קבלת סחורה</Button>
           <Button variant="outline" onClick={() => { setRecvItems([emptyRecvItem]); setRecvOpen(true) }}>✍️ קליטה ידנית</Button>
           <Button onClick={openAdd}>➕ צמיג חדש</Button>
         </> : undefined}
@@ -722,6 +739,10 @@ export default function TiresClient() {
               <a href="/tires/storage" style={{ textDecoration: 'none' }}>
                 <Button variant="outline" style={{ fontSize: '13px' }}>🗄 ארונות וספירה לפי אזור</Button>
               </a>
+              <Button variant="outline" onClick={() => setDupsOpen(true)}
+                style={{ fontSize: '13px', ...(dupGroups.length ? { borderColor: 'var(--warning)', color: '#92400e' } : {}) }}>
+                🔁 כפילויות{dupGroups.length ? ` (${dupGroups.length})` : ''}
+              </Button>
               <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
             </div>
           )}
@@ -1220,6 +1241,22 @@ export default function TiresClient() {
           </div>
         </div>
       </Modal>
+
+      <DuplicatesModal<Tire>
+        open={dupsOpen} onClose={() => setDupsOpen(false)} title="🔁 כפילויות צמיגים"
+        groups={dupGroups} keeperOf={pickKeeper} onMerge={mergeGroup}
+        columns={[
+          { label: 'מותג', render: t => t.brand || '—' },
+          { label: 'מידה', render: t => tireSize(t) },
+          { label: 'מדדים', render: t => `${t.load_idx ?? ''}${t.speed_idx ?? ''}` || '—' },
+          ...(isAdmin ? [{ label: 'מחיר קנייה', render: (t: Tire) => t.cost_price ? `₪${t.cost_price}` : '—' }] : []),
+          { label: 'מחיר מכירה', render: t => t.sell_price ? `₪${t.sell_price}` : <span style={{ color: 'var(--danger)' }}>חסר</span> },
+          { label: 'מקט/ברקוד', render: t => t.sku || '—' },
+          { label: 'כמות', render: t => t.qty },
+          { label: 'מיקום', render: t => t.location || '—' },
+          { label: 'נוצר', render: t => t.created_at?.slice(0, 10) },
+        ]}
+      />
 
       {mergeSource && (
         <TirePickerModal tires={tires} excludeId={mergeSource.id}

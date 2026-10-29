@@ -2796,3 +2796,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 05:49 | Investigated stock receive/barcode/duplicates/product search bugs; proposal sent, awaiting approval (no code changes) | api/yard/barcode, api/yard/search, ReceiveClient, TiresClient | proposal | ~15000 |
+| 05:58 | Created app/api/yard/barcode/route.ts | — | ~940 |
+| 05:59 | Created lib/search/fuzzy.ts | — | ~434 |
+| 05:59 | Edited components/yard/ReceiveClient.tsx | CSS: padding | ~147 |
+| 06:00 | Created lib/stock/duplicates.ts | — | ~945 |
+| 06:01 | Created components/stock/DuplicatesModal.tsx | — | ~1314 |
+| 06:04 | Barcode lookup fix, fuzzy Hebrew search, office receive page, duplicates view+merge (tires & products) | api/yard/barcode, api/yard/search, api/stock/merge, lib/search/fuzzy, lib/stock/duplicates, DuplicatesModal, Tires/Products/Receive/Header | tsc+lint clean, logic tested | ~40000 |

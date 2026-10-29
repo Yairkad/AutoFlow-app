@@ -18,7 +18,8 @@ const emptyProdForm = { name: '', sell_price: '', cost_price: '' }
 
 interface QuickEntry { item: SearchResult; count: number }
 
-export default function ReceiveClient() {
+/** office: opened from the management app (/tires/receive) instead of the yard terminal */
+export default function ReceiveClient({ office = false }: { office?: boolean }) {
   const router  = useRouter()
   const scanRef = useRef<HTMLInputElement>(null)
   const qtyRef  = useRef<HTMLInputElement>(null)
@@ -235,7 +236,7 @@ export default function ReceiveClient() {
 
   // ═══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
+    <div className={`flex flex-col ${office ? 'rounded-2xl overflow-hidden' : 'h-full'}`} style={{ background: '#f0f4f8', ...(office ? { minHeight: '75vh' } : {}) }}>
 
       {/* Link an unknown barcode to an existing tire */}
       {linkCode && (
@@ -252,7 +253,7 @@ export default function ReceiveClient() {
           minChars={2}
           search={async (q, kind) => {
             const params = kind === 'size' ? tireSizeSearchParams(q) : `q=${encodeURIComponent(q)}`
-            const res = await fetch(`/api/yard/search?${params}&type=tire`)
+            const res = await fetch(`/api/yard/search?${params}&type=tire&include_empty=1`)
             return res.ok ? res.json() : []
           }}
           getKey={r => r.id}
@@ -358,7 +359,7 @@ export default function ReceiveClient() {
       {/* Header */}
       <div className="bg-slate-800 text-white flex items-center justify-between flex-shrink-0" style={{ padding: '14px 18px' }}>
         <h2 className="text-xl font-bold">📦 {quickMode ? 'סריקה מהירה' : 'קבלת סחורה'}</h2>
-        <button onClick={() => quickMode ? cancelQuick() : router.back()}
+        <button onClick={() => quickMode ? cancelQuick() : office ? router.push('/tires') : router.back()}
           className="bg-white/10 rounded-lg font-semibold text-sm active:bg-white/20" style={{ padding: '6px 14px' }}>
           ← {quickMode ? 'ביטול' : 'חזור'}
         </button>
@@ -483,6 +484,11 @@ export default function ReceiveClient() {
                   <span className="text-slate-500 text-sm">מלאי נוכחי:</span>
                   <span className="font-bold text-slate-700">{found.stock ?? 0} יח׳</span>
                 </div>
+                {(found.dup_count ?? 0) > 1 && (
+                  <div role="alert" className="mt-3 bg-amber-50 border border-amber-300 text-amber-800 rounded-lg text-sm font-semibold" style={{ padding: '8px 12px' }}>
+                    ⚠ לברקוד הזה יש {found.dup_count} רשומות כפולות — נבחרה זו עם המחיר. כדאי למזג דרך כפתור 🔁 כפילויות.
+                  </div>
+                )}
               </div>
 
               <div className="bg-white rounded-2xl shadow" style={{ padding: '20px' }}>
