@@ -208,8 +208,6 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const [showDropdown, setShowDropdown] = useState(false)
 
   // Notification bell
-  const [pendingQuotes,       setPendingQuotes]       = useState(0)
-  const [pendingAlignment,    setPendingAlignment]    = useState(0)
   const [pendingTestTransfer, setPendingTestTransfer] = useState(0)
   const [showBell,            setShowBell]            = useState(false)
 
@@ -232,12 +230,8 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
     const tid = profile?.tenantId
     if (!tid) return
     Promise.all([
-      supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'open'),
-      supabase.from('alignment_jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'waiting'),
       supabase.from('test_transfers').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'ממתין'),
-    ]).then(([pq, pa, pt]) => {
-      setPendingQuotes(pq.count ?? 0)
-      setPendingAlignment(pa.count ?? 0)
+    ]).then(([pt]) => {
       setPendingTestTransfer(pt.count ?? 0)
     })
   }, [profile?.tenantId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -275,12 +269,10 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
     // A Hebrew brand name (tire_brands) finds that brand's tires too
     const { data: brandRows } = await supabase.from('tire_brands').select('name_en, name_he')
     const heBrands = brandsMatchingHe(brandRows, term)
-    const [debts, suppliers, employees, quotes, alignments, inspections, cars, expenses, products, tires, customers, custInvoices, suppInvoices] = await Promise.all([
+    const [debts, suppliers, employees, inspections, cars, expenses, products, tires, customers, custInvoices, suppInvoices] = await Promise.all([
       supabase.from('customer_debts').select('id, name, phone, plate, amount').or(`name.ilike.${like},phone.ilike.${like},plate.ilike.${like}`).limit(4),
       supabase.from('suppliers').select('id, name, phone, contact_name').or(`name.ilike.${like},phone.ilike.${like},contact_name.ilike.${like}`).limit(4),
       supabase.from('employees').select('id, full_name, phone').or(`full_name.ilike.${like},phone.ilike.${like}`).limit(4),
-      supabase.from('quotes').select('id, client_name, phone, plate').or(`client_name.ilike.${like},phone.ilike.${like},plate.ilike.${like}`).limit(4),
-      supabase.from('alignment_jobs').select('id, plate, customer_name, customer_phone').or(`plate.ilike.${like},customer_name.ilike.${like},customer_phone.ilike.${like}`).limit(4),
       supabase.from('car_inspections').select('id, plate, owner_name, owner_phone').or(`plate.ilike.${like},owner_name.ilike.${like},owner_phone.ilike.${like}`).limit(4),
       supabase.from('cars').select('id, plate, make, model, owner_name, buyer_name').or(`plate.ilike.${like},make.ilike.${like},model.ilike.${like},owner_name.ilike.${like},buyer_name.ilike.${like}`).limit(4),
       supabase.from('expenses').select('id, description, amount').ilike('description', like).limit(4),
@@ -304,8 +296,6 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
       if (!r.supplier_id) return
       all.push({ id: r.supplier_id, icon: '🧾', category: 'חשבוניות ספקים', primary: r.suppliers?.name ?? '—', secondary: [r.doc_number ? `מס' ${r.doc_number}` : null, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/suppliers' })
     })
-    quotes.data?.forEach(r => all.push({ id: r.id, icon: '💬', category: 'הצעות', primary: r.client_name ?? '—', secondary: [r.phone, r.plate].filter(Boolean).join(' · '), href: '/quotes' }))
-    alignments.data?.forEach(r => all.push({ id: r.id, icon: '🔩', category: 'פרונט', primary: r.plate, secondary: [r.customer_name, r.customer_phone].filter(Boolean).join(' · '), href: '/alignment' }))
     inspections.data?.forEach(r => all.push({ id: r.id, icon: '📝', category: 'בדיקות', primary: r.plate, secondary: [r.owner_name, r.owner_phone].filter(Boolean).join(' · '), href: '/inspections' }))
     cars.data?.forEach(r => all.push({ id: r.id, icon: '🚗', category: 'רכבים', primary: [r.make, r.model, r.plate].filter(Boolean).join(' '), secondary: (r.owner_name || r.buyer_name) ?? undefined, href: '/cars' }))
     expenses.data?.forEach(r => all.push({ id: r.id, icon: '💰', category: 'הוצאות', primary: r.description ?? '—', secondary: r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : undefined, href: '/expenses' }))
@@ -575,7 +565,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
         {/* Bell */}
         {(() => {
-          const total = pendingQuotes + pendingAlignment + pendingTestTransfer
+          const total = pendingTestTransfer
           return (
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <button
@@ -615,32 +605,6 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                       <div style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
                         הכל מטופל ✓
                       </div>
-                    )}
-                    {pendingQuotes > 0 && (
-                      <Link
-                        href="/quotes"
-                        onClick={() => setShowBell(false)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px', textDecoration: 'none', color: 'var(--text)', borderBottom: pendingAlignment > 0 ? '1px solid var(--border)' : 'none' }}
-                      >
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>💬</span>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 600 }}>{pendingQuotes} הצעות מחיר</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ממתינות לטיפול</div>
-                        </div>
-                      </Link>
-                    )}
-                    {pendingAlignment > 0 && (
-                      <Link
-                        href="/alignment"
-                        onClick={() => setShowBell(false)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px', textDecoration: 'none', color: 'var(--text)', borderBottom: pendingTestTransfer > 0 ? '1px solid var(--border)' : 'none' }}
-                      >
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>🔩</span>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 600 }}>{pendingAlignment} עבודות פרונט</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ממתינות להתחלה</div>
-                        </div>
-                      </Link>
                     )}
                     {pendingTestTransfer > 0 && (
                       <Link

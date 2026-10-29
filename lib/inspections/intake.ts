@@ -44,9 +44,12 @@ export function intakeMissing(row: {
   return missing
 }
 
-// Uploaded documents are deleted this many days after the customer arrived (or, if they never
-// arrived, after they submitted the form). Stated in the privacy policy — keep both in sync.
-export const INTAKE_FILE_RETENTION_DAYS = 30
+// Documents of an inspection that took place (customer arrived, or an inspection opened in the
+// office) are kept 12 months, as the Ministry of Transport rules require, then deleted. A customer
+// who submitted the link form but never came: deleted 30 days after submitting.
+// Stated in the privacy policy and on the customer form — keep all three in sync.
+export const INTAKE_FILE_RETENTION_DAYS = 365
+export const INTAKE_UNUSED_RETENTION_DAYS = 30
 
 export function newIntakeToken(): string {
   const bytes = new Uint8Array(16)

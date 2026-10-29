@@ -9,12 +9,12 @@ import { balanceOf } from '@/lib/debts/ledger'
 import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 type Section = 'finance' | 'tires' | 'cars'
-type CardId = 'income' | 'expenses' | 'profit' | 'debts' | 'products' | 'employees' | 'tires' | 'alignment' | 'cars' | 'inspections'
+type CardId = 'income' | 'expenses' | 'profit' | 'debts' | 'products' | 'employees' | 'tires' | 'cars' | 'inspections'
 
 const DEFAULT_LAYOUT: Record<CardId, Section> = {
   income: 'finance', expenses: 'finance', profit: 'finance',
   debts: 'finance', products: 'finance', employees: 'finance',
-  tires: 'tires', alignment: 'tires',
+  tires: 'tires',
   cars: 'cars', inspections: 'cars',
 }
 
@@ -59,20 +59,17 @@ interface Stats {
   suppDebtCount:          number
   activeEmployees:        number
   inventoryItems:         number
-  openQuotes:             number
   carsInInventory:        number
   openCarRequests:        number
   tiresInStock:           number
-  activeJobs:             number
-  completedJobsMonth:     number
   totalInspections:       number
 }
 
 const EMPTY: Stats = {
   expensesMonth: 0, incomeMonth: 0, customerDebts: 0, supplierDebts: 0,
-  custDebtCount: 0, suppDebtCount: 0, activeEmployees: 0, inventoryItems: 0, openQuotes: 0,
+  custDebtCount: 0, suppDebtCount: 0, activeEmployees: 0, inventoryItems: 0,
   carsInInventory: 0, openCarRequests: 0, tiresInStock: 0,
-  activeJobs: 0, completedJobsMonth: 0, totalInspections: 0,
+  totalInspections: 0,
 }
 
 function fmt(n: number) {
@@ -169,40 +166,6 @@ function DebtCard({ customerDebts, supplierDebts, custCount, suppCount, href }: 
   )
 }
 
-function AlignmentCard({ active, completedMonth, href }: { active: number; completedMonth: number; href: string }) {
-  const router = useRouter()
-  return (
-    <div
-      onClick={() => router.push(href)}
-      className="stat-card stat-card-double"
-      style={{
-        background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)',
-        padding: '14px 16px', borderTop: '3px solid #d97706', cursor: 'pointer',
-        transition: 'transform .15s, box-shadow .15s',
-        display: 'flex', flexDirection: 'column', gap: '8px', justifyContent: 'center',
-      }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,0,0,.1)' }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow)' }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg,#d97706,#fbbf24)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,.1)', fontSize: 18 }}>🔩</div>
-        <div className="stat-card-double-title" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>כיוון פרונט</div>
-      </div>
-      <div className="stat-card-double-body">
-        <div className="stat-card-double-col">
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>⏳ פעילות</span>
-          <span style={{ fontSize: '18px', fontWeight: 800, color: active > 0 ? '#d97706' : 'var(--text-muted)' }}>{active}</span>
-        </div>
-        <div className="stat-card-double-sep" />
-        <div className="stat-card-double-col">
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>✅ הושלמו החודש</span>
-          <span style={{ fontSize: '15px', fontWeight: 800, color: completedMonth > 0 ? 'var(--primary)' : 'var(--text-muted)' }}>{completedMonth}</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function CarsCard({ inInventory, openRequests, href }: { inInventory: number; openRequests: number; href: string }) {
   const router = useRouter()
   return (
@@ -274,7 +237,7 @@ export default function DashboardStats() {
     const to   = `${y}-${m}-31`
 
     // Only fetch data the user is allowed to see
-    const [expenses, incomeRes, custDebts, suppDebts, custLedgerDebts, custLedgerPayments, emps, products, tires, quotes, cars, carReqs, alignJobs, alignDone, inspections] = await Promise.all([
+    const [expenses, incomeRes, custDebts, suppDebts, custLedgerDebts, custLedgerPayments, emps, products, tires, cars, carReqs, inspections] = await Promise.all([
       canMod('expenses')                   ? supabase.from('expenses').select('amount').gte('date', from).lte('date', to)                                        : Promise.resolve({ data: [] }),
       canMod('income', 'expenses')         ? supabase.from('income').select('amount').gte('date', from).lte('date', to)                                          : Promise.resolve({ data: [] }),
       canMod('debts')                      ? supabase.from('customer_debts').select('amount,paid').eq('is_closed', false)                                         : Promise.resolve({ data: [] }),
@@ -284,11 +247,8 @@ export default function DashboardStats() {
       canMod('employees')                  ? supabase.from('employees').select('id').eq('is_active', true)                                                        : Promise.resolve({ data: [] }),
       canMod('products', 'products_view')  ? supabase.from('products').select('qty')                                                                             : Promise.resolve({ data: [] }),
       canMod('tires', 'tires_view')        ? supabase.from('tires').select('qty')                                                                                : Promise.resolve({ data: [] }),
-      canMod('quotes')                     ? supabase.from('quotes').select('id').eq('status', 'open')                                                           : Promise.resolve({ data: [] }),
       canMod('cars')                       ? supabase.from('cars').select('status').neq('status', 'sold')                                                        : Promise.resolve({ data: [] }),
       canMod('cars')                       ? supabase.from('car_requests').select('id').eq('status', 'open')                                                     : Promise.resolve({ data: [] }),
-      canMod('alignment')                  ? supabase.from('alignment_jobs').select('id').in('status', ['waiting', 'in_progress'])                               : Promise.resolve({ data: [] }),
-      canMod('alignment')                  ? supabase.from('alignment_jobs').select('id').in('status', ['done', 'delivered']).gte('updated_at', from).lte('updated_at', to) : Promise.resolve({ data: [] }),
       canMod('inspections')               ? supabase.from('car_inspections').select('id')                                                                        : Promise.resolve({ data: [] }),
     ])
 
@@ -328,12 +288,9 @@ export default function DashboardStats() {
       suppDebtCount:    (suppDebts.data ?? []).length,
       activeEmployees:  (emps.data ?? []).length,
       inventoryItems:   invCount,
-      openQuotes:       (quotes.data ?? []).length,
       carsInInventory:  (cars.data ?? []).filter((c: { status: string }) => c.status === 'available').length,
       openCarRequests:  (carReqs.data ?? []).length,
       tiresInStock:     (tires.data ?? []).filter((r: { qty: number }) => r.qty > 0).length,
-      activeJobs:          (alignJobs.data ?? []).length,
-      completedJobsMonth:  (alignDone.data ?? []).length,
       totalInspections:    (inspections.data ?? []).length,
     }
 
@@ -361,8 +318,8 @@ export default function DashboardStats() {
 
     const tables = ['expenses', 'income', 'customer_debts', 'supplier_debts',
       'customer_ledger_debts', 'customer_ledger_payments',
-      'employees', 'products', 'tires', 'quotes', 'cars', 'car_requests',
-      'alignment_jobs', 'car_inspections']
+      'employees', 'products', 'tires', 'cars', 'car_requests',
+      'car_inspections']
     let ch = supabase.channel('dashboard-stats')
     for (const table of tables) {
       ch = ch.on('postgres_changes', { event: '*', schema: 'public', table }, () => fetchStats(admin, mods))
@@ -398,7 +355,6 @@ export default function DashboardStats() {
     { id: 'products',   show: can('products','products_view'), node: <StatCard label="פריטים במלאי" value={stats.inventoryItems}  icon="📦" color="#7c3aed" gradient="linear-gradient(135deg,#7c3aed,#a78bfa)" href="/products" /> },
     { id: 'employees',  show: can('employees'),         node: <StatCard label="עובדים פעילים" value={stats.activeEmployees} icon="👷" color="#2563eb" gradient="linear-gradient(135deg,#2563eb,#60a5fa)" href="/employees" /> },
     { id: 'tires',      show: can('tires','tires_view'),node: <StatCard label="סוגי צמיג במלאי" value={stats.tiresInStock} icon="🔘" color="#0891b2" gradient="linear-gradient(135deg,#0891b2,#22d3ee)" href="/tires" /> },
-    { id: 'alignment',  show: can('alignment'),         node: <AlignmentCard active={stats.activeJobs} completedMonth={stats.completedJobsMonth} href="/alignment" /> },
     { id: 'cars',       show: can('cars'),              node: <CarsCard inInventory={stats.carsInInventory} openRequests={stats.openCarRequests} href="/cars" /> },
     { id: 'inspections',show: can('inspections'),       node: <StatCard label="בדיקות קניה" value={stats.totalInspections} icon="📝" color="#6366f1" gradient="linear-gradient(135deg,#6366f1,#a5b4fc)" href="/inspections" /> },
   ]

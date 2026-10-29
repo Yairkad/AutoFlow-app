@@ -1164,16 +1164,6 @@ export default function CustomerTrackingTab({
                     <div key={inv.uid} style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'var(--bg)', borderRadius: '8px', padding: '10px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', gap: '4px' }}>
-                          {(['invoice', 'karteset'] as const).map(t => (
-                            <button key={t} type="button" onClick={() => updateInvoiceLine(i, 'type', t)} style={{
-                              padding: '4px 8px', border: '1px solid', borderRadius: '5px', fontSize: '11px', cursor: 'pointer', fontWeight: 600,
-                              borderColor: inv.type === t ? (t === 'karteset' ? '#7c3aed' : '#0369a1') : 'var(--border)',
-                              background: inv.type === t ? (t === 'karteset' ? '#ede9fe' : '#e0f2fe') : 'transparent',
-                              color: inv.type === t ? (t === 'karteset' ? '#7c3aed' : '#0369a1') : 'var(--text-muted)',
-                            }}>{t === 'invoice' ? 'חשבונית' : 'כרטסת'}</button>
-                          ))}
-                        </div>
-                        <div style={{ display: 'flex', gap: '4px' }}>
                           {(['charge', 'credit'] as const).map(dir => (
                             <button key={dir} type="button" onClick={() => updateInvoiceLine(i, 'direction', dir)} style={{
                               padding: '4px 10px', border: '1px solid', borderRadius: '5px', fontSize: '11px', cursor: 'pointer', fontWeight: 600,
