@@ -8,6 +8,9 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import MoreMenu from '@/components/ui/MoreMenu'
+import FreeDocEditor, { printFreeDoc, type FreeDocContent, type BizHeader } from '@/components/documents/FreeDocEditor'
+
+interface FreeDocRow { id: string; name: string; content: FreeDocContent | null; created_at: string }
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import PageHeader from '@/components/ui/PageHeader'
@@ -60,7 +63,7 @@ const emptyForm = {
   footerText: '',
 }
 
-const DOC_TABS = ['templates', 'contracts', 'poa', 'drive'] as const
+const DOC_TABS = ['editor', 'templates', 'contracts', 'poa', 'drive'] as const
 type DocTab = typeof DOC_TABS[number]
 
 const emptyCol: FormColumn = { label: '', width: 'medium' }
@@ -750,6 +753,10 @@ export default function DocumentsClient() {
 
   // ── Tabs ──────────────────────────────────────────────────────────────────────
   const [docTab, setDocTab] = useState<DocTab>('templates')
+  // Free documents (type 'free_doc') and the one open in the editor (id null = not saved yet)
+  const [freeDocs, setFreeDocs] = useState<FreeDocRow[]>([])
+  const [freeEdit, setFreeEdit] = useState<{ id: string | null; name: string; content: FreeDocContent | null } | null>(null)
+  const [biz, setBiz] = useState<BizHeader>({ name: '', sub: '', phone: '', address: '', logo: '' })
 
   // ── Built-in checklist card state ─────────────────────────────────────────────
   const [clCopies, setClCopies] = useState(1)
@@ -783,11 +790,12 @@ export default function DocumentsClient() {
       .from('documents')
       .select('*')
       .eq('tenant_id', tenantId.current)
-      .in('type', ['form_template', 'html_template'])
+      .in('type', ['form_template', 'html_template', 'free_doc'])
       .order('created_at', { ascending: true })
     const all = data ?? []
     setForms(all.filter(d => d.type === 'form_template') as FormDoc[])
     setHtmlForms(all.filter(d => d.type === 'html_template') as HtmlDoc[])
+    setFreeDocs(all.filter(d => d.type === 'free_doc') as FreeDocRow[])
     setLoading(false)
   }, [sb])
 
@@ -803,6 +811,7 @@ export default function DocumentsClient() {
         bizAddress.current  = (tenant.address as string)         || ''
         bizLicense.current  = (tenant.license_number as string)  || ''
         logoBase64.current  = (tenant.logo_base64 as string)     || ''
+        setBiz({ name: bizName.current, sub: bizSubTitle.current, phone: bizPhone.current, address: bizAddress.current, logo: logoBase64.current })
       }
       fetch(`/api/drive/status?tenant_id=${profile.tenantId}`)
         .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => {})
@@ -1171,6 +1180,7 @@ export default function DocumentsClient() {
       {/* Tab bar — each tab has its own link (?tab=poa …) for bookmarks */}
       <div className="scroll-x" style={{ marginBottom: 20 }}><div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
         {([
+          ['editor',    'עורך מסמכים'],
           ['templates', '📄 תבניות הדפסה'],
           ['contracts', '📝 חוזי מכירת רכב'],
           ['poa',       '✍️ ייפוי כוח'],
@@ -1192,6 +1202,63 @@ export default function DocumentsClient() {
 
       {/* ── Car sale contracts tab ── */}
       {docTab === 'contracts' && <CarContractsPanel />}
+
+      {/* ── Free document editor: blank page + text boxes ── */}
+      {docTab === 'editor' && (freeEdit ? (
+        <FreeDocEditor
+          key={freeEdit.id ?? 'new'}
+          initialName={freeEdit.name}
+          initialContent={freeEdit.content}
+          biz={biz}
+          onClose={() => setFreeEdit(null)}
+          onSave={async (name, content) => {
+            const { data, error } = freeEdit.id
+              ? await sb.from('documents').update({ name, content }).eq('id', freeEdit.id).select('id').single()
+              : await sb.from('documents').insert({ tenant_id: tenantId.current, name, type: 'free_doc', icon: '📝', content }).select('id').single()
+            if (error) { showToast('שגיאה בשמירה', 'error'); return }
+            setFreeEdit(f => f && { ...f, id: data.id, name, content })
+            showToast('המסמך נשמר ✓', 'success')
+            fetchAll()
+          }}
+        />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', flex: 1 }}>דף ריק בגודל A4 שמוסיפים עליו תיבות טקסט בגודל ובעיצוב שרוצים — עם או בלי כותרת העסק.</p>
+            <Button onClick={() => setFreeEdit({ id: null, name: 'מסמך חדש', content: null })}>+ מסמך חדש</Button>
+          </div>
+          {freeDocs.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+              אין עדיין מסמכים — לחץ &quot;+ מסמך חדש&quot;.
+            </div>
+          ) : (
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+              {freeDocs.map((d, i) => (
+                <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', borderTop: i ? '1px solid var(--border)' : 'none' }}>
+                  <button type="button" onClick={() => setFreeEdit({ id: d.id, name: d.name, content: d.content })}
+                    style={{ flex: 1, textAlign: 'right', background: 'none', border: 0, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                    <div style={{ fontWeight: 600 }}>{d.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{(d.content?.boxes ?? []).length} תיבות טקסט · נוצר {new Date(d.created_at).toLocaleDateString('he-IL')}</div>
+                  </button>
+                  <Button size="sm" variant="secondary" onClick={() => printFreeDoc(d.name, d.content ?? { boxes: [], letterhead: true }, biz)}>הדפס</Button>
+                  <RowActionsMenu align="end" actions={[
+                    { key: 'open', label: 'עריכה', icon: '✏️', onClick: () => setFreeEdit({ id: d.id, name: d.name, content: d.content }) },
+                    { key: 'dup', label: 'שכפול', icon: '📋', onClick: async () => {
+                      await sb.from('documents').insert({ tenant_id: tenantId.current, name: `${d.name} (עותק)`, type: 'free_doc', icon: '📝', content: d.content })
+                      fetchAll()
+                    } },
+                    { key: 'del', label: 'מחיקה', icon: '🗑️', danger: true, onClick: async () => {
+                      if (!(await confirm({ msg: `למחוק את "${d.name}"?` }))) return
+                      await sb.from('documents').delete().eq('id', d.id)
+                      fetchAll()
+                    } },
+                  ]} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
 
       {/* ── Power of attorney (Ministry of Transport form) ── */}
       {docTab === 'poa' && <PowerOfAttorneyPanel />}

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T14:45:36.914Z
-> Files: 170 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T14:50:42.173Z
+> Files: 171 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -497,6 +497,7 @@
 
 ## components/documents/
 
+- `FreeDocEditor.tsx` — Opens a print window with the page laid out exactly as in the editor (~3613 tok)
 - `PowerOfAttorneyPanel.tsx` — Documents tab 'ייפוי כוח': official MoT PDF (pdfjs → PNG) as background, transparent fields on top; calibration mode (drag / arrows, per-field x,y,w,h,fs + printer offset mm) saved in poa_form_settings.layout; quick-fill lists for proxies + owners; print only (~5500 tok)
 
 ## components/employees/
