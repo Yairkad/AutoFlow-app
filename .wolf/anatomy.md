@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T06:32:26.310Z
-> Files: 159 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T12:21:04.584Z
+> Files: 167 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -33,6 +33,10 @@
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
 
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/
+
+- `autoflow-redesign.html` — AutoFlow — עיצוב חדש (~14264 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
 
@@ -159,6 +163,10 @@
 ## app/(app)/settings/
 
 
+## app/(app)/stock-count/
+
+- `page.tsx` — hub: scan count / full tire count / count by cabinets (~500 tok)
+
 ## app/(app)/suppliers/
 
 
@@ -269,6 +277,7 @@
 ## app/api/stock/invoice-items/
 
 - `route.ts` — Next.js API route: POST, DELETE (~1871 tok)
+- `route.ts` — POST add invoice lines to stock (cost from invoice, movement, match/create item), DELETE reverse (~1500 tok)
 
 ## app/api/stock/merge/
 
@@ -569,6 +578,9 @@
 - `SuppliersClient.tsx` — Shell: loads suppliers/debts/payments, tab switch (מעקב/פרטים), first-load-only loading spinner via hasLoadedRef (~2600 tok)
 - `SupplierTrackingTab.tsx` — "מעקב" tab: per-supplier accordion, month blocks, debt/invoice CRUD modal, bulk-edit, pay/print/Excel; search matches doc_number/invoices[].number too, and (unless it matched the supplier's name) narrows visible rows to just the matching invoice instead of showing the whole ledger (2026-09-17, bug-039) (~38353 tok)
 
+## components/suppliers/ArrivalsModal.tsx
+
+
 ## components/test-transfer/
 
 
@@ -578,11 +590,21 @@
 - `TirePickerModal.tsx` — shared picker: search existing tires by size/brand/SKU (inventory count add/link, tires merge) (~900 tok)
 - `TirePickerModal.tsx` — TirePickerModal (~1047 tok)
 
+## components/tires/BrandNamesModal.tsx
+
+
 ## components/ui/
 
 - `FilterBar.tsx` — Remembers whether the filters panel was open (per screen) (~1229 tok)
 - `MoreMenu.tsx` — Excel export / import as menu items (replaces a separate ExcelMenu button) (~1002 tok)
 - `SearchSelect.tsx` — Label of the empty choice (value ''), e.g. "— ללא ספק ספציפי —" (~1099 tok)
+
+## components/ui/ (2026-10-29 additions)
+
+- `FilterBar.tsx` — always-visible search + "סינון" toggle panel + removable chips + end slot (~1200 tok)
+- `Modal.tsx` — typed-in modal ignores backdrop clicks, ✕/Esc confirm; guard={false} opt-out (~900 tok)
+- `MoreMenu.tsx` — toolbar "⋯ עוד" dropdown (actions + optional Excel export/import) (~900 tok)
+- `SearchSelect.tsx` — typeable select (fuzzy filter, keyboard) for suppliers/customers (~900 tok)
 
 ## components/yard-hub/
 
@@ -693,6 +715,13 @@
 
 - `size.ts` — null-safe tire size helpers: tireSizeText, hasTireSize, isTireMissingDetails/Price, parseTireSize (~350 tok)
 
+## lib/tires/brands.ts
+
+
+## lib/ui/
+
+- `backdrop.ts` — guardedBackdrop(onClose): hand-built overlay closes on outside click only while untouched (~150 tok)
+
 ## lib/utils/
 
 
@@ -716,6 +745,9 @@
 
 
 ## scripts/
+
+
+## supabase/migrations (2026-10-29)
 
 
 ## supabase/migrations/
@@ -752,30 +784,3 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-
-## components/ui/ (2026-10-29 additions)
-- `MoreMenu.tsx` — toolbar "⋯ עוד" dropdown (actions + optional Excel export/import) (~900 tok)
-- `FilterBar.tsx` — always-visible search + "סינון" toggle panel + removable chips + end slot (~1200 tok)
-- `SearchSelect.tsx` — typeable select (fuzzy filter, keyboard) for suppliers/customers (~900 tok)
-- `Modal.tsx` — typed-in modal ignores backdrop clicks, ✕/Esc confirm; guard={false} opt-out (~900 tok)
-
-## lib/ui/
-- `backdrop.ts` — guardedBackdrop(onClose): hand-built overlay closes on outside click only while untouched (~150 tok)
-
-## lib/tires/brands.ts
-- Hebrew brand names (tire_brands): brandMap, brandHe, brandSearchText, brandsMatchingHe, sameBrand (~500 tok)
-
-## components/suppliers/ArrivalsModal.tsx
-- "📦 מה הגיע?" lines for a supplier invoice (drafts + saved), toArrivalInputs (~2200 tok)
-
-## components/tires/BrandNamesModal.tsx
-- edit Hebrew name per tire brand (~900 tok)
-
-## app/api/stock/invoice-items/
-- `route.ts` — POST add invoice lines to stock (cost from invoice, movement, match/create item), DELETE reverse (~1500 tok)
-
-## app/(app)/stock-count/
-- `page.tsx` — hub: scan count / full tire count / count by cabinets (~500 tok)
-
-## supabase/migrations (2026-10-29)
-- `105_supplier_invoice_items.sql`, `106_tire_brands.sql`
