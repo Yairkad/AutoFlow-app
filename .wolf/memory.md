@@ -2831,3 +2831,6 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 12:21 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/autoflow-redesign.html | — | ~14264 |
 | 12:22 | Inspections office scan + redesign mockup artifact (navy, no green) published | IntakeFilesModal, files API | done | ~40000 |
+| 12:40 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/autoflow-redesign.html | inline fix | ~14 |
+| 12:40 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/autoflow-redesign.html | inline fix | ~13 |
+| 12:40 | 12-month inspection doc retention, removed karteset toggle + alignment/quotes; mockup v2 (light rail tiles, yard panel, tasks w/ updates, doc editor, merged employees) | many | pushed | ~60000 |

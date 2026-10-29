@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T12:21:04.584Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T12:40:35.781Z
 > Files: 167 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
@@ -36,7 +36,7 @@
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/
 
-- `autoflow-redesign.html` — AutoFlow — עיצוב חדש (~14264 tok)
+- `autoflow-redesign.html` — AutoFlow — עיצוב חדש (~17113 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
 

@@ -5,6 +5,8 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+- [2026-10-29] Redesign direction (mockup https://claude.ai/artifact/ACzsde1NcVUnZiwwWnQN4c): navy brand, landing-page yellow only as highlight, no green except approve/paid status. Sidebar LIGHT with each tab as its own separate tile (user disliked dark rail without separation). Dashboard: fixed yard-control panel ~1/3 width on desktop only (not on mobile). Tasks replace reminders+tasks split: one list, status tag (פתוח/בטיפול/בוצע), items stay visible, with progress updates. Employees: one screen with details+salary per employee (no inner tabs). Documents: free-form editor (blank A4 + text boxes with size/style). Supplier/customer invoices: invoice only (no karteset). Alignment & quotes modules removed (2026-10-29).
+- [2026-10-29] Inspection documents retention: 12 months after an inspection that took place (Ministry of Transport rules), incl. office scans; link form with no inspection → 30 days.
 - [2026-10-29] UI density: one primary button per screen; secondary actions in ⋯ (components/ui/MoreMenu); row actions in ⋮ (RowActionsMenu) except the main one (e.g. 💰 תשלום / ✅ שלם). Search + "סינון" button (components/ui/FilterBar) must ALWAYS be visible — never put search/filters inside a menu. In suppliers/customers the per-group "+ הוסף" is the most-used button → keep it first and bold. Pickers of suppliers/customers must be typeable (components/ui/SearchSelect). Yard terminal UI is "organized" — don't restyle it.
 - [2026-10-29] Supplier invoice price is authoritative: "מה הגיע" sets the item's cost price from the invoice. Hebrew tire brand names are per brand (tire_brands), shown Hebrew above English.
 - [2026-10-29] Form popups must never lose typed data on an outside click.
