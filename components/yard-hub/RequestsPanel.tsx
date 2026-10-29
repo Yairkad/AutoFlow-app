@@ -205,6 +205,8 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
         const line = `${pad2(now.getDate())}/${pad2(now.getMonth() + 1)}: ${note}`
         changes.notes = r.notes ? `${r.notes}\n${line}` : line
       }
+      // A logged conversation means the customer was reached
+      if ((r.no_answer_count ?? 0) > 0) { changes.no_answer_count = 0; changes.no_answer_at = null }
     }
     if (withStatus) setStatus(r, withStatus, changes)
     else if (Object.keys(changes).length) patch(r, changes)
@@ -285,6 +287,8 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                   </span>
                   <RowActionsMenu align="end" actions={[
                     ...(r.phone ? [{ key: 'wa', icon: '💬', label: 'שליחת וואטסאפ', onClick: () => window.open(whatsappLink(r.phone!, r.status === 'arrived' ? `שלום ${r.customer_name}, הצמיג שהזמנת (${r.item_desc}) הגיע אלינו 🙂` : undefined), '_blank') }] : []),
+                    ...(isOpen ? [{ key: 'noans', icon: '📵', label: 'חייגנו — לא ענה', onClick: () => patch(r, { no_answer_count: (r.no_answer_count ?? 0) + 1, no_answer_at: new Date().toISOString() }) }] : []),
+                    ...((r.no_answer_count ?? 0) > 0 ? [{ key: 'reached', icon: '✓', label: 'ענה — נקה סימון', onClick: () => patch(r, { no_answer_count: 0, no_answer_at: null }) }] : []),
                     { key: 'call', icon: '📞', label: 'סיכום שיחה (מועד התקנה / הערה)', onClick: () => openCall(r) },
                     { key: 'edit', icon: '✏️', label: 'עריכת נתונים', onClick: () => startEdit(r) },
                     ...(isOpen ? [{ key: 'cancel', icon: '✕', label: 'ביטול הבקשה', onClick: () => setStatus(r, 'cancelled') }] : []),
@@ -298,6 +302,12 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                       ? <a href={`tel:${r.phone}`} className="font-bold" style={{ fontSize: 14, color: '#1E2B66', direction: 'ltr', whiteSpace: 'nowrap', display: 'inline-block' }}>📞 {fmtPhone(r.phone)}</a>
                       : <span className="text-slate-300" style={{ fontSize: 13 }}>אין טלפון</span>}
                   </div>
+                  {isOpen && (r.no_answer_count ?? 0) > 0 && (
+                    <span title={r.no_answer_at ? `ניסיון אחרון: ${fmtDate(r.no_answer_at)}` : undefined}
+                      className="rounded-full font-bold text-xs flex-shrink-0 bg-red-50 text-red-700 border border-red-200" style={{ padding: '2px 8px', whiteSpace: 'nowrap' }}>
+                      📵 לא ענה{(r.no_answer_count ?? 0) > 1 ? ` ×${r.no_answer_count}` : ''}{r.no_answer_at ? ` · ${fmtDate(r.no_answer_at)}` : ''}
+                    </span>
+                  )}
                   <span className={`rounded-full font-bold text-xs flex-shrink-0 ${STATUS_COLOR[r.status]}`} style={{ padding: '3px 9px', whiteSpace: 'nowrap' }}>
                     {REQUEST_STATUS_LABEL[r.status]}
                   </span>

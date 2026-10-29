@@ -28,6 +28,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // amount only means something for a partial payment
     update.paid_amount = b.payment_status === 'partial' && Number(b.paid_amount) > 0 ? Number(b.paid_amount) : null
   }
+  // "Called, no answer": the client sends the new attempt count (0 clears the marker)
+  if (b.no_answer_count !== undefined) {
+    const n = Math.max(0, Math.floor(Number(b.no_answer_count) || 0))
+    update.no_answer_count = n
+    update.no_answer_at = n > 0 ? new Date().toISOString() : null
+  }
   if (b.status !== undefined) {
     if (!STATUSES.includes(b.status)) return NextResponse.json({ error: 'invalid status' }, { status: 400 })
     update.status = b.status
