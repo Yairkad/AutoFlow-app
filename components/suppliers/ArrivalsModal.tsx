@@ -7,7 +7,15 @@ import Button from '@/components/ui/Button'
 import { fuzzyIncludes } from '@/lib/search/fuzzy'
 import { parseTireSize, tireSizeText } from '@/lib/tires/size'
 import type { ArrivalInput } from '@/app/api/stock/invoice-items/route'
-import { brandHe, brandMap, brandSearchText, type BrandMap } from '@/lib/tires/brands'
+import { brandHe, brandMap, brandSearchText, sameBrand, type BrandMap } from '@/lib/tires/brands'
+import { useProfile } from '@/lib/contexts/ProfileContext'
+
+// Size typed so far: "195/55" (no rim yet) already narrows the list
+const SIZE_RE = /(\d{3})\s*[/\s-]\s*(\d{2})(?:\s*(?:z?r|\/|\s|-)?\s*(\d{2}))?/i
+function partialSize(q: string) {
+  const m = q.match(SIZE_RE)
+  return m ? { width: +m[1], profile: +m[2], rim: m[3] ? +m[3] : null, rest: q.replace(m[0], '').trim() } : null
+}
 
 /** A line being typed in "מה הגיע?" (kept on the invoice line until the invoice is saved) */
 export interface ArrivalDraft {
@@ -39,7 +47,9 @@ export function toArrivalInputs(drafts: ArrivalDraft[]): ArrivalInput[] {
 }
 
 interface TireRow { id: string; brand: string | null; width: number | null; profile: number | null; rim: number | null; qty: number }
-interface ProdRow { id: string; name: string; sku: string | null; qty: number }
+interface ProdRow { id: string; name: string; sku: string | null; qty: number; supplier_id?: string | null }
+type Sugg = { id: string; label: string; other?: boolean }
+type NewItem = { key: string; type: 'tire' | 'product'; brand: string; width: string; profile: string; rim: string; load_idx: string; speed_idx: string; name: string; sku: string; sell_price: string }
 
 interface Props {
   open: boolean
@@ -51,41 +61,98 @@ interface Props {
   onDeleteSaved?: (id: string) => void
   /** View only (from the invoice list): no new lines */
   readOnly?: boolean
+  /** The invoice's supplier: its brands / products are suggested first */
+  supplierId?: string | null
 }
 
-export default function ArrivalsModal({ open, onClose, title, drafts, onDraftsChange, saved = [], onDeleteSaved, readOnly }: Props) {
+export default function ArrivalsModal({ open, onClose, title, drafts, onDraftsChange, saved = [], onDeleteSaved, readOnly, supplierId }: Props) {
+  const { profile } = useProfile()
   const [tires, setTires] = useState<TireRow[]>([])
   const [prods, setProds] = useState<ProdRow[]>([])
   const [brands, setBrands] = useState<BrandMap>(new Map())
+  const [suppBrands, setSuppBrands] = useState<string[]>([])  // what this supplier brings
   const [focus, setFocus] = useState<string | null>(null)   // draft key showing suggestions
+  const [wide, setWide] = useState<Set<string>>(new Set())  // drafts showing other suppliers' items too
+  const [newItem, setNewItem] = useState<NewItem | null>(null)
+  const [creating, setCreating] = useState(false)
 
   useEffect(() => {
     if (!open || readOnly) return
     const sb = createClient()
     Promise.all([
       sb.from('tires').select('id, brand, width, profile, rim, qty').limit(5000),
-      sb.from('products').select('id, name, sku, qty').limit(5000),
+      sb.from('products').select('id, name, sku, qty, supplier_id').limit(5000),
       sb.from('tire_brands').select('name_en, name_he'),
-    ]).then(([t, p, b]) => { setTires(t.data ?? []); setProds(p.data ?? []); setBrands(brandMap(b.data)) })
-  }, [open, readOnly])
+      supplierId ? sb.from('suppliers').select('*').eq('id', supplierId).maybeSingle() : Promise.resolve({ data: null }),
+    ]).then(([t, p, b, s]) => {
+      setTires(t.data ?? []); setProds(p.data ?? []); setBrands(brandMap(b.data))
+      setSuppBrands(Array.isArray(s.data?.brands) ? s.data.brands : [])
+    })
+  }, [open, readOnly, supplierId])
+
+  const isSupplierBrand = (brand: string | null) => suppBrands.some(sb => sameBrand(brands, sb, brand))
 
   const set = (key: string, patch: Partial<ArrivalDraft>) =>
     onDraftsChange(drafts.map(d => d.key === key ? { ...d, ...patch } : d))
 
-  function suggestions(d: ArrivalDraft): { id: string; label: string }[] {
+  // Suggestions: this supplier's brands / products first (only those, until "show others");
+  // the last option is always "a new item that isn't in stock yet"
+  function suggestions(d: ArrivalDraft): { list: Sugg[]; hidden: number } {
     const q = d.text.trim()
-    if (q.length < 2) return []
+    if (q.length < 2) return { list: [], hidden: 0 }
+    const showAll = wide.has(d.key)
     if (d.item_type === 'product') {
-      return prods.filter(p => fuzzyIncludes(`${p.name} ${p.sku ?? ''}`, q)).slice(0, 8)
-        .map(p => ({ id: p.id, label: `${p.name} · מלאי ${p.qty}` }))
+      const hits = prods.filter(p => fuzzyIncludes(`${p.name} ${p.sku ?? ''}`, q))
+      const mine = supplierId ? hits.filter(p => p.supplier_id === supplierId) : hits
+      const others = supplierId ? hits.filter(p => p.supplier_id !== supplierId) : []
+      const shown = [...mine, ...(showAll || !mine.length ? others : [])].slice(0, 10)
+      return { list: shown.map(p => ({ id: p.id, label: `${p.name} · מלאי ${p.qty}`, other: !!supplierId && p.supplier_id !== supplierId })),
+        hidden: showAll || !mine.length ? 0 : others.length }
     }
-    const size = parseTireSize(q)
-    const words = q.replace(/\d{3}\s*[/\s-]\s*\d{2}\s*(?:z?r|\/|\s|-)?\s*\d{2}/i, '').trim()
-    return tires
-      .filter(t => (!size || (t.width === size.width && t.profile === size.profile && t.rim === size.rim))
-        && (!words || fuzzyIncludes(brandSearchText(brands, t.brand), words)) && (size || words))
-      .slice(0, 8)
-      .map(t => ({ id: t.id, label: `${brandHe(brands, t.brand) ?? t.brand ?? ''} ${tireSizeText(t) || 'ללא מידה'} · מלאי ${t.qty}`.trim() }))
+    const size = partialSize(q)
+    const words = size ? size.rest : q
+    const hits = tires.filter(t =>
+      (!size || (t.width === size.width && t.profile === size.profile && (size.rim == null || t.rim === size.rim)))
+      && (!words || fuzzyIncludes(brandSearchText(brands, t.brand), words)))
+      .sort((a, b) => (a.rim ?? 0) - (b.rim ?? 0) || (b.qty ?? 0) - (a.qty ?? 0))
+    const mine = suppBrands.length ? hits.filter(t => isSupplierBrand(t.brand)) : hits
+    const others = suppBrands.length ? hits.filter(t => !isSupplierBrand(t.brand)) : []
+    const shown = [...mine, ...(showAll || !mine.length ? others : [])].slice(0, 12)
+    return {
+      list: shown.map(t => ({ id: t.id, other: suppBrands.length > 0 && !isSupplierBrand(t.brand),
+        label: `${brandHe(brands, t.brand) ?? t.brand ?? ''} ${tireSizeText(t) || 'ללא מידה'} · מלאי ${t.qty}`.trim() })),
+      hidden: showAll || !mine.length ? 0 : others.length,
+    }
+  }
+
+  function openNew(d: ArrivalDraft) {
+    const size = partialSize(d.text)
+    const brand = (size ? size.rest : d.text).trim() || (suppBrands.length === 1 ? suppBrands[0] : '')
+    setNewItem({ key: d.key, type: d.item_type, brand, width: size ? String(size.width) : '', profile: size ? String(size.profile) : '',
+      rim: size?.rim ? String(size.rim) : '', load_idx: '', speed_idx: '', name: d.item_type === 'product' ? d.text.trim() : '', sku: '', sell_price: '' })
+    setFocus(null)
+  }
+
+  // Create the item (qty 0 — the invoice line adds the stock when it is saved) and pick it
+  async function createNew() {
+    if (!newItem || !profile?.tenantId) return
+    const n = newItem
+    if (n.type === 'tire' && !(n.width && n.profile && n.rim)) return
+    if (n.type === 'product' && !n.name.trim()) return
+    setCreating(true)
+    const sb = createClient()
+    const price = Number(n.sell_price) || null
+    const row = n.type === 'tire'
+      ? { tenant_id: profile.tenantId, brand: n.brand.trim() || null, width: +n.width, profile: +n.profile, rim: +n.rim,
+          load_idx: n.load_idx.trim() || null, speed_idx: n.speed_idx.trim() || null, sell_price: price, qty: 0, supplier_id: supplierId ?? null }
+      : { tenant_id: profile.tenantId, name: n.name.trim(), sku: n.sku.trim() || null, sell_price: price, qty: 0, supplier_id: supplierId ?? null }
+    const { data, error } = await sb.from(n.type === 'tire' ? 'tires' : 'products').insert(row).select('*').single()
+    setCreating(false)
+    if (error || !data) { alert('שגיאה ביצירת הפריט'); return }
+    if (n.type === 'tire') setTires(t => [data as TireRow, ...t]); else setProds(p => [data as ProdRow, ...p])
+    const label = n.type === 'tire' ? `${n.brand.trim()} ${n.width}/${n.profile}R${n.rim}`.trim() : n.name.trim()
+    set(n.key, { ref_id: data.id, text: label })
+    setNewItem(null)
   }
 
   const total = [...saved.map(s => s.qty * (s.unit_cost ?? 0)), ...drafts.map(d => (Number(d.qty) || 0) * (Number(d.unit_cost) || 0))]
@@ -122,7 +189,8 @@ export default function ArrivalsModal({ open, onClose, title, drafts, onDraftsCh
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {drafts.map(d => {
-              const sugg = focus === d.key && !d.ref_id ? suggestions(d) : []
+              const sg = focus === d.key && !d.ref_id ? suggestions(d) : { list: [], hidden: 0 }
+              const sugg = sg.list
               return (
                 <div key={d.key} style={{ display: 'flex', gap: '6px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
@@ -145,19 +213,29 @@ export default function ArrivalsModal({ open, onClose, title, drafts, onDraftsCh
                       style={{ width: '100%', borderColor: d.ref_id ? 'var(--success)' : undefined }} />
                     {d.ref_id && <span style={{ fontSize: '11px', color: 'var(--success)' }}>✓ פריט קיים</span>}
                     {!d.ref_id && d.text.trim().length >= 2 && focus !== d.key && (
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>אם לא קיים — ייווצר חדש</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>לא נבחר פריט מהמלאי — <button type="button" onClick={() => openNew(d)} style={{ border: 0, background: 'none', padding: 0, color: 'var(--primary)', cursor: 'pointer', fontSize: '11px', fontWeight: 600 }}>הוסף כפריט חדש</button></span>
                     )}
-                    {sugg.length > 0 && (
-                      <ul style={{ position: 'absolute', top: '100%', right: 0, left: 0, zIndex: 20, margin: 0, padding: 0, listStyle: 'none',
+                    {focus === d.key && !d.ref_id && d.text.trim().length >= 2 && (
+                      <ul style={{ position: 'absolute', top: '100%', right: 0, left: 0, zIndex: 20, margin: 0, padding: 0, listStyle: 'none', maxHeight: 300, overflowY: 'auto',
                         background: 'var(--bg-card, #fff)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.12)' }}>
                         {sugg.map(s => (
                           <li key={s.id}>
                             <button type="button" onMouseDown={e => { e.preventDefault(); set(d.key, { ref_id: s.id, text: s.label.replace(/ · מלאי \d+$/, '') }); setFocus(null) }}
-                              style={{ width: '100%', textAlign: 'right', padding: '7px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px' }}>
-                              {s.label}
+                              style={{ width: '100%', textAlign: 'right', padding: '7px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', color: s.other ? 'var(--text-muted)' : undefined }}>
+                              {s.label}{s.other && <span style={{ fontSize: 11 }}> · ספק אחר</span>}
                             </button>
                           </li>
                         ))}
+                        {sg.hidden > 0 && (
+                          <li><button type="button" onMouseDown={e => { e.preventDefault(); setWide(w => new Set(w).add(d.key)) }}
+                            style={{ width: '100%', textAlign: 'right', padding: '7px 10px', border: 'none', borderTop: '1px solid var(--border)', background: 'none', cursor: 'pointer', fontSize: '12.5px', color: 'var(--primary)' }}>
+                            הצג גם חברות של ספקים אחרים ({sg.hidden})
+                          </button></li>
+                        )}
+                        <li><button type="button" onMouseDown={e => { e.preventDefault(); openNew(d) }}
+                          style={{ width: '100%', textAlign: 'right', padding: '8px 10px', border: 'none', borderTop: '1px solid var(--border)', background: 'var(--bg-soft)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: 'var(--primary)' }}>
+                          + {d.item_type === 'tire' ? 'צמיג' : 'מוצר'} חדש שלא קיים במלאי…
+                        </button></li>
                       </ul>
                     )}
                   </div>
@@ -177,6 +255,37 @@ export default function ArrivalsModal({ open, onClose, title, drafts, onDraftsCh
           </button>
         </>
       )}
+
+      <Modal open={!!newItem} onClose={() => setNewItem(null)} title={newItem?.type === 'tire' ? 'צמיג חדש' : 'מוצר חדש'} maxWidth={460}
+        footer={<>
+          <Button variant="secondary" onClick={() => setNewItem(null)}>ביטול</Button>
+          <Button onClick={createNew} loading={creating}
+            disabled={!newItem || (newItem.type === 'tire' ? !(newItem.width && newItem.profile && newItem.rim) : !newItem.name.trim())}>הוסף ובחר</Button>
+        </>}>
+        {newItem && (newItem.type === 'tire' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+            <label style={{ gridColumn: '1 / -1' }} className="form-label">חברה
+              <input className="form-input" list="arrival-brands" value={newItem.brand} onChange={e => setNewItem({ ...newItem, brand: e.target.value })} />
+              <datalist id="arrival-brands">{[...new Set([...suppBrands, ...tires.map(t => t.brand).filter(Boolean) as string[]])].map(b => <option key={b} value={b} />)}</datalist>
+            </label>
+            {(['width', 'profile', 'rim'] as const).map(k => (
+              <label key={k} className="form-label">{k === 'width' ? 'רוחב' : k === 'profile' ? 'פרופיל' : 'קוטר'}
+                <input className="form-input" inputMode="numeric" value={newItem[k]} onChange={e => setNewItem({ ...newItem, [k]: e.target.value.replace(/\D/g, '') })} />
+              </label>
+            ))}
+            <label className="form-label">אינדקס עומס<input className="form-input" value={newItem.load_idx} onChange={e => setNewItem({ ...newItem, load_idx: e.target.value })} /></label>
+            <label className="form-label">אינדקס מהירות<input className="form-input" value={newItem.speed_idx} onChange={e => setNewItem({ ...newItem, speed_idx: e.target.value.toUpperCase() })} /></label>
+            <label className="form-label">מחיר מכירה<input className="form-input" type="number" min="0" value={newItem.sell_price} onChange={e => setNewItem({ ...newItem, sell_price: e.target.value })} /></label>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            <label className="form-label">שם המוצר<input className="form-input" value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} /></label>
+            <label className="form-label">מק״ט / ברקוד<input className="form-input" value={newItem.sku} onChange={e => setNewItem({ ...newItem, sku: e.target.value })} /></label>
+            <label className="form-label">מחיר מכירה<input className="form-input" type="number" min="0" value={newItem.sell_price} onChange={e => setNewItem({ ...newItem, sell_price: e.target.value })} /></label>
+          </div>
+        ))}
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 10 }}>הכמות ומחיר הקנייה ייכנסו מהחשבונית כשתישמר.</p>
+      </Modal>
 
       {total > 0 && (
         <div style={{ marginTop: '12px', fontSize: '13px', color: 'var(--text-muted)' }}>

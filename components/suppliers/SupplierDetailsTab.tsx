@@ -77,6 +77,15 @@ export default function SupplierDetailsTab({
   const [fBankAccount, setFBankAccount]       = useState('')
   const [fBankHolder, setFBankHolder]         = useState('')
   const [fOpeningBalance, setFOpeningBalance] = useState('')
+  // Tire brands the supplier brings (learned from "מה הגיע?", editable here) — once migration 111 ran
+  const [fBrands, setFBrands] = useState<string[]>([])
+  const [brandInput, setBrandInput] = useState('')
+  const hasBrands = suppliers.some(s => Array.isArray(s.brands))
+  const addBrand = () => {
+    const b = brandInput.trim()
+    if (b && !fBrands.some(x => x.toLowerCase() === b.toLowerCase())) setFBrands(v => [...v, b])
+    setBrandInput('')
+  }
   const [showBankDrop, setShowBankDrop]       = useState(false)
   const [saving, setSaving]       = useState(false)
 
@@ -98,13 +107,16 @@ export default function SupplierDetailsTab({
       setFBankName(s.bank_name ?? ''); setFBankBranch(s.bank_branch ?? '')
       setFBankAccount(s.bank_account ?? ''); setFBankHolder(s.bank_account_holder ?? '')
       setFOpeningBalance(s.opening_balance ? String(s.opening_balance) : '')
+      setFBrands(s.brands ?? [])
     } else {
       setEditItem(null)
       setFName(''); setFCategory(''); setFContact(''); setFPhone('')
       setFEmail(''); setFAddress(''); setFNotes('')
       setFBankName(''); setFBankBranch(''); setFBankAccount(''); setFBankHolder('')
       setFOpeningBalance('')
+      setFBrands([])
     }
+    setBrandInput('')
     setShowBankDrop(false)
     setShowModal(true)
   }
@@ -127,6 +139,7 @@ export default function SupplierDetailsTab({
       bank_account: fBankAccount.trim() || null,
       bank_account_holder: fBankHolder.trim() || null,
       opening_balance: parseFloat(fOpeningBalance) || 0,
+      ...(hasBrands ? { brands: fBrands } : {}),
     }
     if (editItem) {
       const { error } = await supabase.from('suppliers').update(row).eq('id', editItem.id)
@@ -377,6 +390,12 @@ export default function SupplierDetailsTab({
                   <div style={{ fontSize: '13px' }}>{selected.notes}</div>
                 </div>
               )}
+              {(selected.brands?.length ?? 0) > 0 && (
+                <div style={{ background: 'var(--bg)', borderRadius: '8px', padding: '10px 14px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>חברות צמיגים</div>
+                  <div style={{ fontSize: '13px' }}>{selected.brands!.join(' · ')}</div>
+                </div>
+              )}
               {!!selected.opening_balance && (
                 <div style={{ background: 'var(--bg)', borderRadius: '8px', padding: '10px 14px' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>יתרת פתיחה</div>
@@ -562,6 +581,27 @@ export default function SupplierDetailsTab({
                 <input type="number" step="0.01" value={fOpeningBalance} onChange={e => setFOpeningBalance(e.target.value)} placeholder="0" className="form-input" />
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>חוב שהיה קיים לפני תחילת המעקב במערכת — משמש כנקודת פתיחה בכרטסת המודפסת</span>
               </label>
+              {hasBrands && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 600 }}>
+                  חברות צמיגים שהספק מביא
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {fBrands.map(b => (
+                      <span key={b} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 6px 3px 10px', borderRadius: 999, background: 'var(--bg-soft)', border: '1px solid var(--border)', fontWeight: 500 }}>
+                        {b}
+                        <button type="button" aria-label={`הסר ${b}`} onClick={() => setFBrands(v => v.filter(x => x !== b))}
+                          style={{ border: 0, background: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1 }}>✕</button>
+                      </span>
+                    ))}
+                    {fBrands.length === 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400 }}>עדיין לא נלמדו — יתמלא לבד מ&quot;מה הגיע?&quot;</span>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input value={brandInput} onChange={e => setBrandInput(e.target.value)} placeholder="הוסף חברה (למשל Michelin)" className="form-input"
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addBrand() } }} style={{ margin: 0 }} />
+                    <button type="button" onClick={addBrand} className="form-input" style={{ width: 'auto', cursor: 'pointer', margin: 0 }}>הוסף</button>
+                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>ב&quot;מה הגיע?&quot; של הספק יוצעו קודם צמיגים של החברות האלה. נלמד אוטומטית מהחשבוניות, ואפשר להוסיף או להסיר.</span>
+                </div>
+              )}
               {/* Bank / payment details */}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>

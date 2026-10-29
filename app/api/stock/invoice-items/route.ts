@@ -75,6 +75,9 @@ export async function POST(req: NextRequest) {
   const { data: brandRows } = await sb.from('tire_brands').select('name_en, name_he').eq('tenant_id', tenantId)
   const brands = brandMap(brandRows)
 
+  // Learn which tire brands this supplier brings (editable in the supplier card)
+  const learned = new Set<string>()
+
   let failed = 0
   for (const it of lines) {
     const refId = await resolveItem(sb, tenantId, debt.supplier_id, it, brands)
@@ -90,6 +93,10 @@ export async function POST(req: NextRequest) {
       ...(!cur.supplier_id && debt.supplier_id ? { supplier_id: debt.supplier_id } : {}),
     }).eq('id', refId).eq('tenant_id', tenantId)
     if (upErr) { console.error('[invoice-items] stock', upErr.message); failed++; continue }
+    if (it.item_type === 'tire') {
+      const { data: t } = await sb.from('tires').select('brand').eq('id', refId).maybeSingle()
+      if (t?.brand?.trim()) learned.add(t.brand.trim())
+    }
 
     const [mvTable, mvCol] = it.item_type === 'tire' ? ['tire_sales', 'tire_id'] : ['product_sales', 'product_id']
     const mvRow = { tenant_id: tenantId, [mvCol]: refId, qty: it.qty, movement_type: 'order', sold_date: debt.date }
@@ -103,6 +110,14 @@ export async function POST(req: NextRequest) {
       description: it.description.trim() || '—', qty: it.qty, unit_cost: cost, movement_id: mv.data?.id ?? null,
     })
     if (insErr) { console.error('[invoice-items] line', insErr.message); failed++ }
+  }
+  if (learned.size && debt.supplier_id) {
+    const { data: sup, error } = await sb.from('suppliers').select('brands').eq('id', debt.supplier_id).eq('tenant_id', tenantId).maybeSingle()
+    if (!error && sup && Array.isArray(sup.brands)) {   // column exists (migration 111)
+      const have = new Set((sup.brands as string[]).map(b => normalizeSearch(b)))
+      const add = [...learned].filter(b => !have.has(normalizeSearch(b)))
+      if (add.length) await sb.from('suppliers').update({ brands: [...sup.brands, ...add] }).eq('id', debt.supplier_id).eq('tenant_id', tenantId)
+    }
   }
   return NextResponse.json({ ok: failed === 0, failed }, { status: failed === lines.length ? 500 : 200 })
 }

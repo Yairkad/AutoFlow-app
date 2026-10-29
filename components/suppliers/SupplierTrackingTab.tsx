@@ -1436,7 +1436,7 @@ export default function SupplierTrackingTab({
           drafts={sInvoices[arrivalsLine].arrivals ?? []}
           onDraftsChange={d => setSInvoices(prev => prev.map((l, j) => j === arrivalsLine ? { ...l, arrivals: d } : l))}
           saved={editSupp && arrivalsLine === 0 ? itemsOfDebt(editSupp.id) : []}
-          onDeleteSaved={deleteArrival} />
+          onDeleteSaved={deleteArrival} supplierId={sSupplier || null} />
       )}
       {viewArrivals && (
         <ArrivalsModal open readOnly onClose={() => setViewArrivals(null)}
