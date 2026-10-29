@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Button from '@/components/ui/Button'
+import { printHtml } from '@/lib/print/printHtml'
 
 // Free document editor (2026-10): a blank A4 page; add text boxes anywhere, drag them, resize
 // them, and style each one (size, bold / italic / underline, color, alignment) — like a simple
@@ -18,7 +19,7 @@ export interface FreeBox {
   align: 'right' | 'center' | 'left'
 }
 export interface FreeDocContent { boxes: FreeBox[]; letterhead: boolean }
-export interface BizHeader { name: string; sub: string; phone: string; address: string; logo: string }
+export interface BizHeader { name: string; sub: string; phone: string; address: string; logo: string; license?: string }
 
 export const PAGE_W = 595, PAGE_H = 842
 const COLORS = ['#141A2E', '#26357A', '#B9342D', '#137A55', '#5B6478']
@@ -27,11 +28,24 @@ const newBox = (y: number): FreeBox => ({ id: crypto.randomUUID(), x: 48, y, w: 
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-function letterheadHtml(b: BizHeader) {
-  return `<div style="position:absolute;top:28px;right:40px;left:40px;display:flex;align-items:center;gap:14px;border-bottom:2px solid #26357A;padding-bottom:10px">
-    ${b.logo ? `<img src="${b.logo}" style="height:52px;max-width:120px;object-fit:contain">` : ''}
-    <div><div style="font-size:20px;font-weight:700">${esc(b.name)}</div>
-    <div style="font-size:11px;color:#5B6478">${esc([b.sub, b.address, b.phone].filter(Boolean).join(' · '))}</div></div></div>`
+// The business's official letterhead — the same layout as "כותרת עסק ריקה" in print templates
+// (בס"ד, business details on the right, logo + services line on the left, rule underneath),
+// drawn in page px (A4 = 595 px wide, so 1 mm ≈ 2.83 px). Used on screen and in print.
+export const LETTERHEAD_H = 150
+export function letterheadHtml(b: BizHeader) {
+  return `<div style="position:absolute;top:28px;right:42px;left:42px;font-family:inherit;color:#000">
+    <div style="font-size:8px;font-weight:700;text-align:right;margin-bottom:2px">בס"ד</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:11px;border-bottom:1.5px solid #000">
+      <div style="font-size:10px;font-weight:700;line-height:1.45">
+        <div style="font-size:12.5px;font-weight:800">${esc(b.name)}</div>
+        ${b.sub ? `<div>${esc(b.sub)}</div>` : ''}${b.address ? `<div>${esc(b.address)}</div>` : ''}
+        ${b.phone ? `<div>טל׳: ${esc(b.phone)}</div>` : ''}${b.license ? `<div>מס׳ רישיון מוסך: ${esc(b.license)}</div>` : ''}
+      </div>
+      <div style="text-align:center">
+        ${b.logo ? `<img src="${b.logo}" alt="" style="max-height:82px;max-width:180px;object-fit:contain;display:block;margin:0 auto">` : ''}
+        <div style="font-size:7px;font-weight:700;margin-top:3px;letter-spacing:.3px;color:#333">מוסך מורשה | פנצ׳רייה | פחחות | מכון בדיקת רכב | כיוון פרונט</div>
+      </div>
+    </div></div>`
 }
 
 /** Opens a print window with the page laid out exactly as in the editor */
@@ -46,9 +60,7 @@ export function printFreeDoc(name: string, content: FreeDocContent, biz: BizHead
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@400;700&display=swap"></head>
 <body><div class="page">${content.letterhead ? letterheadHtml(biz) : ''}${boxes}</div>
 <script>window.onload=function(){setTimeout(function(){window.print()},250)}<\/script></body></html>`
-  const w = window.open('', '_blank')
-  if (!w) { alert('אפשר חלונות קופצים בדפדפן כדי להדפיס'); return }
-  w.document.write(html); w.document.close()
+  printHtml(html)
 }
 
 export default function FreeDocEditor({ initialName, initialContent, biz, onSave, onClose }: {
@@ -59,7 +71,7 @@ export default function FreeDocEditor({ initialName, initialContent, biz, onSave
   onClose: () => void
 }) {
   const [name, setName]   = useState(initialName)
-  const [boxes, setBoxes] = useState<FreeBox[]>(initialContent?.boxes ?? [newBox(140)])
+  const [boxes, setBoxes] = useState<FreeBox[]>(initialContent?.boxes ?? [newBox(LETTERHEAD_H + 20)])
   const [letterhead, setLetterhead] = useState(initialContent?.letterhead ?? true)
   const [selId, setSelId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -127,7 +139,7 @@ export default function FreeDocEditor({ initialName, initialContent, biz, onSave
       </div>
 
       <div role="toolbar" aria-label="כלי עריכה" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', padding: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, position: 'sticky', top: 0, zIndex: 3 }}>
-        <Button size="sm" onClick={() => { const b = newBox(Math.min(PAGE_H - 60, 140 + boxes.length * 50)); setBoxes(bs => [...bs, b]); setSelId(b.id) }}>+ תיבת טקסט</Button>
+        <Button size="sm" onClick={() => { const b = newBox(Math.min(PAGE_H - 60, LETTERHEAD_H + 20 + boxes.length * 50)); setBoxes(bs => [...bs, b]); setSelId(b.id) }}>+ תיבת טקסט</Button>
         <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 600 }}>
           גודל
           <select aria-label="גודל גופן" disabled={!sel} value={sel?.size ?? 16} onChange={e => sel && patch(sel.id, { size: Number(e.target.value) })}
@@ -158,16 +170,7 @@ export default function FreeDocEditor({ initialName, initialContent, biz, onSave
         onPointerDown={e => { if (e.target === e.currentTarget) setSelId(null) }}>
         <div ref={pageRef} aria-label="דף A4" style={{ position: 'relative', width: PAGE_W, height: PAGE_H, margin: '0 auto', background: '#fff', color: '#141A2E', boxShadow: '0 4px 24px rgba(20,26,46,.18)' }}
           onPointerDown={e => { if (e.target === e.currentTarget) setSelId(null) }}>
-          {letterhead && (
-            <div aria-hidden="true" style={{ position: 'absolute', top: 28, right: 40, left: 40, display: 'flex', alignItems: 'center', gap: 14, borderBottom: '2px solid #26357A', paddingBottom: 10, pointerEvents: 'none' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {biz.logo && <img src={biz.logo} alt="" style={{ height: 52, maxWidth: 120, objectFit: 'contain' }} />}
-              <div>
-                <div style={{ fontSize: 20, fontWeight: 700 }}>{biz.name}</div>
-                <div style={{ fontSize: 11, color: '#5B6478' }}>{[biz.sub, biz.address, biz.phone].filter(Boolean).join(' · ')}</div>
-              </div>
-            </div>
-          )}
+          {letterhead && <div aria-hidden="true" style={{ pointerEvents: 'none' }} dangerouslySetInnerHTML={{ __html: letterheadHtml(biz) }} />}
           {boxes.map(b => (
             <div key={b.id} data-id={b.id} contentEditable suppressContentEditableWarning role="textbox" aria-multiline="true" aria-label="תיבת טקסט"
               onPointerDown={e => startDrag(e, b)}

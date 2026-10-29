@@ -1,5 +1,6 @@
 'use client'
 
+import { printHtml } from '@/lib/print/printHtml'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
@@ -260,11 +261,7 @@ body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #fff
 
 </body></html>`
 
-  const w = window.open('', '_blank', 'width=900,height=700')
-  if (!w) return
-  w.document.write(html)
-  w.document.close()
-  w.onload = () => { w.focus(); w.print() }
+  printHtml(html)
 }
 
 // ── Copy cell helper ──────────────────────────────────────────────────────────

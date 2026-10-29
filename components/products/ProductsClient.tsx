@@ -16,6 +16,7 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { fuzzyIncludes } from '@/lib/search/fuzzy'
 import DuplicatesModal from '@/components/stock/DuplicatesModal'
 import { findProductDuplicates, pickKeeper } from '@/lib/stock/duplicates'
+import { printHtml } from '@/lib/print/printHtml'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -1028,10 +1029,7 @@ function PriceListOverlay({ products, onClose }: { products: Product[]; onClose:
   )
 
   function doPrint() {
-    const w = window.open('', '_blank')
-    if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-    w.document.write(buildPricelistHtml(products))
-    w.document.close()
+    printHtml(buildPricelistHtml(products))
   }
 
   return (

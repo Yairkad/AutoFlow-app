@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sessionTenant } from '@/lib/auth/sessionTenant'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const tenantId = searchParams.get('tenant_id')
-  if (!tenantId) return NextResponse.json({ connected: false })
+  const guard = await sessionTenant(searchParams.get('tenant_id'))
+  if ('error' in guard) return NextResponse.json({ connected: false })
+  const tenantId = guard.tenantId
 
   const sb = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

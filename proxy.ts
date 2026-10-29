@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
-import { ALL_YARD_KEYS, YARD_TRACKING_KEY } from '@/lib/yard/access'
+import { YARD_TRACKING_KEY } from '@/lib/yard/access'
 import { YARD_COOKIE, verifyYardSession } from '@/lib/auth/yard-session'
 
 // ── Public paths – no auth needed ──────────────────────────────────────────
@@ -37,23 +37,24 @@ const ROUTE_MODULES: [string, string[] | null][] = [
   ['/dashboard',   null],
   ['/my-profile',  null],
   ['/employees',   null],      // all users – directory view for non-admins
-  ['/settings',    []],        // admin only
+  ['/settings',    ['settings']],   // same as the sidebar (admins always pass)
   ['/expenses',    ['expenses']],
+  ['/checks',      ['expenses', 'suppliers']],
+  ['/bank-sync',   ['bank_sync']],
+  ['/reports',     ['financial_reports']],
   ['/income',      ['income', 'expenses']],
   ['/debts',       ['debts']],
   ['/products',    ['products', 'products_view']],
   ['/tires',       ['tires', 'tires_view']],
   ['/stock-count', ['products', 'tires']],
+  ['/scan',        ['products', 'tires']],
   ['/cars',        ['cars']],
   ['/suppliers',   ['suppliers']],
   ['/customers',   ['customers']],
   ['/inspections', ['inspections']],
+  ['/test-transfer', ['test_transfer']],
   ['/reminders',   ['reminders']],
   ['/documents',   ['documents']],
-  // Worker terminal: any yard key gets in; each section is checked again in the
-  // yard layout (pages) and in requireYard() (new API routes).
-  ['/yard',          ALL_YARD_KEYS],
-  ['/api/yard',      ALL_YARD_KEYS],
   ['/yard-tracking', [YARD_TRACKING_KEY]],
 ]
 
@@ -83,8 +84,17 @@ export async function proxy(request: NextRequest) {
     return res
   }
 
-  // Allow public routes without any check
-  if (PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) {
+  // Public pages and static files. '/' is matched exactly — as a prefix it used to match every path,
+  // which silently turned off the login + module checks below for the whole app (fixed 2026-10).
+  const isStaticFile = /\/[^/]+\.[a-z0-9]+$/i.test(pathname)
+  if (pathname === '/' || isStaticFile || PUBLIC_PREFIXES.some(p => p !== '/' && pathname.startsWith(p))) {
+    return NextResponse.next({ request })
+  }
+
+  // API routes check their own auth (requireAuth / requireYard / cron secret / signed links), and
+  // the yard terminal has its own PIN login (app/yard/layout.tsx); the office terminal checks admin
+  // server-side. Only the app's pages go through the login + module check here.
+  if (pathname.startsWith('/api/') || pathname === '/yard' || pathname.startsWith('/yard/') || pathname.startsWith('/yard-office')) {
     return NextResponse.next({ request })
   }
 

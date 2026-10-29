@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAccessToken, mergeRootFolders } from '@/lib/drive'
+import { sessionTenant } from '@/lib/auth/sessionTenant'
 
 export async function POST(req: Request) {
   try {
-    const { tenant_id } = await req.json()
-    if (!tenant_id) return NextResponse.json({ error: 'missing tenant_id' }, { status: 400 })
+    const body = await req.json().catch(() => ({}))
+    const guard = await sessionTenant(body.tenant_id, { adminOnly: true })
+    if ('error' in guard) return guard.error
+    const tenant_id = guard.tenantId
 
     const sb = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

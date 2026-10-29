@@ -21,6 +21,7 @@ import LocationBadge from '@/components/stock/LocationBadge'
 import { fuzzyIncludes } from '@/lib/search/fuzzy'
 import DuplicatesModal from '@/components/stock/DuplicatesModal'
 import { findTireDuplicates, pickKeeper } from '@/lib/stock/duplicates'
+import { printHtml } from '@/lib/print/printHtml'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -301,10 +302,7 @@ export default function TiresClient() {
 </table>
 <script>window.onload=function(){window.print()}<\/script>
 </body></html>`
-    const w = window.open('', '_blank')
-    if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-    w.document.write(html)
-    w.document.close()
+    printHtml(html)
   }
 
   function openAdd() {

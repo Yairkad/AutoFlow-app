@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Button from '@/components/ui/Button'
+import { printHtml } from '@/lib/print/printHtml'
 
 // ── 21 systems per Ministry of Transportation guidelines ──────────────────────
 
@@ -444,10 +445,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 <script>window.onload=function(){window.print()}<\/script>
 </body></html>`
 
-  const w = window.open('', '_blank')
-  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-  w.document.write(html)
-  w.document.close()
+  printHtml(html)
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────

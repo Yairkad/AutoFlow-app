@@ -13,6 +13,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { DEFAULT_YARD_MODULES, YARD_MONEY_KEY, YARD_SECTIONS } from '@/lib/yard/access'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
+import { printHtml } from '@/lib/print/printHtml'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -643,10 +644,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
   <script>window.onload=function(){window.print()}<\/script>
 </body></html>`
 
-    const w = window.open('', '_blank')
-    if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-    w.document.write(html)
-    w.document.close()
+    printHtml(html)
   }
 
   // ── Render: salary table ─────────────────────────────────────────────────────

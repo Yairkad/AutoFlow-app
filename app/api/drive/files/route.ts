@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAccessToken, getOrCreateFolder, createFolder, listFiles, setupRootFolders } from '@/lib/drive'
+import { sessionTenant } from '@/lib/auth/sessionTenant'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const tenantId  = searchParams.get('tenant_id')
+  const guard = await sessionTenant(searchParams.get('tenant_id'))
+  if ('error' in guard) return guard.error
+  const tenantId  = guard.tenantId
   const subFolder = searchParams.get('sub_folder')
   const itemName  = searchParams.get('item_name')   // second level under sub_folder
   const folderId2 = searchParams.get('folder_id')
@@ -70,7 +73,10 @@ export async function GET(req: Request) {
 // POST – create a new subfolder
 export async function POST(req: Request) {
   try {
-    const { tenant_id, parent_id, name } = await req.json()
+    const body = await req.json()
+    const guard = await sessionTenant(body.tenant_id)
+    if ('error' in guard) return guard.error
+    const tenant_id = guard.tenantId, { parent_id, name } = body
     if (!tenant_id || !parent_id || !name) {
       return NextResponse.json({ error: 'Missing params' }, { status: 400 })
     }

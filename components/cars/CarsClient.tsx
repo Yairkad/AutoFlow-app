@@ -18,6 +18,7 @@ import { VehicleData } from '@/lib/utils/plateApi'
 import { MAX_UPLOAD_BYTES, shrinkForUpload } from '@/lib/utils/uploadCompress'
 import CarContractsPanel from './CarContractsPanel'
 import CarContractEditor, { type ContractPrefill } from './CarContractEditor'
+import { printHtml } from '@/lib/print/printHtml'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -468,10 +469,7 @@ ${req.notes ? `<div class="section-title">הערות ודגשים</div><div clas
 </body>
 </html>`
 
-    const w = window.open('', '_blank')
-    if (!w) { toast('אפשר חלונות קופצים בדפדפן', 'error'); return }
-    w.document.write(html)
-    w.document.close()
+    printHtml(html)
   }
 
   // ── Car CRUD ──────────────────────────────────────────────────────

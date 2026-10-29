@@ -15,6 +15,7 @@ import {
   newPoa, poaPrintHtml, renderPoaBackground,
   type FieldBox, type Person, type PoaData, type PoaLayout, type SavedPerson,
 } from '@/lib/forms/poaForm'
+import { printHtml } from '@/lib/print/printHtml'
 
 type ListKey = 'proxies' | 'owners'
 
@@ -201,10 +202,7 @@ export default function PowerOfAttorneyPanel() {
   // ── print ──
   function handlePrint() {
     if (!bg) { showToast('הטופס עדיין נטען', 'info'); return }
-    const w = window.open('', '_blank')
-    if (!w) { showToast('יש לאפשר חלונות קופצים בדפדפן', 'error'); return }
-    w.document.write(poaPrintHtml(bg, layout, data))
-    w.document.close()
+    printHtml(poaPrintHtml(bg, layout, data))
   }
   async function handleClear() {
     const ok = await confirm({ msg: 'לנקות את כל השדות בטופס?', confirmLabel: 'נקה' })

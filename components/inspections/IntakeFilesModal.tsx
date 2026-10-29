@@ -1,5 +1,6 @@
 'use client'
 
+import { printHtml } from '@/lib/print/printHtml'
 import { useCallback, useEffect, useState } from 'react'
 import { intakeFileLabel, type IntakeFile } from '@/lib/inspections/intake'
 import { MAX_UPLOAD_BYTES, compressImageIfNeeded, compressPdfIfNeeded } from '@/lib/utils/uploadCompress'
@@ -16,13 +17,10 @@ type SignedFile = IntakeFile & { url: string | null }
 export function printIntakeFile(f: SignedFile, title: string) {
   if (!f.url) return
   if (f.type === 'application/pdf') { window.open(f.url, '_blank'); return } // browser PDF viewer has its own print
-  const w = window.open('', '_blank')
-  if (!w) return
-  w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>${title}</title>
+  printHtml(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>${title}</title>
 <style>@page{margin:10mm}html,body{margin:0;height:100%}body{display:flex;align-items:center;justify-content:center}
 img{max-width:100%;max-height:100vh;object-fit:contain}</style></head>
 <body><img src="${f.url}" onload="setTimeout(function(){window.focus();window.print()},150)"></body></html>`)
-  w.document.close()
 }
 
 export default function IntakeFilesModal({ inspectionId, title, onClose, onChanged }: {

@@ -3,6 +3,7 @@
 // Car sale contract editor — full-screen, edited directly on the document (no side form).
 // Opened from Documents → חוזי מכירה and from a car's detail view (prefilled from the car).
 
+import { printHtml } from '@/lib/print/printHtml'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
@@ -351,11 +352,8 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
   async function handlePrint() {
     if (!d) return
     // open the window synchronously (popup blockers), fill it after saving
-    const w = window.open('', '_blank')
-    if (!w) { showToast('יש לאפשר חלונות קופצים בדפדפן', 'error'); return }
     if (dirty || !id) await save()
-    w.document.write(contractHtml(d))
-    w.document.close()
+    printHtml(contractHtml(d))
   }
 
   async function handleClose() {

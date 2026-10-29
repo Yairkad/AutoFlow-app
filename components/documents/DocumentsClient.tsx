@@ -17,6 +17,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
 import CarContractsPanel from '@/components/cars/CarContractsPanel'
 import PowerOfAttorneyPanel from '@/components/documents/PowerOfAttorneyPanel'
+import { printHtml } from '@/lib/print/printHtml'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -210,10 +211,7 @@ function printFormTemplate(f: FormDoc, copies: number) {
   <script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>
 </body></html>`
 
-  const w = window.open('', '_blank')
-  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-  w.document.write(html)
-  w.document.close()
+  printHtml(html)
 }
 
 function printChecklist(copies: number, _car: string, _owner: string, _phone: string, logoBase64: string) {
@@ -366,10 +364,7 @@ function printChecklist(copies: number, _car: string, _owner: string, _phone: st
   <script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>
 </body></html>`
 
-  const w = window.open('', '_blank')
-  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-  w.document.write(html)
-  w.document.close()
+  printHtml(html)
 }
 
 // ── printBlankHeader ──────────────────────────────────────────────────────────
@@ -415,10 +410,7 @@ function printBlankHeader(copies: number, bizNameStr: string, logoBase64: string
   ${Array(copies).fill(pageHTML).join('\n')}
   <script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>
   </body></html>`
-  const w = window.open('', '_blank')
-  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-  w.document.write(html)
-  w.document.close()
+  printHtml(html)
 }
 
 // ── printWarranty ─────────────────────────────────────────────────────────────
@@ -545,10 +537,7 @@ function printWarranty(copies: number, bizNameStr: string, logoBase64: string, s
   <script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>
 </body></html>`
 
-  const w = window.open('', '_blank')
-  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-  w.document.write(html)
-  w.document.close()
+  printHtml(html)
 }
 
 function printSellerWaiver(bizNameStr: string, logoBase64: string, subTitle: string, phone: string, address: string, license: string) {
@@ -702,6 +691,7 @@ function printSellerWaiver(bizNameStr: string, logoBase64: string, subTitle: str
 </body>
 </html>`
 
+  // Fillable form (inputs) — the buyer/seller details are typed in this window before printing
   const w = window.open('', '_blank')
   if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
   w.document.write(html)
@@ -811,7 +801,7 @@ export default function DocumentsClient() {
         bizAddress.current  = (tenant.address as string)         || ''
         bizLicense.current  = (tenant.license_number as string)  || ''
         logoBase64.current  = (tenant.logo_base64 as string)     || ''
-        setBiz({ name: bizName.current, sub: bizSubTitle.current, phone: bizPhone.current, address: bizAddress.current, logo: logoBase64.current })
+        setBiz({ name: bizName.current, sub: bizSubTitle.current, phone: bizPhone.current, address: bizAddress.current, logo: logoBase64.current, license: bizLicense.current })
       }
       fetch(`/api/drive/status?tenant_id=${profile.tenantId}`)
         .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => {})
@@ -1058,7 +1048,7 @@ export default function DocumentsClient() {
   }
 
   const printHtmlDoc = (doc: HtmlDoc) => {
-    let html = replaceTemplateVars(doc.content.html, {
+    const html = replaceTemplateVars(doc.content.html, {
       logo:       logoBase64.current,
       bizName:    bizName.current,
       bizSubTitle: bizSubTitle.current,
@@ -1066,12 +1056,7 @@ export default function DocumentsClient() {
       bizAddress: bizAddress.current,
       bizLicense: bizLicense.current,
     })
-    const printScript = '<script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>'
-    html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${printScript}</body>`) : html + printScript
-    const w = window.open('', '_blank')
-    if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-    w.document.write(html)
-    w.document.close()
+    printHtml(html)
   }
 
   const deleteHtmlTemplate = async (doc: HtmlDoc) => {
