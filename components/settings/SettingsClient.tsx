@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import GuideEditor from '@/components/settings/GuideEditor'
 import { BACKUP_TABLES, CHILD_TABLES } from '@/lib/backup/backup'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 type ToastFn = (msg: string, type?: 'success' | 'error' | 'info') => void
 
@@ -218,7 +219,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
       {editing && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={cancel}
+          {...guardedBackdrop(cancel)}
         >
           <div
             style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', maxWidth: '560px', width: '100%', margin: '16px', maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto', direction: 'rtl' }}
@@ -886,7 +887,8 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
       {/* Change PIN modal */}
       {changingPin && (
         <>
-          <div onClick={() => setChangingPin(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 299 }} />
+          {/* Form window: a click outside must not close it (typed details would be lost) */}
+          <div aria-hidden="true" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 299 }} />
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'var(--bg-card)', borderRadius: '14px', padding: '28px', width: 'min(320px, calc(100vw - 32px))', zIndex: 300, direction: 'rtl', boxShadow: '0 20px 60px rgba(0,0,0,.25)' }}>
             <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '20px' }}>🔑 שינוי קוד כספת</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

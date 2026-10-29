@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Button from '@/components/ui/Button'
 import { insertCustomerDebtPayment, updateCustomerDebtPayment, deleteCustomerDebtPayment } from '@/lib/debts/customerDebtPayments'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 type PaymentMethod = 'מזומן' | 'אשראי' | "צ'ק" | 'העברה'
 const METHODS: PaymentMethod[] = ['מזומן', 'אשראי', 'העברה', "צ'ק"]
@@ -135,7 +136,7 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
   const sorted = [...payments].sort((a, b) => b.payment_date.localeCompare(a.payment_date) || b.created_at.localeCompare(a.created_at))
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={close}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(close)}>
       <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700 }}>📜 היסטוריית תשלומים — {debt.name}</h3>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', display: 'flex', gap: '14px', flexWrap: 'wrap' }}>

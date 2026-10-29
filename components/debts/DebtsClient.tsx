@@ -13,6 +13,7 @@ import CallLogModal, { CustomerDebtCall } from './CallLogModal'
 import PaymentHistoryModal, { CustomerDebtPayment } from './PaymentHistoryModal'
 import { insertCustomerDebtPayment } from '@/lib/debts/customerDebtPayments'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -524,7 +525,7 @@ export default function DebtsClient() {
 
       {/* ── CUSTOMER MODAL ── */}
       {showCustModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowCustModal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowCustModal(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '500px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editCust ? '✏️ עריכת חוב לקוח' : '+ חוב לקוח חדש'}</h3>
             <div style={{ display: 'grid', gap: '14px' }}>
@@ -552,7 +553,7 @@ export default function DebtsClient() {
 
       {/* ── ADD TRANSFER-TO-VERIFY MODAL ── */}
       {showTransferModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowTransferModal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowTransferModal(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '420px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>🏦 הוסף העברה לבדיקה</h3>
             <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--text-muted)' }}>רישום חשבונית/העברה שצריך לוודא שהתקבלה בחשבון הבנק</p>
@@ -613,7 +614,7 @@ export default function DebtsClient() {
 
       {/* ── WHATSAPP EDIT MODAL ── */}
       {waModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setWaModal(null)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setWaModal(null))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', width: 'min(420px, calc(100vw - 32px))', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', direction: 'rtl' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>💬 שלח הודעת ווצאפ</h3>
             <p style={{ margin: '0 0 12px', fontSize: '12px', color: 'var(--text-muted)' }}>ערוך את הטקסט לפני השליחה</p>

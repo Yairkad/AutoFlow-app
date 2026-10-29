@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
 import { Supplier, SupplierDebt, ScheduledPayment, fmt, bal, waUrl } from './shared'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -503,7 +504,7 @@ export default function SupplierDetailsTab({
       {showModal && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => setShowModal(false)}
+          {...guardedBackdrop(() => setShowModal(false))}
         >
           <div
             style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '520px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto' }}

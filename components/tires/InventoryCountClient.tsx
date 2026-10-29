@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast'
 import Button from '@/components/ui/Button'
 import { tireSizeText, parseTireSize } from '@/lib/tires/size'
 import TirePickerModal from '@/components/tires/TirePickerModal'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -631,7 +632,7 @@ export default function InventoryCountClient() {
       )}
 
       {newTireOpen && (
-        <div onClick={() => setNewTireOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div {...guardedBackdrop(() => setNewTireOpen(false))} style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div onClick={e => e.stopPropagation()} role="dialog" aria-label="צמיג חדש בלי מקט" style={{ background: 'var(--bg-card)', borderRadius: 14, padding: 18, width: 'min(400px, 100%)', boxShadow: '0 10px 40px rgba(0,0,0,.25)', direction: 'rtl' }}>
             <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>🆕 צמיג חדש בלי מקט</div>
             <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 12 }}>יישמר במלאי וישאר ב&quot;חסרי נתונים&quot; עד שתשלים פרטים בדף הצמיגים.</div>

@@ -1093,7 +1093,8 @@ export default function InspectionsClient() {
       {editModalOpen && (
         <>
           {/* Backdrop */}
-          <div onClick={clearForm} style={{
+          {/* Form window: a click outside must not close it (typed details would be lost) */}
+          <div aria-hidden="true" style={{
             position: 'fixed', inset: 0, zIndex: 499,
             background: 'rgba(0,0,0,0.45)',
           }} />

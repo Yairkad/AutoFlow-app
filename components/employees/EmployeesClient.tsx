@@ -12,6 +12,7 @@ import ExcelMenu from '@/components/ui/ExcelMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { DEFAULT_YARD_MODULES, YARD_MONEY_KEY, YARD_SECTIONS } from '@/lib/yard/access'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -1453,7 +1454,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
       {bankViewEmp && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => setBankViewEmp(null)}
+          {...guardedBackdrop(() => setBankViewEmp(null))}
         >
           <div
             style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', width: 'min(480px, calc(100vw - 32px))', maxHeight: 'calc(100dvh - 60px)', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.2)', direction: 'rtl' }}

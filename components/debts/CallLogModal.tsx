@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Button from '@/components/ui/Button'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 export interface CustomerDebtCall {
   id: string
@@ -56,7 +57,7 @@ export default function CallLogModal({ open, onClose, debtId, debtName, calls, t
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={close}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(close)}>
       <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', maxWidth: '440px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700 }}>📞 מעקב שיחות — {debtName}</h3>
         <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--text-muted)' }}>רישום שיחה חדשה</p>

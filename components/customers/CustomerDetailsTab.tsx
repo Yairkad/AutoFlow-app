@@ -11,6 +11,7 @@ import UnitToggle from '@/components/ui/UnitToggle'
 import { withVat, withoutVat } from '@/lib/utils/vat'
 import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, RecurringItem, CustomerAction, fmt, waUrl } from './shared'
 import { balanceOf } from '@/lib/debts/ledger'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 
 interface CustomerDetailsTabProps {
@@ -528,7 +529,7 @@ export default function CustomerDetailsTab({
       {showModal && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => setShowModal(false)}
+          {...guardedBackdrop(() => setShowModal(false))}
         >
           <div
             style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '520px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto' }}
@@ -591,7 +592,7 @@ export default function CustomerDetailsTab({
 
       {/* ── RECURRING ITEM (RATE TEMPLATE) MODAL ── */}
       {showRecItemModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowRecItemModal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowRecItemModal(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editRecItem ? '✏️ עריכת חיוב חוזר' : '+ חיוב חוזר חדש'}</h3>
             <div style={{ display: 'grid', gap: '14px' }}>
@@ -672,7 +673,7 @@ export default function CustomerDetailsTab({
 
       {/* ── ADD/EDIT CUSTOMER ACTION (quick-fill service type) MODAL ── */}
       {showActionModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowActionModal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowActionModal(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '400px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editAction ? '✏️ עריכת פעולה' : '+ פעולה חדשה'}</h3>
             <div style={{ display: 'grid', gap: '14px' }}>

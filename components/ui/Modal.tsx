@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 
 interface Props {
   open: boolean
@@ -11,20 +12,34 @@ interface Props {
   maxWidth?: number
 }
 
+// Once something was typed in the window, a stray click outside never closes it,
+// and ✕ / Escape ask before throwing the typed details away.
 export default function Modal({ open, onClose, title, children, footer, maxWidth = 560 }: Props) {
+  const { confirm } = useConfirm()
+  const dirty = useRef(false)
+  useEffect(() => { if (open) dirty.current = false }, [open])
+
+  const requestClose = async () => {
+    if (dirty.current && !(await confirm({ msg: 'יש פרטים שלא נשמרו — לסגור בלי לשמור?', confirmLabel: 'סגור בלי לשמור' }))) return
+    onClose()
+  }
+  const closeRef = useRef(requestClose)
+  useEffect(() => { closeRef.current = requestClose })
+
   // Close on Escape
   useEffect(() => {
     if (!open) return
-    const handler = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const handler = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current()
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 
   return (
     <div
-      onClick={onClose}
+      onClick={() => { if (!dirty.current) onClose() }}
+      onInput={() => { dirty.current = true }}
       style={{
         position: 'fixed', inset: 0,
         background: 'rgba(0,0,0,.45)',
@@ -53,7 +68,7 @@ export default function Modal({ open, onClose, title, children, footer, maxWidth
         }}>
           <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{title}</h3>
           <button
-            onClick={onClose}
+            onClick={requestClose}
             aria-label="סגור"
             style={{
               background: '#f1f5f9', border: 'none', cursor: 'pointer',
