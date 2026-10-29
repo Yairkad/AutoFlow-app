@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T22:40:05.308Z
-> Files: 173 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T22:50:06.009Z
+> Files: 174 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../
 
@@ -666,6 +666,7 @@
 
 ## lib/debts/
 
+- `supplierLedger.ts` — Events of one supplier. A payment counts when it was allocated to an invoice, marked paid, (~1136 tok)
 
 ## lib/expenses/
 

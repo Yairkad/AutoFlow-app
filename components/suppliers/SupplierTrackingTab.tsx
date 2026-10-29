@@ -14,6 +14,7 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
 import { reconcileSupplierPayment } from '@/lib/debts/reconcileSupplierPayment'
 import { netAllocation } from '@/lib/debts/netAllocation'
+import { supplierEvents, balanceAfter, monthSummaries, monthOf } from '@/lib/debts/supplierLedger'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
@@ -103,6 +104,8 @@ export default function SupplierTrackingTab({
 
   const [filter, setFilter] = useState<Filter>('open')
   const [search, setSearch] = useState('')
+  // Show one month only (its block opens on every supplier) — '' = all months
+  const [monthFilter, setMonthFilter] = useState('')
 
   // Row selection — bulk-edit mode: check several debt rows, then walk through the edit modal
   // one at a time (closing one, by save or cancel, opens the next) instead of one row at a time.
@@ -944,7 +947,12 @@ export default function SupplierTrackingTab({
 
   // ── Filters ───────────────────────────────────────────────────────────────
 
-  const openSuppTotal = supplierDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
+  const ledgerOf = (sid: string | null) => supplierEvents(
+    supplierDebts.filter(d => d.supplier_id === sid), debtPayments,
+    sid ? scheduledPayments.filter(p => p.supplier_id === sid) : [], todayISO())
+  const openSuppTotal = [...new Set(supplierDebts.map(d => d.supplier_id))]
+    .reduce((s, sid) => s + Math.max(0, balanceAfter(ledgerOf(sid))), 0)
+  const allLedgerMonths = [...new Set(supplierDebts.map(d => monthKeyOf(d.date)))].sort().reverse()
 
   // ── Selected item info ────────────────────────────────────────────────────
 
@@ -1059,6 +1067,10 @@ export default function SupplierTrackingTab({
               <FilterBtn f="closed" label="סגורים" />
               <FilterBtn f="all" label="הכל" />
             </div>
+            <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)} aria-label="חודש" className="form-input" style={{ width: 'auto', margin: 0 }}>
+              <option value="">כל החודשים</option>
+              {allLedgerMonths.map(mk => <option key={mk} value={mk}>{fmtMonth(mk)}</option>)}
+            </select>
             <input
               placeholder="חיפוש ספק / מספר חשבונית / תיאור..."
               aria-label="חיפוש"
@@ -1098,7 +1110,10 @@ export default function SupplierTrackingTab({
               const debts = supplierDebts.filter(d => d.supplier_id === sid)
                 .sort((a, b) => b.date.localeCompare(a.date) || (invNumOf(a.doc_number) - invNumOf(b.doc_number)))
               const supp = suppliers.find(s => s.id === sid)
-              const totalBal = debts.reduce((s, d) => s + bal(d), 0)
+              // Running account: invoices +, credits / payments − on their own dates
+              const events = ledgerOf(sid)
+              const totalBal = balanceAfter(events)
+              const summaries = monthSummaries(events)
 
               const q = search.trim().toLowerCase()
               const nameMatch = !!q && (supp?.name ?? '').toLowerCase().includes(q)
@@ -1119,13 +1134,17 @@ export default function SupplierTrackingTab({
               const visibleDebts = narrowToMatches ? debts.filter(lineMatch) : debts
 
               const monthMap: Record<string, SupplierDebt[]> = {}
+              // A month with only a payment still gets a block (it moved the balance)
+              if (!narrowToMatches) for (const mk of Object.keys(summaries)) monthMap[mk] = []
               visibleDebts.forEach(d => {
                 const mk = monthKeyOf(d.date)
                 if (!monthMap[mk]) monthMap[mk] = []
                 monthMap[mk].push(d)
               })
-              const months = Object.keys(monthMap).sort().reverse()
+              const months = Object.keys(monthMap).sort().reverse().filter(mk => !monthFilter || mk === monthFilter)
+              if (monthFilter && months.length === 0) return null
               const suppPayments = scheduledPayments.filter(p => p.supplier_id === sid)
+              const countedPayIds = new Set(events.filter(e => e.paymentId).map(e => e.paymentId!))
 
               const debtIds = new Set(debts.map(d => d.id))
               const linkedIds = new Set(
@@ -1134,11 +1153,12 @@ export default function SupplierTrackingTab({
               )
               const unlinkedPayments = suppPayments.filter(p => !p.is_paid && !p.allocation_ignored && !linkedIds.has(p.id))
 
-              return { sid, supp, totalBal, monthMap, months, suppPayments, unlinkedPayments }
+              return { sid, supp, totalBal, monthMap, months, suppPayments, unlinkedPayments, summaries, countedPayIds }
             }).filter(Boolean) as {
               sid: string | null; supp: Supplier | undefined; totalBal: number
               monthMap: Record<string, SupplierDebt[]>; months: string[]
               suppPayments: ScheduledPayment[]; unlinkedPayments: ScheduledPayment[]
+              summaries: ReturnType<typeof monthSummaries>; countedPayIds: Set<string>
             }[]
 
             if (groups.length === 0) return (
@@ -1241,20 +1261,15 @@ export default function SupplierTrackingTab({
 
                     {group.months.map((mk, mIdx) => {
                       const monthDebts = group.monthMap[mk]
-                      const carryOver = group.months.slice(mIdx + 1).reduce(
-                        (s, m) => s + group.monthMap[m].reduce((ss, d) => ss + bal(d), 0), 0)
-                      const monthDebtIds = new Set(monthDebts.map(d => d.id))
-                      const linkedPaymentIds = new Set(
-                        debtPayments.filter(dp => monthDebtIds.has(dp.supplier_debt_id) && dp.scheduled_payment_id)
-                          .map(dp => dp.scheduled_payment_id!)
-                      )
-                      const monthPayments = group.suppPayments.filter(p => linkedPaymentIds.has(p.id))
+                      const sum = group.summaries[mk] ?? { opening: 0, charges: 0, credits: 0, payments: 0, closing: 0 }
+                      // Payments shown in the month they were made (by date), not the invoice they paid
+                      const monthPayments = group.suppPayments.filter(p => group.countedPayIds.has(p.id) && monthOf(p.due_date) === mk)
                       const monthChargeTotal = monthDebts.filter(d => d.direction !== 'credit').reduce((s, d) => s + Number(d.amount), 0)
                       const monthCreditTotal = monthDebts.filter(d => d.direction === 'credit').reduce((s, d) => s + Number(d.amount), 0)
                       const monthNetTotal    = monthChargeTotal - monthCreditTotal
                       const monthPaidTotal   = monthDebts.reduce((s, d) => s + Number(d.paid), 0)
-                      const monthBalance     = monthDebts.reduce((s, d) => s + bal(d), 0)
-                      const monthCollapsed   = !expandedMonthKeys.has(monthKeyFor(group.sid, mk))
+                      const monthBalance     = sum.closing   // running balance at the end of this month
+                      const monthCollapsed   = !monthFilter && !expandedMonthKeys.has(monthKeyFor(group.sid, mk))
 
                       return (
                         <div key={mk} style={{ borderBottom: mIdx < group.months.length - 1 ? '1px solid var(--border)' : 'none', padding: '14px 16px' }}>
@@ -1269,13 +1284,25 @@ export default function SupplierTrackingTab({
                               ? <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>סגור ✓</span>
                               : <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>פתוח</span>}
                             <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthBalance > 0 ? 'var(--danger)' : 'var(--success)' }}>
-                              יתרה: {fmt(monthBalance)}
+                              יתרה לסוף החודש: {fmt(monthBalance)}
                             </span>
                           </div>
 
-                          {!monthCollapsed && carryOver !== 0 && (
-                            <div style={{ padding: '7px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', marginBottom: '10px', fontSize: '13px', color: '#92400e', fontWeight: 600 }}>
-                              ↩ יתרה מחודשים קודמים: {fmt(carryOver)}
+                          {/* Month at a glance: opening → charges / credits / payments → closing */}
+                          {!monthCollapsed && (
+                            <div className="month-sum">
+                              <span>פתיחה <b className="num">{fmt(sum.opening)}</b></span>
+                              <span>חיובים <b className="num">+{fmt(sum.charges)}</b></span>
+                              {sum.credits > 0 && <span>זיכויים <b className="num">−{fmt(sum.credits)}</b></span>}
+                              <span>תשלומים <b className="num">−{fmt(sum.payments)}</b></span>
+                              <span>סגירה <b className="num">{fmt(sum.closing)}</b></span>
+                              {group.sid && (
+                                <button type="button" onClick={() => {
+                                  setPrintSupplierId(group.sid!); setPrintRangeMode('months'); setPrintMonths(new Set([mk])); setPrintMode('ledger')
+                                }} style={{ marginInlineStart: 'auto', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 10px', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>
+                                  🖨 הדפס חודש
+                                </button>
+                              )}
                             </div>
                           )}
 
@@ -2151,16 +2178,20 @@ export default function SupplierTrackingTab({
             }
 
             const debts = allDebts.filter(inRange)
-            const priorDebts = rangeStart ? allDebts.filter(d => d.date < rangeStart) : []
-            const openingForReport = (supp?.opening_balance ?? 0) + priorDebts.reduce((s, d) => s + bal(d), 0)
+            // Same running account as the screen: payments and credits on their own dates
+            const events = ledgerOf(printSupplierId)
+            const inRangeDate = (date: string) => inRange({ date } as SupplierDebt)
+            const rangeEvents = events.filter(e => inRangeDate(e.date))
+            const openingForReport = (supp?.opening_balance ?? 0) + (rangeStart ? balanceAfter(events, rangeStart) : 0)
 
-            const chargeTotal = debts.filter(d => d.direction !== 'credit').reduce((s, d) => s + Number(d.amount), 0)
-            const creditTotal = debts.filter(d => d.direction === 'credit').reduce((s, d) => s + Number(d.amount), 0)
-            const paidTotal   = debts.reduce((s, d) => s + Number(d.paid), 0)
+            const chargeTotal = rangeEvents.filter(e => e.kind === 'charge').reduce((s, e) => s + e.amount, 0)
+            const creditTotal = rangeEvents.filter(e => e.kind === 'credit').reduce((s, e) => s + e.amount, 0)
+            const paidTotal   = rangeEvents.filter(e => e.kind === 'payment' || e.kind === 'writeoff').reduce((s, e) => s + e.amount, 0)
 
             let running = openingForReport
             const showOpeningRow = openingForReport !== 0 || !!rangeStart
             const actualBalance = running + chargeTotal - creditTotal - paidTotal
+            const debtById = new Map(debts.map(d => [d.id, d]))
 
             const debtDatesSorted = debts.map(d => d.date).sort()
             const actualFrom = debtDatesSorted[0]
@@ -2219,7 +2250,25 @@ export default function SupplierTrackingTab({
                         <td>{fmt(openingForReport)}</td>
                       </tr>
                     )}
-                    {debts.flatMap(d => {
+                    {rangeEvents.flatMap((e, ei) => {
+                      if (e.kind === 'payment' || e.kind === 'writeoff') {
+                        running -= e.amount
+                        const sp = e.paymentId ? scheduledPayments.find(x => x.id === e.paymentId) : null
+                        const label = e.kind === 'writeoff' ? 'נסגר ידנית'
+                          : sp ? `${sp.payment_method === 'check' ? `צ'ק${sp.check_number ? ' מס׳ ' + sp.check_number : ''}` : 'העברה'}` : 'תשלום'
+                        return [(
+                          <tr key={`p-${ei}`}>
+                            <td>{fmtDMY(e.date)}</td>
+                            <td>—</td>
+                            <td style={{ width: 46, textAlign: 'left', fontWeight: 700 }}>תשלום</td>
+                            <td>{label}</td>
+                            <td style={{ textAlign: 'left' }}>−{fmt(e.amount)}</td>
+                            <td>{fmt(running)}</td>
+                          </tr>
+                        )]
+                      }
+                      const d = e.debtId ? debtById.get(e.debtId) : undefined
+                      if (!d) return []
                       const items = Array.isArray(d.invoices) && d.invoices.length > 0
                         ? [...d.invoices].sort((a, b) => invNumOf(a.number) - invNumOf(b.number))
                         : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]
