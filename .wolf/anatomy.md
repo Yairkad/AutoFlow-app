@@ -1,7 +1,12 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-29T22:50:06.009Z
-> Files: 174 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-30T08:01:54.433Z
+> Files: 179 tracked | Anatomy hits: 0 | Misses: 0
+
+## (added 2026-10-29)
+
+- `components/documents/DriveFilesPanel.tsx` — Drive 'מסמכים' folder browser (upload/scan/folders/delete), shown in Settings (~2200 tok)
+- `lib/stock/barcodes.ts` — itemCodes / extraCodes: main + alt_barcodes of a tire/product (~200 tok)
 
 ## ../../
 
@@ -37,6 +42,7 @@
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/
 
 - `autoflow-redesign.html` — AutoFlow — עיצוב חדש (~17113 tok)
+- `contacts-mock.html` — אנשי קשר — הדמיה (~3121 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
 
@@ -568,12 +574,12 @@
 - `GuideEditor.tsx` — Settings → דף נחיתה → מדריך צמיגים: QR/print, edit texts (HE, optional EN), images (compressed data URL) + credit, add/move/delete sections, reset (~4200 tok)
 
 ## components/stock/
-- `StockClient.tsx` — stock screen (/stock-count): movements of tires+products (invoice/yard/manual), unstocked sales, reports, counts; manual update modal (~3500 tok)
 
 - `DuplicatesModal.tsx` — Default record to keep in a group (~1314 tok)
 - `DuplicatesModal.tsx` — duplicate groups side by side, choose record to keep, merge via /api/stock/merge (~1200 tok)
 - `LocationBadge.tsx` — fetchLayout (~944 tok)
 - `PlacementSheet.tsx` — PlacementSheet (~1232 tok)
+- `StockClient.tsx` — stock screen (/stock-count): movements of tires+products (invoice/yard/manual), unstocked sales, reports, counts; manual update modal (~3500 tok)
 - `StockClient.tsx` — SOURCE_LABEL (~5509 tok)
 - `StorageClient.tsx` — StorageClient (~3122 tok)
 - `StorageMap.tsx` — CAB_W (~1390 tok)
@@ -666,8 +672,8 @@
 
 
 ## lib/debts/
-- `supplierLedger.ts` — supplier running account: events (charge/credit/payment/writeoff), balanceAfter, monthSummaries (~800 tok)
 
+- `supplierLedger.ts` — supplier running account: events (charge/credit/payment/writeoff), balanceAfter, monthSummaries (~800 tok)
 - `supplierLedger.ts` — Events of one supplier. A payment counts when it was allocated to an invoice, marked paid, (~1136 tok)
 
 ## lib/expenses/
@@ -796,9 +802,3 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-
-## (added 2026-10-29)
-- `components/documents/DriveFilesPanel.tsx` — Drive 'מסמכים' folder browser (upload/scan/folders/delete), shown in Settings (~2200 tok)
-- `lib/stock/barcodes.ts` — itemCodes / extraCodes: main + alt_barcodes of a tire/product (~200 tok)
-- `supabase/migrations/108_request_no_answer.sql`, `109_stock_movement_source.sql`, `110_alt_barcodes.sql`
-- `supabase/run-once-105-110.sql` — all release migrations in one file (replaces run-once-105-107)
