@@ -127,7 +127,7 @@ export default function ResetPasswordPage() {
         {success ? (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
-            <p style={{ fontSize: '15px', fontWeight: 600, color: '#16a34a' }}>הסיסמה עודכנה בהצלחה!</p>
+            <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--success)' }}>הסיסמה עודכנה בהצלחה!</p>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>מועבר לדשבורד...</p>
           </div>
         ) : ready ? (

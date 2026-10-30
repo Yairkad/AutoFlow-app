@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { fetchVehicleByPlate, type VehicleData } from '@/lib/utils/plateApi'
-import { INTAKE_FILE_KINDS, INTAKE_FILE_RETENTION_DAYS, INTAKE_MAX_FILE_BYTES, type IntakeFileKind } from '@/lib/inspections/intake'
+import { INTAKE_FILE_KINDS, INTAKE_MAX_FILE_BYTES, type IntakeFileKind } from '@/lib/inspections/intake'
 
 // Public pre-fill form for a purchase inspection — opened by the customer from the personal
 // link the office sent. Details are posted first, then each document in its own request.
@@ -412,7 +412,7 @@ export default function IntakeFormClient({ token }: { token: string }) {
                 onChange={e => { setConsent(e.target.checked); setConsentErr(false) }} />
               <span>
                 אני מאשר/ת ל{business?.name || 'העסק'} לשמור את הפרטים והמסמכים לצורך בדיקת הקנייה בלבד.
-                צילומי המסמכים יימחקו {INTAKE_FILE_RETENTION_DAYS} יום לאחר הבדיקה.{' '}
+                צילומי המסמכים נשמרים 12 חודשים לאחר הבדיקה, כנדרש בתקנות משרד התחבורה, ונמחקים לאחר מכן.{' '}
                 <a href="/privacy" target="_blank" className="font-semibold underline" style={{ color: C.accent }}>מדיניות הפרטיות</a>
               </span>
             </label>

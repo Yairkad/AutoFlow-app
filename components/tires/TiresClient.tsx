@@ -10,11 +10,18 @@ import Button from '@/components/ui/Button'
 import PageHeader from '@/components/ui/PageHeader'
 import StatCard from '@/components/ui/StatCard'
 import * as XLSX from 'xlsx'
-import ExcelMenu from '@/components/ui/ExcelMenu'
+import MoreMenu from '@/components/ui/MoreMenu'
+import FilterBar from '@/components/ui/FilterBar'
+import BrandNamesModal from '@/components/tires/BrandNamesModal'
+import { brandHe, brandMap, brandSearchText, type BrandName } from '@/lib/tires/brands'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import TirePickerModal from '@/components/tires/TirePickerModal'
 import { tireSizeText, hasTireSize, isTireMissingDetails, isTireMissingPrice, parseTireSize } from '@/lib/tires/size'
 import LocationBadge from '@/components/stock/LocationBadge'
+import { fuzzyIncludes } from '@/lib/search/fuzzy'
+import DuplicatesModal from '@/components/stock/DuplicatesModal'
+import { findTireDuplicates, pickKeeper } from '@/lib/stock/duplicates'
+import { printHtml } from '@/lib/print/printHtml'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -34,6 +41,8 @@ interface Tire {
   location: string | null
   notes: string | null
   sku: string | null
+  /** Extra barcodes of the same tire (migration 110) */
+  alt_barcodes?: string[]
   supplier_id: string | null
   condition: 'new' | 'used'
   tire_type: 'regular' | 'reinforced' | 'commercial'
@@ -60,7 +69,7 @@ const SPEED_INDICES = ['B','C','D','E','F','G','H','J','K','L','M','N','P','Q','
 
 const emptyForm = {
   brand: '', width: '', profile: '', rim: '',
-  load_idx: '', speed_idx: '', sku: '',
+  load_idx: '', speed_idx: '', sku: '', alt: '',
   cost_price: '', margin: '', sell_price: '',
   qty: '0', location: '', notes: '', supplier_id: '',
   condition: 'new' as 'new' | 'used',
@@ -116,7 +125,8 @@ export default function TiresClient() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [loading, setLoading]     = useState(true)
 
-  const [tab, setTab] = useState<'tires' | 'movements'>('tires')
+  // Stock movements live on the stock screen (/stock-count) now
+  const tab = 'tires' as const
 
   // Receiving order modal
   const [recvOpen,    setRecvOpen]    = useState(false)
@@ -154,6 +164,11 @@ export default function TiresClient() {
 
   // Merge a duplicate (e.g. a misread barcode saved as a new tire) into the right tire
   const [mergeSource, setMergeSource] = useState<Tire | null>(null)
+  // Duplicates view: same brand+size or same barcode, merged group by group
+  const [dupsOpen, setDupsOpen] = useState(false)
+  // Hebrew brand names (one per brand) — searched and shown above the English name
+  const [brandRows, setBrandRows] = useState<BrandName[]>([])
+  const [brandsOpen, setBrandsOpen] = useState(false)
 
   // Quick SKU inline edit (click directly on SKU cell)
   const [editingSkuId,    setEditingSkuId]    = useState<string | null>(null)
@@ -163,13 +178,15 @@ export default function TiresClient() {
   // ── Load ──────────────────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
-    const [{ data: ts }, { data: mvs }, { data: sups }] = await Promise.all([
+    const [{ data: ts }, { data: mvs }, { data: sups }, { data: brs }] = await Promise.all([
       sb.from('tires').select('*').eq('tenant_id', tenantId.current).order('created_at', { ascending: false }),
       sb.from('tire_sales').select('*').eq('tenant_id', tenantId.current)
         .order('sold_date', { ascending: false }).limit(300),
       sb.from('suppliers').select('id, name').eq('tenant_id', tenantId.current).order('name'),
+      sb.from('tire_brands').select('name_en, name_he').eq('tenant_id', tenantId.current),
     ])
     setTires(ts || [])
+    setBrandRows(brs || [])
     setMovements(mvs || [])
     setSuppliers(sups || [])
     setLoading(false)
@@ -202,6 +219,20 @@ export default function TiresClient() {
 
   // ── Filtered tires ────────────────────────────────────────────────────────────
 
+  const dupGroups = findTireDuplicates(tires)
+  const brands = brandMap(brandRows)
+
+  async function mergeGroup(targetId: string, sourceIds: string[]): Promise<boolean> {
+    const res = await fetch('/api/stock/merge', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'tire', target_id: targetId, source_ids: sourceIds }),
+    })
+    const out = await res.json().catch(() => ({}))
+    showToast(res.ok ? `מוזג ✓ (${sourceIds.length + 1} → 1)` : out.error ?? 'שגיאה במיזוג', res.ok ? 'success' : 'error')
+    await load()
+    return res.ok
+  }
+
   const filtered = tires
     .filter(t => {
       if (filterWidth && t.width   !== parseInt(filterWidth)) return false
@@ -214,9 +245,8 @@ export default function TiresClient() {
       if (filterMissing === 'price'   && !isTireMissingPrice(t))   return false
       if (filterMissing === 'any'     && !isTireMissingDetails(t) && !isTireMissingPrice(t)) return false
       if (search) {
-        const hay = [t.brand, tireSize(t), t.location, t.notes, t.load_idx, t.speed_idx, t.sku]
-          .join(' ').toLowerCase()
-        if (!hay.includes(search.toLowerCase())) return false
+        const hay = [brandSearchText(brands, t.brand), tireSize(t), t.location, t.notes, t.load_idx, t.speed_idx, t.sku].join(' ')
+        if (!fuzzyIncludes(hay, search)) return false
       }
       return true
     })
@@ -267,7 +297,7 @@ export default function TiresClient() {
   tbody tr:nth-child(even){background:#f9fafb}
   @media screen{body{background:#f0f0f0;padding:20px}table{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);border-radius:8px;overflow:hidden}}
 </style></head><body>
-<h1>🔘 מחירון צמיגים</h1>
+<h1>מחירון צמיגים</h1>
 <p>${new Date().toLocaleDateString('he-IL')} · ${rows.length} פריטים</p>
 <table>
   <thead><tr><th>מידה</th><th>יצרן</th><th style="text-align:center">מדדים</th><th style="text-align:center">מיקום</th><th style="text-align:center">מחיר מכירה</th></tr></thead>
@@ -275,10 +305,7 @@ export default function TiresClient() {
 </table>
 <script>window.onload=function(){window.print()}<\/script>
 </body></html>`
-    const w = window.open('', '_blank')
-    if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-    w.document.write(html)
-    w.document.close()
+    printHtml(html)
   }
 
   function openAdd() {
@@ -292,7 +319,7 @@ export default function TiresClient() {
     setEditId(t.id)
     setForm({
       brand: t.brand || '', width: numStr(t.width), profile: numStr(t.profile), rim: numStr(t.rim),
-      load_idx: t.load_idx || '', speed_idx: t.speed_idx || '', sku: t.sku || '',
+      load_idx: t.load_idx || '', speed_idx: t.speed_idx || '', sku: t.sku || '', alt: (t.alt_barcodes ?? []).join(', '),
       cost_price: t.cost_price != null ? String(t.cost_price) : '',
       margin: t.margin ? String(t.margin) : '',
       sell_price: t.sell_price != null ? String(t.sell_price) : '',
@@ -309,7 +336,7 @@ export default function TiresClient() {
     setEditId(null)
     setForm({
       brand: t.brand || '', width: numStr(t.width), profile: numStr(t.profile), rim: numStr(t.rim),
-      load_idx: t.load_idx || '', speed_idx: t.speed_idx || '', sku: '',
+      load_idx: t.load_idx || '', speed_idx: t.speed_idx || '', sku: '', alt: '',
       cost_price: t.cost_price != null ? String(t.cost_price) : '',
       margin: t.margin ? String(t.margin) : '',
       sell_price: t.sell_price != null ? String(t.sell_price) : '',
@@ -349,6 +376,10 @@ export default function TiresClient() {
       location:    form.location.trim() || null,
       notes:       form.notes.trim() || null,
       sku:         form.sku.trim() || null,
+      // Only once the column exists (migration 110) — tires load with '*' so the field shows up then
+      ...(tires.some(t => Array.isArray(t.alt_barcodes))
+        ? { alt_barcodes: [...new Set(form.alt.split(/[\s,]+/).map(c => c.trim()).filter(c => c && c !== form.sku.trim()))] }
+        : {}),
       supplier_id: form.supplier_id || null,
       condition:   form.condition,
       tire_type:   form.tire_type,
@@ -624,9 +655,11 @@ export default function TiresClient() {
         title="צמיגים"
         subtitle={viewOnly ? 'מצב צפיה בלבד' : undefined}
         actions={!viewOnly ? <>
-          <Button variant="outline" onClick={() => window.location.href = '/yard/receive'}>📦 קבלת סחורה</Button>
-          <Button variant="outline" onClick={() => { setRecvItems([emptyRecvItem]); setRecvOpen(true) }}>✍️ קליטה ידנית</Button>
-          <Button onClick={openAdd}>➕ צמיג חדש</Button>
+          <MoreMenu label="📦 קבלת סחורה ▾" actions={[
+            { key: 'scan', label: 'בסריקה', icon: '📷', onClick: () => { window.location.href = '/tires/receive' } },
+            { key: 'manual', label: 'בהקלדה ידנית', icon: '✍️', onClick: () => { setRecvItems([emptyRecvItem]); setRecvOpen(true) } },
+          ]} />
+          <Button onClick={openAdd}>צמיג חדש</Button>
         </> : undefined}
       />
 
@@ -639,92 +672,73 @@ export default function TiresClient() {
         <StatCard label="יח' נמכרו החודש"   value={soldThisMonth} />
         <StatCard label='הכנסות החודש'       value={fmt(revenueMonth)}    color='blue' />
         {missingCount > 0 && (
-          <button onClick={() => { setTab('tires'); setFilterMissing('any') }} title="הצג צמיגים להשלמת פרטים"
+          <button onClick={() => setFilterMissing('any')} title="הצג צמיגים להשלמת פרטים"
             style={{ border: 'none', padding: 0, cursor: 'pointer', background: 'none', fontFamily: 'inherit', textAlign: 'inherit' }}>
-            <StatCard label='⚠ חסרי נתונים / מחיר' value={missingCount} color='orange' />
+            <StatCard label='חסרי נתונים / מחיר' value={missingCount} color='orange' />
           </button>
         )}
-      </div>
-
-      {/* Tabs – movements tab only for admins */}
-      <div className="scroll-x" style={{ marginBottom: '16px' }}>
-      <div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
-        {(['tires', ...(isAdmin ? ['movements'] : [])] as ('tires' | 'movements')[]).map(t => {
-          const label = t === 'tires' ? '🔘 מלאי' : '📊 תנועות מלאי'
-          return (
-            <button key={t} onClick={() => setTab(t)} style={{
-              padding: '7px 16px', border: 'none', borderRadius: '8px',
-              cursor: 'pointer', fontWeight: tab === t ? 600 : 400, fontSize: '13px',
-              background: tab === t ? '#fff' : 'transparent',
-              color: tab === t ? 'var(--text)' : 'var(--text-muted)',
-              boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-              transition: 'all .15s', fontFamily: 'inherit', whiteSpace: 'nowrap',
-            }}>{label}</button>
-          )
-        })}
-      </div>
       </div>
 
       {/* ══════════ TAB: TIRES ══════════ */}
       {tab === 'tires' && (
         <>
-          {/* Filters */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px', alignItems: 'center' }}>
-            <div style={{ position: 'relative', flex: '1 1 160px', minWidth: 0, display: 'flex', alignItems: 'center' }}>
-              <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 10, pointerEvents: 'none', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input className="form-input" style={{ paddingRight: 30 }} placeholder="חיפוש מותג / מידה..."
-                value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <select className="form-input" style={{ flex: '1 1 80px', minWidth: 0 }} value={filterWidth} onChange={e => setFilterWidth(e.target.value)}>
+          {/* Search always visible; filters open from "סינון"; secondary actions in ⋯ */}
+          <FilterBar storageKey="tires" search={search} onSearch={setSearch} placeholder="חיפוש חברה (עברית/אנגלית) / מידה / מק״ט..."
+            chips={[
+              ...(filterWidth ? [{ key: 'w', label: `רוחב ${filterWidth}`, onRemove: () => setFilterWidth('') }] : []),
+              ...(filterProf ? [{ key: 'p', label: `פרופיל ${filterProf}`, onRemove: () => setFilterProf('') }] : []),
+              ...(filterRim ? [{ key: 'r', label: `קוטר ${filterRim}`, onRemove: () => setFilterRim('') }] : []),
+              ...(filterStock ? [{ key: 's', label: filterStock === 'out' ? 'אזל' : 'במלאי', onRemove: () => setFilterStock('') }] : []),
+              ...(filterCondition ? [{ key: 'c', label: filterCondition === 'new' ? 'חדש בלבד' : 'משומש בלבד', onRemove: () => setFilterCondition('') }] : []),
+              ...(filterMissing ? [{ key: 'm', label: filterMissing === 'price' ? 'חסר מחיר' : filterMissing === 'details' ? 'חסרה מידה/מותג' : 'חסר משהו', onRemove: () => setFilterMissing('') }] : []),
+            ]}
+            onClearAll={() => { setSearch(''); setFilterWidth(''); setFilterProf(''); setFilterRim(''); setFilterStock(''); setFilterCondition(''); setFilterMissing('') }}
+            end={!viewOnly ? <>
+              {dupGroups.length > 0 && (
+                <Button variant="outline" onClick={() => setDupsOpen(true)} style={{ fontSize: '13px', borderColor: 'var(--warning)', color: '#92400e' }}>
+                  🔁 {dupGroups.length} כפילויות
+                </Button>
+              )}
+              <MoreMenu
+                excel={{ onExport: exportExcel, onImport: importExcel }}
+                actions={[
+                  { key: 'price', label: 'מחירון', icon: '🖨️', onClick: printPriceList },
+                  { key: 'count', label: 'ספירת מלאי', icon: '📦', onClick: () => { window.location.href = '/stock-count' } },
+                  { key: 'dups', label: `כפילויות${dupGroups.length ? ` (${dupGroups.length})` : ''}`, icon: '🔁', onClick: () => setDupsOpen(true) },
+                  { key: 'brands', label: 'שמות חברות בעברית', icon: '🔤', onClick: () => setBrandsOpen(true) },
+                ]}
+              />
+            </> : undefined}>
+            <select className="form-input" aria-label="רוחב" style={{ flex: '1 1 80px', minWidth: 0, margin: 0 }} value={filterWidth} onChange={e => setFilterWidth(e.target.value)}>
               <option value=''>רוחב</option>
               {WIDTHS.map(w => <option key={w} value={w}>{w}</option>)}
             </select>
-            <select className="form-input" style={{ flex: '1 1 80px', minWidth: 0 }} value={filterProf} onChange={e => setFilterProf(e.target.value)}>
+            <select className="form-input" aria-label="פרופיל" style={{ flex: '1 1 80px', minWidth: 0, margin: 0 }} value={filterProf} onChange={e => setFilterProf(e.target.value)}>
               <option value=''>פרופיל</option>
               {PROFILES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-            <select className="form-input" style={{ flex: '1 1 75px', minWidth: 0 }} value={filterRim} onChange={e => setFilterRim(e.target.value)}>
+            <select className="form-input" aria-label="קוטר" style={{ flex: '1 1 75px', minWidth: 0, margin: 0 }} value={filterRim} onChange={e => setFilterRim(e.target.value)}>
               <option value=''>קוטר</option>
               {RIMS.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
-            <select className="form-input" style={{ flex: '1 1 90px', minWidth: 0 }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
+            <select className="form-input" aria-label="מלאי" style={{ flex: '1 1 90px', minWidth: 0, margin: 0 }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
               <option value=''>כל המלאי</option>
               <option value='instock'>במלאי</option>
               <option value='out'>אזל</option>
             </select>
-            <select className="form-input" style={{ flex: '1 1 90px', minWidth: 0 }} value={filterCondition} onChange={e => setFilterCondition(e.target.value)}>
+            <select className="form-input" aria-label="מצב" style={{ flex: '1 1 90px', minWidth: 0, margin: 0 }} value={filterCondition} onChange={e => setFilterCondition(e.target.value)}>
               <option value=''>חדש + משומש</option>
               <option value='new'>חדש בלבד</option>
               <option value='used'>משומש בלבד</option>
             </select>
-            <select className="form-input" style={{ flex: '1 1 110px', minWidth: 0, borderColor: filterMissing ? 'var(--warning)' : undefined }}
+            <select className="form-input" aria-label="נתונים חסרים" style={{ flex: '1 1 110px', minWidth: 0, margin: 0, borderColor: filterMissing ? 'var(--warning)' : undefined }}
               value={filterMissing} onChange={e => setFilterMissing(e.target.value as typeof filterMissing)}>
               <option value=''>כל הנתונים</option>
-              <option value='any'>⚠ חסר משהו</option>
+              <option value='any'>חסר משהו</option>
               <option value='details'>חסרה מידה / מותג</option>
               <option value='price'>חסר מחיר מכירה</option>
             </select>
-            {(search || filterWidth || filterProf || filterRim || filterStock || filterCondition || filterMissing) && (
-              <button onClick={() => { setSearch(''); setFilterWidth(''); setFilterProf(''); setFilterRim(''); setFilterStock(''); setFilterCondition(''); setFilterMissing('') }}
-                style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid var(--danger)', background: '#fef2f2', color: 'var(--danger)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
-                ✕ נקה
-              </button>
-            )}
-          </div>
-
-          {/* Actions row */}
-          {!viewOnly && (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
-              <Button variant="outline" onClick={printPriceList} style={{ fontSize: '13px' }}>🖨️ מחירון</Button>
-              <a href="/tires/inventory-count" style={{ textDecoration: 'none' }}>
-                <Button variant="outline" style={{ fontSize: '13px' }}>📦 ספירת מלאי</Button>
-              </a>
-              <a href="/tires/storage" style={{ textDecoration: 'none' }}>
-                <Button variant="outline" style={{ fontSize: '13px' }}>🗄 ארונות וספירה לפי אזור</Button>
-              </a>
-              <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
-            </div>
-          )}
+          </FilterBar>
 
           {/* Table */}
           <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
@@ -754,7 +768,7 @@ export default function TiresClient() {
                     const isOut = t.qty === 0
                     const isLow = t.qty > 0 && t.qty <= 2
                     const qtyColor = isOut ? 'var(--danger)' : isLow ? 'var(--warning)' : 'var(--primary)'
-                    const qtyBg   = isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#f0fdf4'
+                    const qtyBg   = isOut ? '#fef2f2' : isLow ? '#fffbeb' : 'var(--success-soft)'
                     const marginPct = t.margin
                       ? t.margin + '%'
                       : (t.cost_price && t.sell_price ? Math.round((t.sell_price / t.cost_price - 1) * 100) + '%' : '—')
@@ -775,10 +789,10 @@ export default function TiresClient() {
                                 onClick={() => setCell(t.id, 'condition', (e.condition ?? t.condition) === 'used' ? 'new' : 'used')}
                                 style={{
                                   fontSize: '11px', fontWeight: 700, border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px 6px',
-                                  background: (e.condition ?? t.condition) === 'used' ? '#fef3c7' : '#f0fdf4',
+                                  background: (e.condition ?? t.condition) === 'used' ? '#fef3c7' : 'var(--success-soft)',
                                   color:      (e.condition ?? t.condition) === 'used' ? '#92400e' : 'var(--primary)',
                                 }}>
-                                {(e.condition ?? t.condition) === 'used' ? '♻ משומש' : '✓ חדש'}
+                                {(e.condition ?? t.condition) === 'used' ? 'משומש' : '✓ חדש'}
                               </button>
                               <div style={{ display: 'flex', gap: 4 }}>
                                 {([['commercial', 'מסחרי', '#fff7ed', '#c2410c'], ['reinforced', 'מחוזק', '#eff6ff', '#1d4ed8']] as const).map(([val, label, bg, color]) => (
@@ -794,7 +808,12 @@ export default function TiresClient() {
                             </div>
                           ) : (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                              {t.brand || <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                              {brandHe(brands, t.brand) ? (
+                                <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                                  <span>{brandHe(brands, t.brand)}</span>
+                                  <span dir="ltr" style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'right' }}>{t.brand}</span>
+                                </span>
+                              ) : (t.brand || <span style={{ color: 'var(--text-muted)' }}>—</span>)}
                               {t.condition === 'used' && (
                                 <span style={{ fontSize: '10px', fontWeight: 700, background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '4px', padding: '1px 5px' }}>♻</span>
                               )}
@@ -826,7 +845,7 @@ export default function TiresClient() {
                             ) : (
                               <button onClick={() => enterEditForRow(t.id)} title="לחץ להשלמת מידה"
                                 style={{ fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#c2410c', border: '1px solid #fed7aa', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                ⚠ חסרה מידה
+                                חסרה מידה
                               </button>
                             )
                           )}
@@ -948,70 +967,6 @@ export default function TiresClient() {
         </>
       )}
 
-      {/* ══════════ TAB: MOVEMENTS ══════════ */}
-      {tab === 'movements' && isAdmin && (
-        <>
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#1d4ed8' }}>
-            📋 תנועות מלאי מוצגות בקריאה בלבד. קליטת סחורה — דרך כפתור <strong>קבלת סחורה</strong>. מכירות — נקלטות אוטומטית מהמסוף ברחבה.
-          </div>
-
-          <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '14px' }}>
-              היסטוריית תנועות ({movements.length})
-            </div>
-            <div style={{ overflowX: 'auto', scrollbarWidth: 'thin' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                    {['תאריך', 'צמיג', 'מקור', 'כמות', 'השפעה על מלאי'].map((h, i) => (
-                      <th key={i} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '12px' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {movements.length === 0 ? (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>אין תנועות עדיין</td></tr>
-                  ) : movements.map(mv => {
-                    const tire = tires.find(t => t.id === mv.tire_id)
-                    const isSale = mv.movement_type === 'sale'
-                    return (
-                      <tr key={mv.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>
-                          {new Date(mv.sold_date).toLocaleDateString('he-IL')}
-                        </td>
-                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>
-                          {tire ? (
-                            <span>
-                              {tire.brand && <span style={{ color: 'var(--text-muted)', fontSize: '12px', marginLeft: '4px' }}>{tire.brand}</span>}
-                              <span style={{ color: 'var(--accent)' }}>{tireSize(tire)}</span>
-                            </span>
-                          ) : '—'}
-                        </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span style={{
-                            background: isSale ? '#f0fdf4' : '#eff6ff',
-                            color: isSale ? 'var(--primary)' : 'var(--accent)',
-                            borderRadius: '6px', padding: '3px 10px', fontWeight: 600, fontSize: '12px',
-                          }}>
-                            {isSale ? '🏪 מכירה מהמסוף' : '📦 קליטת סחורה'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 12px', fontWeight: 700 }}>{mv.qty}</td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span style={{ color: isSale ? 'var(--danger)' : 'var(--primary)', fontWeight: 600 }}>
-                            {isSale ? `−${mv.qty}` : `+${mv.qty}`}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
-
       {/* ── Add / Edit Modal ── */}
       <Modal open={formOpen} onClose={() => setFormOpen(false)}
         title={editId ? '✏️ עריכת צמיג' : '➕ הוספת צמיג'} maxWidth={620}
@@ -1020,10 +975,10 @@ export default function TiresClient() {
             <Button variant="danger" style={{ marginLeft: 'auto' }} onClick={async () => {
               const t = tires.find(x => x.id === editId)
               if (t) { setFormOpen(false); await deleteTire(t) }
-            }}>🗑 מחק</Button>
+            }}>מחק</Button>
           )}
           <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
-          <Button onClick={saveForm} loading={formSaving}>💾 {editId ? 'שמור שינויים' : 'שמור צמיג'}</Button>
+          <Button onClick={saveForm} loading={formSaving}>{editId ? 'שמור שינויים' : 'שמור צמיג'}</Button>
         </>}>
 
         <div style={{ direction: 'rtl', display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -1091,6 +1046,15 @@ export default function TiresClient() {
                   </svg>
                 </button>
               </div>
+            {tires.some(t => Array.isArray(t.alt_barcodes)) && (
+              <div style={{ marginTop: '10px' }}>
+                <label className="form-label" htmlFor="f-alt">ברקודים נוספים לאותו צמיג</label>
+                <input id="f-alt" className="form-input" value={form.alt} onChange={e => setF('alt', e.target.value)}
+                  placeholder="כשהיצרן מדפיס ברקוד אחר על אותו צמיג — מופרדים בפסיק"
+                  style={{ fontFamily: 'monospace', letterSpacing: '0.5px' }}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); setF('alt', form.alt.trim() ? `${form.alt.trim()}, ` : '') } }} />
+              </div>
+            )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
@@ -1181,11 +1145,11 @@ export default function TiresClient() {
                   <button key={c} type="button" onClick={() => setF('condition', c)} style={{
                     flex: 1, padding: '8px', border: `2px solid ${form.condition === c ? (c === 'used' ? '#f59e0b' : 'var(--primary)') : 'var(--border)'}`,
                     borderRadius: '8px', cursor: 'pointer', fontWeight: form.condition === c ? 700 : 400, fontSize: '13px',
-                    background: form.condition === c ? (c === 'used' ? '#fef3c7' : '#f0fdf4') : 'var(--bg)',
+                    background: form.condition === c ? (c === 'used' ? '#fef3c7' : 'var(--success-soft)') : 'var(--bg)',
                     color: form.condition === c ? (c === 'used' ? '#92400e' : 'var(--primary)') : 'var(--text-muted)',
                     fontFamily: 'inherit',
                   }}>
-                    {c === 'new' ? '✓ חדש' : '♻ משומש'}
+                    {c === 'new' ? '✓ חדש' : 'משומש'}
                   </button>
                 ))}
               </div>
@@ -1221,6 +1185,28 @@ export default function TiresClient() {
         </div>
       </Modal>
 
+      {brandsOpen && (
+        <BrandNamesModal open onClose={() => setBrandsOpen(false)} tenantId={profile?.tenantId ?? ''}
+          brands={[...new Set(tires.map(t => t.brand?.trim()).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b))}
+          saved={brandRows} onSaved={load} showToast={showToast} />
+      )}
+
+      <DuplicatesModal<Tire>
+        open={dupsOpen} onClose={() => setDupsOpen(false)} title="🔁 כפילויות צמיגים"
+        groups={dupGroups} keeperOf={pickKeeper} onMerge={mergeGroup}
+        columns={[
+          { label: 'מותג', render: t => t.brand || '—' },
+          { label: 'מידה', render: t => tireSize(t) },
+          { label: 'מדדים', render: t => `${t.load_idx ?? ''}${t.speed_idx ?? ''}` || '—' },
+          ...(isAdmin ? [{ label: 'מחיר קנייה', render: (t: Tire) => t.cost_price ? `₪${t.cost_price}` : '—' }] : []),
+          { label: 'מחיר מכירה', render: t => t.sell_price ? `₪${t.sell_price}` : <span style={{ color: 'var(--danger)' }}>חסר</span> },
+          { label: 'מקט/ברקוד', render: t => t.sku || '—' },
+          { label: 'כמות', render: t => t.qty },
+          { label: 'מיקום', render: t => t.location || '—' },
+          { label: 'נוצר', render: t => t.created_at?.slice(0, 10) },
+        ]}
+      />
+
       {mergeSource && (
         <TirePickerModal tires={tires} excludeId={mergeSource.id}
           title="🔗 מזג לצמיג קיים"
@@ -1234,7 +1220,7 @@ export default function TiresClient() {
         title="✍️ קליטה ידנית למלאי" maxWidth={600}
         footer={<>
           <Button variant="secondary" onClick={() => setRecvOpen(false)}>ביטול</Button>
-          <Button onClick={saveReceiving} loading={recvSaving}>💾 קלוט הזמנה</Button>
+          <Button onClick={saveReceiving} loading={recvSaving}>קלוט הזמנה</Button>
         </>}>
         <div style={{ direction: 'rtl', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {suppliers.length > 0 && (
@@ -1267,7 +1253,7 @@ export default function TiresClient() {
                 {item.dropOpen && (() => {
                   const q = item.search.trim().toLowerCase()
                   const matches = q
-                    ? tires.filter(t => tireSize(t).toLowerCase().includes(q) || (t.brand ?? '').toLowerCase().includes(q) || (t.sku ?? '').toLowerCase().includes(q)).slice(0, 8)
+                    ? tires.filter(t => tireSize(t).toLowerCase().includes(q) || fuzzyIncludes(brandSearchText(brands, t.brand), q) || (t.sku ?? '').toLowerCase().includes(q)).slice(0, 8)
                     : tires.slice(0, 8)
                   if (!matches.length) return null
                   return (

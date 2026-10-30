@@ -12,7 +12,8 @@ import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 type Tab = 'details' | 'tracking'
 
-export default function SuppliersClient() {
+// embedded: inside the accounts screen (its tab bar + header) — the account tracking only
+export default function SuppliersClient({ embedded = false }: { embedded?: boolean } = {}) {
   const supabase = useRef(createClient()).current
   const { profile, loading: profileLoading } = useProfile()
   const tenantIdRef = useRef<string | null>(null)
@@ -144,6 +145,30 @@ export default function SuppliersClient() {
     </div>
   )
 
+  const tracking = (
+    <SupplierTrackingTab
+      tenantId={tenantIdRef.current!}
+      tenantName={tenantName}
+      tenant={(profile?.tenant ?? null) as TenantRow | null}
+      suppliers={suppliers}
+      supplierDebts={supplierDebts}
+      scheduledPayments={scheduledPayments}
+      debtPayments={debtPayments}
+      recurringItems={recurringItems}
+      expenseCats={expenseCats}
+      openId={openId}
+      reload={loadAll}
+    />
+  )
+  const card = null
+
+  if (embedded) return (
+    <div>
+      {tracking}
+      {card}
+    </div>
+  )
+
   return (
     <div>
       <PageHeader
@@ -173,19 +198,7 @@ export default function SuppliersClient() {
       </div>
 
       {tab === 'tracking' ? (
-        <SupplierTrackingTab
-          tenantId={tenantIdRef.current!}
-          tenantName={tenantName}
-          tenant={(profile?.tenant ?? null) as TenantRow | null}
-          suppliers={suppliers}
-          supplierDebts={supplierDebts}
-          scheduledPayments={scheduledPayments}
-          debtPayments={debtPayments}
-          recurringItems={recurringItems}
-          expenseCats={expenseCats}
-          openId={openId}
-          reload={loadAll}
-        />
+        tracking
       ) : (
         <SupplierDetailsTab
           tenantId={tenantIdRef.current!}

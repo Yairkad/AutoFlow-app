@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAccessToken, uploadFile, getOrCreateFolder } from '@/lib/drive'
+import { sessionTenant } from '@/lib/auth/sessionTenant'
 
 export async function POST(req: Request) {
   try {
     const formData = await req.formData()
     const file      = formData.get('file') as File | null
-    const tenantId  = formData.get('tenant_id') as string | null
+    const guard = await sessionTenant(formData.get('tenant_id') as string | null)
+    if ('error' in guard) return guard.error
+    const tenantId  = guard.tenantId
     const subFolder = formData.get('sub_folder') as string | null   // e.g. 'רכבים'
     const itemName  = formData.get('item_name')  as string | null   // e.g. plate number
     const periodName = formData.get('period_name') as string | null // e.g. 'אוגוסט 2026' — optional extra nesting level under item_name

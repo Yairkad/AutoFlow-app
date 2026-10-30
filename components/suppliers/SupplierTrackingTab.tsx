@@ -6,12 +6,15 @@ import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { TenantRow } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
-import ExcelMenu from '@/components/ui/ExcelMenu'
+import MoreMenu from '@/components/ui/MoreMenu'
+import SearchSelect from '@/components/ui/SearchSelect'
+import ArrivalsModal, { emptyArrival, toArrivalInputs, type ArrivalDraft, type SavedArrival } from '@/components/suppliers/ArrivalsModal'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
 import { reconcileSupplierPayment } from '@/lib/debts/reconcileSupplierPayment'
 import { netAllocation } from '@/lib/debts/netAllocation'
+import { supplierEvents, balanceAfter, monthSummaries, monthOf } from '@/lib/debts/supplierLedger'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
@@ -21,6 +24,7 @@ import { withVat, withoutVat } from '@/lib/utils/vat'
 import { Supplier, SupplierDebt, ScheduledPayment, SupplierDebtPayment, RecurringItem, Direction, fmt, bal, waUrl } from './shared'
 import { MAX_UPLOAD_BYTES, compressImageIfNeeded, compressPdfIfNeeded } from '@/lib/utils/uploadCompress'
 import { scanWithAgent, listScanners, getSavedScanner, saveScanner, ScannerAgentMissingError, ScannerAgentOutdatedError, ScannerDeviceNotFoundError, SCANNER_DOWNLOAD_URL, type ScannerDevice } from '@/lib/scannerAgent'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,6 +40,7 @@ interface InvoiceEntry {
   driveFileId?: string
   driveFileName?: string
   driveFileUrl?: string
+  arrivals?: ArrivalDraft[]   // "📦 מה הגיע?" — added to stock when the invoice is saved
 }
 
 type Filter = 'open' | 'closed' | 'all'
@@ -99,6 +104,8 @@ export default function SupplierTrackingTab({
 
   const [filter, setFilter] = useState<Filter>('open')
   const [search, setSearch] = useState('')
+  // Show one month only (its block opens on every supplier) — '' = all months
+  const [monthFilter, setMonthFilter] = useState('')
 
   // Row selection — bulk-edit mode: check several debt rows, then walk through the edit modal
   // one at a time (closing one, by save or cancel, opens the next) instead of one row at a time.
@@ -137,6 +144,10 @@ export default function SupplierTrackingTab({
   const [sSupplier, setSSupplier] = useState('')
   const [sNotes, setSNotes]       = useState('')
   const [sInvoices, setSInvoices] = useState<InvoiceEntry[]>([EMPTY_INV()])
+  // "📦 מה הגיע?": goods received with an invoice (saved lines per debt + which window is open)
+  const [invoiceItems, setInvoiceItems] = useState<SavedArrival[]>([])
+  const [arrivalsLine, setArrivalsLine] = useState<number | null>(null)
+  const [viewArrivals, setViewArrivals] = useState<SupplierDebt | null>(null)
   const [sSaving, setSsaving]     = useState(false)
 
   // Scan/attach invoice file (Google Drive)
@@ -197,6 +208,7 @@ export default function SupplierTrackingTab({
   // "Generate this month's charges" — fixed-type recurring items only
   const [genMonth, setGenMonth] = useState(monthISO())
   const [generating, setGenerating] = useState(false)
+  const [genOpen, setGenOpen] = useState(false)   // "צור חיובים לחודש" month picker
 
   // "Log a meter reading" — month-independent, one meter-type item at a time
   const [meterReadItem, setMeterReadItem] = useState<RecurringItem | null>(null)
@@ -239,7 +251,10 @@ export default function SupplierTrackingTab({
   const [printDateTo, setPrintDateTo] = useState('')
 
   const printSupplierMonths = (() => {
-    const set = new Set(supplierDebts.filter(d => d.supplier_id === printSupplierId).map(d => monthKeyOf(d.date)))
+    const set = new Set([
+      ...supplierDebts.filter(d => d.supplier_id === printSupplierId).map(d => monthKeyOf(d.date)),
+      ...scheduledPayments.filter(p => p.supplier_id === printSupplierId).map(p => monthKeyOf(p.due_date)),
+    ])
     return [...set].sort().reverse()
   })()
   const togglePrintMonth = (mk: string) => setPrintMonths(prev => {
@@ -441,6 +456,35 @@ export default function SupplierTrackingTab({
     return sInvoices.some((other, idx) => idx !== i && other.number.trim().toLowerCase() === num)
   }
 
+  const loadInvoiceItems = async () => {
+    const { data, error } = await supabase.from('supplier_invoice_items')
+      .select('id, debt_id, item_type, description, qty, unit_cost').order('created_at')
+    if (error) console.error('[suppliers] invoice items', error.message)
+    setInvoiceItems(data ?? [])
+  }
+  useEffect(() => { loadInvoiceItems() }, [supplierDebts]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const itemsOfDebt = (id: string) => invoiceItems.filter(x => x.debt_id === id)
+
+  // Adds the "מה הגיע" lines of a saved invoice to stock; returns false if some failed
+  const saveArrivals = async (debtId: string, drafts: ArrivalDraft[] | undefined) => {
+    const items = toArrivalInputs(drafts ?? [])
+    if (!items.length) return true
+    const res = await fetch('/api/stock/invoice-items', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ debt_id: debtId, items }),
+    })
+    const out = await res.json().catch(() => ({}))
+    return res.ok && out.ok !== false
+  }
+
+  const deleteArrival = async (id: string) => {
+    if (!confirm('להסיר את הפריט? הכמות תרד מהמלאי.')) return
+    const res = await fetch(`/api/stock/invoice-items?id=${id}`, { method: 'DELETE' })
+    showToast(res.ok ? 'הוסר והמלאי עודכן ✓' : 'שגיאה בהסרה', res.ok ? 'success' : 'error')
+    loadInvoiceItems()
+  }
+
   const saveSuppDebt = async () => {
     const validLines = sInvoices.filter(i => i.number.trim() || parseFloat(i.amount) > 0)
     if (validLines.length === 0) { showToast('נא למלא לפחות שורה אחת', 'error'); return }
@@ -476,7 +520,8 @@ export default function SupplierTrackingTab({
       }
       const { error } = await supabase.from('supplier_debts').update(row).eq('id', editSupp.id)
       if (error) { showToast('שגיאה בעדכון', 'error'); setSsaving(false); return }
-      showToast('עודכן ✓', 'success')
+      const stockOk = await saveArrivals(editSupp.id, validLines.flatMap(l => l.arrivals ?? []))
+      showToast(stockOk ? 'עודכן ✓' : 'החשבונית עודכנה, אך חלק מהפריטים לא נקלטו למלאי', stockOk ? 'success' : 'error')
     } else {
       // New entry — bulk insert one independent row per line, each its own date/direction
       const rows = validLines.map(l => ({
@@ -497,7 +542,8 @@ export default function SupplierTrackingTab({
       }))
       const { error } = await supabase.from('supplier_debts').insert(rows)
       if (error) { showToast('שגיאה בשמירה', 'error'); setSsaving(false); return }
-      showToast(`נשמרו ${rows.length} רשומות ✓`, 'success')
+      const stockOk = (await Promise.all(validLines.map((l, i) => saveArrivals(rows[i].id, l.arrivals)))).every(Boolean)
+      showToast(stockOk ? `נשמרו ${rows.length} רשומות ✓` : 'נשמר, אך חלק מהפריטים לא נקלטו למלאי', stockOk ? 'success' : 'error')
     }
     setSsaving(false); reload(); closeSuppModal()
   }
@@ -904,7 +950,12 @@ export default function SupplierTrackingTab({
 
   // ── Filters ───────────────────────────────────────────────────────────────
 
-  const openSuppTotal = supplierDebts.filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
+  const ledgerOf = (sid: string | null) => supplierEvents(
+    supplierDebts.filter(d => d.supplier_id === sid), debtPayments,
+    sid ? scheduledPayments.filter(p => p.supplier_id === sid) : [], todayISO())
+  const openSuppTotal = [...new Set(supplierDebts.map(d => d.supplier_id))]
+    .reduce((s, sid) => s + Math.max(0, balanceAfter(ledgerOf(sid))), 0)
+  const allLedgerMonths = [...new Set(supplierDebts.map(d => monthKeyOf(d.date)))].sort().reverse()
 
   // ── Selected item info ────────────────────────────────────────────────────
 
@@ -915,7 +966,7 @@ export default function SupplierTrackingTab({
     <button onClick={() => setFilter(f)} style={{
       padding: '5px 14px', border: '1px solid',
       borderColor: filter === f ? 'var(--primary)' : 'var(--border)',
-      background: filter === f ? '#f0fdf6' : 'transparent',
+      background: filter === f ? 'var(--success-soft)' : 'transparent',
       color: filter === f ? 'var(--primary)' : 'var(--text-muted)',
       borderRadius: '20px', fontSize: '12px', fontWeight: filter === f ? 600 : 400,
       cursor: 'pointer', transition: 'all .12s',
@@ -924,12 +975,12 @@ export default function SupplierTrackingTab({
 
   const StatusChip = ({ debt }: { debt: SupplierDebt }) => {
     if (debt.direction === 'credit')
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>זיכוי</span>
+      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>זיכוי</span>
     if (debt.is_closed) {
       const written = Number(debt.amount) - Number(debt.paid)
       if (written > 0)
         return <span title={`נסגר ידנית — ${fmt(written)} נמחקו מהיתרה`} style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fdf4ff', color: '#a21caf', fontWeight: 600 }}>סגור ידנית (−{fmt(written)})</span>
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>שולם ✓</span>
+      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>שולם ✓</span>
     }
     if (Number(debt.paid) > 0)
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef3c7', color: 'var(--warning)', fontWeight: 600 }}>חלקי</span>
@@ -1008,25 +1059,24 @@ export default function SupplierTrackingTab({
       <div>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Button onClick={() => openSuppModal()}>+ הוסף חשבונית/זיכוי</Button>
-            <Button variant="secondary" onClick={() => { setBulkSelectMode(m => !m); setBulkSelectedIds(new Set()) }}>
-              {bulkSelectMode ? '✖ בטל בחירה' : '☑ עריכה מרובה'}
-            </Button>
-            {bulkSelectMode && bulkSelectedIds.size > 0 && (
-              <Button onClick={startBulkEdit}>✏️ ערוך נבחרים ({bulkSelectedIds.size})</Button>
+            {bulkSelectMode && (
+              <Button variant="secondary" onClick={() => { setBulkSelectMode(false); setBulkSelectedIds(new Set()) }}>בטל בחירה</Button>
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)} className="form-input" style={{ margin: 0, padding: '7px 8px', fontSize: '12px' }} />
-              <Button variant="secondary" loading={generating} onClick={generateRecurringCharges}>🔄 צור חיובים לחודש</Button>
-            </div>
-            <Button variant="secondary" onClick={() => setSchedModal(true)}>📝 צ׳ק / סדרה לספק</Button>
-            <Link href="/checks" style={{ padding: '8px 18px', borderRadius: '9px', fontSize: '14px', fontWeight: 500, border: '1.5px solid var(--border)', background: '#fff', color: 'var(--text)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>📅 יומן צ׳קים</Link>
+            {bulkSelectMode && bulkSelectedIds.size > 0 && (
+              <Button onClick={startBulkEdit}>ערוך נבחרים ({bulkSelectedIds.size})</Button>
+            )}
             <div style={{ display: 'flex', gap: '6px' }}>
               <FilterBtn f="open" label="פתוחים" />
               <FilterBtn f="closed" label="סגורים" />
               <FilterBtn f="all" label="הכל" />
             </div>
+            <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)} aria-label="חודש" className="form-input" style={{ width: 'auto', margin: 0 }}>
+              <option value="">כל החודשים</option>
+              {allLedgerMonths.map(mk => <option key={mk} value={mk}>{fmtMonth(mk)}</option>)}
+            </select>
             <input
               placeholder="חיפוש ספק / מספר חשבונית / תיאור..."
+              aria-label="חיפוש"
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="form-input" style={{ flex: 1, minWidth: '180px', maxWidth: '300px' }}
@@ -1034,9 +1084,28 @@ export default function SupplierTrackingTab({
             <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
               יתרה כוללת: <strong style={{ color: 'var(--danger)' }}>{fmt(openSuppTotal)}</strong>
             </span>
-            <Button variant="secondary" onClick={() => setShowPrintChoice(true)}>🖨️ הדפסה</Button>
-            <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
+            <MoreMenu
+              excel={{ onExport: exportExcel, onImport: importExcel }}
+              actions={[
+                { key: 'bulk', label: 'עריכה מרובה', icon: '☑', onClick: () => { setBulkSelectMode(true); setBulkSelectedIds(new Set()) } },
+                { key: 'gen', label: 'צור חיובים לחודש', icon: '🔄', onClick: () => setGenOpen(true) },
+              { key: 'sched', label: 'צ׳ק / סדרה לספק', icon: '📝', onClick: () => setSchedModal(true) },
+              { key: 'checks', label: 'יומן צ׳קים', icon: '📅', onClick: () => { window.location.href = '/checks' } },
+                { key: 'print', label: 'הדפסה', icon: '🖨️', onClick: () => setShowPrintChoice(true) },
+              ]}
+            />
           </div>
+
+          <Modal open={genOpen} onClose={() => setGenOpen(false)} title="🔄 צור חיובים קבועים לחודש" maxWidth={380}
+            footer={<>
+              <Button variant="secondary" onClick={() => setGenOpen(false)}>ביטול</Button>
+              <Button loading={generating} onClick={async () => { await generateRecurringCharges(); setGenOpen(false) }}>צור חיובים</Button>
+            </>}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 600 }}>
+            חודש
+              <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)} className="form-input" />
+            </label>
+          </Modal>
 
           {(() => {
             const allSuppIds = [...new Set(supplierDebts.map(d => d.supplier_id))]
@@ -1044,7 +1113,10 @@ export default function SupplierTrackingTab({
               const debts = supplierDebts.filter(d => d.supplier_id === sid)
                 .sort((a, b) => b.date.localeCompare(a.date) || (invNumOf(a.doc_number) - invNumOf(b.doc_number)))
               const supp = suppliers.find(s => s.id === sid)
-              const totalBal = debts.reduce((s, d) => s + bal(d), 0)
+              // Running account: invoices +, credits / payments − on their own dates
+              const events = ledgerOf(sid)
+              const totalBal = balanceAfter(events)
+              const summaries = monthSummaries(events)
 
               const q = search.trim().toLowerCase()
               const nameMatch = !!q && (supp?.name ?? '').toLowerCase().includes(q)
@@ -1065,13 +1137,17 @@ export default function SupplierTrackingTab({
               const visibleDebts = narrowToMatches ? debts.filter(lineMatch) : debts
 
               const monthMap: Record<string, SupplierDebt[]> = {}
+              // A month with only a payment still gets a block (it moved the balance)
+              if (!narrowToMatches) for (const mk of Object.keys(summaries)) monthMap[mk] = []
               visibleDebts.forEach(d => {
                 const mk = monthKeyOf(d.date)
                 if (!monthMap[mk]) monthMap[mk] = []
                 monthMap[mk].push(d)
               })
-              const months = Object.keys(monthMap).sort().reverse()
+              const months = Object.keys(monthMap).sort().reverse().filter(mk => !monthFilter || mk === monthFilter)
+              if (monthFilter && months.length === 0) return null
               const suppPayments = scheduledPayments.filter(p => p.supplier_id === sid)
+              const countedPayIds = new Set(events.filter(e => e.paymentId).map(e => e.paymentId!))
 
               const debtIds = new Set(debts.map(d => d.id))
               const linkedIds = new Set(
@@ -1080,11 +1156,12 @@ export default function SupplierTrackingTab({
               )
               const unlinkedPayments = suppPayments.filter(p => !p.is_paid && !p.allocation_ignored && !linkedIds.has(p.id))
 
-              return { sid, supp, totalBal, monthMap, months, suppPayments, unlinkedPayments }
+              return { sid, supp, totalBal, monthMap, months, suppPayments, unlinkedPayments, summaries, countedPayIds }
             }).filter(Boolean) as {
               sid: string | null; supp: Supplier | undefined; totalBal: number
               monthMap: Record<string, SupplierDebt[]>; months: string[]
               suppPayments: ScheduledPayment[]; unlinkedPayments: ScheduledPayment[]
+              summaries: ReturnType<typeof monthSummaries>; countedPayIds: Set<string>
             }[]
 
             if (groups.length === 0) return (
@@ -1105,27 +1182,28 @@ export default function SupplierTrackingTab({
                       <span style={{ display: 'inline-block', transition: 'transform .15s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--text-muted)' }}>›</span>
                       <span style={{ fontWeight: 700, fontSize: '15px' }}>🏭 {group.supp?.name ?? 'ללא ספק'}</span>
                       {group.supp?.phone && <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{group.supp.phone}</span>}
-                      <span style={{ marginRight: 'auto', fontSize: '14px', fontWeight: 700, color: group.totalBal > 0 ? 'var(--danger)' : '#16a34a' }}>
+                      <span style={{ marginRight: 'auto', fontSize: '14px', fontWeight: 700, color: group.totalBal > 0 ? 'var(--danger)' : 'var(--success)' }}>
                         יתרה כוללת: {fmt(group.totalBal)}
                       </span>
-                      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '6px' }}>
-                        {group.totalBal > 0 && (
-                          <button onClick={() => openPaySupplier(group.sid)}
-                            style={{ padding: '4px 12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
-                            💰 תשלום
-                          </button>
-                        )}
+                      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         {group.sid && (
                           <button onClick={() => addDebtForSupplier(group.sid!)}
-                            style={{ padding: '4px 12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                            style={{ padding: '5px 14px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 700 }}>
                             + הוסף
                           </button>
                         )}
-                        {group.sid && (
-                          <button onClick={e => { e.stopPropagation(); setQuickHistorySupplier(group.sid!) }}
-                            style={{ padding: '4px 12px', background: '#fff', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
-                            📜 היסטוריית תשלומים
+                        {group.totalBal > 0 && (
+                          <button onClick={() => openPaySupplier(group.sid)}
+                            style={{ padding: '4px 12px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                            תשלום
                           </button>
+                        )}
+                        {group.sid && (
+                          <RowActionsMenu actions={[
+                            { key: 'hist', label: 'היסטוריית תשלומים', icon: '📜', onClick: () => setQuickHistorySupplier(group.sid!) },
+                            { key: 'rec', label: 'הוסף חיוב חוזר', icon: '🔁', onClick: () => openRecItemModal(group.sid!) },
+                            { key: 'card', label: 'כרטיס ספק (אנשי קשר)', icon: '🪪', onClick: () => { window.location.href = `/contacts?open=${group.sid}` } },
+                          ]} />
                         )}
                       </div>
                     </div>
@@ -1155,17 +1233,18 @@ export default function SupplierTrackingTab({
 
                     {group.sid && (() => {
                       const items = recurringItems.filter(it => it.supplier_id === group.sid)
+                      // Shown only when the supplier has recurring charges; adding one is in the ⋮ menu
+                      if (!items.length) return null
                       return (
                         <div style={{ background: '#fafaf9', borderBottom: '1px solid var(--border)', padding: '10px 16px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: items.length ? '8px' : 0 }}>
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>🔁 חיובים חוזרים</span>
-                            <button onClick={() => openRecItemModal(group.sid!)} style={{ padding: '3px 10px', background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>+ הוסף חיוב חוזר</button>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>חיובים חוזרים</span>
                           </div>
                           {items.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                               {items.map(it => (
                                 <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', flexWrap: 'wrap' }}>
-                                  <span style={{ padding: '1px 7px', borderRadius: '4px', fontWeight: 600, background: it.type === 'meter' ? '#eff6ff' : '#f0fdf6', color: it.type === 'meter' ? '#1d4ed8' : '#16a34a' }}>
+                                  <span style={{ padding: '1px 7px', borderRadius: '4px', fontWeight: 600, background: it.type === 'meter' ? '#eff6ff' : 'var(--success-soft)', color: it.type === 'meter' ? '#1d4ed8' : 'var(--success)' }}>
                                     {it.type === 'meter' ? 'מונה' : 'קבוע'}
                                   </span>
                                   <span style={{ fontWeight: 600, flex: 1, minWidth: '80px' }}>{it.name}</span>
@@ -1174,7 +1253,7 @@ export default function SupplierTrackingTab({
                                   </span>
                                   {!it.active && <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>(לא פעיל)</span>}
                                   {it.type === 'meter' && it.active && (
-                                    <button onClick={() => openMeterReadModal(it)} style={{ padding: '3px 9px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>📊 הזן קריאת מונה</button>
+                                    <button onClick={() => openMeterReadModal(it)} style={{ padding: '3px 9px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>הזן קריאת מונה</button>
                                   )}
                                   <button onClick={() => openRecItemModal(group.sid!, it)} style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>✏️</button>
                                   <button onClick={() => deleteRecItem(it.id)} style={{ padding: '3px 6px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '12px' }}>🗑</button>
@@ -1188,20 +1267,15 @@ export default function SupplierTrackingTab({
 
                     {group.months.map((mk, mIdx) => {
                       const monthDebts = group.monthMap[mk]
-                      const carryOver = group.months.slice(mIdx + 1).reduce(
-                        (s, m) => s + group.monthMap[m].reduce((ss, d) => ss + bal(d), 0), 0)
-                      const monthDebtIds = new Set(monthDebts.map(d => d.id))
-                      const linkedPaymentIds = new Set(
-                        debtPayments.filter(dp => monthDebtIds.has(dp.supplier_debt_id) && dp.scheduled_payment_id)
-                          .map(dp => dp.scheduled_payment_id!)
-                      )
-                      const monthPayments = group.suppPayments.filter(p => linkedPaymentIds.has(p.id))
+                      const sum = group.summaries[mk] ?? { opening: 0, charges: 0, credits: 0, payments: 0, closing: 0 }
+                      // Payments shown in the month they were made (by date), not the invoice they paid
+                      const monthPayments = group.suppPayments.filter(p => group.countedPayIds.has(p.id) && monthOf(p.due_date) === mk)
                       const monthChargeTotal = monthDebts.filter(d => d.direction !== 'credit').reduce((s, d) => s + Number(d.amount), 0)
                       const monthCreditTotal = monthDebts.filter(d => d.direction === 'credit').reduce((s, d) => s + Number(d.amount), 0)
                       const monthNetTotal    = monthChargeTotal - monthCreditTotal
                       const monthPaidTotal   = monthDebts.reduce((s, d) => s + Number(d.paid), 0)
-                      const monthBalance     = monthDebts.reduce((s, d) => s + bal(d), 0)
-                      const monthCollapsed   = !expandedMonthKeys.has(monthKeyFor(group.sid, mk))
+                      const monthBalance     = sum.closing   // running balance at the end of this month
+                      const monthCollapsed   = !monthFilter && !expandedMonthKeys.has(monthKeyFor(group.sid, mk))
 
                       return (
                         <div key={mk} style={{ borderBottom: mIdx < group.months.length - 1 ? '1px solid var(--border)' : 'none', padding: '14px 16px' }}>
@@ -1213,16 +1287,28 @@ export default function SupplierTrackingTab({
                             <span style={{ display: 'inline-block', transition: 'transform .15s', transform: monthCollapsed ? 'rotate(0deg)' : 'rotate(90deg)', color: 'var(--text-muted)', fontSize: '12px' }}>›</span>
                             <span style={{ fontWeight: 700, fontSize: '14px', color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
                             {monthBalance <= 0
-                              ? <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>סגור ✓</span>
+                              ? <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>סגור ✓</span>
                               : <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>פתוח</span>}
-                            <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthBalance > 0 ? 'var(--danger)' : '#16a34a' }}>
-                              יתרה: {fmt(monthBalance)}
+                            <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthBalance > 0 ? 'var(--danger)' : 'var(--success)' }}>
+                              יתרה לסוף החודש: {fmt(monthBalance)}
                             </span>
                           </div>
 
-                          {!monthCollapsed && carryOver !== 0 && (
-                            <div style={{ padding: '7px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', marginBottom: '10px', fontSize: '13px', color: '#92400e', fontWeight: 600 }}>
-                              ↩ יתרה מחודשים קודמים: {fmt(carryOver)}
+                          {/* Month at a glance: opening → charges / credits / payments → closing */}
+                          {!monthCollapsed && (
+                            <div className="month-sum">
+                              <span>פתיחה <b className="num">{fmt(sum.opening)}</b></span>
+                              <span>חיובים <b className="num">+{fmt(sum.charges)}</b></span>
+                              {sum.credits > 0 && <span>זיכויים <b className="num">−{fmt(sum.credits)}</b></span>}
+                              <span>תשלומים <b className="num">−{fmt(sum.payments)}</b></span>
+                              <span>סגירה <b className="num">{fmt(sum.closing)}</b></span>
+                              {group.sid && (
+                                <button type="button" onClick={() => {
+                                  setPrintSupplierId(group.sid!); setPrintRangeMode('months'); setPrintMonths(new Set([mk])); setPrintMode('ledger')
+                                }} style={{ marginInlineStart: 'auto', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 10px', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>
+                                  🖨 הדפס חודש
+                                </button>
+                              )}
                             </div>
                           )}
 
@@ -1262,11 +1348,18 @@ export default function SupplierTrackingTab({
                                       ) : (
                                         <span title="אין קובץ חשבונית מצורף" style={{ marginRight: 4, opacity: 0.25 }}>📎</span>
                                       )}
+                                      {idx === 0 && itemsOfDebt(d.id).length > 0 && (
+                                        <button type="button" onClick={e => { e.stopPropagation(); setViewArrivals(d) }}
+                                          title="מה הגיע בחשבונית" aria-label={`מה הגיע בחשבונית ${item.number || ''}`}
+                                          style={{ marginRight: 4, border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontSize: '13px' }}>
+                                          📦<span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 700 }}>{itemsOfDebt(d.id).length}</span>
+                                        </button>
+                                      )}
                                       {d.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>{d.description}</div>}
                                     </td>
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
                                     <td style={tdSt}><StatusChip debt={d} /></td>
-                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? '#16a34a' : 'var(--danger)' }}>
+                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? 'var(--success)' : 'var(--danger)' }}>
                                       {d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}
                                     </td>
                                     <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -1296,8 +1389,8 @@ export default function SupplierTrackingTab({
                                     <span>סה&quot;כ חיוב: <strong style={{ color: 'var(--text)' }}>{fmt(monthChargeTotal)}</strong></span>
                                     {monthCreditTotal > 0 && <span>סה&quot;כ זיכוי: <strong style={{ color: 'var(--danger)' }}>{fmt(monthCreditTotal)}</strong></span>}
                                     <span>נטו: <strong style={{ color: 'var(--text)' }}>{fmt(monthNetTotal)}</strong></span>
-                                    {monthPaidTotal > 0 && <span>שולם: <strong style={{ color: '#16a34a' }}>{fmt(monthPaidTotal)}</strong></span>}
-                                    <span>יתרה: <strong style={{ color: monthBalance > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(monthBalance)}</strong></span>
+                                    {monthPaidTotal > 0 && <span>שולם: <strong style={{ color: 'var(--success)' }}>{fmt(monthPaidTotal)}</strong></span>}
+                                    <span>יתרה: <strong style={{ color: monthBalance > 0 ? 'var(--danger)' : 'var(--success)' }}>{fmt(monthBalance)}</strong></span>
                                   </div>
                                 </td>
                               </tr>
@@ -1307,7 +1400,7 @@ export default function SupplierTrackingTab({
 
                           {!monthCollapsed && monthPayments.length > 0 && (
                             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px 12px' }}>
-                              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', marginBottom: '7px' }}>📅 תשלומים מתוזמנים:</div>
+                              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', marginBottom: '7px' }}>תשלומים מתוזמנים:</div>
                               {monthPayments.map((p, pi) => {
                                 const days = daysUntilDate(p.due_date)
                                 return (
@@ -1320,7 +1413,7 @@ export default function SupplierTrackingTab({
                                     <span style={{ color: 'var(--text-muted)', fontSize: '12px', whiteSpace: 'nowrap' }}>{p.due_date}</span>
                                     <span style={{ marginRight: 'auto' }}>
                                       {p.is_paid
-                                        ? <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700 }}>✓ שולם</span>
+                                        ? <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 700 }}>✓ שולם</span>
                                         : <span style={{ fontSize: '11px', fontWeight: 600, color: days < 0 ? 'var(--danger)' : days <= 7 ? 'var(--warning)' : '#2563eb' }}>
                                             {days < 0 ? `באיחור ${Math.abs(days)} ימים` : days === 0 ? 'היום!' : `עוד ${days} ימים`}
                                           </span>}
@@ -1342,9 +1435,25 @@ export default function SupplierTrackingTab({
           })()}
         </div>
 
+      {/* ── "📦 מה הגיע?" — editing the open invoice line / viewing a saved invoice ── */}
+      {arrivalsLine !== null && sInvoices[arrivalsLine] && (
+        <ArrivalsModal open onClose={() => setArrivalsLine(null)}
+          title={`📦 מה הגיע${sInvoices[arrivalsLine].number ? ` — חשבונית ${sInvoices[arrivalsLine].number}` : ''}`}
+          drafts={sInvoices[arrivalsLine].arrivals ?? []}
+          onDraftsChange={d => setSInvoices(prev => prev.map((l, j) => j === arrivalsLine ? { ...l, arrivals: d } : l))}
+          saved={editSupp && arrivalsLine === 0 ? itemsOfDebt(editSupp.id) : []}
+          onDeleteSaved={deleteArrival} supplierId={sSupplier || null} />
+      )}
+      {viewArrivals && (
+        <ArrivalsModal open readOnly onClose={() => setViewArrivals(null)}
+          title={`📦 מה הגיע${viewArrivals.doc_number ? ` — חשבונית ${viewArrivals.doc_number}` : ''}`}
+          drafts={[]} onDraftsChange={() => {}}
+          saved={itemsOfDebt(viewArrivals.id)} onDeleteSaved={deleteArrival} />
+      )}
+
       {/* ── SUPPLIER DEBT MODAL ── */}
       {showSuppModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={closeSuppModal}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(closeSuppModal)}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '620px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
               {editSupp ? '✏️ עריכת רשומה' : '+ חשבונית/זיכוי חדש'}
@@ -1360,10 +1469,8 @@ export default function SupplierTrackingTab({
                   <span>ספק</span>
                   <button type="button" onClick={() => setShowQuickAddSupplier(true)} style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, padding: 0 }}>+ הוסף ספק חדש</button>
                 </div>
-                <select value={sSupplier} onChange={e => setSSupplier(e.target.value)} className="form-input">
-                  <option value="">— ללא ספק ספציפי —</option>
-                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <SearchSelect value={sSupplier} onChange={setSSupplier} ariaLabel="ספק" emptyLabel="— ללא ספק ספציפי —"
+                  options={suppliers.map(x => ({ value: x.id, label: x.name }))} />
               </label>
 
               <div>
@@ -1378,22 +1485,12 @@ export default function SupplierTrackingTab({
                     <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'var(--bg)', borderRadius: '8px', padding: '10px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', gap: '4px' }}>
-                          {(['invoice', 'karteset'] as const).map(t => (
-                            <button key={t} type="button" onClick={() => updateInvoiceLine(i, 'type', t)} style={{
-                              padding: '4px 8px', border: '1px solid', borderRadius: '5px', fontSize: '11px', cursor: 'pointer', fontWeight: 600,
-                              borderColor: inv.type === t ? (t === 'karteset' ? '#7c3aed' : '#0369a1') : 'var(--border)',
-                              background: inv.type === t ? (t === 'karteset' ? '#ede9fe' : '#e0f2fe') : 'transparent',
-                              color: inv.type === t ? (t === 'karteset' ? '#7c3aed' : '#0369a1') : 'var(--text-muted)',
-                            }}>{t === 'invoice' ? 'חשבונית' : 'כרטסת'}</button>
-                          ))}
-                        </div>
-                        <div style={{ display: 'flex', gap: '4px' }}>
                           {(['charge', 'credit'] as const).map(dir => (
                             <button key={dir} type="button" onClick={() => updateInvoiceLine(i, 'direction', dir)} style={{
                               padding: '4px 10px', border: '1px solid', borderRadius: '5px', fontSize: '11px', cursor: 'pointer', fontWeight: 600,
-                              borderColor: inv.direction === dir ? (dir === 'credit' ? '#16a34a' : 'var(--danger)') : 'var(--border)',
-                              background: inv.direction === dir ? (dir === 'credit' ? '#f0fdf6' : '#fef2f2') : 'transparent',
-                              color: inv.direction === dir ? (dir === 'credit' ? '#16a34a' : 'var(--danger)') : 'var(--text-muted)',
+                              borderColor: inv.direction === dir ? (dir === 'credit' ? 'var(--success)' : 'var(--danger)') : 'var(--border)',
+                              background: inv.direction === dir ? (dir === 'credit' ? 'var(--success-soft)' : '#fef2f2') : 'transparent',
+                              color: inv.direction === dir ? (dir === 'credit' ? 'var(--success)' : 'var(--danger)') : 'var(--text-muted)',
                             }}>{dir === 'charge' ? 'חיוב' : 'זיכוי'}</button>
                           ))}
                         </div>
@@ -1410,9 +1507,21 @@ export default function SupplierTrackingTab({
                         <input type="date" value={inv.date} onChange={e => updateInvoiceLine(i, 'date', e.target.value)} className="form-input" style={{ margin: 0 }} />
                       </div>
                       {isDuplicateInvoiceNumber(i) && (
-                        <div style={{ fontSize: '11px', color: 'var(--danger)', fontWeight: 600 }}>⚠ מספר חשבונית זה כבר קיים אצל ספק זה</div>
+                        <div style={{ fontSize: '11px', color: 'var(--danger)', fontWeight: 600 }}>מספר חשבונית זה כבר קיים אצל ספק זה</div>
                       )}
                       <input value={inv.notes} onChange={e => updateInvoiceLine(i, 'notes', e.target.value)} placeholder="הערות לשורה זו (אופציונלי)..." className="form-input" style={{ margin: 0 }} />
+                      {inv.direction === 'charge' && (() => {
+                        const n = (inv.arrivals ?? []).filter(a => a.text.trim()).length + (editSupp && i === 0 ? itemsOfDebt(editSupp.id).length : 0)
+                        return (
+                          <button type="button" onClick={() => {
+                            if (!inv.arrivals?.length) setSInvoices(prev => prev.map((l, j) => j === i ? { ...l, arrivals: [emptyArrival()] } : l))
+                            setArrivalsLine(i)
+                          }}
+                            style={{ alignSelf: 'flex-start', padding: '4px 10px', background: n ? '#f0fdf4' : 'transparent', border: `1px solid ${n ? '#86efac' : 'var(--border)'}`, borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', color: n ? '#15803d' : 'var(--text-muted)' }}>
+                            📦 מה הגיע?{n ? ` (${n})` : ''}
+                          </button>
+                        )
+                      })()}
 
                       {/* ── Scan / attach the invoice document itself ── */}
                       {!driveConnected ? (
@@ -1437,12 +1546,12 @@ export default function SupplierTrackingTab({
                           <button type="button" onClick={() => setScannerForLine(i)} disabled={uploadingLineIdx === i} style={{
                             padding: '5px 10px', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: '6px',
                             fontSize: '11px', fontWeight: 600, cursor: uploadingLineIdx === i ? 'default' : 'pointer', color: 'var(--text)',
-                          }}>📷 צלם</button>
+                          }}>צלם</button>
                           <span className="hide-mobile" style={{ display: 'contents' }}>
                             <button type="button" onClick={() => scanLineWithAgent(i)} disabled={agentScanningIdx !== null || uploadingLineIdx === i} style={{
                               padding: '5px 10px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px',
                               fontSize: '11px', fontWeight: 700, cursor: agentScanningIdx !== null ? 'default' : 'pointer', color: '#1d4ed8',
-                            }}>{agentScanningIdx === i ? 'סורק...' : '📠 סרוק'}</button>
+                            }}>{agentScanningIdx === i ? 'סורק...' : 'סרוק'}</button>
                             {hasSavedScanner && !agentMissing && i === 0 && (
                               <button type="button" onClick={() => openScannerPicker(null)} title="בחירת סורק אחר מבין הסורקים המחוברים למחשב"
                                 style={{ alignSelf: 'center', background: 'none', border: 'none', padding: 0, fontSize: '11px', color: 'var(--text-muted)', textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -1478,7 +1587,7 @@ export default function SupplierTrackingTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={closeSuppModal}>{bulkQueue && bulkQueue.length > 1 ? 'דלג ⏭' : 'ביטול'}</Button>
-              <Button loading={sSaving} onClick={saveSuppDebt}>💾 שמור</Button>
+              <Button loading={sSaving} onClick={saveSuppDebt}>שמור</Button>
             </div>
           </div>
         </div>
@@ -1487,7 +1596,7 @@ export default function SupplierTrackingTab({
       {scannerPicker && (
         <div onClick={() => setScannerPicker(null)} style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div onClick={e => e.stopPropagation()} role="dialog" aria-label="בחירת סורק" style={{ background: 'var(--bg-card)', borderRadius: 14, padding: 18, width: 'min(420px, 100%)', boxShadow: '0 10px 40px rgba(0,0,0,.25)', direction: 'rtl' }}>
-            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>📠 מאיזה סורק לסרוק?</div>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>מאיזה סורק לסרוק?</div>
             <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 12 }}>הבחירה תישמר במחשב הזה. אפשר לשנות אותה בכל רגע דרך &quot;החלף סורק&quot;.</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {scannerPicker.devices.map(d => (
@@ -1513,7 +1622,7 @@ export default function SupplierTrackingTab({
 
       {/* ── PAYMENT MODAL — pick one or several open debts + payment method ── */}
       {showPayModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowPayModal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowPayModal(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>₪ תשלום ל{suppliers.find(s => s.id === paySupplierId)?.name ?? 'ספק'}</h3>
 
@@ -1540,7 +1649,7 @@ export default function SupplierTrackingTab({
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0 8px' }}>
                   <span style={{ fontSize: '13px', fontWeight: 600 }}>בחר אילו חודשים לשלם</span>
-                  <button type="button" onClick={selectAllPayDebts} style={{ padding: '4px 10px', background: '#f0fdf4', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>☑ שלם הכל</button>
+                  <button type="button" onClick={selectAllPayDebts} style={{ padding: '4px 10px', background: 'var(--success-soft)', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>שלם הכל</button>
                 </div>
                 {payOpenCreditTotal > 0 && (
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '-4px 0 8px' }}>
@@ -1553,7 +1662,7 @@ export default function SupplierTrackingTab({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
                         <button type="button" onClick={() => toggleMonthPayDebts(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
-                          {debts.every(d => paySelectedIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                          {debts.every(d => paySelectedIds.has(d.id)) ? 'בטל בחירת חודש' : 'בחר חודש'}
                         </button>
                       </div>
                       {debts.map(d => {
@@ -1591,7 +1700,7 @@ export default function SupplierTrackingTab({
                       <button key={m} type="button" onClick={() => setPayMethod(m)} style={{
                         padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
                         border: `1px solid ${payMethod === m ? 'var(--primary)' : 'var(--border)'}`,
-                        background: payMethod === m ? '#f0fdf4' : '#f8fafc',
+                        background: payMethod === m ? 'var(--success-soft)' : '#f8fafc',
                         color: payMethod === m ? 'var(--primary)' : 'var(--text-muted)',
                       }}>
                         {m === 'מזומן' ? '💵' : m === 'אשראי' ? '💳' : m === "צ'ק" ? '📝' : '🏦'} {m}
@@ -1621,7 +1730,7 @@ export default function SupplierTrackingTab({
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowPayModal(false)}>ביטול</Button>
               {payOpenDebts.length > 0 && (
-                <Button loading={paySaving} onClick={submitPayment} style={{ background: '#16a34a', borderColor: '#16a34a' }}>
+                <Button loading={paySaving} onClick={submitPayment} style={{ background: 'var(--success)', borderColor: 'var(--success)' }}>
                   {payMethod === "צ'ק" ? 'המשך לצ׳ק ←' : '✓ אשר תשלום'}
                 </Button>
               )}
@@ -1632,16 +1741,16 @@ export default function SupplierTrackingTab({
 
       {/* ── WHATSAPP MODAL ── */}
       {waModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setWaModal(null)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setWaModal(null))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', width: 'min(420px, calc(100vw - 32px))', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', direction: 'rtl' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>💬 שלח הודעת ווצאפ</h3>
+            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>שלח הודעת ווצאפ</h3>
             <p style={{ margin: '0 0 12px', fontSize: '12px', color: 'var(--text-muted)' }}>ערוך את הטקסט לפני השליחה</p>
             <textarea value={waModal.text} onChange={e => setWaModal(m => m ? { ...m, text: e.target.value } : m)} rows={5} className="form-input" style={{ resize: 'vertical', fontSize: '13px', lineHeight: 1.6 }} />
             <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
               <Button variant="secondary" onClick={() => setWaModal(null)}>ביטול</Button>
               <a href={waUrl(waModal.phone, waModal.text)} target="_blank" rel="noopener noreferrer" onClick={() => setWaModal(null)}
-                style={{ padding: '8px 18px', background: '#16a34a', color: '#fff', border: '1.5px solid #16a34a', borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >📲 פתח ווצאפ</a>
+                style={{ padding: '8px 18px', background: 'var(--success)', color: '#fff', border: '1.5px solid #16a34a', borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >פתח ווצאפ</a>
             </div>
           </div>
         </div>
@@ -1649,7 +1758,7 @@ export default function SupplierTrackingTab({
 
       {/* ── ALLOCATE EXISTING CHECK/PAYMENT MODAL (retroactive) ── */}
       {allocatingPayment && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setAllocatingPayment(null)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setAllocatingPayment(null))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>שיבוץ תשלום מול חובות</h3>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
@@ -1671,7 +1780,7 @@ export default function SupplierTrackingTab({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
                         <button type="button" onClick={() => toggleMonthAllocDebts(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
-                          {debts.every(d => allocSelectedIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                          {debts.every(d => allocSelectedIds.has(d.id)) ? 'בטל בחירת חודש' : 'בחר חודש'}
                         </button>
                       </div>
                       {debts.map(d => {
@@ -1682,7 +1791,7 @@ export default function SupplierTrackingTab({
                             <span style={{ fontSize: 12, flex: 1, color: 'var(--text-muted)' }}>
                               {d.doc_number ? `#${d.doc_number} · ` : ''}{d.date} · יתרה {fmt(bal(d))}
                               {d.is_closed && (
-                                <span style={{ marginRight: 6, padding: '1px 6px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: '#dcfce7', color: '#16a34a' }}>✓ סגור</span>
+                                <span style={{ marginRight: 6, padding: '1px 6px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'var(--success-soft)', color: 'var(--success)' }}>✓ סגור</span>
                               )}
                             </span>
                             {checked && (
@@ -1801,7 +1910,7 @@ export default function SupplierTrackingTab({
                   <div style={{ maxHeight: 260, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
                     {historyExpenses.map((e, i) => (
                       <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderBottom: i < historyExpenses.length - 1 ? '1px solid #f1f5f9' : 'none', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 11, background: '#f0fdf4', color: '#16a34a', padding: '2px 8px', borderRadius: 4, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 11, background: 'var(--success-soft)', color: 'var(--success)', padding: '2px 8px', borderRadius: 4, fontWeight: 600, whiteSpace: 'nowrap' }}>
                           {e.payment_method || '—'}
                         </span>
                         <span style={{ fontSize: 13, flex: 1 }}>{e.description}</span>
@@ -1836,7 +1945,7 @@ export default function SupplierTrackingTab({
 
       {/* ── RECURRING ITEM (RATE TEMPLATE) MODAL ── */}
       {showRecItemModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowRecItemModal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowRecItemModal(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editRecItem ? '✏️ עריכת חיוב חוזר' : '+ חיוב חוזר חדש'}</h3>
             <div style={{ display: 'grid', gap: '14px' }}>
@@ -1909,7 +2018,7 @@ export default function SupplierTrackingTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowRecItemModal(false)}>ביטול</Button>
-              <Button loading={riSaving} onClick={saveRecItem}>💾 שמור</Button>
+              <Button loading={riSaving} onClick={saveRecItem}>שמור</Button>
             </div>
           </div>
         </div>
@@ -1917,9 +2026,9 @@ export default function SupplierTrackingTab({
 
       {/* ── LOG A METER READING MODAL (month-independent) ── */}
       {meterReadItem && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setMeterReadItem(null)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setMeterReadItem(null))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '440px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>📊 הזן קריאת מונה — {meterReadItem.name}</h3>
+            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>הזן קריאת מונה — {meterReadItem.name}</h3>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>קריאה קודמת: <strong>{meterPrevReading}</strong></div>
             <div style={{ display: 'grid', gap: '14px' }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
@@ -1942,7 +2051,7 @@ export default function SupplierTrackingTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setMeterReadItem(null)}>ביטול</Button>
-              <Button loading={mrSaving} onClick={saveMeterReading}>💾 שמור</Button>
+              <Button loading={mrSaving} onClick={saveMeterReading}>שמור</Button>
             </div>
           </div>
         </div>
@@ -1950,9 +2059,9 @@ export default function SupplierTrackingTab({
 
       {/* ── PRINT CHOICE MODAL ── */}
       {showPrintChoice && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowPrintChoice(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowPrintChoice(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '420px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700 }}>🖨️ מה להדפיס?</h3>
+            <h3 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700 }}>מה להדפיס?</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
                 <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>כרטסת ספק (חשבוניות/זיכויים + מאזן)</div>
@@ -2015,7 +2124,7 @@ export default function SupplierTrackingTab({
                   onClick={() => { setShowPrintChoice(false); setPrintMode('ledger') }}
                   disabled={!printSupplierId || (printRangeMode === 'months' && printMonths.size === 0)}
                   style={{ width: '100%' }}
-                >🖨️ הדפס כרטסת</Button>
+                >הדפס כרטסת</Button>
               </div>
 
               <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
@@ -2026,7 +2135,7 @@ export default function SupplierTrackingTab({
                 <Button
                   onClick={() => { setShowPrintChoice(false); setPrintMode('open-summary') }}
                   style={{ width: '100%' }}
-                >📋 הדפס סיכום חובות פתוחים</Button>
+                >הדפס סיכום חובות פתוחים</Button>
               </div>
 
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
@@ -2075,16 +2184,20 @@ export default function SupplierTrackingTab({
             }
 
             const debts = allDebts.filter(inRange)
-            const priorDebts = rangeStart ? allDebts.filter(d => d.date < rangeStart) : []
-            const openingForReport = (supp?.opening_balance ?? 0) + priorDebts.reduce((s, d) => s + bal(d), 0)
+            // Same running account as the screen: payments and credits on their own dates
+            const events = ledgerOf(printSupplierId)
+            const inRangeDate = (date: string) => inRange({ date } as SupplierDebt)
+            const rangeEvents = events.filter(e => inRangeDate(e.date))
+            const openingForReport = (supp?.opening_balance ?? 0) + (rangeStart ? balanceAfter(events, rangeStart) : 0)
 
-            const chargeTotal = debts.filter(d => d.direction !== 'credit').reduce((s, d) => s + Number(d.amount), 0)
-            const creditTotal = debts.filter(d => d.direction === 'credit').reduce((s, d) => s + Number(d.amount), 0)
-            const paidTotal   = debts.reduce((s, d) => s + Number(d.paid), 0)
+            const chargeTotal = rangeEvents.filter(e => e.kind === 'charge').reduce((s, e) => s + e.amount, 0)
+            const creditTotal = rangeEvents.filter(e => e.kind === 'credit').reduce((s, e) => s + e.amount, 0)
+            const paidTotal   = rangeEvents.filter(e => e.kind === 'payment' || e.kind === 'writeoff').reduce((s, e) => s + e.amount, 0)
 
             let running = openingForReport
             const showOpeningRow = openingForReport !== 0 || !!rangeStart
             const actualBalance = running + chargeTotal - creditTotal - paidTotal
+            const debtById = new Map(debts.map(d => [d.id, d]))
 
             const debtDatesSorted = debts.map(d => d.date).sort()
             const actualFrom = debtDatesSorted[0]
@@ -2143,7 +2256,25 @@ export default function SupplierTrackingTab({
                         <td>{fmt(openingForReport)}</td>
                       </tr>
                     )}
-                    {debts.flatMap(d => {
+                    {rangeEvents.flatMap((e, ei) => {
+                      if (e.kind === 'payment' || e.kind === 'writeoff') {
+                        running -= e.amount
+                        const sp = e.paymentId ? scheduledPayments.find(x => x.id === e.paymentId) : null
+                        const label = e.kind === 'writeoff' ? 'נסגר ידנית'
+                          : sp ? `${sp.payment_method === 'check' ? `צ'ק${sp.check_number ? ' מס׳ ' + sp.check_number : ''}` : 'העברה'}` : 'תשלום'
+                        return [(
+                          <tr key={`p-${ei}`}>
+                            <td>{fmtDMY(e.date)}</td>
+                            <td>—</td>
+                            <td style={{ width: 46, textAlign: 'left', fontWeight: 700 }}>תשלום</td>
+                            <td>{label}</td>
+                            <td style={{ textAlign: 'left' }}>−{fmt(e.amount)}</td>
+                            <td>{fmt(running)}</td>
+                          </tr>
+                        )]
+                      }
+                      const d = e.debtId ? debtById.get(e.debtId) : undefined
+                      if (!d) return []
                       const items = Array.isArray(d.invoices) && d.invoices.length > 0
                         ? [...d.invoices].sort((a, b) => invNumOf(a.number) - invNumOf(b.number))
                         : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]

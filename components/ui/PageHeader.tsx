@@ -2,33 +2,36 @@ import React from 'react'
 
 interface Props {
   icon: React.ReactNode
-  iconBg: string        // e.g. 'linear-gradient(135deg,#1a9e5c,#4ade80)'
-  iconShadow?: string   // e.g. '#1a9e5c44'
+  /** Kept for existing callers; the redesign shows the icon on a neutral tile instead */
+  iconBg?: string
+  iconShadow?: string
   title: string
   subtitle?: string
   actions?: React.ReactNode
   marginBottom?: number
 }
 
-export default function PageHeader({ icon, iconBg, iconShadow, title, subtitle, actions, marginBottom = 20 }: Props) {
+// Redesign: title + subtitle carry the hierarchy; the icon sits on a quiet tile in the brand tint
+// (the old colored gradient bubbles per screen are gone). Icons drawn with stroke="#fff" are
+// recolored to the brand through currentColor-like CSS (.ph-icon svg).
+export default function PageHeader({ icon, title, subtitle, actions, marginBottom = 18 }: Props) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       marginBottom, flexWrap: 'wrap', gap: 12,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{
-          width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-          background: iconBg,
+        <div className="ph-icon" aria-hidden="true" style={{
+          width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+          background: 'var(--primary-soft)', color: 'var(--primary)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: iconShadow ? `0 3px 10px ${iconShadow}` : undefined,
         }}>
           {icon}
         </div>
         <div>
-          <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: 'var(--text)' }}>{title}</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: 'var(--text)', letterSpacing: '-.01em' }}>{title}</h1>
           {subtitle && (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '2px 0 0' }}>{subtitle}</p>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '2px 0 0' }}>{subtitle}</p>
           )}
         </div>
       </div>

@@ -2,21 +2,24 @@
 
 import { ButtonHTMLAttributes, useState } from 'react'
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost'
+type Variant = 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost' | 'success'
 type Size = 'sm' | 'md' | 'lg'
 
 const VARIANTS: Record<Variant, React.CSSProperties> = {
-  primary:   { background: 'var(--primary)', color: '#fff', border: '1.5px solid var(--primary)', fontWeight: 600 },
-  secondary: { background: '#fff',    color: 'var(--text)',       border: '1.5px solid var(--border)'  },
-  danger:    { background: '#fff0f0', color: '#dc2626',           border: '1.5px solid #fca5a5'        },
-  outline:   { background: 'transparent', color: 'var(--text)',   border: '1.5px solid var(--border)'  },
-  ghost:     { background: 'transparent', color: 'var(--text-muted)', border: '1px solid transparent'  },
+  primary:   { background: 'var(--primary)', color: '#fff', border: '1px solid var(--primary)', fontWeight: 600 },
+  secondary: { background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)', fontWeight: 600 },
+  // Cancel / delete — red outline only; solid red is never used for a button
+  danger:    { background: 'var(--bg-card)', color: 'var(--danger)', border: '1px solid color-mix(in srgb, var(--danger) 45%, var(--border))', fontWeight: 600 },
+  outline:   { background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', fontWeight: 600 },
+  ghost:     { background: 'transparent', color: 'var(--text-muted)', border: '1px solid transparent' },
+  // Approve / pay / confirm — the only green button
+  success:   { background: 'var(--success)', color: '#fff', border: '1px solid var(--success)', fontWeight: 600 },
 }
 
 const SIZES: Record<Size, React.CSSProperties> = {
-  sm: { padding: '5px 12px',  fontSize: 12 },
-  md: { padding: '8px 18px',  fontSize: 14 },
-  lg: { padding: '11px 24px', fontSize: 15 },
+  sm: { padding: '5px 11px',  fontSize: 12.5, minHeight: 30 },
+  md: { padding: '7px 15px',  fontSize: 14, minHeight: 36 },
+  lg: { padding: '10px 22px', fontSize: 15, minHeight: 44 },
 }
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -63,21 +66,14 @@ export default function Button({
       onMouseLeave={() => { setPressed(false); setHovered(false) }}
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        gap: 6, borderRadius: 9, fontFamily: 'inherit', fontWeight: 500,
+        gap: 6, borderRadius: 8, fontFamily: 'inherit', fontWeight: 500,
         cursor: isDisabled ? 'not-allowed' : 'pointer',
         whiteSpace: 'nowrap',
-        transition: 'opacity .15s, transform .12s, box-shadow .15s',
+        transition: 'opacity .15s, filter .15s, box-shadow .15s',
         opacity: isDisabled ? 0.55 : 1,
-        transform: pressed && !isDisabled
-          ? 'scale(0.96) translateY(1px)'
-          : hovered && !isDisabled
-            ? 'translateY(-1px)'
-            : 'scale(1) translateY(0)',
-        boxShadow: pressed || isDisabled
-          ? 'none'
-          : hovered
-            ? '0 4px 12px rgba(0,0,0,0.14)'
-            : '0 1px 3px rgba(0,0,0,0.08)',
+        // Quiet feedback: slight darken on hover, inset on press — no bouncing
+        filter: hovered && !isDisabled ? 'brightness(0.96)' : undefined,
+        boxShadow: pressed && !isDisabled ? 'inset 0 1px 2px rgba(0,0,0,.12)' : 'none',
         width: fullWidth ? '100%' : undefined,
         ...VARIANTS[variant],
         ...SIZES[size],

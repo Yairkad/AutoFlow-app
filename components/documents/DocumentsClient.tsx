@@ -7,12 +7,15 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import MoreMenu from '@/components/ui/MoreMenu'
+import FreeDocEditor, { printFreeDoc, type FreeDocContent, type BizHeader } from '@/components/documents/FreeDocEditor'
+
+interface FreeDocRow { id: string; name: string; content: FreeDocContent | null; created_at: string }
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
-import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import PageHeader from '@/components/ui/PageHeader'
-import { useIsMobile } from '@/lib/hooks/useIsMobile'
 import CarContractsPanel from '@/components/cars/CarContractsPanel'
 import PowerOfAttorneyPanel from '@/components/documents/PowerOfAttorneyPanel'
+import { printHtml } from '@/lib/print/printHtml'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -59,8 +62,9 @@ const emptyForm = {
   footerText: '',
 }
 
-const DOC_TABS = ['templates', 'contracts', 'poa', 'drive'] as const
-type DocTab = typeof DOC_TABS[number]
+// One gallery of every form; contracts / power of attorney / the editor open as their own view
+type DocView = 'gallery' | 'editor' | 'contracts' | 'poa'
+type GalleryFilter = 'all' | 'builtin' | 'mine' | 'templates'
 
 const emptyCol: FormColumn = { label: '', width: 'medium' }
 
@@ -206,10 +210,7 @@ function printFormTemplate(f: FormDoc, copies: number) {
   <script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>
 </body></html>`
 
-  const w = window.open('', '_blank')
-  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-  w.document.write(html)
-  w.document.close()
+  printHtml(html)
 }
 
 function printChecklist(copies: number, _car: string, _owner: string, _phone: string, logoBase64: string) {
@@ -362,10 +363,7 @@ function printChecklist(copies: number, _car: string, _owner: string, _phone: st
   <script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>
 </body></html>`
 
-  const w = window.open('', '_blank')
-  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-  w.document.write(html)
-  w.document.close()
+  printHtml(html)
 }
 
 // ── printBlankHeader ──────────────────────────────────────────────────────────
@@ -411,10 +409,7 @@ function printBlankHeader(copies: number, bizNameStr: string, logoBase64: string
   ${Array(copies).fill(pageHTML).join('\n')}
   <script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>
   </body></html>`
-  const w = window.open('', '_blank')
-  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-  w.document.write(html)
-  w.document.close()
+  printHtml(html)
 }
 
 // ── printWarranty ─────────────────────────────────────────────────────────────
@@ -479,7 +474,7 @@ function printWarranty(copies: number, bizNameStr: string, logoBase64: string, s
         <li>מומלץ לבדוק את מקוריות הרכב במשרד הרישוי.</li>
       </ul>
       <div class="pp-warn">
-        <h4>⚠️ חשוב ביותר!!!</h4>
+        <h4>חשוב ביותר!!!</h4>
         עם גילוי ליקויים שלא נתגלו בבדיקה – אין אנו אחראים אם התיקון ו/או הבדיקה בוצעו במקום אחר לפני שהרכב נבדק על ידינו שנית.<br/>
         החברה אינה אחראית על ליקויים או מגרעות אשר לא נתגלו בבדיקה זו כתוצאה מהעלמת ליקויים במתכוון.<br/>
         דו"ח זה יפה כוחו לגבי מזמין הבדיקה בלבד.
@@ -541,10 +536,7 @@ function printWarranty(copies: number, bizNameStr: string, logoBase64: string, s
   <script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>
 </body></html>`
 
-  const w = window.open('', '_blank')
-  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-  w.document.write(html)
-  w.document.close()
+  printHtml(html)
 }
 
 function printSellerWaiver(bizNameStr: string, logoBase64: string, subTitle: string, phone: string, address: string, license: string) {
@@ -692,12 +684,13 @@ function printSellerWaiver(bizNameStr: string, logoBase64: string, subTitle: str
     <div class="sig-box">חתימת הקונה<div class="sig-line"></div></div>
   </div>
 
-  <button class="print-btn" onclick="window.print()">🖨️ הדפסה / PDF</button>
+  <button class="print-btn" onclick="window.print()">הדפסה / PDF</button>
 </div>
 <script>document.querySelector('input')?.focus()<\/script>
 </body>
 </html>`
 
+  // Fillable form (inputs) — the buyer/seller details are typed in this window before printing
   const w = window.open('', '_blank')
   if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
   w.document.write(html)
@@ -748,32 +741,18 @@ export default function DocumentsClient() {
   const [saving,   setSaving]   = useState(false)
 
   // ── Tabs ──────────────────────────────────────────────────────────────────────
-  const [docTab, setDocTab] = useState<DocTab>('templates')
-
-  // ── Built-in checklist card state ─────────────────────────────────────────────
-  const [clCopies, setClCopies] = useState(1)
-  const [wCopies,  setWCopies]  = useState(1)
-  const [bhCopies, setBhCopies] = useState(1)
-
-  // ── Drive state ───────────────────────────────────────────────────────────────
-  type DriveItem = { id: string; name: string; mimeType: string; size?: string; createdTime?: string; thumbnailLink?: string; webViewLink?: string }
-  const [driveConnected,  setDriveConnected]  = useState(false)
-  const [driveItems,      setDriveItems]      = useState<DriveItem[]>([])
-  const [driveLoading,    setDriveLoading]    = useState(false)
-  const [uploadProgress,  setUploadProgress]  = useState<{done:number;total:number}|null>(null)
-  const [showScanner,     setShowScanner]     = useState(false)
-  const isMobile = useIsMobile()
-  const [driveDeletingId, setDriveDeletingId] = useState<string|null>(null)
-  // folder navigation: stack of {id, name}
-  const [folderStack,     setFolderStack]     = useState<{id:string;name:string}[]>([])
-  const rootDocsFolderId  = useRef<string>('')
-  const [docsFolderReady, setDocsFolderReady] = useState(false)
-  const [newFolderMode,   setNewFolderMode]   = useState(false)
-  const [newFolderName,   setNewFolderName]   = useState('')
-  const [creatingFolder,  setCreatingFolder]  = useState(false)
-
-  // Per-form copies
-  const [copiesMap, setCopiesMap] = useState<Record<string, number>>({})
+  const [view, setView]       = useState<DocView>('gallery')
+  const [gFilter, setGFilter] = useState<GalleryFilter>('all')
+  const [gSearch, setGSearch] = useState('')
+  // Print dialog for tiles that print N copies
+  const [printAsk, setPrintAsk] = useState<{ title: string; run: (copies: number) => void } | null>(null)
+  const [askCopies, setAskCopies] = useState(1)
+  // Built-in forms the business hid (kept in a 'doc_prefs' documents row — no extra table)
+  const [prefs, setPrefs] = useState<{ id: string | null; hidden: string[] }>({ id: null, hidden: [] })
+  // Free documents (type 'free_doc') and the one open in the editor (id null = not saved yet)
+  const [freeDocs, setFreeDocs] = useState<FreeDocRow[]>([])
+  const [freeEdit, setFreeEdit] = useState<{ id: string | null; name: string; content: FreeDocContent | null } | null>(null)
+  const [biz, setBiz] = useState<BizHeader>({ name: '', sub: '', phone: '', address: '', logo: '' })
 
   // ── Fetch ─────────────────────────────────────────────────────────────────────
 
@@ -782,11 +761,14 @@ export default function DocumentsClient() {
       .from('documents')
       .select('*')
       .eq('tenant_id', tenantId.current)
-      .in('type', ['form_template', 'html_template'])
+      .in('type', ['form_template', 'html_template', 'free_doc', 'doc_prefs'])
       .order('created_at', { ascending: true })
     const all = data ?? []
     setForms(all.filter(d => d.type === 'form_template') as FormDoc[])
     setHtmlForms(all.filter(d => d.type === 'html_template') as HtmlDoc[])
+    setFreeDocs(all.filter(d => d.type === 'free_doc') as FreeDocRow[])
+    const pr = all.find(d => d.type === 'doc_prefs')
+    setPrefs({ id: pr?.id ?? null, hidden: (pr?.content as { hidden?: string[] } | null)?.hidden ?? [] })
     setLoading(false)
   }, [sb])
 
@@ -802,147 +784,33 @@ export default function DocumentsClient() {
         bizAddress.current  = (tenant.address as string)         || ''
         bizLicense.current  = (tenant.license_number as string)  || ''
         logoBase64.current  = (tenant.logo_base64 as string)     || ''
+        setBiz({ name: bizName.current, sub: bizSubTitle.current, phone: bizPhone.current, address: bizAddress.current, logo: logoBase64.current, license: bizLicense.current })
       }
-      fetch(`/api/drive/status?tenant_id=${profile.tenantId}`)
-        .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => {})
       await fetchAll()
     }
     init()
   }, [profile, fetchAll])
 
-  // ── Drive file helpers ────────────────────────────────────────────────────────
-
-  const currentFolderId = useCallback(() => {
-    return folderStack.length > 0
-      ? folderStack[folderStack.length - 1].id
-      : rootDocsFolderId.current
-  }, [folderStack])
-
-  const loadDriveFiles = useCallback(async (folderId?: string) => {
-    if (!tenantId.current) return
-    setDriveLoading(true)
-    try {
-      const id = folderId ?? (folderStack.length > 0 ? folderStack[folderStack.length - 1].id : '')
-      const url = id
-        ? `/api/drive/files?tenant_id=${tenantId.current}&folder_id=${id}`
-        : `/api/drive/files?tenant_id=${tenantId.current}`
-      const res  = await fetch(url)
-      const data = await res.json()
-      if (data.error === 'token_expired') {
-        showToast('חיבור Drive פג — חבר מחדש בהגדרות', 'error')
-        setDriveItems([])
-        setDriveLoading(false)
-        return
-      }
-      if (data.error === 'rebuild_failed') {
-        showToast('שגיאה בשחזור Drive — נא לנתק ולחבר מחדש מההגדרות', 'error')
-        setDriveItems([])
-        setDriveLoading(false)
-        return
-      }
-      if (data.rebuilt) showToast('תיקיות Drive נוצרו מחדש אוטומטית ✓', 'success')
-      if (!id && data.folderId) { rootDocsFolderId.current = data.folderId; setDocsFolderReady(true) }
-      setDriveItems(data.files ?? [])
-    } catch { /* ignore */ }
-    setDriveLoading(false)
-  }, [folderStack])
-
-  function openTab(key: DocTab) {
-    setDocTab(key)
-    if (key === 'drive') { setFolderStack([]); loadDriveFiles('') }
+  // View is linkable: /documents?tab=poa | contracts | editor
+  function openView(v: DocView) {
+    setView(v)
     const url = new URL(window.location.href)
-    if (key === 'templates') url.searchParams.delete('tab'); else url.searchParams.set('tab', key)
+    if (v === 'gallery') url.searchParams.delete('tab'); else url.searchParams.set('tab', v)
     window.history.replaceState(null, '', url)
   }
-
-  // Direct link to a tab (/documents?tab=poa) — read once on open
-  const deepDrive = useRef(false)
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get('tab') as DocTab | null
-    if (t && DOC_TABS.includes(t)) { setDocTab(t); deepDrive.current = t === 'drive' }
+    const t = new URLSearchParams(window.location.search).get('tab')
+    if (t === 'poa' || t === 'contracts') { const id = setTimeout(() => setView(t), 0); return () => clearTimeout(id) }
   }, [])
-  useEffect(() => {
-    if (profile && deepDrive.current) { deepDrive.current = false; loadDriveFiles('') }
-  }, [profile, loadDriveFiles])
 
-  const navigateInto = (item: {id:string;name:string}) => {
-    setFolderStack(p => [...p, item])
-    loadDriveFiles(item.id)
-  }
-
-  const navigateBack = () => {
-    const newStack = folderStack.slice(0, -1)
-    setFolderStack(newStack)
-    const parentId = newStack.length > 0 ? newStack[newStack.length - 1].id : rootDocsFolderId.current
-    loadDriveFiles(parentId)
-  }
-
-  const uploadDriveFiles = async (files: FileList | File[]) => {
-    if (!tenantId.current || !files.length) return
-    const arr = Array.from(files)
-    setUploadProgress({ done: 0, total: arr.length })
-    const targetId = currentFolderId() || rootDocsFolderId.current
-    let done = 0
-    for (const file of arr) {
-      try {
-        const fd = new FormData()
-        fd.append('file', file)
-        fd.append('tenant_id', tenantId.current)
-        if (targetId) fd.append('folder_id', targetId)
-        else fd.append('sub_folder', 'מסמכים')
-        const res = await fetch('/api/drive/upload', { method: 'POST', body: fd })
-        if (!res.ok) throw new Error()
-      } catch { showToast(`שגיאה בהעלאת ${file.name}`, 'error') }
-      done++
-      setUploadProgress({ done, total: arr.length })
-    }
-    showToast(`הועלו ${done}/${arr.length} קבצים ✓`, 'success')
-    setUploadProgress(null)
-    loadDriveFiles()
-  }
-
-  const deleteDriveFile = async (fileId: string, fileName: string) => {
-    const ok = await confirm({ msg: `למחוק את "${fileName}" מהדרייב?`, variant: 'danger' })
-    if (!ok) return
-    setDriveDeletingId(fileId)
-    try {
-      await fetch('/api/drive/delete', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant_id: tenantId.current, file_id: fileId }),
-      })
-      showToast('נמחק', 'success')
-      setDriveItems(p => p.filter(f => f.id !== fileId))
-    } catch { showToast('שגיאה במחיקה', 'error') }
-    setDriveDeletingId(null)
-  }
-
-  const createDriveFolder = async () => {
-    if (!newFolderName.trim() || !tenantId.current) return
-    if (!docsFolderReady || !rootDocsFolderId.current) {
-      showToast('עדיין טוען... נסה שוב', 'error')
-      loadDriveFiles('')
-      return
-    }
-    setCreatingFolder(true)
-    const parentId = currentFolderId() || rootDocsFolderId.current
-    try {
-      const res = await fetch('/api/drive/files', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenant_id: tenantId.current, parent_id: parentId, name: newFolderName.trim() }),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || 'failed')
-      }
-      showToast('תיקיה נוצרה ✓', 'success')
-      setNewFolderName('')
-      setNewFolderMode(false)
-      const reloadId = currentFolderId() || rootDocsFolderId.current
-      loadDriveFiles(reloadId)
-    } catch { showToast('שגיאה ביצירת תיקיה', 'error') }
-    setCreatingFolder(false)
+  async function setHidden(key: string, hide: boolean) {
+    const hidden = hide ? [...new Set([...prefs.hidden, key])] : prefs.hidden.filter(k => k !== key)
+    const { data, error } = prefs.id
+      ? await sb.from('documents').update({ content: { hidden } }).eq('id', prefs.id).select('id').single()
+      : await sb.from('documents').insert({ tenant_id: tenantId.current, name: 'הגדרות טפסים', type: 'doc_prefs', content: { hidden } }).select('id').single()
+    if (error) { showToast('שגיאה בשמירה', 'error'); return }
+    setPrefs({ id: data.id, hidden })
+    showToast(hide ? 'הטופס הוסר מהרשימה' : 'הטופס הוחזר', 'success')
   }
 
   // ── Template CRUD ─────────────────────────────────────────────────────────────
@@ -1048,7 +916,7 @@ export default function DocumentsClient() {
   }
 
   const printHtmlDoc = (doc: HtmlDoc) => {
-    let html = replaceTemplateVars(doc.content.html, {
+    const html = replaceTemplateVars(doc.content.html, {
       logo:       logoBase64.current,
       bizName:    bizName.current,
       bizSubTitle: bizSubTitle.current,
@@ -1056,12 +924,7 @@ export default function DocumentsClient() {
       bizAddress: bizAddress.current,
       bizLicense: bizLicense.current,
     })
-    const printScript = '<script>window.onload=function(){window.onafterprint=function(){window.close()};window.print()}<\/script>'
-    html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${printScript}</body>`) : html + printScript
-    const w = window.open('', '_blank')
-    if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-    w.document.write(html)
-    w.document.close()
+    printHtml(html)
   }
 
   const deleteHtmlTemplate = async (doc: HtmlDoc) => {
@@ -1101,429 +964,178 @@ export default function DocumentsClient() {
     </div>
   )
 
+  // ── Gallery items: built-in forms + the business's own templates and documents ──
+  type Tile = {
+    key: string; group: Exclude<GalleryFilter, 'all'>; kind: string; icon: string; title: string; sub: string
+    open: () => void; actions?: { key: string; label: string; icon: string; danger?: boolean; onClick: () => void }[]
+  }
+  const ask = (title: string, run: (copies: number) => void) => { setAskCopies(1); setPrintAsk({ title, run }) }
+  const B = () => [biz.name, biz.logo, biz.sub, biz.phone, biz.address, biz.license ?? ''] as const
+  const builtins: Tile[] = [
+    { key: 'b:contracts', group: 'builtin', kind: 'חוזים', icon: '📝', title: 'חוזה מכירת רכב', sub: 'חוזים לפי רכב — טיוטות וחתומים', open: () => openView('contracts') },
+    { key: 'b:poa', group: 'builtin', kind: 'משרד התחבורה', icon: '✍️', title: 'ייפוי כוח', sub: 'טופס משרד התחבורה למילוי והדפסה', open: () => openView('poa') },
+    { key: 'b:checklist', group: 'builtin', kind: 'טופס', icon: '🔍', title: 'בדיקת רכב כללית', sub: 'צמיגים · נוזלים · פנסים · מגבים · אביזרים', open: () => ask('בדיקת רכב כללית', n => printChecklist(n, '', '', '', biz.logo)) },
+    { key: 'b:warranty', group: 'builtin', kind: 'טופס', icon: '📋', title: 'הצהרת לקוח – בדיקת רכב', sub: 'הצהרה · פרטי לקוח ורכב · חתימות', open: () => ask('הצהרת לקוח – בדיקת רכב', n => printWarranty(n, ...B())) },
+    { key: 'b:blank', group: 'builtin', kind: 'טופס', icon: '📄', title: 'דף כותרת ריק', sub: 'לוגו ופרטי העסק + שטח לכתיבה', open: () => ask('דף כותרת ריק', n => printBlankHeader(n, ...B())) },
+    { key: 'b:waiver', group: 'builtin', kind: 'טופס', icon: '🤝', title: 'הסרת אחריות מוכר', sub: 'פרטי רכב · מוכר · קונה · חתימות', open: () => printSellerWaiver(...B()) },
+  ]
+  const hiddenBuiltins = builtins.filter(t => prefs.hidden.includes(t.key))
+  const tiles: Tile[] = [
+    ...builtins.filter(t => !prefs.hidden.includes(t.key)).map(t => ({
+      ...t, actions: [{ key: 'hide', label: 'הסר מהרשימה', icon: '🗑️', danger: true, onClick: () => setHidden(t.key, true) }],
+    })),
+    ...freeDocs.map(d => ({
+      key: `f:${d.id}`, group: 'mine' as const, kind: 'מסמך', icon: '📝', title: d.name,
+      sub: `${(d.content?.boxes ?? []).length} תיבות · ${new Date(d.created_at).toLocaleDateString('he-IL')}`,
+      open: () => { setFreeEdit({ id: d.id, name: d.name, content: d.content }); setView('editor') },
+      actions: [
+        { key: 'print', label: 'הדפסה', icon: '🖨', onClick: () => printFreeDoc(d.name, d.content ?? { boxes: [], letterhead: true }, biz) },
+        { key: 'dup', label: 'שכפול', icon: '📋', onClick: async () => {
+          await sb.from('documents').insert({ tenant_id: tenantId.current, name: `${d.name} (עותק)`, type: 'free_doc', icon: '📝', content: d.content })
+          fetchAll()
+        } },
+        { key: 'del', label: 'מחיקה', icon: '🗑️', danger: true, onClick: async () => {
+          if (!(await confirm({ msg: `למחוק את "${d.name}"?` }))) return
+          await sb.from('documents').delete().eq('id', d.id)
+          fetchAll()
+        } },
+      ],
+    })),
+    ...forms.map(f => ({
+      key: `t:${f.id}`, group: 'templates' as const, kind: 'טבלה', icon: f.icon || '📋', title: f.name,
+      sub: f.content.columns?.map(c => c.label).filter(Boolean).join(' · ') || `${f.content.columns?.length ?? 0} עמודות`,
+      open: () => ask(f.name, n => printFormTemplate(f, n)),
+      actions: [
+        { key: 'edit', label: 'עריכה', icon: '✏️', onClick: () => openEdit(f) },
+        { key: 'dup', label: 'שכפול', icon: '📋', onClick: () => duplicateTemplate(f) },
+        { key: 'delete', label: 'מחיקה', icon: '🗑️', danger: true, onClick: () => deleteTemplate(f) },
+      ],
+    })),
+    ...htmlForms.map(doc => ({
+      key: `h:${doc.id}`, group: 'templates' as const, kind: 'עיצוב אישי', icon: doc.icon || '🎨', title: doc.name, sub: 'מסמך HTML',
+      open: () => printHtmlDoc(doc),
+      actions: [
+        { key: 'rename', label: 'שינוי שם', icon: '✏️', onClick: () => renameHtmlTemplate(doc) },
+        { key: 'delete', label: 'מחיקה', icon: '🗑️', danger: true, onClick: () => deleteHtmlTemplate(doc) },
+      ],
+    })),
+  ]
+  const shownTiles = tiles.filter(t =>
+    (gFilter === 'all' || t.group === gFilter) &&
+    (!gSearch.trim() || `${t.title} ${t.sub} ${t.kind}`.includes(gSearch.trim())))
+
+  const backBar = (title: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+      <button type="button" onClick={() => { setFreeEdit(null); openView('gallery') }} className="doc-back">→ כל הטפסים</button>
+      <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>{title}</h2>
+    </div>
+  )
+
   return (
     <div>
       <PageHeader
         icon={<svg viewBox="0 0 24 24" width={22} height={22} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>}
-        iconBg="linear-gradient(135deg,#06b6d4,#22d3ee)"
-        iconShadow="#06b6d444"
-        title="מסמכים"
-        actions={docTab === 'templates'
-          ? <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                ref={htmlUploadRef}
-                type="file"
-                accept=".html,.htm"
-                style={{ display: 'none' }}
-                onChange={e => {
-                  if (e.target.files?.[0]) uploadHtmlTemplate(e.target.files[0])
-                  e.currentTarget.value = ''
-                }}
-              />
-              <Button variant="secondary" onClick={() => htmlUploadRef.current?.click()}>📤 העלה HTML</Button>
-              <Button variant="secondary" onClick={() => setHtmlPasteOpen(true)}>📋 הדבק קוד HTML</Button>
-              <Button variant="primary" onClick={openAdd}>➕ תבנית חדשה</Button>
-            </div>
-          : docTab === 'drive' && driveConnected
-            ? <>
-                <input type="file" id="doc-drive-upload" style={{ display: 'none' }} multiple
-                  onChange={e => { if (e.target.files?.length) uploadDriveFiles(e.target.files); e.target.value = '' }}
-                />
-                {isMobile && <button onClick={() => setShowScanner(true)} disabled={!!uploadProgress} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  background: 'var(--surface, #f5f5f5)', color: 'var(--text)', borderRadius: 8,
-                  padding: '8px 14px', fontSize: 14, fontWeight: 600,
-                  cursor: uploadProgress ? 'default' : 'pointer',
-                  opacity: uploadProgress ? 0.7 : 1,
-                  border: '1.5px solid var(--border)',
-                }}>
-                  📷 סרוק
-                </button>}
-                <label htmlFor="doc-drive-upload" style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  background: '#f0fdf9', color: '#15803d', borderRadius: 9,
-                  border: '1.5px solid #bbf7d0',
-                  padding: '8px 16px', fontSize: 14, fontWeight: 600,
-                  cursor: uploadProgress ? 'default' : 'pointer',
-                  opacity: uploadProgress ? 0.7 : 1,
-                  pointerEvents: uploadProgress ? 'none' : 'auto',
-                }}>
-                  {uploadProgress ? `⏳ ${uploadProgress.done}/${uploadProgress.total}` : '📤 העלה קבצים'}
-                </label>
-                {uploadProgress && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 120, height: 6, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', background: 'var(--primary)', borderRadius: 99, width: `${(uploadProgress.done/uploadProgress.total)*100}%`, transition: 'width 0.3s' }} />
-                    </div>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{Math.round((uploadProgress.done/uploadProgress.total)*100)}%</span>
-                  </div>
-                )}
-              </>
-            : undefined
-        }
+        title="טפסים"
+        subtitle="כל הטפסים, החוזים והמסמכים של העסק במקום אחד"
+        actions={view === 'gallery' ? <>
+          <input ref={htmlUploadRef} id="doc-html-upload" aria-label="העלאת קובץ HTML" type="file" accept=".html,.htm" style={{ display: 'none' }}
+            onChange={e => { if (e.target.files?.[0]) uploadHtmlTemplate(e.target.files[0]); e.currentTarget.value = '' }} />
+          <MoreMenu label="+ חדש ▾" actions={[
+            { key: 'free', label: 'מסמך חופשי (על נייר העסק)', icon: '📝', onClick: () => { setFreeEdit({ id: null, name: 'מסמך חדש', content: null }); openView('editor') } },
+            { key: 'table', label: 'טופס טבלה להדפסה', icon: '📋', onClick: openAdd },
+            { key: 'contract', label: 'חוזה מכירת רכב', icon: '🚗', onClick: () => openView('contracts') },
+            { key: 'upload', label: 'העלאת קובץ HTML', icon: '📤', onClick: () => document.getElementById('doc-html-upload')?.click() },
+            { key: 'paste', label: 'הדבקת קוד HTML', icon: '📋', onClick: () => setHtmlPasteOpen(true) },
+          ]} />
+        </> : undefined}
       />
 
-      {/* Tab bar — each tab has its own link (?tab=poa …) for bookmarks */}
-      <div className="scroll-x" style={{ marginBottom: 20 }}><div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
-        {([
-          ['templates', '📄 תבניות הדפסה'],
-          ['contracts', '📝 חוזי מכירת רכב'],
-          ['poa',       '✍️ ייפוי כוח'],
-          ['drive',     '📂 קבצים בדרייב'],
-        ] as const).map(([key, label]) => (
-          <button key={key} onClick={() => openTab(key)}
-            style={{
-              padding: '7px 18px', border: 'none', cursor: 'pointer',
-              fontFamily: 'inherit', fontSize: 13, fontWeight: docTab === key ? 600 : 400,
-              color: docTab === key ? 'var(--text)' : 'var(--text-muted)',
-              background: docTab === key ? '#fff' : 'transparent',
-              borderRadius: '8px', whiteSpace: 'nowrap',
-              boxShadow: docTab === key ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-              transition: 'all .15s',
-            }}
-          >{label}</button>
-        ))}
-      </div></div>
+      {view === 'contracts' && <>{backBar('חוזה מכירת רכב')}<CarContractsPanel /></>}
+      {view === 'poa' && <>{backBar('ייפוי כוח')}<PowerOfAttorneyPanel /></>}
 
-      {/* ── Car sale contracts tab ── */}
-      {docTab === 'contracts' && <CarContractsPanel />}
-
-      {/* ── Power of attorney (Ministry of Transport form) ── */}
-      {docTab === 'poa' && <PowerOfAttorneyPanel />}
-
-      {/* ── Drive files tab ── */}
-      {docTab === 'drive' && (
-        <div>
-          {!driveConnected ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>☁️</div>
-              <div style={{ fontWeight: 700, marginBottom: 8 }}>Google Drive לא מחובר</div>
-              <a href="/settings" style={{ color: 'var(--primary)', fontSize: 13 }}>חבר מהגדרות ←</a>
-            </div>
-          ) : (
-            <>
-              {/* Breadcrumb + actions bar */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-                {/* Back button */}
-                {folderStack.length > 0 && (
-                  <button onClick={navigateBack} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
-                    ← חזור
-                  </button>
-                )}
-                {/* Breadcrumb path */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--text-muted)', flex: 1 }}>
-                  <span style={{ color: 'var(--primary)', fontWeight: 600 }}>מסמכים</span>
-                  {folderStack.map((f, i) => (
-                    <span key={f.id}>
-                      <span style={{ margin: '0 2px' }}>/</span>
-                      <span style={{ color: i === folderStack.length - 1 ? 'var(--text)' : 'var(--primary)', fontWeight: 600 }}>{f.name}</span>
-                    </span>
-                  ))}
-                </div>
-                {/* New folder */}
-                {newFolderMode ? (
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <input
-                      autoFocus
-                      value={newFolderName}
-                      onChange={e => setNewFolderName(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') createDriveFolder(); if (e.key === 'Escape') { setNewFolderMode(false); setNewFolderName('') } }}
-                      placeholder="שם תיקיה..."
-                      style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', width: 140 }}
-                    />
-                    <button onClick={createDriveFolder} disabled={creatingFolder || !newFolderName.trim()} style={{ padding: '6px 12px', background: '#f0fdf9', color: '#15803d', border: '1.5px solid #bbf7d0', borderRadius: 9, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
-                      {creatingFolder ? '...' : '✓'}
-                    </button>
-                    <button onClick={() => { setNewFolderMode(false); setNewFolderName('') }} style={{ padding: '6px 10px', background: 'none', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
-                  </div>
-                ) : (
-                  <button onClick={() => setNewFolderMode(true)} disabled={driveLoading} style={{ padding: '6px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600, opacity: driveLoading ? 0.5 : 1 }}>
-                    📁 תיקיה חדשה
-                  </button>
-                )}
-              </div>
-
-              {driveLoading ? (
-                <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>טוען...</div>
-              ) : driveItems.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
-                  <div style={{ fontWeight: 700 }}>תיקיה ריקה</div>
-                  <div style={{ fontSize: 13, marginTop: 6 }}>העלה קובץ או צור תיקיה חדשה</div>
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
-                  {driveItems.map(item => {
-                    const isFolder = item.mimeType === 'application/vnd.google-apps.folder'
-                    const isImage  = item.mimeType?.startsWith('image/')
-                    const isPdf    = item.mimeType === 'application/pdf'
-                    if (isFolder) return (
-                      <div key={item.id}
-                        onClick={() => navigateInto({ id: item.id, name: item.name })}
-                        style={{ background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', border: '1px solid var(--border)', padding: '18px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
-                      >
-                        <span style={{ fontSize: 28 }}>📁</span>
-                        <span style={{ fontSize: 13, fontWeight: 600, wordBreak: 'break-word' }}>{item.name}</span>
-                      </div>
-                    )
-                    return (
-                      <div key={item.id} style={{ background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', border: '1px solid var(--border)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                        <a href={item.webViewLink} target="_blank" rel="noreferrer" style={{ display: 'block', height: 110, background: 'var(--bg)' }}>
-                          {isImage
-                            ? <img src={`https://drive.google.com/thumbnail?id=${item.id}&sz=w400`} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: 40 }}>{isPdf ? '📄' : '📎'}</div>
-                          }
-                        </a>
-                        <div style={{ padding: '8px 10px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, wordBreak: 'break-word', lineHeight: 1.3 }}>{item.name}</div>
-                          {item.size && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{(parseInt(item.size)/1024).toFixed(0)} KB</div>}
-                          <div style={{ display: 'flex', gap: 5, marginTop: 4 }}>
-                            <a href={item.webViewLink} target="_blank" rel="noreferrer" style={{ flex: 1, textAlign: 'center', fontSize: 11, padding: '4px 0', background: 'var(--bg)', borderRadius: 6, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>🔗 פתח</a>
-                            <button onClick={() => deleteDriveFile(item.id, item.name)} disabled={driveDeletingId === item.id}
-                              style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--danger)', borderRadius: 6, color: 'var(--danger)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
-                              {driveDeletingId === item.id ? '...' : '🗑️'}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+      {/* ── Free document editor: blank page + text boxes ── */}
+      {view === 'editor' && freeEdit && (
+        <FreeDocEditor
+          key={freeEdit.id ?? 'new'}
+          initialName={freeEdit.name}
+          initialContent={freeEdit.content}
+          biz={biz}
+          onClose={() => { setFreeEdit(null); openView('gallery') }}
+          onSave={async (name, content) => {
+            const { data, error } = freeEdit.id
+              ? await sb.from('documents').update({ name, content }).eq('id', freeEdit.id).select('id').single()
+              : await sb.from('documents').insert({ tenant_id: tenantId.current, name, type: 'free_doc', icon: '📝', content }).select('id').single()
+            if (error) { showToast('שגיאה בשמירה', 'error'); return }
+            setFreeEdit(f => f && { ...f, id: data.id, name, content })
+            showToast('המסמך נשמר ✓', 'success')
+            fetchAll()
+          }}
+        />
       )}
 
-      {/* ── Templates tab ── */}
-      {docTab === 'templates' && <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-
-        {/* ── Built-in: בדיקת רכב ── */}
-        <div style={{
-          background: '#fff', borderRadius: 'var(--radius)',
-          boxShadow: 'var(--shadow)', borderRight: '5px solid var(--primary)',
-          padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-              🔍 בדיקת רכב כללית
-            </div>
-            <span style={{
-              fontSize: 11, fontWeight: 600, padding: '2px 8px',
-              borderRadius: 99, background: '#f0fdf4', color: 'var(--primary)',
-              border: '1px solid var(--primary)',
-            }}>מובנה</span>
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            צמיגים · נוזלים · פנסים · מגבים · אביזרים · שטיפה
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>עותקים:</label>
-            <input
-              type="number" min={1} max={10}
-              value={clCopies}
-              onChange={e => setClCopies(Math.max(1, parseInt(e.target.value) || 1))}
-              style={{ width: 50, padding: '4px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, textAlign: 'center' }}
-            />
-            <Button
-              variant="primary"
-              style={{ marginRight: 'auto' }}
-              onClick={() => printChecklist(clCopies, '', '', '', logoBase64.current)}
-            >
-              🖨️ הדפס
-            </Button>
-          </div>
-        </div>
-
-        {/* ── Built-in: תעודת אחריות ── */}
-        <div style={{
-          background: '#fff', borderRadius: 'var(--radius)',
-          boxShadow: 'var(--shadow)', borderRight: '5px solid var(--primary)',
-          padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-              📋 הצהרת לקוח – בדיקת רכב
-            </div>
-            <span style={{
-              fontSize: 11, fontWeight: 600, padding: '2px 8px',
-              borderRadius: 99, background: '#f0fdf4', color: 'var(--primary)',
-              border: '1px solid var(--primary)',
-            }}>מובנה</span>
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            עמוד 1 ריק למילוי ידני · הצהרה · פרטי לקוח/רכב · חתימות
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>עותקים:</label>
-            <input
-              type="number" min={1} max={10}
-              value={wCopies}
-              onChange={e => setWCopies(Math.max(1, parseInt(e.target.value) || 1))}
-              style={{ width: 50, padding: '4px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, textAlign: 'center' }}
-            />
-            <Button
-              variant="primary"
-              style={{ marginRight: 'auto' }}
-              onClick={() => printWarranty(wCopies, bizName.current, logoBase64.current, bizSubTitle.current, bizPhone.current, bizAddress.current, bizLicense.current)}
-            >
-              🖨️ הדפס
-            </Button>
-          </div>
-        </div>
-
-        {/* ── Built-in: דף כותרת ריק ── */}
-        <div style={{
-          background: '#fff', borderRadius: 'var(--radius)',
-          boxShadow: 'var(--shadow)', borderRight: '5px solid var(--primary)',
-          padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-              📄 דף כותרת ריק
-            </div>
-            <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: '#f0fdf4', color: 'var(--primary)', border: '1px solid var(--primary)' }}>מובנה</span>
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            לוגו + פרטי עסק + שטח ריק לכתיבה ידנית
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>עותקים:</label>
-            <input
-              type="number" min={1} max={10}
-              value={bhCopies}
-              onChange={e => setBhCopies(Math.max(1, parseInt(e.target.value) || 1))}
-              style={{ width: 50, padding: '4px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, textAlign: 'center' }}
-            />
-            <Button variant="primary" style={{ marginRight: 'auto' }} onClick={() => printBlankHeader(bhCopies, bizName.current, logoBase64.current, bizSubTitle.current, bizPhone.current, bizAddress.current, bizLicense.current)}>
-              🖨️ הדפס
-            </Button>
-          </div>
-        </div>
-
-        {/* ── Built-in: הסרת אחריות מוכר ── */}
-        <div style={{
-          background: '#fff', borderRadius: 'var(--radius)',
-          boxShadow: 'var(--shadow)', borderRight: '5px solid var(--primary)',
-          padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-              🤝 הסרת אחריות מוכר
-            </div>
-            <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 99, background: '#f0fdf4', color: 'var(--primary)', border: '1px solid var(--primary)' }}>מובנה</span>
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            פרטי רכב · מוכר · קונה · הצהרה משפטית · חתימות
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <Button variant="primary" style={{ marginRight: 'auto' }} onClick={() => printSellerWaiver(bizName.current, logoBase64.current, bizSubTitle.current, bizPhone.current, bizAddress.current, bizLicense.current)}>
-              📝 מלא והדפס
-            </Button>
-          </div>
-        </div>
-
-        </div>
-
-        {/* ── HTML templates ── */}
-        {htmlForms.length > 0 && (
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-              מסמכים בעיצוב אישי
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-              {htmlForms.map(doc => (
-                <div key={doc.id} style={{
-                  background: '#fff', borderRadius: 'var(--radius)',
-                  boxShadow: 'var(--shadow)', borderRight: '5px solid #7c3aed',
-                  padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                    <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span>{doc.icon || '🎨'}</span>
-                      <span style={{ wordBreak: 'break-word' }}>{doc.name}</span>
-                    </div>
-                    <RowActionsMenu variant="plain" actions={[
-                      { key: 'rename', label: 'שינוי שם', icon: '✏️', onClick: () => renameHtmlTemplate(doc) },
-                      { key: 'delete', label: 'מחיקה', icon: '🗑️', danger: true, onClick: () => deleteHtmlTemplate(doc) },
-                    ]} />
-                  </div>
-                  <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600, display: 'flex', gap: 4, alignItems: 'center' }}>
-                    <span>HTML</span>
-                    <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>· עיצוב אישי</span>
-                  </div>
-                  <Button
-                    variant="primary"
-                    style={{ marginTop: 4, background: '#7c3aed', borderColor: '#7c3aed' }}
-                    onClick={() => printHtmlDoc(doc)}
-                  >
-                    🖨️ פתח והדפס
-                  </Button>
-                </div>
+      {/* ── Gallery: every form as a same-size sheet ── */}
+      {(view === 'gallery' || (view === 'editor' && !freeEdit)) && (
+        <>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+            <input className="form-input" type="search" aria-label="חיפוש טופס" placeholder="חיפוש טופס..." value={gSearch}
+              onChange={e => setGSearch(e.target.value)} style={{ flex: '1 1 200px', maxWidth: 320, margin: 0 }} />
+            <div role="group" aria-label="סוג" style={{ display: 'flex', gap: 4, padding: 4, background: '#f1f5f9', borderRadius: 10 }}>
+              {([['all', 'הכל'], ['builtin', 'מובנים'], ['mine', 'מסמכים שלי'], ['templates', 'תבניות']] as const).map(([k, l]) => (
+                <button key={k} type="button" onClick={() => setGFilter(k)} aria-pressed={gFilter === k} style={{
+                  padding: '6px 14px', border: 'none', borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13,
+                  background: gFilter === k ? '#fff' : 'transparent', color: gFilter === k ? 'var(--text)' : 'var(--text-muted)',
+                  fontWeight: gFilter === k ? 600 : 400, boxShadow: gFilter === k ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
+                }}>{l}</button>
               ))}
             </div>
           </div>
-        )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 16 }}>
-        {/* ── Custom templates ── */}
-        {forms.map(f => (
-          <div key={f.id} style={{
-            background: '#fff', borderRadius: 'var(--radius)',
-            boxShadow: 'var(--shadow)', borderRight: '5px solid var(--accent)',
-            padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10,
-          }}>
-            {/* Title row + 3-dot menu */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>{f.icon || '📋'}</span> {f.name}
+          {shownTiles.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>אין טפסים להצגה — אפשר ליצור מ&quot;+ חדש&quot;.</div>
+          ) : (
+            <div className="doc-grid">
+              {shownTiles.map(t => (
+                <div key={t.key} className="doc-tile">
+                  <button type="button" className="doc-sheet" onClick={t.open} aria-label={`פתח ${t.title}`}>
+                    <span className="doc-sheet-head"><span aria-hidden="true">{t.icon}</span></span>
+                    <span className="doc-sheet-lines" aria-hidden="true"><i /><i /><i /><i /><i /></span>
+                    <span className="doc-sheet-kind">{t.kind}</span>
+                  </button>
+                  <div className="doc-tile-foot">
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div className="doc-tile-title">{t.title}</div>
+                      <div className="doc-tile-sub">{t.sub}</div>
+                    </div>
+                    {t.actions && <RowActionsMenu variant="plain" align="end" actions={t.actions} />}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {hiddenBuiltins.length > 0 && (
+            <details style={{ marginTop: 20, fontSize: 13, color: 'var(--text-muted)' }}>
+              <summary style={{ cursor: 'pointer' }}>טפסים מובנים שהוסרו ({hiddenBuiltins.length})</summary>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                {hiddenBuiltins.map(t => (
+                  <button key={t.key} type="button" onClick={() => setHidden(t.key, false)} className="doc-back">↩ {t.title}</button>
+                ))}
               </div>
-              <RowActionsMenu variant="plain" actions={[
-                { key: 'edit', label: 'עריכה', icon: '✏️', onClick: () => openEdit(f) },
-                { key: 'dup', label: 'שכפול', icon: '📋', onClick: () => duplicateTemplate(f) },
-                { key: 'delete', label: 'מחיקה', icon: '🗑️', danger: true, onClick: () => deleteTemplate(f) },
-              ]} />
-            </div>
+            </details>
+          )}
+        </>
+      )}
 
-            <div style={{ fontSize: 13, color: 'var(--text)' }}>
-              {f.content.columns?.map(c => c.label).join(' · ')}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              {f.content.columns?.length} עמודות
-              {f.content.headerExtra ? ' · ' + f.content.headerExtra : ''}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-              <label style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>עותקים:</label>
-              <input
-                type="number" min={1} max={20}
-                value={copiesMap[f.id] ?? 1}
-                onChange={e => setCopiesMap(p => ({ ...p, [f.id]: Math.max(1, parseInt(e.target.value) || 1) }))}
-                style={{ width: 50, padding: '4px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, textAlign: 'center' }}
-              />
-              <Button variant="primary" style={{ marginRight: 'auto' }} onClick={() => printFormTemplate(f, copiesMap[f.id] ?? 1)}>
-                🖨️ הדפס
-              </Button>
-            </div>
-          </div>
-        ))}
-
-        {/* Empty state */}
-        {forms.length === 0 && (
-          <div style={{
-            background: '#fff', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)',
-            borderRight: '5px dashed var(--border)', padding: '28px 20px',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: 10, color: 'var(--text-muted)', cursor: 'pointer',
-          }} onClick={openAdd}>
-            <div style={{ fontSize: 32 }}>➕</div>
-            <div style={{ fontSize: 13, fontWeight: 600 }}>צור תבנית חדשה</div>
-          </div>
-        )}
-        </div>
-      </div>}
+      {/* ── Print copies ── */}
+      <Modal open={!!printAsk} onClose={() => setPrintAsk(null)} title={printAsk ? `הדפסה — ${printAsk.title}` : ''} maxWidth={360}
+        footer={<>
+          <Button variant="secondary" onClick={() => setPrintAsk(null)}>ביטול</Button>
+          <Button onClick={() => { printAsk?.run(askCopies); setPrintAsk(null) }}>הדפס</Button>
+        </>}>
+        <label className="form-label" htmlFor="doc-copies">מספר עותקים</label>
+        <input id="doc-copies" type="number" min={1} max={20} className="form-input" value={askCopies}
+          onChange={e => setAskCopies(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))} style={{ width: 100 }} />
+      </Modal>
 
       {/* ── Add/Edit Template Modal ── */}
       <Modal
@@ -1534,7 +1146,7 @@ export default function DocumentsClient() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
-            <Button variant="primary" onClick={saveTemplate} loading={saving}>💾 שמור</Button>
+            <Button variant="primary" onClick={saveTemplate} loading={saving}>שמור</Button>
           </>
         }
       >
@@ -1603,7 +1215,7 @@ export default function DocumentsClient() {
                 borderRadius: 8, background: 'none', width: '100%', cursor: 'pointer',
                 fontSize: 13, color: 'var(--text-muted)', fontFamily: 'inherit',
               }}
-            >➕ הוסף עמודה</button>
+            >הוסף עמודה</button>
           </div>
 
           <hr style={{ border: 'none', borderTop: '1px solid var(--border)' }} />
@@ -1685,7 +1297,7 @@ export default function DocumentsClient() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setHtmlPasteOpen(false)}>ביטול</Button>
-            <Button variant="primary" onClick={savePastedHtml} loading={htmlPasteSaving}>💾 שמור</Button>
+            <Button variant="primary" onClick={savePastedHtml} loading={htmlPasteSaving}>שמור</Button>
           </>
         }
       >
@@ -1716,12 +1328,6 @@ export default function DocumentsClient() {
         </div>
       </Modal>
 
-      {showScanner && (
-        <DocumentScannerModal
-          onComplete={file => { setShowScanner(false); uploadDriveFiles([file]) }}
-          onClose={() => setShowScanner(false)}
-        />
-      )}
     </div>
   )
 }

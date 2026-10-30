@@ -8,10 +8,15 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import * as XLSX from 'xlsx'
-import ExcelMenu from '@/components/ui/ExcelMenu'
+import MoreMenu from '@/components/ui/MoreMenu'
+import FilterBar from '@/components/ui/FilterBar'
 import PageHeader from '@/components/ui/PageHeader'
 import { progressStart, progressDone } from '@/components/ui/RouteProgress'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
+import { fuzzyIncludes } from '@/lib/search/fuzzy'
+import DuplicatesModal from '@/components/stock/DuplicatesModal'
+import { findProductDuplicates, pickKeeper } from '@/lib/stock/duplicates'
+import { printHtml } from '@/lib/print/printHtml'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -63,7 +68,6 @@ function fmtPrice(n: number | null) {
   if (!n) return '—'
   return '₪' + n.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
-function todayISO() { return new Date().toISOString().slice(0, 10) }
 function thisMonthStart() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
@@ -86,7 +90,8 @@ export default function ProductsClient() {
   const [movements, setMovements] = useState<Movement[]>([])
 
   // Tabs
-  const [tab, setTab] = useState<'products' | 'movements'>('products')
+  // Stock movements live on the stock screen (/stock-count) now
+  const tab = 'products' as const
 
   // Filters
   const [search, setSearch] = useState('')
@@ -102,17 +107,7 @@ export default function ProductsClient() {
   const [editingProductId,  setEditingProductId]  = useState<string | null>(null)
   const [editMap, setEditMap] = useState<Record<string, Partial<Product>>>({})
 
-  // Movement form
-  const [mvProductId, setMvProductId] = useState('')
-  const [mvProductSearch, setMvProductSearch] = useState('')
-  const [mvDropOpen, setMvDropOpen] = useState(false)
-  const [mvType, setMvType] = useState<'sale' | 'order'>('sale')
-  const [mvQty, setMvQty] = useState('')
-  const [mvDate, setMvDate] = useState(todayISO())
-  const [mvSaving, setMvSaving] = useState(false)
-
   const [isLoading,    setIsLoading]    = useState(true)
-  const [deletingMvId, setDeletingMvId] = useState<string | null>(null)
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -164,13 +159,28 @@ export default function ProductsClient() {
 
   const cats = [...new Set(products.map(p => p.category).filter(Boolean) as string[])].sort()
 
+  // Duplicates view: same name or same barcode/SKU, merged group by group
+  const [dupsOpen, setDupsOpen] = useState(false)
+  const dupGroups = findProductDuplicates(products)
+
+  async function mergeGroup(targetId: string, sourceIds: string[]): Promise<boolean> {
+    const res = await fetch('/api/stock/merge', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind: 'product', target_id: targetId, source_ids: sourceIds }),
+    })
+    const out = await res.json().catch(() => ({}))
+    showToast(res.ok ? `מוזג ✓ (${sourceIds.length + 1} → 1)` : out.error ?? 'שגיאה במיזוג', res.ok ? 'success' : 'error')
+    await load()
+    return res.ok
+  }
+
   const filtered = products.filter(p => {
     if (filterCat && p.category !== filterCat) return false
     if (filterStock === 'out' && p.qty !== 0) return false
     if (filterStock === 'low' && !(p.min_qty > 0 && p.qty <= p.min_qty && p.qty > 0)) return false
     if (search) {
-      const hay = [p.name, p.category, p.sku, p.barcode, p.notes, p.unit].join(' ').toLowerCase()
-      if (!hay.includes(search.toLowerCase())) return false
+      const hay = [p.name, p.category, p.sku, p.barcode, p.notes, p.unit].join(' ')
+      if (!fuzzyIncludes(hay, search)) return false
     }
     return true
   })
@@ -303,63 +313,6 @@ export default function ProductsClient() {
 
   // ── Stock movement ──────────────────────────────────────────────────────────
 
-  async function saveMovement() {
-    if (!mvProductId) return showToast('יש לבחור מוצר', 'error')
-    const qty = parseFloat(mvQty)
-    if (!qty || qty <= 0) return showToast('יש להזין כמות', 'error')
-
-    const prod = products.find(p => p.id === mvProductId)
-    if (!prod) return
-
-    const newQty = mvType === 'order' ? prod.qty + qty : Math.max(0, prod.qty - qty)
-    const tempId = `temp-${Date.now()}`
-    const optimisticMv: Movement = { id: tempId, product_id: mvProductId, qty, sold_date: mvDate, movement_type: mvType }
-
-    setProducts(prev => prev.map(p => p.id === mvProductId ? { ...p, qty: newQty } : p))
-    setMovements(prev => [optimisticMv, ...prev])
-    setMvQty(''); setMvProductId(''); setMvProductSearch('')
-
-    setMvSaving(true)
-    const [{ error: mvErr }, { error: qtyErr }] = await Promise.all([
-      sb.from('product_sales').insert({ tenant_id: tenantId.current, product_id: mvProductId, qty, sold_date: mvDate, movement_type: mvType }),
-      sb.from('products').update({ qty: newQty }).eq('id', mvProductId),
-    ])
-    setMvSaving(false)
-
-    if (mvErr || qtyErr) {
-      setProducts(prev => prev.map(p => p.id === mvProductId ? { ...p, qty: prod.qty } : p))
-      setMovements(prev => prev.filter(m => m.id !== tempId))
-      showToast('שגיאה בשמירה', 'error')
-    } else {
-      showToast(mvType === 'sale' ? `נרשמה מכירה של ${qty} יח׳ ✓` : `נרשמה הזמנה של ${qty} יח׳ ✓`, 'success')
-      load()
-    }
-  }
-
-  async function deleteMovement(mv: Movement) {
-    const prod = products.find(p => p.id === mv.product_id)
-    if (!prod) return
-    const revertedQty = mv.movement_type === 'order' ? Math.max(0, prod.qty - mv.qty) : prod.qty + mv.qty
-
-    setDeletingMvId(mv.id)
-    setMovements(prev => prev.filter(m => m.id !== mv.id))
-    setProducts(prev => prev.map(p => p.id === mv.product_id ? { ...p, qty: revertedQty } : p))
-
-    const [{ error: e1 }, { error: e2 }] = await Promise.all([
-      sb.from('product_sales').delete().eq('id', mv.id),
-      sb.from('products').update({ qty: revertedQty }).eq('id', mv.product_id),
-    ])
-    setDeletingMvId(null)
-
-    if (e1 || e2) {
-      setMovements(prev => [mv, ...prev])
-      setProducts(prev => prev.map(p => p.id === mv.product_id ? { ...p, qty: prod.qty } : p))
-      showToast('שגיאה במחיקה', 'error')
-    } else {
-      showToast('נמחק ✓', 'success')
-    }
-  }
-
   // ── Excel ────────────────────────────────────────────────────────────────────
 
   function exportExcel() {
@@ -436,7 +389,7 @@ export default function ProductsClient() {
         iconShadow="#ec489944"
         title="מוצרים"
         subtitle={viewOnly ? 'מצב צפיה בלבד' : undefined}
-        actions={<><Button variant="outline" onClick={() => setShowPricelist(true)}>🖨️ מחירון</Button>{!viewOnly && <Button onClick={openAdd}>➕ מוצר חדש</Button>}</>}
+        actions={!viewOnly ? <Button onClick={openAdd}>מוצר חדש</Button> : <Button variant="outline" onClick={() => setShowPricelist(true)}>מחירון</Button>}
       />
 
       {/* Stats */}
@@ -449,43 +402,41 @@ export default function ProductsClient() {
         <StatCard label='הכנסות החודש'     value={fmt(revenueMonth)}   color='blue' />
       </div>
 
-      {/* Tabs */}
-      <div className="scroll-x" style={{ marginBottom: '16px' }}><div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
-        {([['products', '📋 מוצרים'], ['movements', '📊 תנועות מלאי']] as const).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)} style={{
-            padding: '7px 16px', border: 'none', borderRadius: '8px',
-            cursor: 'pointer', fontWeight: tab === t ? 600 : 400, fontSize: '13px',
-            background: tab === t ? '#fff' : 'transparent',
-            color: tab === t ? 'var(--text)' : 'var(--text-muted)',
-            boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,.1)' : 'none',
-            transition: 'all .15s', fontFamily: 'inherit', whiteSpace: 'nowrap',
-          }}>{label}</button>
-        ))}
-      </div></div>
 
       {/* ══════════ TAB: PRODUCTS ══════════ */}
       {tab === 'products' && (
         <>
-          {/* Filters + edit mode toggle */}
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
-            <div style={{ position: 'relative', maxWidth: '260px', display: 'flex', alignItems: 'center' }}>
-              <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 10, pointerEvents: 'none', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input className="form-input" style={{ paddingRight: 30 }} placeholder="חיפוש..."
-                value={search} onChange={e => setSearch(e.target.value)} />
-            </div>
-            <select className="form-input" style={{ width: 'auto' }} value={filterCat} onChange={e => setFilterCat(e.target.value)}>
+          {/* Search always visible; filters open from "סינון"; secondary actions in ⋯ */}
+          <FilterBar storageKey="products" search={search} onSearch={setSearch} placeholder="חיפוש שם / מק״ט / ברקוד..."
+            chips={[
+              ...(filterCat ? [{ key: 'c', label: filterCat, onRemove: () => setFilterCat('') }] : []),
+              ...(filterStock ? [{ key: 's', label: filterStock === 'out' ? 'אזל' : 'מלאי נמוך', onRemove: () => setFilterStock('') }] : []),
+            ]}
+            onClearAll={() => { setSearch(''); setFilterCat(''); setFilterStock('') }}
+            end={!viewOnly ? <>
+              {dupGroups.length > 0 && (
+                <Button variant="outline" onClick={() => setDupsOpen(true)} style={{ fontSize: '13px', borderColor: 'var(--warning)', color: '#92400e' }}>
+                  🔁 {dupGroups.length} כפילויות
+                </Button>
+              )}
+              <MoreMenu
+                excel={{ onExport: exportExcel, onImport: importExcel }}
+                actions={[
+                  { key: 'price', label: 'מחירון', icon: '🖨️', onClick: () => setShowPricelist(true) },
+                  { key: 'dups', label: `כפילויות${dupGroups.length ? ` (${dupGroups.length})` : ''}`, icon: '🔁', onClick: () => setDupsOpen(true) },
+                ]}
+              />
+            </> : undefined}>
+            <select className="form-input" aria-label="קטגוריה" style={{ width: 'auto', margin: 0 }} value={filterCat} onChange={e => setFilterCat(e.target.value)}>
               <option value=''>כל הקטגוריות</option>
               {cats.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <select className="form-input" style={{ width: 'auto' }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
+            <select className="form-input" aria-label="מלאי" style={{ width: 'auto', margin: 0 }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
               <option value=''>כל המלאי</option>
               <option value='low'>מלאי נמוך</option>
               <option value='out'>אזל</option>
             </select>
-            <div style={{ marginRight: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {!viewOnly && <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />}
-            </div>
-          </div>
+          </FilterBar>
 
           {/* Products table */}
           <div className="products-table-wrap" style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
@@ -529,7 +480,7 @@ export default function ProductsClient() {
                     const isLow = p.min_qty > 0 && p.qty <= p.min_qty && p.qty > 0
                     const isOut = p.qty === 0
                     const qtyColor = isOut ? 'var(--danger)' : isLow ? 'var(--warning)' : 'var(--primary)'
-                    const qtyBg   = isOut ? '#fef2f2' : isLow ? '#fffbeb' : '#f0fdf4'
+                    const qtyBg   = isOut ? '#fef2f2' : isLow ? '#fffbeb' : 'var(--success-soft)'
                     const marginPct = p.margin ? p.margin + '%'
                       : (p.buy_price && p.sell_price ? Math.round((p.sell_price / p.buy_price - 1) * 100) + '%' : '—')
                     const suppName = suppliers.find(s => s.id === p.supplier_id)?.name || '—'
@@ -621,196 +572,13 @@ export default function ProductsClient() {
         </>
       )}
 
-      {/* ══════════ TAB: MOVEMENTS ══════════ */}
-      {tab === 'movements' && (
-        <>
-          {/* Quick entry form */}
-          <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', padding: '16px', marginBottom: '16px' }}>
-            <h3 style={{ margin: '0 0 14px', fontSize: '15px', fontWeight: 700 }}>רישום תנועה</h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'end' }}>
-
-              {/* Type toggle */}
-              <div style={{ minWidth: '160px' }}>
-                <div className="form-label">סוג תנועה</div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {([['sale', '💰 מכירה'], ['order', '📦 הזמנה']] as const).map(([t, label]) => (
-                    <button key={t} onClick={() => setMvType(t)} style={{
-                      flex: 1, padding: '8px', border: `2px solid ${mvType === t ? (t === 'sale' ? 'var(--primary)' : 'var(--accent)') : 'var(--border)'}`,
-                      borderRadius: '8px', cursor: 'pointer', fontWeight: mvType === t ? 700 : 400,
-                      fontSize: '13px', background: mvType === t ? (t === 'sale' ? '#f0fdf4' : '#eff6ff') : 'var(--bg)',
-                      color: mvType === t ? (t === 'sale' ? 'var(--primary)' : 'var(--accent)') : 'var(--text-muted)',
-                    }}>{label}</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Product */}
-              <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '200px' }}>
-                <label className="form-label">מוצר {mvProductId && <span style={{ color: 'var(--primary)', fontWeight: 700 }}>✓</span>}</label>
-                <input
-                  className="form-input" style={{ borderColor: mvProductId ? 'var(--primary)' : undefined }}
-                  placeholder="חפש לפי שם או מק״ט..."
-                  value={mvProductSearch}
-                  autoComplete="off"
-                  onFocus={() => setMvDropOpen(true)}
-                  onBlur={() => setTimeout(() => setMvDropOpen(false), 150)}
-                  onChange={e => {
-                    const val = e.target.value
-                    setMvProductSearch(val)
-                    setMvDropOpen(true)
-                    setMvQty('')
-                    // exact match → auto-select
-                    const exact = products.find(p =>
-                      p.name.toLowerCase() === val.toLowerCase() ||
-                      (p.sku != null && p.sku.toLowerCase() === val.toLowerCase())
-                    )
-                    setMvProductId(exact?.id ?? '')
-                  }}
-                />
-                {/* Top-3 dropdown */}
-                {mvDropOpen && mvProductSearch.trim() !== '' && (() => {
-                  const q = mvProductSearch.toLowerCase()
-                  const matches = products
-                    .filter(p => p.name.toLowerCase().includes(q) || (p.sku ?? '').toLowerCase().includes(q))
-                    .slice(0, 3)
-                  if (matches.length === 0) return null
-                  return (
-                    <div style={{
-                      position: 'absolute', top: '100%', right: 0, left: 0, zIndex: 50,
-                      background: 'var(--bg-card)', border: '1px solid var(--border)',
-                      borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.12)', marginTop: '2px',
-                    }}>
-                      {matches.map(p => (
-                        <div key={p.id}
-                          onMouseDown={() => {
-                            setMvProductSearch(p.name)
-                            setMvProductId(p.id)
-                            setMvDropOpen(false)
-                            setMvQty('')
-                          }}
-                          className="tr-hover"
-                          style={{
-                            padding: '9px 12px', borderBottom: '1px solid var(--border)',
-                            fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          }}
-                        >
-                          <span>
-                            {p.sku && <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '6px' }}>[{p.sku}]</span>}
-                            <strong>{p.name}</strong>
-                          </span>
-                          <span style={{ fontSize: '11px', color: p.qty === 0 ? 'var(--danger)' : 'var(--text-muted)' }}>
-                            מלאי: {p.qty} {p.unit}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
-                {mvProductId && !mvDropOpen && (() => {
-                  const prod = products.find(x => x.id === mvProductId)
-                  return prod ? (
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
-                      מלאי נוכחי: <strong style={{ color: prod.qty === 0 ? 'var(--danger)' : 'var(--primary)' }}>{prod.qty} {prod.unit}</strong>
-                    </div>
-                  ) : null
-                })()}
-              </div>
-
-              {/* Qty */}
-              <div style={{ width: '90px' }}>
-                <label className="form-label">כמות</label>
-                <input className="form-input" type="number" min="1" step="1" placeholder="1"
-                  value={mvQty} onChange={e => setMvQty(e.target.value)} />
-              </div>
-
-              {/* Date */}
-              <div style={{ width: '150px' }}>
-                <label className="form-label">תאריך</label>
-                <input className="form-input" type="date" value={mvDate} onChange={e => setMvDate(e.target.value)} />
-              </div>
-
-              {/* Save */}
-              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <Button onClick={saveMovement} loading={mvSaving} style={{ width: '100%' }}>
-                  💾 רשום
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Movements table */}
-          <div style={{ background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}>
-            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '14px' }}>
-              היסטוריית תנועות ({movements.length})
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg)', borderBottom: '2px solid var(--border)' }}>
-                    {['תאריך', 'מוצר', 'סוג', 'כמות', 'השפעה על מלאי', ''].map((h, i) => (
-                      <th key={i} style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: '12px' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {movements.length === 0 ? (
-                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                      אין תנועות עדיין
-                    </td></tr>
-                  ) : movements.map(mv => {
-                    const prod = products.find(p => p.id === mv.product_id)
-                    const isSale = mv.movement_type === 'sale'
-                    return (
-                      <tr key={mv.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>
-                          {new Date(mv.sold_date).toLocaleDateString('he-IL')}
-                        </td>
-                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>
-                          {prod?.name || '—'}
-                        </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span style={{
-                            background: isSale ? '#f0fdf4' : '#eff6ff',
-                            color: isSale ? 'var(--primary)' : 'var(--accent)',
-                            borderRadius: '6px', padding: '3px 10px', fontWeight: 600, fontSize: '12px',
-                          }}>
-                            {isSale ? '💰 מכירה' : '📦 הזמנה'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 12px', fontWeight: 700 }}>{Number(mv.qty)}</td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span style={{ color: isSale ? 'var(--danger)' : 'var(--primary)', fontWeight: 600 }}>
-                            {isSale ? `−${mv.qty}` : `+${mv.qty}`}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <button
-                            title="מחק תנועה"
-                            disabled={deletingMvId === mv.id}
-                            onClick={() => deleteMovement(mv)}
-                            style={{ background: 'none', border: 'none', cursor: deletingMvId === mv.id ? 'not-allowed' : 'pointer', fontSize: '15px', color: 'var(--danger)', opacity: deletingMvId === mv.id ? 0.4 : 1, display: 'inline-flex', alignItems: 'center' }}
-                          >
-                            {deletingMvId === mv.id
-                              ? <span style={{ width: 14, height: 14, border: '2px solid #fca5a5', borderTopColor: 'var(--danger)', borderRadius: '50%', display: 'inline-block', animation: 'spin .6s linear infinite' }} />
-                              : '🗑️'}
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
 
       {/* ── Add / Edit Modal ── */}
       <Modal open={formOpen} onClose={() => setFormOpen(false)}
         title={editId ? '✏️ עריכת מוצר' : '➕ הוספת מוצר'} maxWidth={640}
         footer={<>
           <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
-          <Button onClick={saveForm}>💾 {editId ? 'שמור שינויים' : 'שמור מוצר'}</Button>
+          <Button onClick={saveForm}>{editId ? 'שמור שינויים' : 'שמור מוצר'}</Button>
         </>}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', direction: 'rtl' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -890,6 +658,21 @@ export default function ProductsClient() {
           </div>
         </div>
       </Modal>
+
+      <DuplicatesModal<Product>
+        open={dupsOpen} onClose={() => setDupsOpen(false)} title="🔁 כפילויות מוצרים"
+        groups={dupGroups} keeperOf={pickKeeper} onMerge={mergeGroup}
+        columns={[
+          { label: 'שם', render: p => p.name },
+          { label: 'קטגוריה', render: p => p.category || '—' },
+          ...(isAdmin ? [{ label: 'מחיר קנייה', render: (p: Product) => p.buy_price ? `₪${p.buy_price}` : '—' }] : []),
+          { label: 'מחיר מכירה', render: p => p.sell_price ? `₪${p.sell_price}` : <span style={{ color: 'var(--danger)' }}>חסר</span> },
+          { label: 'מק״ט', render: p => p.sku || '—' },
+          { label: 'ברקוד', render: p => p.barcode || '—' },
+          { label: 'כמות', render: p => p.qty },
+          { label: 'נוצר', render: p => p.created_at?.slice(0, 10) },
+        ]}
+      />
 
       {/* ── Price List Overlay ─────────────────────────────────────────────── */}
       {showPricelist && (
@@ -983,10 +766,7 @@ function PriceListOverlay({ products, onClose }: { products: Product[]; onClose:
   )
 
   function doPrint() {
-    const w = window.open('', '_blank')
-    if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-    w.document.write(buildPricelistHtml(products))
-    w.document.close()
+    printHtml(buildPricelistHtml(products))
   }
 
   return (
@@ -1003,7 +783,7 @@ function PriceListOverlay({ products, onClose }: { products: Product[]; onClose:
       }}>
         {/* Toolbar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
-          <span style={{ fontWeight: 700, fontSize: '16px' }}>🖨️ מחירון מוצרים</span>
+          <span style={{ fontWeight: 700, fontSize: '16px' }}>מחירון מוצרים</span>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={doPrint}
@@ -1077,7 +857,7 @@ function StatCard({ label, value, color }: { label: string; value: string | numb
   const colors = { blue: 'var(--accent)', orange: 'var(--warning)', red: 'var(--danger)' }
   const bgs    = { blue: '#eff6ff',       orange: '#fffbeb',        red: '#fef2f2' }
   return (
-    <div style={{ background: color ? bgs[color] : '#f0fdf4', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+    <div style={{ background: color ? bgs[color] : 'var(--success-soft)', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
       <div style={{ fontSize: '20px', fontWeight: 900, color: color ? colors[color] : 'var(--primary)' }}>{value}</div>
       <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{label}</div>
     </div>

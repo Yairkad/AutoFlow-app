@@ -18,17 +18,15 @@ const NAV_ITEMS = [
   { href: '/employees',   label: 'עובדים',                  color: '#0ea5e9,#38bdf8', module: null },
   { href: '/products',    label: 'מוצרים',                  color: '#f97316,#fb923c', module: ['products', 'products_view'] },
   { href: '/tires',       label: 'צמיגים',                  color: '#6b7280,#9ca3af', module: ['tires', 'tires_view'] },
-  { href: '/scan',        label: 'סריקת ברקוד',             color: '#0f172a,#334155', module: ['products', 'tires'] },
+  { href: '/stock-count', label: 'מלאי',                    color: '#334155,#64748b', module: ['products', 'tires'] },
   { href: '/yard-tracking', label: 'מעקב רחבה',             color: '#475569,#94a3b8', module: 'yard_tracking' },
   { href: '/cars',        label: 'רכבים',                   color: '#10b981,#34d399', module: 'cars' },
-  { href: '/quotes',      label: 'הצעות מחיר',              color: '#ec4899,#f472b6', module: 'quotes' },
-  { href: '/suppliers',   label: 'ספקים',                   color: '#64748b,#94a3b8', module: 'suppliers' },
-  { href: '/customers',   label: 'לקוחות',                  color: '#78716c,#a8a29e', module: 'customers' },
-  { href: '/alignment',   label: 'פרונט',                   color: '#14b8a6,#2dd4bf', module: 'alignment' },
+  { href: '/accounts',    label: 'חשבונות',                 color: '#64748b,#94a3b8', module: ['suppliers', 'customers'] },
+  { href: '/contacts',    label: 'אנשי קשר',                color: '#78716c,#a8a29e', module: ['suppliers', 'customers'] },
   { href: '/inspections',   label: 'בדיקות קניה',  color: '#22c55e,#4ade80', module: 'inspections' },
   { href: '/test-transfer', label: 'שינוע לטסטים', color: '#d97706,#f59e0b', module: 'test_transfer' },
-  { href: '/reminders',   label: 'תזכורות',                 color: '#f59e0b,#fde68a', module: 'reminders' },
-  { href: '/documents',   label: 'מסמכים',                  color: '#3b82f6,#93c5fd', module: 'documents' },
+  { href: '/reminders',   label: 'משימות',                  color: '#f59e0b,#fde68a', module: 'reminders' },
+  { href: '/documents',   label: 'טפסים',                   color: '#3b82f6,#93c5fd', module: 'documents' },
   { href: '/settings',    label: 'הגדרות',                  color: '#6b7280,#d1d5db', module: 'settings' },
   { href: '/my-profile',  label: 'הפרופיל שלי',             color: '#a855f7,#c084fc', module: 'my_profile' },
 ]
@@ -36,10 +34,10 @@ const NAV_ITEMS = [
 // ─── חלוקה לקטגוריות — ערוך כאן כרצונך ──────────────────────────────────────
 const SECTIONS: { label: string | null; hrefs: string[] }[] = [
   { label: null,       hrefs: ['/dashboard'] },
-  { label: 'כספים',   hrefs: ['/expenses', '/checks', '/bank-sync', '/reports', '/debts', '/suppliers', '/customers'] },
+  { label: 'כספים',   hrefs: ['/expenses', '/checks', '/bank-sync', '/reports', '/debts', '/accounts', '/contacts'] },
   { label: 'אנשים',   hrefs: ['/employees'] },
-  { label: 'מלאי',    hrefs: ['/products', '/tires', '/scan', '/yard-tracking', '/cars'] },
-  { label: 'עסקאות',  hrefs: ['/quotes', '/alignment', '/inspections', '/test-transfer'] },
+  { label: 'מלאי',    hrefs: ['/products', '/tires', '/stock-count', '/yard-tracking', '/cars'] },
+  { label: 'עסקאות',  hrefs: ['/inspections', '/test-transfer'] },
   { label: 'כללי',    hrefs: ['/reminders', '/documents'] },
   { label: 'מערכת',   hrefs: ['/settings', '/my-profile'] },
 ]
@@ -55,12 +53,11 @@ const ICONS: Record<string, React.ReactNode> = {
   '/employees':   <><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></>,
   '/products':    <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></>,
   '/tires':       <><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></>,
+  '/stock-count': <><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></>,
   '/yard-tracking': <><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></>,
   '/cars':        <><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v4h-7V8Z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>,
-  '/quotes':      <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>,
-  '/suppliers':   <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><rect x="9" y="14" width="6" height="7"/></>,
-  '/customers':   <><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M1 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></>,
-  '/alignment':   <><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></>,
+  '/accounts':    <><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></>,
+  '/contacts':    <><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M1 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></>,
   '/inspections':   <><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 12 2 2 4-4"/></>,
   '/test-transfer': <><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>,
   '/reminders':   <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></>,
@@ -118,55 +115,30 @@ function NavItem({
   const isActive      = pathname === item.href
   const isPending     = pendingHref === item.href && !isActive
   const isHighlighted = isActive || isPending
-  const [from, to]    = item.color.split(',')
 
+  // Redesign: every tab is its own tile; the active one is filled with the brand color
   return (
     <Link
       href={item.href}
       title={item.label}
+      aria-current={isActive ? 'page' : undefined}
       onMouseDown={() => onDown(item.href)}
       onMouseUp={onUp}
       onMouseLeave={onLeave}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        padding: '5px 10px',
-        margin: '1px 6px',
-        borderRadius: '9px',
-        fontSize: '13px',
-        fontWeight: isHighlighted ? 600 : 400,
-        color: 'var(--text)',
-        background: isHighlighted ? 'var(--bg-hover, #f3faf6)' : 'transparent',
-        boxShadow: isHighlighted ? 'inset 3px 0 0 var(--primary)' : 'none',
-        textDecoration: 'none',
-        transition: 'all .15s, transform .1s',
-        transform: pressed === item.href ? 'scale(0.95)' : 'scale(1)',
-        opacity: isPending ? 0.75 : 1,
-        cursor: 'pointer',
-      }}
+      className="nav-tile"
+      data-active={isHighlighted ? 'true' : undefined}
+      style={{ opacity: isPending ? 0.8 : 1, transform: pressed === item.href ? 'scale(0.98)' : undefined }}
     >
-      <span style={{
-        width: 30, height: 30,
-        borderRadius: '8px',
-        background: `linear-gradient(135deg, ${from}, ${to})`,
-        boxShadow: `0 2px 5px ${from}55`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-        transition: 'transform .15s',
-        transform: isHighlighted ? 'scale(1.05)' : 'scale(1)',
-      }}>
-        <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          {ICONS[item.href]}
-        </svg>
-      </span>
+      <svg viewBox="0 0 24 24" width={17} height={17} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+        {ICONS[item.href]}
+      </svg>
 
       <span style={{ flex: 1 }}>{item.label}</span>
 
       {isPending && (
         <span style={{
           width: 8, height: 8, borderRadius: '50%',
-          border: '2px solid var(--primary)',
+          border: '2px solid currentColor',
           borderTopColor: 'transparent',
           display: 'inline-block',
           animation: 'spin .6s linear infinite',
@@ -262,13 +234,14 @@ export default function Sidebar({
           right: 0,
           bottom: 0,
           width: 'var(--sidebar-w)',
-          background: 'var(--bg-card)',
-          borderLeft: '1px solid var(--border)',
+          background: 'var(--rail)',
+          borderLeft: '1px solid var(--rail-line)',
           overflowY: 'auto',
           overflowX: 'hidden',
           zIndex: 90,
           padding: '0',
           transition: 'transform .25s ease',
+          display: 'flex', flexDirection: 'column',
         }}
       >
         {/* Business branding */}
@@ -279,9 +252,7 @@ export default function Sidebar({
           onMouseLeave={() => setBrandPressed(false)}
           style={{
             display: 'flex', alignItems: 'center', gap: '10px',
-            padding: '12px 14px',
-            borderBottom: '1px solid var(--border)',
-            marginBottom: '4px',
+            padding: '14px 16px 10px',
             textDecoration: 'none', color: 'var(--text)',
             transition: 'transform .1s, opacity .1s',
             transform: brandPressed ? 'scale(0.94)' : 'scale(1)',
@@ -304,7 +275,7 @@ export default function Sidebar({
         {!loaded && <SkeletonNav />}
 
         {loaded && (
-          <div style={{ padding: '4px 0 8px' }}>
+          <div style={{ padding: '4px 12px 10px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             {activeSections.map((section, si) => {
               const sectionItems = section.hrefs
                 .filter(h => visibleHrefs.has(h))
@@ -314,15 +285,14 @@ export default function Sidebar({
               if (sectionItems.length === 0) return null
 
               return (
-                <div key={si}>
+                <div key={si} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {section.label && (
                     <div style={{
-                      fontSize: '9px',
-                      letterSpacing: '1.3px',
-                      textTransform: 'uppercase',
-                      color: 'var(--text-muted)',
-                      padding: '10px 16px 3px',
-                      opacity: 0.6,
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      letterSpacing: '.04em',
+                      color: '#7A8399',
+                      padding: '0 6px 1px',
                     }}>
                       {section.label}
                     </div>
@@ -345,45 +315,23 @@ export default function Sidebar({
           </div>
         )}
 
-        {/* Yard terminal quick-launch */}
-        {loaded && (isAdmin || modules.some(m => ALL_YARD_KEYS.includes(m))) && (
-          <div style={{ display: 'flex', gap: '6px', padding: '8px 10px 4px', borderTop: '1px solid var(--border)' }}>
-            {([
-              { href: '/yard',        icon: '🔧', label: 'רחבה', title: 'מסוף רחבה' },
-              // מסוף משרד is admin-only (proxy.ts) — don't show a link that bounces
-              ...(isAdmin ? [{ href: '/yard-office', icon: '🖥', label: 'משרד', title: 'מסוף משרד' }] : []),
-            ]).map(({ href, icon, label, title }) => (
-              <a key={href} href={href} target="_blank" rel="noopener noreferrer" title={title} style={{
-                flex: 1, textAlign: 'center', padding: '5px 4px',
-                fontSize: '11px', fontWeight: 600,
-                borderRadius: '7px', border: '1px solid var(--border)',
-                background: 'var(--bg)', color: 'var(--text-muted)',
-                textDecoration: 'none', transition: 'all .15s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover, #f3faf6)'; e.currentTarget.style.color = 'var(--text)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg)'; e.currentTarget.style.color = 'var(--text-muted)' }}
-              >{icon} <span>{label}</span></a>
-            ))}
-          </div>
-        )}
-
-        {/* Hidden edit button */}
+        {/* Footer: terminal launchers + menu editing, small and pinned to the bottom */}
         {loaded && (
-          <button
-            onClick={() => setEditorOpen(true)}
-            style={{
-              display: 'block', width: '100%',
-              padding: '10px 0', marginTop: '4px',
-              borderTop: '1px solid var(--border)',
-              background: 'none', border: 'none',
-              fontSize: '11px', color: 'var(--text-muted)', cursor: 'pointer',
-              opacity: 0.4, transition: 'opacity .15s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '0.4')}
-          >
-            ✦ ערוך סידור תפריט
-          </button>
+          <div style={{
+            marginTop: 'auto', position: 'sticky', bottom: 0, background: 'var(--rail)',
+            display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap',
+            padding: '8px 12px', borderTop: '1px solid var(--rail-line)', fontSize: '11.5px',
+          }}>
+            {(isAdmin || modules.some(m => ALL_YARD_KEYS.includes(m))) && ([
+              { href: '/yard',        label: 'מסוף רחבה' },
+              // מסוף משרד is admin-only (proxy.ts) — don't show a link that bounces
+              ...(isAdmin ? [{ href: '/yard-office', label: 'מסוף משרד' }] : []),
+            ]).map(({ href, label }) => (
+              <a key={href} href={href} target="_blank" rel="noopener noreferrer" className="sidebar-foot-link">{label} ↗</a>
+            ))}
+            <button type="button" onClick={() => setEditorOpen(true)} className="sidebar-foot-link" style={{ marginInlineStart: 'auto' }}
+              title="ערוך סידור תפריט" aria-label="ערוך סידור תפריט">⚙︎</button>
+          </div>
         )}
       </aside>
 

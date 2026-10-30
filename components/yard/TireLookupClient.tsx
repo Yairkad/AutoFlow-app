@@ -70,7 +70,7 @@ export default function TireLookupClient() {
       <div className="flex-shrink-0" style={{ padding: '10px 14px 0' }}>
         <button onClick={() => setSheetOpen(true)}
           className="w-full border-2 border-blue-500 rounded-xl bg-white text-right font-bold flex items-center gap-2"
-          style={{ padding: '12px 14px', fontSize: '16px', color: lastQuery ? '#0f172a' : '#94a3b8' }}>
+          style={{ padding: '12px 14px', fontSize: '16px', color: lastQuery ? '#141A2E' : '#94a3b8' }}>
           🔍 {(mode === 'tire' ? lastQuery.replace(/\/+$/, '').replace(/^\/+/, '') : lastQuery) || (mode === 'tire' ? 'חפש מידת צמיג...' : 'חפש מוצר או ברקוד...')}
         </button>
       </div>

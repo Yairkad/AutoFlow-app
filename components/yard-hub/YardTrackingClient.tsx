@@ -4,17 +4,13 @@ import { useEffect, useState } from 'react'
 import PageHeader from '@/components/ui/PageHeader'
 import LoansPanel from './LoansPanel'
 import RequestsPanel from './RequestsPanel'
-import QuickReportsPanel from './QuickReportsPanel'
 import StockSummaryCards from './StockSummaryCards'
-import NoStockPanel from './NoStockPanel'
 
-type Tab = 'loans' | 'requests' | 'nostock' | 'reports'
+type Tab = 'loans' | 'requests'
 
 const TABS: { value: Tab; icon: string; label: string; countKey?: string }[] = [
   { value: 'requests', icon: '⏳', label: 'לקוחות ממתינים', countKey: 'yard_requests' },
   { value: 'loans',    icon: '🔁', label: 'השאלות',          countKey: 'yard_loans' },
-  { value: 'nostock',  icon: '📦', label: 'נמכר ללא מלאי',  countKey: 'no_stock' },
-  { value: 'reports',  icon: '📊', label: 'דוחות' },
 ]
 
 // Office view of everything the yard workers record — same panels and data as /yard.
@@ -31,9 +27,9 @@ export default function YardTrackingClient() {
     <div className="flex flex-col gap-4">
       <PageHeader
         icon={<span style={{ fontSize: 22 }}>📋</span>}
-        iconBg="linear-gradient(135deg,#0f172a,#475569)"
+        iconBg="linear-gradient(135deg,#141A2E,#475569)"
         title="מעקב רחבה"
-        subtitle="מה שהעובדים רושמים ברחבה — לקוחות שמחכים, השאלות, דוחות ושווי מלאי"
+        subtitle="מה שהעובדים רושמים ברחבה — לקוחות שמחכים והשאלות (מלאי ודוחות: במסך מלאי)"
         marginBottom={0}
       />
       <StockSummaryCards />
@@ -46,7 +42,7 @@ export default function YardTrackingClient() {
           return (
             <button key={t.value} role="tab" aria-selected={active} onClick={() => setTab(t.value)}
               className={`flex items-center gap-2 font-bold whitespace-nowrap transition-colors ${active ? 'text-slate-900' : 'text-slate-500 hover:text-slate-800'}`}
-              style={{ padding: '10px 16px', fontSize: 16, marginBottom: -2, borderBottom: `3px solid ${active ? '#0f172a' : 'transparent'}` }}>
+              style={{ padding: '10px 16px', fontSize: 16, marginBottom: -2, borderBottom: `3px solid ${active ? '#141A2E' : 'transparent'}` }}>
               <span style={{ fontSize: 18 }}>{t.icon}</span>
               {t.label}
               {n > 0 && (
@@ -59,8 +55,6 @@ export default function YardTrackingClient() {
 
       {tab === 'loans'    && <LoansPanel variant="office" />}
       {tab === 'requests' && <RequestsPanel variant="office" />}
-      {tab === 'nostock'  && <NoStockPanel variant="office" />}
-      {tab === 'reports'  && <QuickReportsPanel variant="office" />}
     </div>
   )
 }

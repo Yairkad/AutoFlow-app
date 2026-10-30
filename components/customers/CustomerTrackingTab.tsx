@@ -4,15 +4,19 @@ import { useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
-import ExcelMenu from '@/components/ui/ExcelMenu'
+import MoreMenu from '@/components/ui/MoreMenu'
+import Modal from '@/components/ui/Modal'
+import SearchSelect from '@/components/ui/SearchSelect'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { recordCustomerPayment } from '@/lib/debts/reconcileCustomerLedgerPayment'
 import { balanceOf, buildLedger, RawLedgerEvent } from '@/lib/debts/ledger'
+import { monthSummaries, type SupplierLedgerEvent } from '@/lib/debts/supplierLedger'
 import QuickAddCustomerModal, { QuickCustomer } from '@/components/customers/QuickAddCustomerModal'
 import PlateInput from '@/components/ui/PlateInput'
 import { VehicleData } from '@/lib/utils/plateApi'
 import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, RecurringItem, CustomerAction, Direction, fmt, bal, waUrl } from './shared'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -45,6 +49,8 @@ interface CustomerTrackingTabProps {
   customerActions: CustomerAction[]
   openId: string | null
   reload: () => void
+  /** Customer card (contact details, recurring charges, quick actions) — from the ⋮ menu */
+  onOpenCard?: (customerId: string) => void
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -85,13 +91,15 @@ const tdSt: React.CSSProperties = { padding: '8px 10px', verticalAlign: 'middle'
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CustomerTrackingTab({
-  tenantId, tenantName, customers, customerDebts, customerPayments, recurringItems, customerActions, openId, reload,
+  tenantId, tenantName, customers, customerDebts, customerPayments, recurringItems, customerActions, openId, reload, onOpenCard,
 }: CustomerTrackingTabProps) {
   const supabase    = useRef(createClient()).current
   const { showToast } = useToast()
 
   const [filter, setFilter] = useState<Filter>('open')
   const [search, setSearch] = useState('')
+  // Show one month only (its block opens on every customer) — '' = all months
+  const [monthFilter, setMonthFilter] = useState('')
 
   // Row selection
 
@@ -183,6 +191,7 @@ export default function CustomerTrackingTab({
   // "Generate this month's charges" — fixed-type recurring items only
   const [genMonth, setGenMonth] = useState(monthISO())
   const [generating, setGenerating] = useState(false)
+  const [genOpen, setGenOpen] = useState(false)   // "צור חיובים לחודש" month picker
 
   // "Log a meter reading" — month-independent, one meter-type item at a time
   const [meterReadItem, setMeterReadItem] = useState<RecurringItem | null>(null)
@@ -203,7 +212,10 @@ export default function CustomerTrackingTab({
   const [printDateTo, setPrintDateTo] = useState('')
 
   const printCustomerMonths = (() => {
-    const set = new Set(customerDebts.filter(d => d.customer_id === printCustomerId).map(d => monthKeyOf(d.date)))
+    const set = new Set([
+      ...customerDebts.filter(d => d.customer_id === printCustomerId).map(d => monthKeyOf(d.date)),
+      ...customerPayments.filter(p => p.customer_id === printCustomerId).map(p => monthKeyOf(paymentDateOf(p))),
+    ])
     return [...set].sort().reverse()
   })()
   const togglePrintMonth = (mk: string) => setPrintMonths(prev => {
@@ -626,7 +638,7 @@ export default function CustomerTrackingTab({
     <button onClick={() => setFilter(f)} style={{
       padding: '5px 14px', border: '1px solid',
       borderColor: filter === f ? 'var(--primary)' : 'var(--border)',
-      background: filter === f ? '#f0fdf6' : 'transparent',
+      background: filter === f ? 'var(--success-soft)' : 'transparent',
       color: filter === f ? 'var(--primary)' : 'var(--text-muted)',
       borderRadius: '20px', fontSize: '12px', fontWeight: filter === f ? 600 : 400,
       cursor: 'pointer', transition: 'all .12s',
@@ -637,9 +649,9 @@ export default function CustomerTrackingTab({
   // only (kept out of the green/"paid" color family on purpose, see lib/debts/ledger.ts).
   const StatusChip = ({ debt }: { debt: CustomerLedgerDebt }) => {
     if (debt.direction === 'credit')
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>זיכוי</span>
+      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>זיכוי</span>
     if (debt.is_closed)
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f5f3ff', color: '#7c3aed', fontWeight: 600 }}>🏷 מכוסה</span>
+      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f5f3ff', color: '#7c3aed', fontWeight: 600 }}>מכוסה</span>
     return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>חיוב</span>
   }
 
@@ -723,23 +735,25 @@ export default function CustomerTrackingTab({
       <div>
         <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
           <Button onClick={() => openDebtModal()}>+ הוסף חשבונית/זיכוי</Button>
-          <Button variant="secondary" onClick={() => { setBulkSelectMode(m => !m); setBulkSelectedIds(new Set()) }}>
-            {bulkSelectMode ? '✖ בטל בחירה' : '☑ עריכה מרובה'}
-          </Button>
-          {bulkSelectMode && bulkSelectedIds.size > 0 && (
-            <Button onClick={startBulkEdit}>✏️ ערוך נבחרים ({bulkSelectedIds.size})</Button>
+          {bulkSelectMode && (
+            <Button variant="secondary" onClick={() => { setBulkSelectMode(false); setBulkSelectedIds(new Set()) }}>בטל בחירה</Button>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)} className="form-input" style={{ margin: 0, padding: '7px 8px', fontSize: '12px' }} />
-            <Button variant="secondary" loading={generating} onClick={generateRecurringCharges}>🔄 צור חיובים לחודש</Button>
-          </div>
+          {bulkSelectMode && bulkSelectedIds.size > 0 && (
+            <Button onClick={startBulkEdit}>ערוך נבחרים ({bulkSelectedIds.size})</Button>
+          )}
           <div style={{ display: 'flex', gap: '6px' }}>
             <FilterBtn f="open" label="פתוחים" />
             <FilterBtn f="closed" label="סגורים" />
             <FilterBtn f="all" label="הכל" />
           </div>
+          <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)} aria-label="חודש" className="form-input" style={{ width: 'auto', margin: 0 }}>
+            <option value="">כל החודשים</option>
+            {[...new Set([...customerDebts.map(d => monthKeyOf(d.date)), ...customerPayments.map(p => monthKeyOf(paymentDateOf(p)))])].sort().reverse()
+              .map(mk => <option key={mk} value={mk}>{fmtMonth(mk)}</option>)}
+          </select>
           <input
             placeholder="חיפוש לקוח / מספר חשבונית / תיאור..."
+            aria-label="חיפוש"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="form-input" style={{ flex: 1, minWidth: '180px', maxWidth: '300px' }}
@@ -747,9 +761,26 @@ export default function CustomerTrackingTab({
           <span style={{ marginRight: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
             יתרה כוללת: <strong style={{ color: 'var(--danger)' }}>{fmt(openCustTotal)}</strong>
           </span>
-          <Button variant="secondary" onClick={() => setShowPrintChoice(true)}>🖨️ הדפסה</Button>
-          <ExcelMenu onExportExcel={exportExcel} onImportExcel={importExcel} />
+          <MoreMenu
+            excel={{ onExport: exportExcel, onImport: importExcel }}
+            actions={[
+              { key: 'bulk', label: 'עריכה מרובה', icon: '☑', onClick: () => { setBulkSelectMode(true); setBulkSelectedIds(new Set()) } },
+              { key: 'gen', label: 'צור חיובים לחודש', icon: '🔄', onClick: () => setGenOpen(true) },
+              { key: 'print', label: 'הדפסה', icon: '🖨️', onClick: () => setShowPrintChoice(true) },
+            ]}
+          />
         </div>
+
+        <Modal open={genOpen} onClose={() => setGenOpen(false)} title="🔄 צור חיובים קבועים לחודש" maxWidth={380}
+          footer={<>
+            <Button variant="secondary" onClick={() => setGenOpen(false)}>ביטול</Button>
+            <Button loading={generating} onClick={async () => { await generateRecurringCharges(); setGenOpen(false) }}>צור חיובים</Button>
+          </>}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 600 }}>
+          חודש
+            <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)} className="form-input" />
+          </label>
+        </Modal>
 
         {(() => {
           const allCustIds = [...new Set(customerDebts.map(d => d.customer_id))]
@@ -801,31 +832,22 @@ export default function CustomerTrackingTab({
               if (!monthMap[mk]) monthMap[mk] = []
               if (!narrowToMatches && !displayMonthMap[mk]) displayMonthMap[mk] = []
             })
-            const months = Object.keys(monthMap).sort().reverse()
             const displayMonths = Object.keys(displayMonthMap).sort().reverse()
 
-            // "Settled through this month" = applying the customer's WHOLE payment pool (every
-            // payment ever recorded, regardless of its own date — payments aren't tied to a
-            // specific month in this flat ledger model) against charges oldest-month-first.
-            // cumCharge accumulates net charges through each month; subtracting the one total
-            // totalPaid tells us whether that running total is already covered. This is a
-            // display-only FIFO heuristic (never persisted, never decides which debt a payment
-            // "belongs to") — at the most recent month it always equals totalBal exactly, same
-            // as balanceOf(debts, payments), which doubles as a consistency check. Always walks
-            // the FULL month map (not the search-narrowed one) so the running balance shown next
-            // to a narrowed-down month is still correct.
-            const totalPaid = payments.reduce((s, p) => s + Number(p.amount), 0)
-            let cumCharge = 0
-            const cumBalanceByMonth: Record<string, number> = {}
-            for (const mk of [...months].reverse()) {
-              cumCharge += (monthMap[mk] ?? []).reduce((s, d) => s + bal(d), 0)
-              cumBalanceByMonth[mk] = cumCharge - totalPaid
-            }
+            // Running account, same as suppliers: charges +, credits / payments − on their own dates;
+            // each month is a window on it (opening → charges / credits / payments → closing).
+            const events: SupplierLedgerEvent[] = [
+              ...debts.map(d => ({ date: d.date, kind: (d.direction === 'credit' ? 'credit' : 'charge') as 'credit' | 'charge', amount: Number(d.amount) })),
+              ...payments.map(p => ({ date: paymentDateOf(p), kind: 'payment' as const, amount: Number(p.amount) })),
+            ].sort((a, b) => a.date.localeCompare(b.date))
+            const summaries = monthSummaries(events)
+            const shownMonths = displayMonths.filter(mk => !monthFilter || mk === monthFilter)
+            if (monthFilter && !shownMonths.length) return null
 
-            return { cid, cust, totalBal, payments, monthMap: displayMonthMap, months: displayMonths, cumBalanceByMonth }
+            return { cid, cust, totalBal, payments, monthMap: displayMonthMap, months: shownMonths, summaries }
           }).filter(Boolean) as {
             cid: string | null; cust: Customer | undefined; totalBal: number; payments: CustomerLedgerPayment[]
-            monthMap: Record<string, CustomerLedgerDebt[]>; months: string[]; cumBalanceByMonth: Record<string, number>
+            monthMap: Record<string, CustomerLedgerDebt[]>; months: string[]; summaries: ReturnType<typeof monthSummaries>
           }[]
 
           if (groups.length === 0) return (
@@ -846,24 +868,25 @@ export default function CustomerTrackingTab({
                     <span style={{ display: 'inline-block', transition: 'transform .15s', transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--text-muted)' }}>›</span>
                     <span style={{ fontWeight: 700, fontSize: '15px' }}>💳 {group.cust?.name ?? 'ללא לקוח'}</span>
                     {group.cust?.phone && <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{group.cust.phone}</span>}
-                    <span style={{ marginRight: 'auto', fontSize: '14px', fontWeight: 700, color: group.totalBal > 0 ? 'var(--danger)' : '#16a34a' }}>
+                    <span style={{ marginRight: 'auto', fontSize: '14px', fontWeight: 700, color: group.totalBal > 0 ? 'var(--danger)' : 'var(--success)' }}>
                       יתרה כוללת: {fmt(group.totalBal)}
                     </span>
-                    <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '6px' }}>
-                      {group.totalBal > 0 && (
-                        <button onClick={() => openPayCustomer(group.cid)}
-                          style={{ padding: '4px 12px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
-                          💰 תשלום
-                        </button>
-                      )}
+                    <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       {group.cid && (
                         <button onClick={() => addDebtForCustomer(group.cid!)}
-                          style={{ padding: '4px 12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                          style={{ padding: '5px 14px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 700 }}>
                           + הוסף
+                        </button>
+                      )}
+                      {group.totalBal > 0 && (
+                        <button onClick={() => openPayCustomer(group.cid)}
+                          style={{ padding: '4px 12px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                          תשלום
                         </button>
                       )}
                       {group.cid && (() => {
                         const kebabActions = [
+                          ...(onOpenCard ? [{ key: 'card', label: 'כרטיס לקוח · חיובים חוזרים ופעולות', icon: '🪪', onClick: () => onOpenCard(group.cid!) }] : []),
                           ...(group.payments.length > 1 ? [{ key: 'merge', label: 'מזג תשלומים', icon: '🔗', onClick: () => { setMergeCid(group.cid); setMergeSelected(new Set()) } }] : []),
                           ...(group.payments.length > 0 ? [{ key: 'delpay', label: 'מחק כל התשלומים', icon: '🗑', danger: true, onClick: () => deleteAllPaymentsForCustomer(group.cid!, group.cust?.name ?? '', group.payments.length) }] : []),
                         ]
@@ -883,7 +906,7 @@ export default function CustomerTrackingTab({
                   {group.cid && mergeCid === group.cid && (
                     <div style={{ background: '#f5f3ff', borderBottom: '1px solid var(--border)', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '12px', color: '#5b21b6' }}>סמן 2+ שורות תשלום למיזוג לשורה אחת בהדפסה (נבחרו: {mergeSelected.size})</span>
-                      <Button size="sm" onClick={mergePayments} disabled={mergeSelected.size < 2}>🔗 מזג</Button>
+                      <Button size="sm" onClick={mergePayments} disabled={mergeSelected.size < 2}>מזג</Button>
                       <Button size="sm" variant="secondary" onClick={() => { setMergeCid(null); setMergeSelected(new Set()) }}>ביטול</Button>
                     </div>
                   )}
@@ -897,11 +920,9 @@ export default function CustomerTrackingTab({
                     const monthNetTotal    = monthChargeTotal - monthCreditTotal
                     const monthPayments    = group.payments.filter(p => monthKeyOf(paymentDateOf(p)) === mk)
                     const monthPaidTotal   = monthPayments.reduce((s, p) => s + Number(p.amount), 0)
-                    const monthCollapsed   = !expandedMonthKeys.has(monthKeyFor(group.cid, mk))
-                    // Settled = the customer's WHOLE payment pool (all payments, any date)
-                    // already covers all charges through this month, applied oldest-first —
-                    // not just "did this same month's own payments cover this same month".
-                    const monthSettled     = group.cumBalanceByMonth[mk] <= 0
+                    const monthCollapsed   = !monthFilter && !expandedMonthKeys.has(monthKeyFor(group.cid, mk))
+                    const sum              = group.summaries[mk] ?? { opening: 0, charges: 0, credits: 0, payments: 0, closing: 0 }
+                    const monthSettled     = sum.closing <= 0.005
 
                     return (
                       <div key={mk} style={{ borderBottom: mIdx < group.months.length - 1 ? '1px solid var(--border)' : 'none', padding: '14px 16px' }}>
@@ -912,10 +933,31 @@ export default function CustomerTrackingTab({
                         >
                           <span style={{ display: 'inline-block', transition: 'transform .15s', transform: monthCollapsed ? 'rotate(0deg)' : 'rotate(90deg)', color: 'var(--text-muted)', fontSize: '12px' }}>›</span>
                           <span style={{ fontWeight: 700, fontSize: '14px', color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
-                          <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthSettled ? '#16a34a' : 'var(--danger)' }}>
-                            נטו לחודש: {fmt(monthNetTotal)}
+                          {monthSettled
+                            ? <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>סגור ✓</span>
+                            : <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>פתוח</span>}
+                          <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthSettled ? 'var(--success)' : 'var(--danger)' }}>
+                            יתרה לסוף החודש: {fmt(sum.closing)}
                           </span>
                         </div>
+
+                        {/* Month at a glance: opening → charges / credits / payments → closing */}
+                        {!monthCollapsed && (
+                          <div className="month-sum">
+                            <span>פתיחה <b className="num">{fmt(sum.opening)}</b></span>
+                            <span>חיובים <b className="num">+{fmt(sum.charges)}</b></span>
+                            {sum.credits > 0 && <span>זיכויים <b className="num">−{fmt(sum.credits)}</b></span>}
+                            <span>תשלומים <b className="num">−{fmt(sum.payments)}</b></span>
+                            <span>סגירה <b className="num">{fmt(sum.closing)}</b></span>
+                            {group.cid && (
+                              <button type="button" onClick={() => {
+                                setPrintCustomerId(group.cid!); setPrintRangeMode('months'); setPrintMonths(new Set([mk])); setPrintMode('ledger')
+                              }} style={{ marginInlineStart: 'auto', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 10px', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>
+                                🖨 הדפס חודש
+                              </button>
+                            )}
+                          </div>
+                        )}
 
                         {/* Invoices/credits table */}
                         {!monthCollapsed && (
@@ -959,7 +1001,7 @@ export default function CustomerTrackingTab({
                                     </td>
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
                                     <td style={tdSt}><StatusChip debt={d} /></td>
-                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? '#16a34a' : 'var(--danger)' }}>
+                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? 'var(--success)' : 'var(--danger)' }}>
                                       {d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}
                                     </td>
                                     <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -1005,7 +1047,7 @@ export default function CustomerTrackingTab({
                                   <tr
                                     key={`pay-${p.id}`}
                                     onClick={merging ? toggleGroup : undefined}
-                                    style={{ background: selected ? '#ddd6fe' : '#f0fdf6', cursor: merging ? 'pointer' : undefined }}
+                                    style={{ background: selected ? '#ddd6fe' : 'var(--success-soft)', cursor: merging ? 'pointer' : undefined }}
                                   >
                                     {bulkSelectMode && <td style={tdSt}></td>}
                                     <td style={tdSt}>
@@ -1013,8 +1055,8 @@ export default function CustomerTrackingTab({
                                       {p.receipt_issued ? `🧾 קבלה #${p.receipt_number || '—'}` : '💰 תשלום'}
                                     </td>
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{paymentDateOf(p)}</td>
-                                    <td style={tdSt}><span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#dcfce7', color: '#16a34a', fontWeight: 600 }}>{p.payment_method}</span></td>
-                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: '#16a34a' }}>−{fmt(total)}</td>
+                                    <td style={tdSt}><span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>{p.payment_method}</span></td>
+                                    <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: 'var(--success)' }}>−{fmt(total)}</td>
                                     <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>
                                       {!merging && (
                                         <button
@@ -1038,7 +1080,7 @@ export default function CustomerTrackingTab({
                                   <span>סה&quot;כ חיוב: <strong style={{ color: 'var(--text)' }}>{fmt(monthChargeTotal)}</strong></span>
                                   {monthCreditTotal > 0 && <span>סה&quot;כ זיכוי: <strong style={{ color: 'var(--danger)' }}>{fmt(monthCreditTotal)}</strong></span>}
                                   <span>נטו: <strong style={{ color: 'var(--text)' }}>{fmt(monthNetTotal)}</strong></span>
-                                  {monthPaidTotal > 0 && <span>שולם בחודש זה: <strong style={{ color: '#16a34a' }}>{fmt(monthPaidTotal)}</strong></span>}
+                                  {monthPaidTotal > 0 && <span>שולם בחודש זה: <strong style={{ color: 'var(--success)' }}>{fmt(monthPaidTotal)}</strong></span>}
                                 </div>
                               </td>
                             </tr>
@@ -1060,9 +1102,9 @@ export default function CustomerTrackingTab({
 
       {/* ── LOG A METER READING MODAL (month-independent) ── */}
       {meterReadItem && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setMeterReadItem(null)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setMeterReadItem(null))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '440px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>📊 הזן קריאת מונה — {meterReadItem.name}</h3>
+            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>הזן קריאת מונה — {meterReadItem.name}</h3>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>קריאה קודמת: <strong>{meterPrevReading}</strong></div>
             <div style={{ display: 'grid', gap: '14px' }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
@@ -1085,7 +1127,7 @@ export default function CustomerTrackingTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setMeterReadItem(null)}>ביטול</Button>
-              <Button loading={mrSaving} onClick={saveMeterReading}>💾 שמור</Button>
+              <Button loading={mrSaving} onClick={saveMeterReading}>שמור</Button>
             </div>
           </div>
         </div>
@@ -1093,7 +1135,7 @@ export default function CustomerTrackingTab({
 
       {/* ── CUSTOMER DEBT MODAL ── */}
       {showDebtModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={closeDebtModal}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(closeDebtModal)}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '620px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
               {editDebt ? '✏️ עריכת רשומה' : '+ חשבונית/זיכוי חדש'}
@@ -1109,15 +1151,13 @@ export default function CustomerTrackingTab({
                   <span>לקוח</span>
                   <button type="button" onClick={() => setShowQuickAddCustomer(true)} style={{ fontSize: '11px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, padding: 0 }}>+ הוסף לקוח חדש</button>
                 </div>
-                <select value={dCustomer} onChange={e => setDCustomer(e.target.value)} className="form-input">
-                  <option value="">— ללא לקוח ספציפי —</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <SearchSelect value={dCustomer} onChange={setDCustomer} ariaLabel="לקוח" emptyLabel="— ללא לקוח ספציפי —"
+                  options={customers.map(x => ({ value: x.id, label: x.name }))} />
               </label>
 
               {dCustomer && customerActions.some(a => a.customer_id === dCustomer) && (
                 <div>
-                  <span style={{ fontSize: '13px', fontWeight: 600 }}>⚡ פעולות מהירות</span>
+                  <span style={{ fontSize: '13px', fontWeight: 600 }}>פעולות מהירות</span>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
                     {customerActions.filter(a => a.customer_id === dCustomer).map(a => {
                       const active = selectedActionIds.includes(a.id)
@@ -1148,22 +1188,12 @@ export default function CustomerTrackingTab({
                     <div key={inv.uid} style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'var(--bg)', borderRadius: '8px', padding: '10px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', gap: '4px' }}>
-                          {(['invoice', 'karteset'] as const).map(t => (
-                            <button key={t} type="button" onClick={() => updateInvoiceLine(i, 'type', t)} style={{
-                              padding: '4px 8px', border: '1px solid', borderRadius: '5px', fontSize: '11px', cursor: 'pointer', fontWeight: 600,
-                              borderColor: inv.type === t ? (t === 'karteset' ? '#7c3aed' : '#0369a1') : 'var(--border)',
-                              background: inv.type === t ? (t === 'karteset' ? '#ede9fe' : '#e0f2fe') : 'transparent',
-                              color: inv.type === t ? (t === 'karteset' ? '#7c3aed' : '#0369a1') : 'var(--text-muted)',
-                            }}>{t === 'invoice' ? 'חשבונית' : 'כרטסת'}</button>
-                          ))}
-                        </div>
-                        <div style={{ display: 'flex', gap: '4px' }}>
                           {(['charge', 'credit'] as const).map(dir => (
                             <button key={dir} type="button" onClick={() => updateInvoiceLine(i, 'direction', dir)} style={{
                               padding: '4px 10px', border: '1px solid', borderRadius: '5px', fontSize: '11px', cursor: 'pointer', fontWeight: 600,
-                              borderColor: inv.direction === dir ? (dir === 'credit' ? '#16a34a' : 'var(--danger)') : 'var(--border)',
-                              background: inv.direction === dir ? (dir === 'credit' ? '#f0fdf6' : '#fef2f2') : 'transparent',
-                              color: inv.direction === dir ? (dir === 'credit' ? '#16a34a' : 'var(--danger)') : 'var(--text-muted)',
+                              borderColor: inv.direction === dir ? (dir === 'credit' ? 'var(--success)' : 'var(--danger)') : 'var(--border)',
+                              background: inv.direction === dir ? (dir === 'credit' ? 'var(--success-soft)' : '#fef2f2') : 'transparent',
+                              color: inv.direction === dir ? (dir === 'credit' ? 'var(--success)' : 'var(--danger)') : 'var(--text-muted)',
                             }}>{dir === 'charge' ? 'חיוב' : 'זיכוי'}</button>
                           ))}
                         </div>
@@ -1205,7 +1235,7 @@ export default function CustomerTrackingTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={closeDebtModal}>{bulkQueue && bulkQueue.length > 1 ? 'דלג ⏭' : 'ביטול'}</Button>
-              <Button loading={dSaving} onClick={saveDebt}>💾 שמור</Button>
+              <Button loading={dSaving} onClick={saveDebt}>שמור</Button>
             </div>
           </div>
         </div>
@@ -1213,7 +1243,7 @@ export default function CustomerTrackingTab({
 
       {/* ── PAYMENT MODAL — one flat amount for the customer, no invoice allocation ── */}
       {showPayModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowPayModal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowPayModal(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>₪ תשלום מ{customers.find(c => c.id === payCustomerId)?.name ?? 'לקוח'}</h3>
 
@@ -1229,7 +1259,7 @@ export default function CustomerTrackingTab({
                   <button key={m} type="button" onClick={() => setPayMethod(m)} style={{
                     padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
                     border: `1px solid ${payMethod === m ? 'var(--primary)' : 'var(--border)'}`,
-                    background: payMethod === m ? '#f0fdf4' : '#f8fafc',
+                    background: payMethod === m ? 'var(--success-soft)' : '#f8fafc',
                     color: payMethod === m ? 'var(--primary)' : 'var(--text-muted)',
                   }}>
                     {m === 'מזומן' ? '💵' : m === 'אשראי' ? '💳' : m === "צ'ק" ? '📝' : '🏦'} {m}
@@ -1274,14 +1304,14 @@ export default function CustomerTrackingTab({
 
             {payDebtsByMonth.length > 0 && (
               <div style={{ marginTop: '18px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>🏷 תייג אילו חשבוניות תשלום זה מכסה <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(אופציונלי, לצורך מעקב בלבד — לא משפיע על הסכום)</span></div>
+                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>תייג אילו חשבוניות תשלום זה מכסה <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(אופציונלי, לצורך מעקב בלבד — לא משפיע על הסכום)</span></div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
                   {payDebtsByMonth.map(([mk, debts]) => (
                     <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
                         <button type="button" onClick={() => toggleMonthPayTags(mk)} style={{ padding: '1px 8px', background: 'transparent', color: '#7c3aed', border: '1px solid #ddd6fe', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
-                          {debts.every(d => payTagIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                          {debts.every(d => payTagIds.has(d.id)) ? 'בטל בחירת חודש' : 'בחר חודש'}
                         </button>
                       </div>
                       {debts.map(d => (
@@ -1300,7 +1330,7 @@ export default function CustomerTrackingTab({
 
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowPayModal(false)}>ביטול</Button>
-              <Button loading={paySaving} onClick={submitPayment} style={{ background: '#16a34a', borderColor: '#16a34a' }}>
+              <Button variant="success" loading={paySaving} onClick={submitPayment} style={{ background: 'var(--success)', borderColor: 'var(--success)' }}>
                 ✓ אשר תשלום
               </Button>
             </div>
@@ -1310,16 +1340,16 @@ export default function CustomerTrackingTab({
 
       {/* ── WHATSAPP MODAL ── */}
       {waModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setWaModal(null)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setWaModal(null))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', width: 'min(420px, calc(100vw - 32px))', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', direction: 'rtl' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>💬 שלח הודעת ווצאפ</h3>
+            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>שלח הודעת ווצאפ</h3>
             <p style={{ margin: '0 0 12px', fontSize: '12px', color: 'var(--text-muted)' }}>ערוך את הטקסט לפני השליחה</p>
             <textarea value={waModal.text} onChange={e => setWaModal(m => m ? { ...m, text: e.target.value } : m)} rows={5} className="form-input" style={{ resize: 'vertical', fontSize: '13px', lineHeight: 1.6 }} />
             <div style={{ display: 'flex', gap: '10px', marginTop: '16px', justifyContent: 'flex-end' }}>
               <Button variant="secondary" onClick={() => setWaModal(null)}>ביטול</Button>
               <a href={waUrl(waModal.phone, waModal.text)} target="_blank" rel="noopener noreferrer" onClick={() => setWaModal(null)}
-                style={{ padding: '8px 18px', background: '#16a34a', color: '#fff', border: '1.5px solid #16a34a', borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >📲 פתח ווצאפ</a>
+                style={{ padding: '8px 18px', background: 'var(--success)', color: '#fff', border: '1.5px solid #16a34a', borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >פתח ווצאפ</a>
             </div>
           </div>
         </div>
@@ -1339,9 +1369,9 @@ export default function CustomerTrackingTab({
 
       {/* ── PRINT CHOICE MODAL ── */}
       {showPrintChoice && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowPrintChoice(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowPrintChoice(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '420px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700 }}>🖨️ הדפסת כרטסת לקוח</h3>
+            <h3 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700 }}>הדפסת כרטסת לקוח</h3>
             <div style={{ border: '1px solid var(--border)', borderRadius: '10px', padding: '12px' }}>
               <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>כרטסת לקוח (חשבוניות/זיכויים + מאזן)</div>
               <select
@@ -1403,7 +1433,7 @@ export default function CustomerTrackingTab({
                 onClick={() => { setShowPrintChoice(false); setPrintMode('ledger') }}
                 disabled={!printCustomerId || (printRangeMode === 'months' && printMonths.size === 0)}
                 style={{ width: '100%' }}
-              >🖨️ הדפס כרטסת</Button>
+              >הדפס כרטסת</Button>
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowPrintChoice(false)}>סגור</Button>

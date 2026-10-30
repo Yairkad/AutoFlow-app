@@ -87,7 +87,7 @@ export default function TireSizeInput({ value, onChange, autoFocus, onEnter }: {
         aria-label={LABEL[key]}
         placeholder={'0'.repeat(LEN[key])}
         className="bg-white rounded-xl font-black text-center outline-none focus:ring-4 focus:ring-blue-400"
-        style={{ width: key === 'width' ? 74 : 56, padding: '9px 4px', fontSize: '21px', letterSpacing: '1px', color: '#0f172a' }}
+        style={{ width: key === 'width' ? 74 : 56, padding: '9px 4px', fontSize: '21px', letterSpacing: '1px', color: '#141A2E' }}
       />
       <span className="text-slate-300 font-semibold" style={{ fontSize: '10px' }}>{LABEL[key]}</span>
     </div>

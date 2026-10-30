@@ -13,6 +13,7 @@ export interface ZoneTire {
   rim: number | null
   qty: number
   location: string | null
+  alt_barcodes?: string[]
 }
 
 export interface ZoneEntry {

@@ -39,7 +39,7 @@ function fmt(v: number) {
   return '₪' + Math.abs(v).toLocaleString('he-IL', { maximumFractionDigits: 0 })
 }
 
-const COLORS = ['#1a9e5c', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16']
+const COLORS = ['var(--primary)', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16']
 
 // ── Section card ──────────────────────────────────────────────────────────────
 

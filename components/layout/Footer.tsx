@@ -18,12 +18,6 @@ export default function Footer({ inner }: { inner?: boolean } = {}) {
       fontSize: '12px',
       color: 'var(--text-muted)',
     }}>
-      <div>
-        אפיון, עיצוב ופיתוח:{' '}
-        <span style={{ fontWeight: 600, color: 'var(--text)' }}>יאיר קדוש</span>
-        {' '}| כל הזכויות שמורות © {new Date().getFullYear()}
-      </div>
-
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <Link href="/privacy" className="link-hover" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
           מדיניות פרטיות
@@ -33,6 +27,8 @@ export default function Footer({ inner }: { inner?: boolean } = {}) {
         </Link>
         <span style={{ color: 'var(--border)' }}>|</span>
         <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>v{versionData.version}</span>
+        <span style={{ color: 'var(--border)' }}>|</span>
+        <span dir="ltr">© Yair Kadosh</span>
       </div>
     </footer>
   )

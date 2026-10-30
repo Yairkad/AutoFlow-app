@@ -1,5 +1,6 @@
 'use client'
 
+import { printHtml } from '@/lib/print/printHtml'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
@@ -228,7 +229,7 @@ body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #fff
       <li>מומלץ לבדוק את מקוריות הרכב במשרד הרישוי.</li>
     </ul>
     <div class="pp-warn">
-      <h4>⚠️ חשוב ביותר!!!</h4>
+      <h4>חשוב ביותר!!!</h4>
       עם גילוי ליקויים שלא נתגלו בבדיקה – אין אנו אחראים אם התיקון ו/או הבדיקה בוצעו במקום אחר לפני שהרכב נבדק על ידינו שנית.<br>
       החברה אינה אחראית על ליקויים או מגרעות אשר לא נתגלו בבדיקה זו כתוצאה מהעלמת ליקויים במתכוון.<br>
       דו"ח זה יפה כוחו לגבי מזמין הבדיקה בלבד.
@@ -260,11 +261,7 @@ body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #fff
 
 </body></html>`
 
-  const w = window.open('', '_blank', 'width=900,height=700')
-  if (!w) return
-  w.document.write(html)
-  w.document.close()
-  w.onload = () => { w.focus(); w.print() }
+  printHtml(html)
 }
 
 // ── Copy cell helper ──────────────────────────────────────────────────────────
@@ -787,7 +784,7 @@ export default function InspectionsClient() {
                 </div>
                 <div style={{ paddingTop: 20 }}>
                   <Button size="sm" onClick={handlePlateSearch} disabled={plateLoading}>
-                    {plateLoading ? '...' : '🔍 מלא אוטומטית'}
+                    {plateLoading ? '...' : 'מלא אוטומטית'}
                   </Button>
                 </div>
               </div>
@@ -860,7 +857,7 @@ export default function InspectionsClient() {
               disabled={saving}
               style={{ fontSize: 15, fontWeight: 800, padding: '10px 0', minWidth: 180 }}
             >
-              {saving ? 'שומר...' : '🖨️ הדפס מסמך ושמור'}
+              {saving ? 'שומר...' : 'הדפס מסמך ושמור'}
             </Button>
             {editingId && (
               <Button
@@ -869,7 +866,7 @@ export default function InspectionsClient() {
                 disabled={saving}
                 style={{ flexShrink: 0, padding: '10px 20px', whiteSpace: 'nowrap', fontWeight: 700 }}
               >
-                💾 שמור ללא הדפסה
+                שמור ללא הדפסה
               </Button>
             )}
             <button
@@ -882,7 +879,7 @@ export default function InspectionsClient() {
                 color: 'var(--text-muted)', whiteSpace: 'nowrap',
               }}
             >
-              🗑️ נקה
+              נקה
             </button>
           </div>
         </div>
@@ -911,7 +908,7 @@ export default function InspectionsClient() {
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <Button variant="primary" size="sm">
-                📊 ייצוא לאקסל
+                ייצוא לאקסל
               </Button>
             </div>
           </div>
@@ -961,7 +958,7 @@ export default function InspectionsClient() {
                       <RowActionsMenu actions={[
                         { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openEdit(ins) },
                         { key: 'print', label: 'הדפס', icon: '🖨️', onClick: () => handlePrint(ins) },
-                        ...(ins.intake_files?.length ? [{ key: 'docs', label: 'מסמכי לקוח', icon: '📎', onClick: () => setFilesIns(ins) }] : []),
+                        { key: 'docs', label: `מסמכי לקוח${ins.intake_files?.length ? ` (${ins.intake_files.length})` : ''} / סריקה`, icon: '📎', onClick: () => setFilesIns(ins) },
                         { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => handleDelete(ins.id) },
                       ]} />
                     </div>
@@ -1005,11 +1002,11 @@ export default function InspectionsClient() {
                       <>
                         <button onClick={() => { setChecklistIns(ins); setFindingsMenuId(null) }}
                           style={{ padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1.5px solid var(--primary)', background: 'var(--primary)', color: '#fff', cursor: 'pointer' }}>
-                          ✏️ ערוך
+                          ערוך
                         </button>
                         <button onClick={() => { printChecklistFromList(ins); setFindingsMenuId(null) }}
                           style={{ padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', cursor: 'pointer' }}>
-                          🖨️ הדפס
+                          הדפס
                         </button>
                         <button onClick={() => setFindingsMenuId(null)}
                           style={{ padding: '4px 8px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
@@ -1020,7 +1017,7 @@ export default function InspectionsClient() {
                       <button
                         onClick={() => setFindingsMenuId(ins.id)}
                         style={{ padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', cursor: 'pointer' }}>
-                        📋 ממצאי בדיקה
+                        ממצאי בדיקה
                       </button>
                     )}
                   </div>
@@ -1086,14 +1083,16 @@ export default function InspectionsClient() {
       )}
 
       {filesIns && (
-        <IntakeFilesModal inspectionId={filesIns.id} title={filesIns.owner_name || filesIns.plate} onClose={() => setFilesIns(null)} />
+        <IntakeFilesModal inspectionId={filesIns.id} title={filesIns.owner_name || filesIns.plate} onClose={() => setFilesIns(null)}
+          onChanged={() => loadInspections()} />
       )}
 
       {/* ── Edit Modal ── */}
       {editModalOpen && (
         <>
           {/* Backdrop */}
-          <div onClick={clearForm} style={{
+          {/* Form window: a click outside must not close it (typed details would be lost) */}
+          <div aria-hidden="true" style={{
             position: 'fixed', inset: 0, zIndex: 499,
             background: 'rgba(0,0,0,0.45)',
           }} />
@@ -1121,11 +1120,11 @@ export default function InspectionsClient() {
               <span style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)' }}>
                 {editingInspection && isPendingIntake(editingInspection) ? 'קליטת לקוח מטופס' : 'עריכת בדיקה'}
               </span>
-              {!!editingInspection?.intake_files?.length && (
+              {editingInspection?.id && (
                 <button onClick={() => setFilesIns(editingInspection)} style={{
                   marginInlineStart: 'auto', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700,
                   border: '1px solid var(--border)', background: 'var(--bg)', cursor: 'pointer', fontFamily: 'inherit',
-                }}>📎 מסמכים ({editingInspection.intake_files.length})</button>
+                }}>📎 מסמכי לקוח{editingInspection.intake_files?.length ? ` (${editingInspection.intake_files.length})` : ''}</button>
               )}
             </div>
 
@@ -1200,7 +1199,7 @@ export default function InspectionsClient() {
                     </div>
                     <div style={{ paddingTop: 20 }}>
                       <Button size="sm" onClick={handlePlateSearch} disabled={plateLoading}>
-                        {plateLoading ? '...' : '🔍 מלא אוטומטית'}
+                        {plateLoading ? '...' : 'מלא אוטומטית'}
                       </Button>
                     </div>
                   </div>
@@ -1267,11 +1266,11 @@ export default function InspectionsClient() {
 
                 <Button fullWidth onClick={handlePrintAndSave} disabled={saving}
                   style={{ fontSize: 15, fontWeight: 800, padding: '10px 0', minWidth: 160 }}>
-                  {saving ? 'שומר...' : '🖨️ הדפס ושמור'}
+                  {saving ? 'שומר...' : 'הדפס ושמור'}
                 </Button>
                 <Button variant="secondary" onClick={handleSaveOnly} disabled={saving}
                   style={{ flexShrink: 0, padding: '10px 20px', whiteSpace: 'nowrap', fontWeight: 700 }}>
-                  💾 שמור
+                  שמור
                 </Button>
                 <button onClick={clearForm} style={{
                   flexShrink: 0, padding: '10px 16px',

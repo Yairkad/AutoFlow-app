@@ -56,7 +56,7 @@ export default function DashboardPage() {
               {/* Left column: stats on top, alerts bar at bottom */}
               <div
                 className="dash-stats-col"
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden' }}
+                style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '16px', overflow: 'hidden' }}
               >
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                   <DashboardStats />

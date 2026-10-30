@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
 import { Supplier, SupplierDebt, ScheduledPayment, fmt, bal, waUrl } from './shared'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -24,6 +25,9 @@ interface SupplierDetailsTabProps {
   categories: string[]
   scheduledPayments: ScheduledPayment[]
   openId: string | null
+  /** 'edit' = only the add/edit form (opened for openId, or empty for a new one); 'panel' = only the card of openId */
+  mode?: 'full' | 'edit' | 'panel'
+  onClose?: () => void
   onOpenTracking: (supplierId: string) => void
   reload: () => void
 }
@@ -51,7 +55,7 @@ const ISRAELI_BANKS: { name: string; code: string }[] = [
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SupplierDetailsTab({
-  tenantId, suppliers, debts, categories, scheduledPayments, openId, onOpenTracking, reload,
+  tenantId, suppliers, debts, categories, scheduledPayments, openId, onOpenTracking, reload, mode = 'full', onClose,
 }: SupplierDetailsTabProps) {
   const supabase = useRef(createClient()).current
   const { showToast } = useToast()
@@ -63,6 +67,7 @@ export default function SupplierDetailsTab({
 
   // Supplier form
   const [showModal, setShowModal] = useState(false)
+  const closeModal = () => { setShowModal(false); if (mode === 'edit') onClose?.() }
   const [editItem, setEditItem]   = useState<Supplier | null>(null)
   const [fName, setFName]         = useState('')
   const [fContact, setFContact]   = useState('')
@@ -76,8 +81,27 @@ export default function SupplierDetailsTab({
   const [fBankAccount, setFBankAccount]       = useState('')
   const [fBankHolder, setFBankHolder]         = useState('')
   const [fOpeningBalance, setFOpeningBalance] = useState('')
+  // Tire brands the supplier brings (learned from "מה הגיע?", editable here) — once migration 111 ran
+  const [fBrands, setFBrands] = useState<string[]>([])
+  const [brandInput, setBrandInput] = useState('')
+  const hasBrands = suppliers.some(s => Array.isArray(s.brands))
+  const addBrand = () => {
+    const b = brandInput.trim()
+    if (b && !fBrands.some(x => x.toLowerCase() === b.toLowerCase())) setFBrands(v => [...v, b])
+    setBrandInput('')
+  }
   const [showBankDrop, setShowBankDrop]       = useState(false)
   const [saving, setSaving]       = useState(false)
+
+  // Edit-only mode (from the contacts page): open the form at once — for openId, or empty for a new one
+  const editOpened = useRef(false)
+  useEffect(() => {
+    if (mode !== 'edit' || editOpened.current) return
+    // flag set inside the timer: StrictMode's mount→cleanup→mount would otherwise cancel the only open
+    const t = setTimeout(() => { editOpened.current = true; openModal(suppliers.find(x => x.id === openId)) }, 0)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode])
 
   // Deep-link: ?open=<supplierId> (parsed once by the shell, passed down as `openId`)
   useEffect(() => {
@@ -97,13 +121,16 @@ export default function SupplierDetailsTab({
       setFBankName(s.bank_name ?? ''); setFBankBranch(s.bank_branch ?? '')
       setFBankAccount(s.bank_account ?? ''); setFBankHolder(s.bank_account_holder ?? '')
       setFOpeningBalance(s.opening_balance ? String(s.opening_balance) : '')
+      setFBrands(s.brands ?? [])
     } else {
       setEditItem(null)
       setFName(''); setFCategory(''); setFContact(''); setFPhone('')
       setFEmail(''); setFAddress(''); setFNotes('')
       setFBankName(''); setFBankBranch(''); setFBankAccount(''); setFBankHolder('')
       setFOpeningBalance('')
+      setFBrands([])
     }
+    setBrandInput('')
     setShowBankDrop(false)
     setShowModal(true)
   }
@@ -126,6 +153,7 @@ export default function SupplierDetailsTab({
       bank_account: fBankAccount.trim() || null,
       bank_account_holder: fBankHolder.trim() || null,
       opening_balance: parseFloat(fOpeningBalance) || 0,
+      ...(hasBrands ? { brands: fBrands } : {}),
     }
     if (editItem) {
       const { error } = await supabase.from('suppliers').update(row).eq('id', editItem.id)
@@ -142,7 +170,7 @@ export default function SupplierDetailsTab({
     if (cat && !categories.includes(cat)) {
       await supabase.from('supplier_categories').insert({ tenant_id: tid, name: cat })
     }
-    setSaving(false); setShowModal(false); reload()
+    setSaving(false); closeModal(); reload()
   }
 
   const deleteSupplier = async (s: Supplier) => {
@@ -187,6 +215,7 @@ export default function SupplierDetailsTab({
 
   return (
     <div>
+      {mode !== 'edit' && <>
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
         <Button onClick={() => openModal()}>+ הוסף ספק</Button>
@@ -274,7 +303,7 @@ export default function SupplierDetailsTab({
                           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{openCnt} חובות</div>
                         </div>
                       ) : (
-                        <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, flexShrink: 0 }}>✓ נקי</span>
+                        <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 600, flexShrink: 0 }}>✓ נקי</span>
                       )}
 
                       {/* Actions area */}
@@ -289,7 +318,7 @@ export default function SupplierDetailsTab({
                             target="_blank"
                             rel="noopener noreferrer"
                             title="שלח הודעה בווצאפ"
-                            style={{ padding: '5px 9px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '7px', fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}
+                            style={{ padding: '5px 9px', background: 'var(--success-soft)', color: 'var(--success)', border: '1px solid #bbf7d0', borderRadius: '7px', fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}
                           >
                             💬
                           </a>
@@ -307,7 +336,7 @@ export default function SupplierDetailsTab({
         {selected && (
           <>
             {/* Mobile backdrop */}
-            <div className="supplier-detail-backdrop" onClick={() => setSelected(null)} />
+            <div className="supplier-detail-backdrop" onClick={() => { setSelected(null); if (mode === 'panel') onClose?.() }} />
           <div className="supplier-detail-panel" style={{
             flex: 1, minWidth: 0,
             background: 'var(--bg-card)',
@@ -345,15 +374,15 @@ export default function SupplierDetailsTab({
                   href={waUrl(selected.phone, `שלום ${selected.name}, `)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ padding: '8px 14px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ padding: '8px 14px', background: 'var(--success-soft)', color: 'var(--success)', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   💬 ווצאפ
                 </a>
               )}
-              <Button variant="outline" size="sm" onClick={() => openModal(selected)}>✏️ ערוך</Button>
-              <Button variant="danger" size="sm" onClick={() => deleteSupplier(selected)}>🗑 מחק</Button>
+              <Button variant="outline" size="sm" onClick={() => openModal(selected)}>ערוך</Button>
+              <Button variant="danger" size="sm" onClick={() => deleteSupplier(selected)}>מחק</Button>
               <button
-                onClick={() => setSelected(null)}
+                onClick={() => { setSelected(null); if (mode === 'panel') onClose?.() }}
                 style={{ padding: '6px 10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', color: 'var(--text-muted)' }}
               >✕</button>
             </div>
@@ -372,19 +401,25 @@ export default function SupplierDetailsTab({
               ))}
               {selected.notes && (
                 <div style={{ background: '#fffbeb', borderRadius: '8px', padding: '10px 14px', gridColumn: '1 / -1' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>📝 הערות</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>הערות</div>
                   <div style={{ fontSize: '13px' }}>{selected.notes}</div>
+                </div>
+              )}
+              {(selected.brands?.length ?? 0) > 0 && (
+                <div style={{ background: 'var(--bg)', borderRadius: '8px', padding: '10px 14px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>חברות צמיגים</div>
+                  <div style={{ fontSize: '13px' }}>{selected.brands!.join(' · ')}</div>
                 </div>
               )}
               {!!selected.opening_balance && (
                 <div style={{ background: 'var(--bg)', borderRadius: '8px', padding: '10px 14px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>📒 יתרת פתיחה</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>יתרת פתיחה</div>
                   <div style={{ fontSize: '13px', fontWeight: 600 }}>{selected.opening_balance.toLocaleString('he-IL')} ₪</div>
                 </div>
               )}
               {(selected.bank_name || selected.bank_account) && (
                 <div style={{ background: '#f0f9ff', borderRadius: '8px', padding: '10px 14px', gridColumn: '1 / -1', border: '1px solid #bae6fd' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '5px' }}>🏦 פרטי בנק לתשלום</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '5px' }}>פרטי בנק לתשלום</div>
                   <div style={{ fontSize: '13px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                     {selected.bank_name && <span><strong>בנק:</strong> {selected.bank_name}</span>}
                     {selected.bank_branch && <span><strong>סניף:</strong> {selected.bank_branch}</span>}
@@ -471,7 +506,7 @@ export default function SupplierDetailsTab({
                               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{d.date}</div>
                             </div>
                             <div style={{ textAlign: 'left', flexShrink: 0 }}>
-                              <div style={{ fontWeight: 700, color: d.is_closed ? '#16a34a' : 'var(--danger)' }}>
+                              <div style={{ fontWeight: 700, color: d.is_closed ? 'var(--success)' : 'var(--danger)' }}>
                                 {d.is_closed ? '✓ שולם' : `יתרה: ${fmt(bal(d))}`}
                               </div>
                               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
@@ -499,11 +534,13 @@ export default function SupplierDetailsTab({
         )}
       </div>
 
+      </>}
+
       {/* ── ADD/EDIT MODAL ── */}
       {showModal && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => setShowModal(false)}
+          {...guardedBackdrop(() => closeModal())}
         >
           <div
             style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '520px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto' }}
@@ -561,6 +598,27 @@ export default function SupplierDetailsTab({
                 <input type="number" step="0.01" value={fOpeningBalance} onChange={e => setFOpeningBalance(e.target.value)} placeholder="0" className="form-input" />
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>חוב שהיה קיים לפני תחילת המעקב במערכת — משמש כנקודת פתיחה בכרטסת המודפסת</span>
               </label>
+              {hasBrands && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 600 }}>
+                  חברות צמיגים שהספק מביא
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {fBrands.map(b => (
+                      <span key={b} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 6px 3px 10px', borderRadius: 999, background: 'var(--bg-soft)', border: '1px solid var(--border)', fontWeight: 500 }}>
+                        {b}
+                        <button type="button" aria-label={`הסר ${b}`} onClick={() => setFBrands(v => v.filter(x => x !== b))}
+                          style={{ border: 0, background: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 13, lineHeight: 1 }}>✕</button>
+                      </span>
+                    ))}
+                    {fBrands.length === 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400 }}>עדיין לא נלמדו — יתמלא לבד מ&quot;מה הגיע?&quot;</span>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input value={brandInput} onChange={e => setBrandInput(e.target.value)} placeholder="הוסף חברה (למשל Michelin)" className="form-input"
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addBrand() } }} style={{ margin: 0 }} />
+                    <button type="button" onClick={addBrand} className="form-input" style={{ width: 'auto', cursor: 'pointer', margin: 0 }}>הוסף</button>
+                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>ב&quot;מה הגיע?&quot; של הספק יוצעו קודם צמיגים של החברות האלה. נלמד אוטומטית מהחשבוניות, ואפשר להוסיף או להסיר.</span>
+                </div>
+              )}
               {/* Bank / payment details */}
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -600,7 +658,7 @@ export default function SupplierDetailsTab({
                               <div
                                 key={b.code + b.name}
                                 onMouseDown={e => { e.preventDefault(); setFBankName(b.name); setShowBankDrop(false) }}
-                                style={{ padding: '9px 12px', cursor: 'pointer', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: fBankName === b.name ? '#f0fdf4' : undefined }}
+                                style={{ padding: '9px 12px', cursor: 'pointer', fontSize: '13px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: fBankName === b.name ? 'var(--success-soft)' : undefined }}
                               >
                                 <span>{b.name}</span>
                                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>{b.code}</span>
@@ -626,8 +684,8 @@ export default function SupplierDetailsTab({
               </div>
             </div>
             <div className="sticky-actions">
-              <Button variant="secondary" onClick={() => setShowModal(false)}>ביטול</Button>
-              <Button loading={saving} onClick={saveSupplier}>💾 שמור</Button>
+              <Button variant="secondary" onClick={() => closeModal()}>ביטול</Button>
+              <Button loading={saving} onClick={saveSupplier}>שמור</Button>
             </div>
           </div>
         </div>

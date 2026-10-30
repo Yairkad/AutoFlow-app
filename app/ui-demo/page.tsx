@@ -28,9 +28,9 @@ export default function UiDemo() {
       <section>
         <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '14px', color: 'var(--text-muted)' }}>Buttons</h2>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <Button variant="primary">💾 שמור</Button>
+          <Button variant="primary">שמור</Button>
           <Button variant="secondary">ביטול</Button>
-          <Button variant="danger">🗑️ מחק</Button>
+          <Button variant="danger">מחק</Button>
           <Button variant="outline">ייצוא Excel</Button>
           <Button variant="ghost">פרטים נוספים</Button>
           <Button variant="primary" size="sm">קטן</Button>
@@ -88,7 +88,7 @@ export default function UiDemo() {
         <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '14px', color: 'var(--text-muted)' }}>Toast</h2>
         <div style={{ display: 'flex', gap: '10px' }}>
           {[
-            { label: '✅ הצלחה', msg: 'נשמר בהצלחה!', type: 'success' as const, bg: '#16a34a' },
+            { label: '✅ הצלחה', msg: 'נשמר בהצלחה!', type: 'success' as const, bg: 'var(--success)' },
             { label: '❌ שגיאה', msg: 'אירעה שגיאה', type: 'error' as const, bg: '#dc2626' },
             { label: 'ℹ️ מידע', msg: 'נא לשים לב', type: 'info' as const, bg: '#2563eb' },
           ].map(t => (
@@ -127,7 +127,7 @@ export default function UiDemo() {
           footer={
             <>
               <Button variant="secondary" onClick={() => setModalOpen(false)}>ביטול</Button>
-              <Button variant="primary" onClick={() => { setModalOpen(false); showToast('נשמר!') }}>💾 שמור</Button>
+              <Button variant="primary" onClick={() => { setModalOpen(false); showToast('נשמר!') }}>שמור</Button>
             </>
           }
         >
@@ -142,7 +142,7 @@ export default function UiDemo() {
       {/* Confirm */}
       <section>
         <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '14px', color: 'var(--text-muted)' }}>Confirm Dialog</h2>
-        <Button variant="danger" onClick={handleDelete}>🗑️ מחק רשומה</Button>
+        <Button variant="danger" onClick={handleDelete}>מחק רשומה</Button>
       </section>
 
       {/* Empty State */}

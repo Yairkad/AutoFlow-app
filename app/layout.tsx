@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Heebo } from 'next/font/google'
+import { Heebo, IBM_Plex_Sans_Hebrew, IBM_Plex_Mono } from 'next/font/google'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import { createServiceClient } from '@/lib/supabase/service'
@@ -10,6 +10,19 @@ const heebo = Heebo({
   subsets: ['hebrew', 'latin'],
   weight: ['300', '400', '500', '600', '700', '800'],
   variable: '--font-heebo',
+})
+
+// App UI typeface (redesign 2026-10): Plex Hebrew for text, Plex Mono for numbers / sizes / plates.
+// Heebo stays loaded for the public site (landing CSS uses --font-heebo).
+const plex = IBM_Plex_Sans_Hebrew({
+  subsets: ['hebrew', 'latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-ui',
+})
+const plexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['500', '600'],
+  variable: '--font-num',
 })
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -49,7 +62,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#1a9e5c',
+  themeColor: '#26357A',
 }
 
 export default function RootLayout({
@@ -58,7 +71,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="he" dir="rtl" className={heebo.variable}>
+    <html lang="he" dir="rtl" className={`${heebo.variable} ${plex.variable} ${plexMono.variable}`}>
       <body>
         <RouteProgress />
         <ToastProvider>

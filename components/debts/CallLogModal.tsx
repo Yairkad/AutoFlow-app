@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Button from '@/components/ui/Button'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 export interface CustomerDebtCall {
   id: string
@@ -56,9 +57,9 @@ export default function CallLogModal({ open, onClose, debtId, debtName, calls, t
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={close}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(close)}>
       <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', maxWidth: '440px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-        <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700 }}>📞 מעקב שיחות — {debtName}</h3>
+        <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700 }}>מעקב שיחות — {debtName}</h3>
         <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--text-muted)' }}>רישום שיחה חדשה</p>
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
@@ -81,7 +82,7 @@ export default function CallLogModal({ open, onClose, debtId, debtName, calls, t
 
         <div className="sticky-actions" style={{ marginBottom: calls.length ? '16px' : 0 }}>
           <Button variant="secondary" onClick={close}>סגור</Button>
-          <Button loading={saving} onClick={save}>💾 שמור שיחה</Button>
+          <Button loading={saving} onClick={save}>שמור שיחה</Button>
         </div>
 
         {calls.length > 0 && (
@@ -91,7 +92,7 @@ export default function CallLogModal({ open, onClose, debtId, debtName, calls, t
               {[...calls].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(c => (
                 <div key={c.id} style={{ padding: '8px 10px', background: 'var(--bg)', borderRadius: '8px', fontSize: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, color: c.answered ? '#16a34a' : 'var(--danger)' }}>{c.answered ? '✓ ענה' : '✕ לא ענה'}</span>
+                    <span style={{ fontWeight: 600, color: c.answered ? 'var(--success)' : 'var(--danger)' }}>{c.answered ? '✓ ענה' : '✕ לא ענה'}</span>
                     <span style={{ color: 'var(--text-muted)' }}>{fmtDT(c.created_at)}</span>
                   </div>
                   {c.notes && <div style={{ marginTop: '4px', color: 'var(--text)' }}>{c.notes}</div>}

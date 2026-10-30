@@ -11,6 +11,7 @@ import UnitToggle from '@/components/ui/UnitToggle'
 import { withVat, withoutVat } from '@/lib/utils/vat'
 import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, RecurringItem, CustomerAction, fmt, waUrl } from './shared'
 import { balanceOf } from '@/lib/debts/ledger'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 
 interface CustomerDetailsTabProps {
@@ -22,6 +23,9 @@ interface CustomerDetailsTabProps {
   customerActions: CustomerAction[]
   categories: string[]
   openId: string | null
+  /** 'edit' = only the add/edit form (opened for openId, or empty for a new one); 'panel' = only the card of openId */
+  mode?: 'full' | 'edit' | 'panel'
+  onClose?: () => void
   onOpenTracking: (customerId: string) => void
   reload: () => void
 }
@@ -29,7 +33,7 @@ interface CustomerDetailsTabProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CustomerDetailsTab({
-  tenantId, customers, debts, payments, recurringItems, customerActions, categories, openId, onOpenTracking, reload,
+  tenantId, customers, debts, payments, recurringItems, customerActions, categories, openId, onOpenTracking, reload, mode = 'full', onClose,
 }: CustomerDetailsTabProps) {
   const supabase = useRef(createClient()).current
   const { showToast } = useToast()
@@ -62,15 +66,28 @@ export default function CustomerDetailsTab({
 
   // Customer form
   const [showModal, setShowModal] = useState(false)
+  const closeModal = () => { setShowModal(false); if (mode === 'edit') onClose?.() }
   const [editItem, setEditItem]   = useState<Customer | null>(null)
   const [fName, setFName]         = useState('')
   const [fPhone, setFPhone]       = useState('')
+  const [fContact, setFContact]   = useState('')
+  const hasContact = customers.some(c => 'contact_name' in c)   // migration 112
   const [fEmail, setFEmail]       = useState('')
   const [fAddress, setFAddress]   = useState('')
   const [fNotes, setFNotes]       = useState('')
   const [fCategory, setFCategory]             = useState('')
   const [fOpeningBalance, setFOpeningBalance] = useState('')
   const [saving, setSaving]       = useState(false)
+
+  // Edit-only mode (from the contacts page): open the form at once — for openId, or empty for a new one
+  const editOpened = useRef(false)
+  useEffect(() => {
+    if (mode !== 'edit' || editOpened.current) return
+    // flag set inside the timer: StrictMode's mount→cleanup→mount would otherwise cancel the only open
+    const t = setTimeout(() => { editOpened.current = true; openModal(customers.find(x => x.id === openId)) }, 0)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode])
 
   // Deep-link: ?open=<customerId> (parsed once by the shell, passed down as `openId`)
   useEffect(() => {
@@ -85,12 +102,12 @@ export default function CustomerDetailsTab({
   const openModal = (c?: Customer) => {
     if (c) {
       setEditItem(c)
-      setFName(c.name); setFCategory(c.category ?? ''); setFPhone(c.phone ?? '')
+      setFName(c.name); setFCategory(c.category ?? ''); setFPhone(c.phone ?? ''); setFContact(c.contact_name ?? '')
       setFEmail(c.email ?? ''); setFAddress(c.address ?? ''); setFNotes(c.notes ?? '')
       setFOpeningBalance(c.opening_balance ? String(c.opening_balance) : '')
     } else {
       setEditItem(null)
-      setFName(''); setFCategory(''); setFPhone('')
+      setFName(''); setFCategory(''); setFPhone(''); setFContact('')
       setFEmail(''); setFAddress(''); setFNotes('')
       setFOpeningBalance('')
     }
@@ -106,6 +123,7 @@ export default function CustomerDetailsTab({
       name: fName.trim(),
       category: fCategory.trim() || null,
       phone: fPhone.trim() || null,
+      ...(hasContact ? { contact_name: fContact.trim() || null } : {}),
       email: fEmail.trim() || null,
       address: fAddress.trim() || null,
       notes: fNotes.trim() || null,
@@ -126,7 +144,7 @@ export default function CustomerDetailsTab({
     if (cat && !categories.includes(cat)) {
       await supabase.from('customer_categories').insert({ tenant_id: tid, name: cat })
     }
-    setSaving(false); setShowModal(false); reload()
+    setSaving(false); closeModal(); reload()
   }
 
   const deleteCustomer = async (c: Customer) => {
@@ -255,6 +273,8 @@ export default function CustomerDetailsTab({
 
   return (
     <div>
+      {mode !== 'edit' && <>
+      {mode === 'full' && <>
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
         <Button onClick={() => openModal()}>+ הוסף לקוח</Button>
@@ -274,8 +294,10 @@ export default function CustomerDetailsTab({
         <ExcelMenu onExportExcel={exportExcel} />
       </div>
 
+      </>}
       <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
 
+        {mode === 'full' && <>
         {/* ── Customers list ── */}
         <div style={{ flex: 1, minWidth: 0, maxHeight: 'calc(100dvh - 240px)', overflowY: 'auto', paddingLeft: '4px' }}>
           {filtered.length === 0 ? (
@@ -339,7 +361,7 @@ export default function CustomerDetailsTab({
                           <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(debt)}</div>
                         </div>
                       ) : (
-                        <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600, flexShrink: 0 }}>✓ נקי</span>
+                        <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 600, flexShrink: 0 }}>✓ נקי</span>
                       )}
 
                       {/* Actions area */}
@@ -354,7 +376,7 @@ export default function CustomerDetailsTab({
                             target="_blank"
                             rel="noopener noreferrer"
                             title="שלח הודעה בווצאפ"
-                            style={{ padding: '5px 9px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '7px', fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}
+                            style={{ padding: '5px 9px', background: 'var(--success-soft)', color: 'var(--success)', border: '1px solid #bbf7d0', borderRadius: '7px', fontSize: '14px', textDecoration: 'none', display: 'flex', alignItems: 'center' }}
                           >
                             💬
                           </a>
@@ -368,11 +390,13 @@ export default function CustomerDetailsTab({
           )}
         </div>
 
+        </>}
+
         {/* ── Detail panel ── */}
         {selected && (
           <>
             {/* Mobile backdrop */}
-            <div className="supplier-detail-backdrop" onClick={() => setSelected(null)} />
+            <div className="supplier-detail-backdrop" onClick={() => { setSelected(null); if (mode === 'panel') onClose?.() }} />
           <div className="supplier-detail-panel" style={{
             flex: 1, minWidth: 0,
             background: 'var(--bg-card)',
@@ -407,15 +431,15 @@ export default function CustomerDetailsTab({
                   href={waUrl(selected.phone, `שלום ${selected.name}, `)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ padding: '8px 14px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ padding: '8px 14px', background: 'var(--success-soft)', color: 'var(--success)', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '13px', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
                   💬 ווצאפ
                 </a>
               )}
-              <Button variant="outline" size="sm" onClick={() => openModal(selected)}>✏️ ערוך</Button>
-              <Button variant="danger" size="sm" onClick={() => deleteCustomer(selected)}>🗑 מחק</Button>
+              <Button variant="outline" size="sm" onClick={() => openModal(selected)}>ערוך</Button>
+              <Button variant="danger" size="sm" onClick={() => deleteCustomer(selected)}>מחק</Button>
               <button
-                onClick={() => setSelected(null)}
+                onClick={() => { setSelected(null); if (mode === 'panel') onClose?.() }}
                 style={{ padding: '6px 10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', color: 'var(--text-muted)' }}
               >✕</button>
             </div>
@@ -434,13 +458,13 @@ export default function CustomerDetailsTab({
               ))}
               {selected.notes && (
                 <div style={{ background: '#fffbeb', borderRadius: '8px', padding: '10px 14px', gridColumn: '1 / -1' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>📝 הערות</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>הערות</div>
                   <div style={{ fontSize: '13px' }}>{selected.notes}</div>
                 </div>
               )}
               {!!selected.opening_balance && (
                 <div style={{ background: 'var(--bg)', borderRadius: '8px', padding: '10px 14px' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>📒 יתרת פתיחה</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '3px' }}>יתרת פתיחה</div>
                   <div style={{ fontSize: '13px', fontWeight: 600 }}>{selected.opening_balance.toLocaleString('he-IL')} ₪</div>
                 </div>
               )}
@@ -465,7 +489,7 @@ export default function CustomerDetailsTab({
               return (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>🔁 חיובים חוזרים</h3>
+                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>חיובים חוזרים</h3>
                     <button onClick={() => openRecItemModal()} style={{ padding: '4px 10px', background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>+ הוסף</button>
                   </div>
                   {recItems.length === 0 ? (
@@ -474,7 +498,7 @@ export default function CustomerDetailsTab({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '18px' }}>
                       {recItems.map(it => (
                         <div key={it.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', flexWrap: 'wrap', background: 'var(--bg)', borderRadius: '6px', padding: '6px 10px' }}>
-                          <span style={{ padding: '1px 7px', borderRadius: '4px', fontWeight: 600, background: it.type === 'meter' ? '#eff6ff' : '#f0fdf6', color: it.type === 'meter' ? '#1d4ed8' : '#16a34a' }}>
+                          <span style={{ padding: '1px 7px', borderRadius: '4px', fontWeight: 600, background: it.type === 'meter' ? '#eff6ff' : 'var(--success-soft)', color: it.type === 'meter' ? '#1d4ed8' : 'var(--success)' }}>
                             {it.type === 'meter' ? 'מונה' : 'קבוע'}
                           </span>
                           <span style={{ fontWeight: 600, flex: 1, minWidth: '80px' }}>{it.name}</span>
@@ -490,7 +514,7 @@ export default function CustomerDetailsTab({
                   )}
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>⚡ פעולות מהירות</h3>
+                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>פעולות מהירות</h3>
                     <button onClick={() => openActionModal()} style={{ padding: '4px 10px', background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>+ הוסף</button>
                   </div>
                   {actionItems.length === 0 ? (
@@ -524,11 +548,13 @@ export default function CustomerDetailsTab({
         )}
       </div>
 
+      </>}
+
       {/* ── ADD/EDIT MODAL ── */}
       {showModal && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => setShowModal(false)}
+          {...guardedBackdrop(() => closeModal())}
         >
           <div
             style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '520px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto' }}
@@ -557,6 +583,12 @@ export default function CustomerDetailsTab({
                   </datalist>
                 </label>
               </div>
+              {hasContact && (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                  איש קשר
+                  <input value={fContact} onChange={e => setFContact(e.target.value)} placeholder="שם הסוכן / איש הקשר" className="form-input" />
+                </label>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   טלפון
@@ -582,8 +614,8 @@ export default function CustomerDetailsTab({
               </label>
             </div>
             <div className="sticky-actions">
-              <Button variant="secondary" onClick={() => setShowModal(false)}>ביטול</Button>
-              <Button loading={saving} onClick={saveCustomer}>💾 שמור</Button>
+              <Button variant="secondary" onClick={() => closeModal()}>ביטול</Button>
+              <Button loading={saving} onClick={saveCustomer}>שמור</Button>
             </div>
           </div>
         </div>
@@ -591,7 +623,7 @@ export default function CustomerDetailsTab({
 
       {/* ── RECURRING ITEM (RATE TEMPLATE) MODAL ── */}
       {showRecItemModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowRecItemModal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowRecItemModal(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editRecItem ? '✏️ עריכת חיוב חוזר' : '+ חיוב חוזר חדש'}</h3>
             <div style={{ display: 'grid', gap: '14px' }}>
@@ -664,7 +696,7 @@ export default function CustomerDetailsTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowRecItemModal(false)}>ביטול</Button>
-              <Button loading={riSaving} onClick={saveRecItem}>💾 שמור</Button>
+              <Button loading={riSaving} onClick={saveRecItem}>שמור</Button>
             </div>
           </div>
         </div>
@@ -672,7 +704,7 @@ export default function CustomerDetailsTab({
 
       {/* ── ADD/EDIT CUSTOMER ACTION (quick-fill service type) MODAL ── */}
       {showActionModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowActionModal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowActionModal(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '400px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editAction ? '✏️ עריכת פעולה' : '+ פעולה חדשה'}</h3>
             <div style={{ display: 'grid', gap: '14px' }}>
@@ -687,7 +719,7 @@ export default function CustomerDetailsTab({
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowActionModal(false)}>ביטול</Button>
-              <Button loading={aSaving} onClick={saveAction}>💾 שמור</Button>
+              <Button loading={aSaving} onClick={saveAction}>שמור</Button>
             </div>
           </div>
         </div>

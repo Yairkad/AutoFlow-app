@@ -2790,3 +2790,115 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:50 | Created components/landing/MapEmbed.tsx | — | ~224 |
 | 12:51 | Created app/zz-preview/page.tsx | — | ~180 |
 | 12:52 | Privacy-scan follow-up: Google map is click-to-load (MapEmbed, no Google requests/cookies before click) so no cookie banner needed; privacy/accessibility text updated; privacy+terms links added to /login, /accessibility, own /guide (GuideView legalLinks prop; not on other garages' /guide/<token>). Pre-existing: login green #1a9e5c button contrast 3.44:1 + no <main> | MapEmbed, app/page.tsx, legal pages, login, GuideView | done | ~15k |
+
+## Session: 2026-10-29 05:47
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 05:49 | Investigated stock receive/barcode/duplicates/product search bugs; proposal sent, awaiting approval (no code changes) | api/yard/barcode, api/yard/search, ReceiveClient, TiresClient | proposal | ~15000 |
+| 05:58 | Created app/api/yard/barcode/route.ts | — | ~940 |
+| 05:59 | Created lib/search/fuzzy.ts | — | ~434 |
+| 05:59 | Edited components/yard/ReceiveClient.tsx | CSS: padding | ~147 |
+| 06:00 | Created lib/stock/duplicates.ts | — | ~945 |
+| 06:01 | Created components/stock/DuplicatesModal.tsx | — | ~1314 |
+| 06:04 | Barcode lookup fix, fuzzy Hebrew search, office receive page, duplicates view+merge (tires & products) | api/yard/barcode, api/yard/search, api/stock/merge, lib/search/fuzzy, lib/stock/duplicates, DuplicatesModal, Tires/Products/Receive/Header | tsc+lint clean, logic tested | ~40000 |
+| 06:25 | Created components/ui/MoreMenu.tsx | — | ~1002 |
+| 06:26 | Created components/ui/SearchSelect.tsx | — | ~1099 |
+| 06:28 | Created app/api/stock/invoice-items/route.ts | — | ~1871 |
+| 06:29 | Created components/suppliers/ArrivalsModal.tsx | — | ~2959 |
+| 06:32 | Created components/tires/BrandNamesModal.tsx | — | ~1016 |
+| 06:32 | Created components/ui/FilterBar.tsx | — | ~1229 |
+| 06:44 | Modal guard, suppliers/customers toolbar+SearchSelect, invoice 'מה הגיע', Hebrew tire brands, FilterBar/MoreMenu across screens, /stock-count hub | many | tsc+lint clean, UI checked in preview | ~120000 |
+
+## Session: 2026-10-29 06:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-29 10:51
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-29 11:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-29 12:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:21 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/autoflow-redesign.html | — | ~14264 |
+| 12:22 | Inspections office scan + redesign mockup artifact (navy, no green) published | IntakeFilesModal, files API | done | ~40000 |
+| 12:40 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/autoflow-redesign.html | inline fix | ~14 |
+| 12:40 | Edited ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/autoflow-redesign.html | inline fix | ~13 |
+| 12:40 | 12-month inspection doc retention, removed karteset toggle + alignment/quotes; mockup v2 (light rail tiles, yard panel, tasks w/ updates, doc editor, merged employees) | many | pushed | ~60000 |
+
+## Session: 2026-10-29 13:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:29 | Created components/yard/SessionItemsEditor.tsx | — | ~2336 |
+| 13:30 | Office: 'עריכת נתונים' edits card items in place (SessionItemsEditor); mockup v3 yard drawer (left, pushes content) | OfficeClient, SessionItemsEditor | tsc+lint clean | ~30000 |
+
+## Session: 2026-10-29 13:38
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:45 | Created components/layout/YardDrawer.tsx | — | ~1844 |
+| 13:52 | Redesign stage 1 (tokens/fonts/sidebar/header/modal/buttons/yard drawer) + stage 2a (dashboard KPI tiles, 226 green literals → tokens, hex-alpha concat fixed) | many | tsc+lint clean, preview checked | ~80000 |
+
+## Session: 2026-10-29 14:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 14:45 | Created components/reminders/RemindersClient.tsx | — | ~5999 |
+| 14:50 | Created components/documents/FreeDocEditor.tsx | — | ~3613 |
+| 14:55 | Redesign: tasks (merged + updates, mig 107), employees one screen, free doc editor, emoji stripped from 176 button labels, approve buttons green | many | tsc+lint clean | ~70000 |
+
+## Session: 2026-10-29 15:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 15:24 | Security (drive sessionTenant, proxy fix), printHtml iframe for all prints, official letterhead, yard palette (.yard-theme), login brand, emoji cleanup in JSX | many | tsc+lint clean, proxy curl-tested | ~60000 |
+
+## Session: 2026-10-29 15:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-29 16:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:00 | Footer: removed designer line; now privacy · accessibility · v6.2.81 · © Yair Kadosh; version reset to 6.2.81; bump-version patch no longer rolls over at 9 | components/layout/Footer.tsx, lib/version.json, scripts/bump-version.js | done | ~2k |
+
+## Session: 2026-10-29 21:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-29 21:22
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-10-29 22:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 22:30 | Created components/stock/StockClient.tsx | — | ~5509 |
+| 22:40 | Created components/documents/DriveFilesPanel.tsx | — | ~3374 |
+| 22:50 | Created lib/debts/supplierLedger.ts | — | ~1136 |
+| 23:50 | Preview feedback round: alerts one-line+links, cars 2 tabs, scan field, expenses filters, checks cancel, car-sale payments→debts, urgent tasks red, stock screen (movements+yard sales), no-answer marker, alt barcodes + partial merge, settings (Drive pill/verify, business card, Drive files, backup status), forms gallery + editor fixes, supplier running account, run-once-105-110 | many | done, pushed | ~200k |
+| 00:30 | "מה הגיע?": supplier brands (learned + editable, migration 111), supplier-first suggestions, partial size, new item modal; snapshot SQL before ledger deploy | ArrivalsModal, SupplierDetailsTab, invoice-items route, 111_supplier_brands.sql, snapshot-suppliers-before-ledger.sql | done | ~15k |
+
+## Session: 2026-10-30 07:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:01 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/contacts-mock.html | — | ~3121 |
+| 08:05 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/contacts-mock.html | — | ~4577 |
+| 08:12 | Created components/contacts/ContactsClient.tsx | — | ~4835 |
+| 08:30 | Accounts (/accounts tabs suppliers|customers, tracking only) + Contacts (/contacts list, card, vCard/Excel export, edit via details tabs mode='edit'); customers month view = suppliers; scan → stock tab; migration 112 customers.contact_name | accounts/, contacts/, Suppliers/CustomersClient, *DetailsTab, Sidebar, proxy, Header | done | ~40k |

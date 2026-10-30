@@ -1,7 +1,12 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-26T12:51:23.320Z
-> Files: 143 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-30T08:12:54.570Z
+> Files: 180 tracked | Anatomy hits: 0 | Misses: 0
+
+## (added 2026-10-29)
+
+- `components/documents/DriveFilesPanel.tsx` — Drive 'מסמכים' folder browser (upload/scan/folders/delete), shown in Settings (~2200 tok)
+- `lib/stock/barcodes.ts` — itemCodes / extraCodes: main + alt_barcodes of a tire/product (~200 tok)
 
 ## ../../
 
@@ -33,6 +38,11 @@
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
 
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/
+
+- `autoflow-redesign.html` — AutoFlow — עיצוב חדש (~17113 tok)
+- `contacts-mock.html` — אנשי קשר — הדמיה (~4577 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
 
@@ -89,6 +99,9 @@
 
 
 ## .claude/rules/
+
+
+## Redesign additions (2026-10-29)
 
 
 ## app/
@@ -159,6 +172,10 @@
 ## app/(app)/settings/
 
 
+## app/(app)/stock-count/
+
+- `page.tsx` — hub: scan count / full tire count / count by cabinets (~500 tok)
+
 ## app/(app)/suppliers/
 
 
@@ -170,6 +187,10 @@
 
 ## app/(app)/tires/inventory-count/
 
+
+## app/(app)/tires/receive/
+
+- `page.tsx` — office stock receive (ReceiveClient office) — stays in the app, not the yard (~80 tok)
 
 ## app/accessibility/
 
@@ -262,6 +283,15 @@
 
 - `route.ts` — POST {plates[]} → {plate: {tokef, lastTest}} from data.gov.il (local+imported, chunks of 100, filters array). Used by CarsClient auto-sync on load (~400 tok)
 
+## app/api/stock/invoice-items/
+
+- `route.ts` — Next.js API route: POST, DELETE (~1871 tok)
+- `route.ts` — POST add invoice lines to stock (cost from invoice, movement, match/create item), DELETE reverse (~1500 tok)
+
+## app/api/stock/merge/
+
+- `route.ts` — POST merge duplicate tires/products into one: moves movements/refs, sums qty, fills missing fields, deletes sources (~1000 tok)
+
 ## app/api/store/
 
 
@@ -273,6 +303,7 @@
 
 ## app/api/yard/barcode/
 
+- `route.ts` — Same barcode as the scanner may read it: case, a dropped/added leading zero (EAN-13 vs UPC-A) (~940 tok)
 
 ## app/api/yard/receive/
 
@@ -460,6 +491,10 @@
 ## components/checks/
 
 
+## components/contacts/
+
+- `ContactsClient.tsx` — KIND_LABEL (~4835 tok)
+
 ## components/customers/
 
 - `CustomerDetailsTab.tsx` — "פרטים" tab: flat customer record CRUD (name/contact/etc), no expand state (~10100 tok)
@@ -475,6 +510,8 @@
 
 ## components/documents/
 
+- `DriveFilesPanel.tsx` — DriveFilesPanel (~3374 tok)
+- `FreeDocEditor.tsx` — Opens a print window with the page laid out exactly as in the editor (~3613 tok)
 - `PowerOfAttorneyPanel.tsx` — Documents tab 'ייפוי כוח': official MoT PDF (pdfjs → PNG) as background, transparent fields on top; calibration mode (drag / arrows, per-field x,y,w,h,fs + printer offset mm) saved in poa_form_settings.layout; quick-fill lists for proxies + owners; print only (~5500 tok)
 
 ## components/employees/
@@ -511,6 +548,7 @@
 - `AppShell.tsx` — Wraps Header+Sidebar+children in ProfileProvider; <main> margin-right:var(--sidebar-w) (~200 tok)
 - `Header.tsx` — Clock, global search (Ctrl+K) w/ category-filter chips (CategoryChips), notification bell, user dropdown; search now also covers `customers`, invoice number (`doc_number`) on `customer_ledger_debts`/`supplier_debts` (2026-09-17); hamburger+search-icon shown at <=900px (~10343 tok)
 - `Sidebar.tsx` — NAV_ITEMS/SECTIONS, module-gated nav (isModuleVisible); at <=900px sidebar is a hamburger-triggered 240px drawer (--sidebar-w:0, aside slides via data-mobile-open, globals.css) — NOT an icon-only rail, that approach was tried+reverted (bug-036/037); yard quick-launch gated by isAdmin||modules.includes('yard') (~5622 tok)
+- `YardDrawer.tsx` — OPEN_KEY (~1844 tok)
 
 ## components/products/
 
@@ -520,6 +558,7 @@
 
 ## components/reminders/
 
+- `RemindersClient.tsx` — STATUS — renders form (~5999 tok)
 
 ## components/reports/
 
@@ -540,8 +579,12 @@
 
 ## components/stock/
 
+- `DuplicatesModal.tsx` — Default record to keep in a group (~1314 tok)
+- `DuplicatesModal.tsx` — duplicate groups side by side, choose record to keep, merge via /api/stock/merge (~1200 tok)
 - `LocationBadge.tsx` — fetchLayout (~944 tok)
 - `PlacementSheet.tsx` — PlacementSheet (~1232 tok)
+- `StockClient.tsx` — stock screen (/stock-count): movements of tires+products (invoice/yard/manual), unstocked sales, reports, counts; manual update modal (~3500 tok)
+- `StockClient.tsx` — SOURCE_LABEL (~5509 tok)
 - `StorageClient.tsx` — StorageClient (~3122 tok)
 - `StorageMap.tsx` — CAB_W (~1390 tok)
 - `StorageMapEditor.tsx` — inp (~1814 tok)
@@ -549,20 +592,38 @@
 
 ## components/suppliers/
 
+- `ArrivalsModal.tsx` — A line being typed in "מה הגיע?" (kept on the invoice line until the invoice is saved) (~2959 tok)
 - `SupplierDetailsTab.tsx` — "פרטים" tab: flat supplier record CRUD (name/contact/etc), no expand state (~9300 tok)
 - `SuppliersClient.tsx` — Shell: loads suppliers/debts/payments, tab switch (מעקב/פרטים), first-load-only loading spinner via hasLoadedRef (~2600 tok)
 - `SupplierTrackingTab.tsx` — "מעקב" tab: per-supplier accordion, month blocks, debt/invoice CRUD modal, bulk-edit, pay/print/Excel; search matches doc_number/invoices[].number too, and (unless it matched the supplier's name) narrows visible rows to just the matching invoice instead of showing the whole ledger (2026-09-17, bug-039) (~38353 tok)
+
+## components/suppliers/ArrivalsModal.tsx
+
 
 ## components/test-transfer/
 
 
 ## components/tires/
 
+- `BrandNamesModal.tsx` — Brands as written on the tires (~1016 tok)
 - `TirePickerModal.tsx` — shared picker: search existing tires by size/brand/SKU (inventory count add/link, tires merge) (~900 tok)
 - `TirePickerModal.tsx` — TirePickerModal (~1047 tok)
 
+## components/tires/BrandNamesModal.tsx
+
+
 ## components/ui/
 
+- `FilterBar.tsx` — Remembers whether the filters panel was open (per screen) (~1229 tok)
+- `MoreMenu.tsx` — Excel export / import as menu items (replaces a separate ExcelMenu button) (~1002 tok)
+- `SearchSelect.tsx` — Label of the empty choice (value ''), e.g. "— ללא ספק ספציפי —" (~1099 tok)
+
+## components/ui/ (2026-10-29 additions)
+
+- `FilterBar.tsx` — always-visible search + "סינון" toggle panel + removable chips + end slot (~1200 tok)
+- `Modal.tsx` — typed-in modal ignores backdrop clicks, ✕/Esc confirm; guard={false} opt-out (~900 tok)
+- `MoreMenu.tsx` — toolbar "⋯ עוד" dropdown (actions + optional Excel export/import) (~900 tok)
+- `SearchSelect.tsx` — typeable select (fuzzy filter, keyboard) for suppliers/customers (~900 tok)
 
 ## components/yard-hub/
 
@@ -575,7 +636,9 @@
 
 ## components/yard/
 
+- `ReceiveClient.tsx` — office: opened from the management app (/tires/receive) instead of the yard terminal (~9794 tok)
 - `SearchSheet.tsx` — 'numeric' opens the phone's number pad (tire sizes); 'search' the normal keyboard (~1753 tok)
+- `SessionItemsEditor.tsx` — SessionItemsEditor — renders table (~2336 tok)
 - `TireLookupClient.tsx` — normalizeTireSize (~1660 tok)
 - `YardDashboard.tsx` — YardDashboard (~1826 tok)
 - `YardLogin.tsx` — Shown as a switch-employee overlay (with a cancel button) instead of the full login screen (~1416 tok)
@@ -614,6 +677,8 @@
 
 ## lib/debts/
 
+- `supplierLedger.ts` — supplier running account: events (charge/credit/payment/writeoff), balanceAfter, monthSummaries (~800 tok)
+- `supplierLedger.ts` — Events of one supplier. A payment counts when it was allocated to an invoice, marked paid, (~1136 tok)
 
 ## lib/expenses/
 
@@ -653,8 +718,15 @@
 ## lib/scannerAgent.ts
 
 
+## lib/search/
+
+- `fuzzy.ts` — Lowercase, drop quote/geresh marks, final letters → regular, doubled י/ו → single. (~434 tok)
+- `fuzzy.ts` — Hebrew spelling-tolerant search: normalizeSearch, fuzzyIncludes (client), likePatterns (DB ilike per word) (~500 tok)
+
 ## lib/stock/
 
+- `duplicates.ts` — The record to keep by default: has a sell price, then most stock, then the oldest. (~945 tok)
+- `duplicates.ts` — findTireDuplicates / findProductDuplicates (union-find on brand+size / name / sku+barcode), pickKeeper (~900 tok)
 - `storage.ts` — "a3, B2 / c10" → ['A3', 'B2', 'C10'] (unique, in order). Free text that isn't a shelf is ignored. (~1559 tok)
 - `zoneCount.ts` — For a tire that was recorded outside the counted shelves: it moved here, or it's in both places. (~1709 tok)
 
@@ -664,6 +736,13 @@
 ## lib/tires/
 
 - `size.ts` — null-safe tire size helpers: tireSizeText, hasTireSize, isTireMissingDetails/Price, parseTireSize (~350 tok)
+
+## lib/tires/brands.ts
+
+
+## lib/ui/
+
+- `backdrop.ts` — guardedBackdrop(onClose): hand-built overlay closes on outside click only while untouched (~150 tok)
 
 ## lib/utils/
 
@@ -688,6 +767,9 @@
 
 
 ## scripts/
+
+
+## supabase/migrations (2026-10-29)
 
 
 ## supabase/migrations/

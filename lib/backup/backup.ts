@@ -99,5 +99,9 @@ export function backupFileName(date = new Date()) {
 
 /** Records a successful backup on the tenant (drives the "no recent backup" reminder). */
 export async function markBackup(sb: SupabaseClient, tenantId: string, kind: 'download' | 'drive' | 'auto') {
-  await sb.from('tenants').update({ last_backup_at: new Date().toISOString(), last_backup_kind: kind, last_backup_error: null }).eq('id', tenantId)
+  const at = new Date().toISOString()
+  const { error } = await sb.from('tenants').update({ last_backup_at: at, last_backup_kind: kind, last_backup_error: null }).eq('id', tenantId)
+  // Not fatal (the backup itself exists) — but say so instead of the status silently not moving
+  if (error) console.error('markBackup failed (migration 098?):', error.message)
+  return at
 }

@@ -17,6 +17,8 @@ export interface Supplier {
   bank_account: string | null
   bank_account_holder: string | null
   opening_balance: number
+  /** Tire brands this supplier brings — learned from invoices, editable (migration 111) */
+  brands?: string[]
   created_at: string
 }
 

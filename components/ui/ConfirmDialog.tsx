@@ -67,7 +67,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 width: 44, height: 44, borderRadius: 12, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '22px',
-                background: (state.options.variant ?? 'danger') === 'danger' ? '#fee2e2' : '#f0fdf9',
+                background: (state.options.variant ?? 'danger') === 'danger' ? '#fee2e2' : 'var(--bg-soft)',
               }}>
                 {state.options.icon ?? '🗑️'}
               </div>

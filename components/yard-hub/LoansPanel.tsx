@@ -192,7 +192,7 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
         <Sheet title={editId ? 'עריכת השאלה' : 'השאלה חדשה'} onClose={() => setForm(null)}>
           <Toggle value={form.direction} onChange={v => f('direction', v)} options={[
             { value: 'borrowed', label: '📥 קיבלנו מהם', color: '#b45309' },
-            { value: 'lent',     label: '📤 נתנו להם',  color: '#1d4ed8' },
+            { value: 'lent',     label: '📤 נתנו להם',  color: '#1E2B66' },
           ]} />
           <Field label="פנצ׳ריה *">
             <input list="loan-shops" value={form.shop_name} autoFocus
@@ -219,7 +219,7 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
           </div>
           <Field label="הערות"><input value={form.notes} onChange={e => f('notes', e.target.value)} className={inputCls} style={inputStyle} /></Field>
           <button onClick={save} disabled={saving} className="bg-green-600 text-white rounded-xl font-black disabled:opacity-60" style={{ padding: '14px', fontSize: '18px' }}>
-            {saving ? 'שומר...' : '💾 שמור'}
+            {saving ? 'שומר...' : 'שמור'}
           </button>
         </Sheet>
       )}

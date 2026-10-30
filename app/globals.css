@@ -1,24 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  --primary:    #1a9e5c;
-  --primary-hover: #158a4e;
-  --accent:     #2563eb;
-  --warning:    #d97706;
-  --danger:     #dc2626;
-  --success:    #16a34a;
-  --text:       #1e293b;
-  --text-muted: #64748b;
-  --bg:         #f8fafc;
+  /* Redesign 2026-10: navy brand, cool neutrals; green / red only for approve-cancel and status */
+  --primary:    #26357A;
+  --primary-hover: #1E2B66;
+  --primary-soft: #E7EAF6;
+  --accent:     #3B4FA8;
+  --highlight:  #E2BE1E;   /* landing-page yellow — plates, active marks; never for text */
+  --warning:    #9A6412;
+  --warning-soft: #F8EEDB;
+  --danger:     #B9342D;
+  --danger-soft: #F9E6E4;
+  --success:    #137A55;
+  --success-soft: #E3F3EC;
+  --text:       #141A2E;
+  --text-muted: #5B6478;
+  --bg:         #F2F3F7;
   --bg-card:    #ffffff;
-  --border:     #e2e8f0;
-  --radius:       12px;
+  --bg-soft:    #F7F8FB;
+  --border:     #E2E5EE;
+  --rail:       #E8EBF3;
+  --rail-line:  #D9DDE8;
+  --radius:       10px;
   --radius-sm:    6px;
   --radius-md:    8px;
-  --radius-input: 9px;
-  --shadow:     0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
-  --sidebar-w:  240px;
-  --header-h:   64px;
+  --radius-input: 8px;
+  --shadow:     0 1px 2px rgba(20,26,46,.05), 0 6px 20px rgba(20,26,46,.05);
+  --sidebar-w:  248px;
+  --header-h:   60px;
 }
 
 * {
@@ -32,7 +41,7 @@ html {
 }
 
 body {
-  font-family: var(--font-heebo), sans-serif;
+  font-family: var(--font-ui), var(--font-heebo), Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: 15px;
@@ -48,7 +57,7 @@ body {
 
 /* Focus ring */
 *:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -69,7 +78,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   font-family: inherit;
   font-size: 14px;
   color: var(--text);
-  background: var(--bg);
+  background: var(--bg-card);
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   outline: none;
   box-sizing: border-box;
@@ -77,7 +86,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .form-input:focus {
   border-color: var(--primary);
   background: var(--bg-card);
-  box-shadow: 0 0 0 3px rgba(26,158,92,.12);
+  box-shadow: 0 0 0 3px rgba(38,53,122,.12);
 }
 .form-input::placeholder { color: #94a3b8; }
 .form-input[disabled] { opacity: 0.55; cursor: not-allowed; }
@@ -104,7 +113,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   transition: border-color 0.15s;
   outline: none;
 }
-.search-input-global:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,158,92,.1); }
+.search-input-global:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(38,53,122,.1); }
 
 /* NProgress top loading bar */
 #nprogress { pointer-events: none; }
@@ -141,7 +150,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   transition: background .12s;
 }
 .tr-hover:hover {
-  background: #f0fdf9 !important;
+  background: var(--bg-soft) !important;
 }
 
 /* Toggle switch — replaces native checkbox where used */
@@ -361,6 +370,11 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 .dash-mobile-bottom { display: none; }
 
+/* Tablets (landscape 10"–12.9"): the stats get two columns so numbers aren't squeezed next to the tasks panel */
+@media (min-width: 641px) and (max-width: 1280px) {
+  .cards-section-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+
 @media (max-width: 640px) {
   /* Stack columns vertically, remove fixed height */
   .dash-layout {
@@ -431,6 +445,13 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   grid-template-columns: 1fr 1px 1fr;
   align-items: center;
 }
+
+/* Each half of a double card: label above, number below (was inline on desktop and ran together) */
+.stat-card-double-col { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; text-align: center; }
+.stat-card-double-sep { align-self: stretch; background: var(--border); }
+/* KPI numbers shrink on narrow tiles (tablets) instead of being clipped */
+.kpi-tile { min-width: 0; overflow: hidden; }
+.kpi-tile .stat-card-value { font-size: clamp(17px, 1.9vw, 24px) !important; white-space: nowrap; }
 
 /* Card slot fills its grid row height */
 .card-slot {
@@ -764,3 +785,181 @@ button:not(:disabled):active {
     gap: 8px;
   }
 }
+
+/* ── Redesign helpers ─────────────────────────────────────────────────────── */
+/* Numbers, sizes, plates, SKUs line up in columns */
+.num { font-family: var(--font-num), ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.plate-chip { font-family: var(--font-num), ui-monospace, monospace; font-weight: 600; background: var(--highlight); color: #1B2140;
+  border: 1px solid rgba(0,0,0,.15); border-radius: 5px; padding: 1px 8px; direction: ltr; display: inline-block; white-space: nowrap; align-self: center; }
+/* Page header icons were drawn white for the old gradient tiles — recolor to the brand */
+.ph-icon svg { stroke: currentColor !important; }
+.ph-icon svg [fill="#fff"], .ph-icon svg[fill="#fff"] { fill: currentColor; }
+
+/* Sidebar tabs — each one a separate tile (redesign) */
+.nav-tile { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 9px; font-size: 13.5px; font-weight: 600;
+  color: #3A4360; background: var(--bg-card); border: 1px solid var(--rail-line); text-decoration: none;
+  box-shadow: 0 1px 0 rgba(20,26,46,.04); transition: border-color .15s, color .15s, background .15s; }
+.nav-tile svg { color: #6B7490; }
+.nav-tile:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--rail-line)); color: var(--text); }
+.nav-tile[data-active="true"] { background: var(--primary); border-color: var(--primary); color: #fff; }
+.nav-tile[data-active="true"] svg { color: #fff; }
+
+/* ── Yard drawer (desktop): left edge tab / left third, pushes main via --drawer-w ── */
+.yard-drawer { position: fixed; top: var(--header-h); bottom: 0; left: 0; width: var(--drawer-w, 52px); z-index: 80;
+  background: var(--bg-card); border-right: 1px solid var(--border); display: flex; flex-direction: column; transition: width .2s; }
+.yard-drawer-closed button { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; height: 100%;
+  padding: 14px 0; border: 0; background: none; cursor: pointer; color: var(--text-muted); font-family: inherit; }
+.yard-drawer-closed button.empty { color: #A6ADBF; }
+.yd-vt { writing-mode: vertical-rl; font-weight: 700; color: var(--text); }
+.yd-n { background: var(--primary-soft); color: var(--primary); border-radius: 99px; padding: 1px 8px; font-size: 12px; }
+.yd-alert { writing-mode: vertical-rl; background: var(--warning-soft); color: var(--warning); border-radius: 99px; padding: 6px 2px; font-size: 11px; font-weight: 700; }
+.yd-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.yd-head h2 { font-size: 15px; font-weight: 700; }
+.yd-pill { font-size: 12px; font-weight: 600; background: var(--primary-soft); color: var(--primary); border-radius: 99px; padding: 1px 9px; }
+.yd-x { margin-inline-start: auto; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: none; cursor: pointer; color: var(--text-muted); }
+.yd-body { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; background: var(--bg-soft); }
+.yd-empty { display: grid; justify-items: center; gap: 6px; text-align: center; color: var(--text-muted); padding: 40px 12px; }
+.yd-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.yd-card.wait { border-color: color-mix(in srgb, var(--warning) 55%, var(--border)); }
+.yd-card-h { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.yd-st { margin-inline-start: auto; font-size: 12px; font-weight: 600; border-radius: 99px; padding: 1px 9px; background: var(--primary-soft); color: var(--primary); }
+.yd-st.wait { background: var(--warning-soft); color: var(--warning); }
+.yd-items { list-style: none; padding: 6px 12px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.yd-items li { display: flex; justify-content: space-between; gap: 8px; }
+.yd-items .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.yd-card-f { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-top: 1px solid var(--border); }
+.yd-total { font-weight: 700; font-size: 15px; }
+.yd-close { background: var(--success); color: #fff; border: 1px solid var(--success); border-radius: 8px; padding: 6px 12px; font-weight: 600; font-family: inherit; cursor: pointer; }
+.yd-close:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 900px) {
+  :root { --drawer-w: 0px !important; }
+  .yard-drawer { display: none; }
+}
+
+/* KPI tile (dashboard) */
+.kpi-tile { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 4px; justify-content: center; transition: border-color .15s; }
+.kpi-tile:hover { border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); }
+
+/* ── Redesign palette for Tailwind-built screens (yard terminal, office terminal, receive) ──
+   Tailwind v4 colors are CSS variables, so remapping them inside .yard-theme restyles those
+   screens without touching their markup or behavior: slate → navy-tinted neutrals,
+   blue → brand navy, green / red → the approve / cancel tones. Amber (warnings) stays. */
+.yard-theme {
+  --color-slate-50:  #F7F8FB; --color-slate-100: #EEF0F5; --color-slate-200: #E2E5EE; --color-slate-300: #C9CEDB;
+  --color-slate-400: #98A0B5; --color-slate-500: #6B7490; --color-slate-600: #4E5772; --color-slate-700: #3A4360;
+  --color-slate-800: #1B2448; --color-slate-900: #121A36;
+  --color-blue-50:  #E7EAF6; --color-blue-100: #D5DAEF; --color-blue-200: #B7C0E4; --color-blue-300: #94A2D8;
+  --color-blue-400: #6F80D0; --color-blue-500: #3B4FA8; --color-blue-600: #26357A; --color-blue-700: #1E2B66; --color-blue-800: #172152;
+  --color-green-50: #E3F3EC; --color-green-100: #CDEADD; --color-green-200: #A8D9C3; --color-green-500: #1F8F66;
+  --color-green-600: #137A55; --color-green-700: #0F6446; --color-green-800: #0B4E37;
+  --color-red-50: #F9E6E4; --color-red-100: #F3D0CD; --color-red-200: #E8ABA6; --color-red-400: #D6645D;
+  --color-red-500: #C9413A; --color-red-600: #B9342D; --color-red-700: #9A2A24; --color-red-800: #7A211C;
+  font-family: var(--font-ui), var(--font-heebo), Arial, sans-serif;
+}
+
+/* ── Barcode scan field (scan page + stock count) ── */
+.scan-field-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 10px; }
+.scan-field {
+  display: flex; align-items: center; gap: 14px; padding: 0 18px; height: 64px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(27,33,64,.04), 0 8px 24px -12px rgba(27,33,64,.18);
+  color: var(--text-muted); transition: border-color .15s, box-shadow .15s;
+}
+.scan-field:focus-within { border-color: var(--primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
+.scan-field input {
+  flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent; direction: ltr; text-align: left;
+  font-family: var(--font-num), ui-monospace, monospace; font-size: 20px; font-weight: 600; letter-spacing: 2px; color: var(--text);
+}
+.scan-field input::placeholder { font-family: var(--font-ui); letter-spacing: 0; font-weight: 400; font-size: 15px; color: var(--text-muted); direction: rtl; }
+.scan-field kbd { font-family: var(--font-num), monospace; font-size: 11px; padding: 3px 8px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px; color: var(--text-muted); background: var(--bg-soft); }
+.scan-field-hint { font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+.scan-field-wrap[data-mode="count"] .scan-field { border-color: color-mix(in srgb, var(--warning) 45%, transparent); }
+.scan-field-wrap[data-mode="count"] .scan-field:focus-within { border-color: var(--warning); box-shadow: 0 0 0 4px color-mix(in srgb, var(--warning) 14%, transparent); color: var(--warning); }
+@media (max-width: 640px) { .scan-field kbd { display: none; } .scan-field { height: 56px; } }
+
+/* Sidebar footer links (terminals, menu editor) */
+.sidebar-foot-link { padding: 4px 8px; border-radius: 6px; color: var(--text-muted); text-decoration: none; background: none; border: 0; cursor: pointer; font: inherit; white-space: nowrap; }
+.sidebar-foot-link:hover { color: var(--text); background: color-mix(in srgb, var(--primary) 7%, transparent); }
+
+/* Settings: small Google Drive status pill */
+.drive-pill { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; text-decoration: none; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-muted); white-space: nowrap; }
+.drive-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+.drive-pill[data-ok="false"] { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); background: var(--danger-soft); }
+.drive-pill[data-ok="false"] .dot { background: var(--danger); }
+.drive-pill:hover { border-color: var(--primary); }
+
+/* ── Forms gallery (documents): every form as a same-size A4 sheet ── */
+.doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 18px; }
+.doc-tile { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.doc-sheet {
+  position: relative; aspect-ratio: 1 / 1.414; width: 100%; padding: 14px 14px 12px; cursor: pointer; font: inherit; text-align: right;
+  background: #fff; border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(27,33,64,.05), 0 10px 22px -16px rgba(27,33,64,.35);
+  display: flex; flex-direction: column; gap: 10px; transition: transform .15s, box-shadow .15s, border-color .15s;
+}
+.doc-sheet:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); box-shadow: 0 2px 4px rgba(27,33,64,.06), 0 16px 30px -18px rgba(27,33,64,.45); }
+.doc-sheet:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.doc-sheet-head { display: flex; align-items: center; justify-content: flex-start; padding-bottom: 8px; border-bottom: 2px solid color-mix(in srgb, var(--primary) 18%, transparent); font-size: 22px; }
+.doc-sheet-lines { display: flex; flex-direction: column; gap: 9px; padding-top: 4px; }
+.doc-sheet-lines i { display: block; height: 4px; border-radius: 2px; background: #EDEFF5; }
+.doc-sheet-lines i:nth-child(2) { width: 85%; } .doc-sheet-lines i:nth-child(4) { width: 70%; } .doc-sheet-lines i:nth-child(5) { width: 45%; }
+.doc-sheet-kind { position: absolute; bottom: 10px; left: 10px; font-size: 10.5px; font-weight: 600; color: var(--text-muted); background: var(--bg-soft); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+.doc-tile-foot { display: flex; align-items: flex-start; gap: 4px; }
+.doc-tile-title { font-size: 13.5px; font-weight: 700; color: var(--text); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-tile-sub { font-size: 11.5px; color: var(--text-muted); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-back { padding: 6px 12px; border: 1px solid var(--border); background: var(--bg-card); border-radius: 8px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; color: var(--text); }
+.doc-back:hover { border-color: var(--primary); }
+@media (max-width: 640px) { .doc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } }
+
+/* Supplier month at a glance (running account) */
+.month-sum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 8px 12px; margin-bottom: 10px; border-radius: 8px; background: var(--bg-soft); border: 1px solid var(--border); font-size: 12.5px; color: var(--text-muted); }
+.month-sum b { color: var(--text); font-weight: 700; margin-inline-start: 4px; direction: ltr; unicode-bidi: isolate; }
+
+/* ── Contacts page ── */
+.ct-seg { display: flex; gap: 3px; background: #E6E9F1; padding: 3px; border-radius: 9px }
+.ct-seg button { border: 0; background: none; padding: 6px 14px; border-radius: 7px; font: inherit; font-size: 13px; color: var(--text-muted); cursor: pointer }
+.ct-seg button[aria-pressed="true"] { background: #fff; color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.08) }
+.ct-sel { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--primary-soft, #E9ECF6); border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent); border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; font-size: 13px; color: var(--primary) }
+.ct-list { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden }
+.ct-row { display: grid; grid-template-columns: 26px minmax(0,1.4fr) minmax(0,.9fr) minmax(0,1fr) minmax(120px,auto) 74px; align-items: center; gap: 14px; padding: 11px 14px; border-top: 1px solid var(--border); cursor: pointer }
+.ct-row:first-child { border-top: 0 }
+.ct-row:not(.ct-th):hover { background: var(--bg-soft) }
+.ct-row.on { background: color-mix(in srgb, var(--primary) 5%, #fff); box-shadow: inset -3px 0 0 var(--primary) }
+.ct-th { background: var(--bg-soft); font-size: 12px; color: var(--text-muted); font-weight: 600; cursor: default; padding-block: 8px }
+.ct-nm { font-weight: 700; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.ct-cat { font-size: 13px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.ct-person { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.ct-ph { font-family: var(--font-num), ui-monospace, monospace; direction: ltr; text-align: right; font-size: 14.5px; font-weight: 600; letter-spacing: .3px; white-space: nowrap }
+.ct-tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; font-weight: 600; margin-inline-start: 6px; vertical-align: 1px }
+.ct-tag.supplier { background: color-mix(in srgb, var(--primary) 10%, #fff); color: var(--primary) }
+.ct-tag.customer { background: #F4EFDD; color: #7A5A00 }
+.ct-acts { display: flex; gap: 5px; justify-content: flex-end }
+.ct-ico { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); display: grid; place-items: center; background: #fff; font-size: 14px; text-decoration: none }
+.ct-ico:hover { border-color: var(--primary) }
+.ct-card { width: 340px; flex-shrink: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; position: sticky; top: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow) }
+.ct-who { display: grid; gap: 4px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px; padding: 12px }
+.ct-btn { border: 1px solid var(--border); background: var(--bg-card); border-radius: 9px; padding: 7px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text); text-decoration: none }
+.ct-btn:hover { border-color: var(--primary) }
+.ct-x { border: 1px solid var(--border); background: none; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; color: var(--text-muted) }
+.ct-more { border: 1px solid var(--border); border-radius: 10px }
+.ct-more summary { cursor: pointer; padding: 10px 12px; font-weight: 600; font-size: 13px; color: var(--text-muted) }
+.ct-more dl { display: grid; grid-template-columns: 96px 1fr; gap: 7px 10px; font-size: 13px; margin: 0; padding: 0 12px 12px }
+.ct-more dt { color: var(--text-muted) } .ct-more dd { margin: 0; font-weight: 500; overflow-wrap: anywhere }
+.ct-backdrop { display: none }
+@media (max-width: 1100px) {
+  .ct-backdrop { display: block; position: fixed; inset: 0; background: rgba(20,26,46,.35); z-index: 150 }
+  .ct-card { position: fixed; top: auto; bottom: 0; left: 0; right: 0; width: auto; max-height: 85dvh; overflow-y: auto; z-index: 151; border-radius: 16px 16px 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) }
+}
+@media (max-width: 760px) {
+  .ct-row { grid-template-columns: 24px minmax(0,1fr) auto; gap: 10px }
+  .ct-row > :nth-child(3), .ct-row > :nth-child(6) { display: none }
+  .ct-row > :nth-child(4) { grid-column: 2; grid-row: 2; font-size: 12.5px }
+  .ct-row > :nth-child(5) { grid-column: 3; grid-row: 1 / span 2 }
+}
+
+/* Accounts: customer card over the list */
+.acc-card-overlay { position: fixed; inset: 0; z-index: 180; background: rgba(20,26,46,.4); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto }
+.acc-card { width: 100%; max-width: 760px }
+.acc-card .supplier-detail-panel { position: static !important; transform: none !important; max-height: none !important; width: auto !important }
+.acc-card .supplier-detail-backdrop { display: none !important }

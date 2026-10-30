@@ -49,7 +49,7 @@ export default function ExcelMenu({
   return (
     <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
       <button style={triggerSt} onClick={() => setOpen(v => !v)}>
-        📊 Excel ▾
+        Excel ▾
       </button>
 
       {open && (
@@ -60,7 +60,7 @@ export default function ExcelMenu({
           minWidth: '160px', zIndex: 200, overflow: 'hidden',
         }}>
           <button style={itemSt} onClick={() => { onExportExcel(); setOpen(false) }}>
-            📤 ייצא Excel
+            ייצא Excel
           </button>
           {onImportExcel && (
             <label style={{ ...itemSt, cursor: 'pointer' }}>

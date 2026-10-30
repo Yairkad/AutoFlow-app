@@ -94,6 +94,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const fn = item.item_type === 'tire' ? 'decrement_tire_qty' : 'decrement_product_qty'
         const { error: decErr } = await supabase.rpc(fn, { p_id: item.ref_id, p_qty: item.quantity })
         if (decErr) console.error(`${fn} failed`, item.ref_id, decErr.message)
+        // Record the sale as a stock movement (shown on the stock screen next to arrivals)
+        const [table, refCol] = item.item_type === 'tire' ? ['tire_sales', 'tire_id'] : ['product_sales', 'product_id']
+        const row = { tenant_id: profile.tenant_id, [refCol]: item.ref_id, qty: item.quantity, movement_type: 'sale' }
+        let { error: mvErr } = await supabase.from(table).insert({ ...row, source: 'yard', session_id: id })
+        // Before migration 109 the source columns don't exist yet — still record the sale
+        if (mvErr && /source|session_id|column/i.test(mvErr.message)) ({ error: mvErr } = await supabase.from(table).insert(row))
+        if (mvErr) console.error('sale movement insert failed', item.ref_id, mvErr.message)
       }
       const { error: nsErr } = await supabase.from('yard_session_items')
         .update({ no_stock_qty: short > 0 ? short : null }).eq('id', item.id)
