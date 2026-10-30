@@ -1198,6 +1198,7 @@ export default function SupplierTrackingTab({
                         {group.sid && (
                           <RowActionsMenu actions={[
                             { key: 'hist', label: 'היסטוריית תשלומים', icon: '📜', onClick: () => setQuickHistorySupplier(group.sid!) },
+                            { key: 'rec', label: 'הוסף חיוב חוזר', icon: '🔁', onClick: () => openRecItemModal(group.sid!) },
                           ]} />
                         )}
                       </div>
@@ -1228,11 +1229,12 @@ export default function SupplierTrackingTab({
 
                     {group.sid && (() => {
                       const items = recurringItems.filter(it => it.supplier_id === group.sid)
+                      // Shown only when the supplier has recurring charges; adding one is in the ⋮ menu
+                      if (!items.length) return null
                       return (
                         <div style={{ background: '#fafaf9', borderBottom: '1px solid var(--border)', padding: '10px 16px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: items.length ? '8px' : 0 }}>
                             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>חיובים חוזרים</span>
-                            <button onClick={() => openRecItemModal(group.sid!)} style={{ padding: '3px 10px', background: 'transparent', color: 'var(--primary)', border: '1px solid var(--primary)', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>+ הוסף חיוב חוזר</button>
                           </div>
                           {items.length > 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
