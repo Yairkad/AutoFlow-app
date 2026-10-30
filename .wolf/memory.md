@@ -2893,3 +2893,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 22:50 | Created lib/debts/supplierLedger.ts | — | ~1136 |
 | 23:50 | Preview feedback round: alerts one-line+links, cars 2 tabs, scan field, expenses filters, checks cancel, car-sale payments→debts, urgent tasks red, stock screen (movements+yard sales), no-answer marker, alt barcodes + partial merge, settings (Drive pill/verify, business card, Drive files, backup status), forms gallery + editor fixes, supplier running account, run-once-105-110 | many | done, pushed | ~200k |
 | 00:30 | "מה הגיע?": supplier brands (learned + editable, migration 111), supplier-first suggestions, partial size, new item modal; snapshot SQL before ledger deploy | ArrivalsModal, SupplierDetailsTab, invoice-items route, 111_supplier_brands.sql, snapshot-suppliers-before-ledger.sql | done | ~15k |
+
+## Session: 2026-10-30 07:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
