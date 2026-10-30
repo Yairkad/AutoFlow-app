@@ -251,7 +251,10 @@ export default function SupplierTrackingTab({
   const [printDateTo, setPrintDateTo] = useState('')
 
   const printSupplierMonths = (() => {
-    const set = new Set(supplierDebts.filter(d => d.supplier_id === printSupplierId).map(d => monthKeyOf(d.date)))
+    const set = new Set([
+      ...supplierDebts.filter(d => d.supplier_id === printSupplierId).map(d => monthKeyOf(d.date)),
+      ...scheduledPayments.filter(p => p.supplier_id === printSupplierId).map(p => monthKeyOf(p.due_date)),
+    ])
     return [...set].sort().reverse()
   })()
   const togglePrintMonth = (mk: string) => setPrintMonths(prev => {

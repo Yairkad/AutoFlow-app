@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { recordCustomerPayment } from '@/lib/debts/reconcileCustomerLedgerPayment'
 import { balanceOf, buildLedger, RawLedgerEvent } from '@/lib/debts/ledger'
+import { monthSummaries, type SupplierLedgerEvent } from '@/lib/debts/supplierLedger'
 import QuickAddCustomerModal, { QuickCustomer } from '@/components/customers/QuickAddCustomerModal'
 import PlateInput from '@/components/ui/PlateInput'
 import { VehicleData } from '@/lib/utils/plateApi'
@@ -95,6 +96,8 @@ export default function CustomerTrackingTab({
 
   const [filter, setFilter] = useState<Filter>('open')
   const [search, setSearch] = useState('')
+  // Show one month only (its block opens on every customer) — '' = all months
+  const [monthFilter, setMonthFilter] = useState('')
 
   // Row selection
 
@@ -207,7 +210,10 @@ export default function CustomerTrackingTab({
   const [printDateTo, setPrintDateTo] = useState('')
 
   const printCustomerMonths = (() => {
-    const set = new Set(customerDebts.filter(d => d.customer_id === printCustomerId).map(d => monthKeyOf(d.date)))
+    const set = new Set([
+      ...customerDebts.filter(d => d.customer_id === printCustomerId).map(d => monthKeyOf(d.date)),
+      ...customerPayments.filter(p => p.customer_id === printCustomerId).map(p => monthKeyOf(paymentDateOf(p))),
+    ])
     return [...set].sort().reverse()
   })()
   const togglePrintMonth = (mk: string) => setPrintMonths(prev => {
@@ -738,6 +744,11 @@ export default function CustomerTrackingTab({
             <FilterBtn f="closed" label="סגורים" />
             <FilterBtn f="all" label="הכל" />
           </div>
+          <select value={monthFilter} onChange={e => setMonthFilter(e.target.value)} aria-label="חודש" className="form-input" style={{ width: 'auto', margin: 0 }}>
+            <option value="">כל החודשים</option>
+            {[...new Set([...customerDebts.map(d => monthKeyOf(d.date)), ...customerPayments.map(p => monthKeyOf(paymentDateOf(p)))])].sort().reverse()
+              .map(mk => <option key={mk} value={mk}>{fmtMonth(mk)}</option>)}
+          </select>
           <input
             placeholder="חיפוש לקוח / מספר חשבונית / תיאור..."
             aria-label="חיפוש"
@@ -819,31 +830,22 @@ export default function CustomerTrackingTab({
               if (!monthMap[mk]) monthMap[mk] = []
               if (!narrowToMatches && !displayMonthMap[mk]) displayMonthMap[mk] = []
             })
-            const months = Object.keys(monthMap).sort().reverse()
             const displayMonths = Object.keys(displayMonthMap).sort().reverse()
 
-            // "Settled through this month" = applying the customer's WHOLE payment pool (every
-            // payment ever recorded, regardless of its own date — payments aren't tied to a
-            // specific month in this flat ledger model) against charges oldest-month-first.
-            // cumCharge accumulates net charges through each month; subtracting the one total
-            // totalPaid tells us whether that running total is already covered. This is a
-            // display-only FIFO heuristic (never persisted, never decides which debt a payment
-            // "belongs to") — at the most recent month it always equals totalBal exactly, same
-            // as balanceOf(debts, payments), which doubles as a consistency check. Always walks
-            // the FULL month map (not the search-narrowed one) so the running balance shown next
-            // to a narrowed-down month is still correct.
-            const totalPaid = payments.reduce((s, p) => s + Number(p.amount), 0)
-            let cumCharge = 0
-            const cumBalanceByMonth: Record<string, number> = {}
-            for (const mk of [...months].reverse()) {
-              cumCharge += (monthMap[mk] ?? []).reduce((s, d) => s + bal(d), 0)
-              cumBalanceByMonth[mk] = cumCharge - totalPaid
-            }
+            // Running account, same as suppliers: charges +, credits / payments − on their own dates;
+            // each month is a window on it (opening → charges / credits / payments → closing).
+            const events: SupplierLedgerEvent[] = [
+              ...debts.map(d => ({ date: d.date, kind: (d.direction === 'credit' ? 'credit' : 'charge') as 'credit' | 'charge', amount: Number(d.amount) })),
+              ...payments.map(p => ({ date: paymentDateOf(p), kind: 'payment' as const, amount: Number(p.amount) })),
+            ].sort((a, b) => a.date.localeCompare(b.date))
+            const summaries = monthSummaries(events)
+            const shownMonths = displayMonths.filter(mk => !monthFilter || mk === monthFilter)
+            if (monthFilter && !shownMonths.length) return null
 
-            return { cid, cust, totalBal, payments, monthMap: displayMonthMap, months: displayMonths, cumBalanceByMonth }
+            return { cid, cust, totalBal, payments, monthMap: displayMonthMap, months: shownMonths, summaries }
           }).filter(Boolean) as {
             cid: string | null; cust: Customer | undefined; totalBal: number; payments: CustomerLedgerPayment[]
-            monthMap: Record<string, CustomerLedgerDebt[]>; months: string[]; cumBalanceByMonth: Record<string, number>
+            monthMap: Record<string, CustomerLedgerDebt[]>; months: string[]; summaries: ReturnType<typeof monthSummaries>
           }[]
 
           if (groups.length === 0) return (
@@ -915,11 +917,9 @@ export default function CustomerTrackingTab({
                     const monthNetTotal    = monthChargeTotal - monthCreditTotal
                     const monthPayments    = group.payments.filter(p => monthKeyOf(paymentDateOf(p)) === mk)
                     const monthPaidTotal   = monthPayments.reduce((s, p) => s + Number(p.amount), 0)
-                    const monthCollapsed   = !expandedMonthKeys.has(monthKeyFor(group.cid, mk))
-                    // Settled = the customer's WHOLE payment pool (all payments, any date)
-                    // already covers all charges through this month, applied oldest-first —
-                    // not just "did this same month's own payments cover this same month".
-                    const monthSettled     = group.cumBalanceByMonth[mk] <= 0
+                    const monthCollapsed   = !monthFilter && !expandedMonthKeys.has(monthKeyFor(group.cid, mk))
+                    const sum              = group.summaries[mk] ?? { opening: 0, charges: 0, credits: 0, payments: 0, closing: 0 }
+                    const monthSettled     = sum.closing <= 0.005
 
                     return (
                       <div key={mk} style={{ borderBottom: mIdx < group.months.length - 1 ? '1px solid var(--border)' : 'none', padding: '14px 16px' }}>
@@ -930,10 +930,31 @@ export default function CustomerTrackingTab({
                         >
                           <span style={{ display: 'inline-block', transition: 'transform .15s', transform: monthCollapsed ? 'rotate(0deg)' : 'rotate(90deg)', color: 'var(--text-muted)', fontSize: '12px' }}>›</span>
                           <span style={{ fontWeight: 700, fontSize: '14px', color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
+                          {monthSettled
+                            ? <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>סגור ✓</span>
+                            : <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>פתוח</span>}
                           <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthSettled ? 'var(--success)' : 'var(--danger)' }}>
-                            נטו לחודש: {fmt(monthNetTotal)}
+                            יתרה לסוף החודש: {fmt(sum.closing)}
                           </span>
                         </div>
+
+                        {/* Month at a glance: opening → charges / credits / payments → closing */}
+                        {!monthCollapsed && (
+                          <div className="month-sum">
+                            <span>פתיחה <b className="num">{fmt(sum.opening)}</b></span>
+                            <span>חיובים <b className="num">+{fmt(sum.charges)}</b></span>
+                            {sum.credits > 0 && <span>זיכויים <b className="num">−{fmt(sum.credits)}</b></span>}
+                            <span>תשלומים <b className="num">−{fmt(sum.payments)}</b></span>
+                            <span>סגירה <b className="num">{fmt(sum.closing)}</b></span>
+                            {group.cid && (
+                              <button type="button" onClick={() => {
+                                setPrintCustomerId(group.cid!); setPrintRangeMode('months'); setPrintMonths(new Set([mk])); setPrintMode('ledger')
+                              }} style={{ marginInlineStart: 'auto', background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 10px', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>
+                                🖨 הדפס חודש
+                              </button>
+                            )}
+                          </div>
+                        )}
 
                         {/* Invoices/credits table */}
                         {!monthCollapsed && (
