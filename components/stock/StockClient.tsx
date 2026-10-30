@@ -11,10 +11,11 @@ import Modal from '@/components/ui/Modal'
 import FilterBar from '@/components/ui/FilterBar'
 import NoStockPanel from '@/components/yard-hub/NoStockPanel'
 import QuickReportsPanel from '@/components/yard-hub/QuickReportsPanel'
+import ScanClient from '@/components/scan/ScanClient'
 import { fuzzyIncludes } from '@/lib/search/fuzzy'
 import type { SearchResult } from '@/app/api/yard/search/route'
 
-type Tab = 'moves' | 'nostock' | 'reports' | 'count'
+type Tab = 'scan' | 'moves' | 'nostock' | 'reports' | 'count'
 
 interface Move {
   id: string
@@ -54,6 +55,11 @@ export default function StockClient() {
   const tenantId = profile?.tenantId
 
   const [tab, setTab]       = useState<Tab>('moves')
+  // /stock-count?tab=scan (the old /scan page redirects here) — read once
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab')
+    if (t === 'scan' || t === 'moves' || t === 'nostock' || t === 'reports' || t === 'count') { const id = setTimeout(() => setTab(t), 0); return () => clearTimeout(id) }
+  }, [])
   const [moves, setMoves]   = useState<Move[] | null>(null)
   const [from, setFrom]     = useState(monthStart)
   const [to, setTo]         = useState('')
@@ -155,7 +161,7 @@ export default function StockClient() {
     showToast('נמחק והכמות הוחזרה', 'success'); load()
   }
 
-  const TABS: [Tab, string][] = [['moves', 'תנועות'], ['nostock', 'נמכר ללא מלאי'], ['reports', 'דוחות'], ['count', 'ספירת מלאי']]
+  const TABS: [Tab, string][] = [['scan', 'סריקת ברקוד'], ['moves', 'תנועות'], ['nostock', 'נמכר ללא מלאי'], ['reports', 'דוחות'], ['count', 'ספירת מלאי']]
   const th: React.CSSProperties = { padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: 'var(--text-muted)', fontSize: 12, whiteSpace: 'nowrap' }
   const td: React.CSSProperties = { padding: '10px 12px', fontSize: 13, borderTop: '1px solid var(--border)' }
 
@@ -237,6 +243,7 @@ export default function StockClient() {
         </>
       )}
 
+      {tab === 'scan' && <ScanClient embedded />}
       {tab === 'nostock' && <NoStockPanel variant="office" />}
       {tab === 'reports' && <QuickReportsPanel variant="office" />}
 

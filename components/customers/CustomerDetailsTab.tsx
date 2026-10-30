@@ -23,6 +23,9 @@ interface CustomerDetailsTabProps {
   customerActions: CustomerAction[]
   categories: string[]
   openId: string | null
+  /** 'edit' = only the add/edit form (opened for openId, or empty for a new one); 'panel' = only the card of openId */
+  mode?: 'full' | 'edit' | 'panel'
+  onClose?: () => void
   onOpenTracking: (customerId: string) => void
   reload: () => void
 }
@@ -30,7 +33,7 @@ interface CustomerDetailsTabProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CustomerDetailsTab({
-  tenantId, customers, debts, payments, recurringItems, customerActions, categories, openId, onOpenTracking, reload,
+  tenantId, customers, debts, payments, recurringItems, customerActions, categories, openId, onOpenTracking, reload, mode = 'full', onClose,
 }: CustomerDetailsTabProps) {
   const supabase = useRef(createClient()).current
   const { showToast } = useToast()
@@ -63,15 +66,28 @@ export default function CustomerDetailsTab({
 
   // Customer form
   const [showModal, setShowModal] = useState(false)
+  const closeModal = () => { setShowModal(false); if (mode === 'edit') onClose?.() }
   const [editItem, setEditItem]   = useState<Customer | null>(null)
   const [fName, setFName]         = useState('')
   const [fPhone, setFPhone]       = useState('')
+  const [fContact, setFContact]   = useState('')
+  const hasContact = customers.some(c => 'contact_name' in c)   // migration 112
   const [fEmail, setFEmail]       = useState('')
   const [fAddress, setFAddress]   = useState('')
   const [fNotes, setFNotes]       = useState('')
   const [fCategory, setFCategory]             = useState('')
   const [fOpeningBalance, setFOpeningBalance] = useState('')
   const [saving, setSaving]       = useState(false)
+
+  // Edit-only mode (from the contacts page): open the form at once — for openId, or empty for a new one
+  const editOpened = useRef(false)
+  useEffect(() => {
+    if (mode !== 'edit' || editOpened.current) return
+    // flag set inside the timer: StrictMode's mount→cleanup→mount would otherwise cancel the only open
+    const t = setTimeout(() => { editOpened.current = true; openModal(customers.find(x => x.id === openId)) }, 0)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode])
 
   // Deep-link: ?open=<customerId> (parsed once by the shell, passed down as `openId`)
   useEffect(() => {
@@ -86,12 +102,12 @@ export default function CustomerDetailsTab({
   const openModal = (c?: Customer) => {
     if (c) {
       setEditItem(c)
-      setFName(c.name); setFCategory(c.category ?? ''); setFPhone(c.phone ?? '')
+      setFName(c.name); setFCategory(c.category ?? ''); setFPhone(c.phone ?? ''); setFContact(c.contact_name ?? '')
       setFEmail(c.email ?? ''); setFAddress(c.address ?? ''); setFNotes(c.notes ?? '')
       setFOpeningBalance(c.opening_balance ? String(c.opening_balance) : '')
     } else {
       setEditItem(null)
-      setFName(''); setFCategory(''); setFPhone('')
+      setFName(''); setFCategory(''); setFPhone(''); setFContact('')
       setFEmail(''); setFAddress(''); setFNotes('')
       setFOpeningBalance('')
     }
@@ -107,6 +123,7 @@ export default function CustomerDetailsTab({
       name: fName.trim(),
       category: fCategory.trim() || null,
       phone: fPhone.trim() || null,
+      ...(hasContact ? { contact_name: fContact.trim() || null } : {}),
       email: fEmail.trim() || null,
       address: fAddress.trim() || null,
       notes: fNotes.trim() || null,
@@ -127,7 +144,7 @@ export default function CustomerDetailsTab({
     if (cat && !categories.includes(cat)) {
       await supabase.from('customer_categories').insert({ tenant_id: tid, name: cat })
     }
-    setSaving(false); setShowModal(false); reload()
+    setSaving(false); closeModal(); reload()
   }
 
   const deleteCustomer = async (c: Customer) => {
@@ -256,6 +273,8 @@ export default function CustomerDetailsTab({
 
   return (
     <div>
+      {mode !== 'edit' && <>
+      {mode === 'full' && <>
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
         <Button onClick={() => openModal()}>+ הוסף לקוח</Button>
@@ -275,8 +294,10 @@ export default function CustomerDetailsTab({
         <ExcelMenu onExportExcel={exportExcel} />
       </div>
 
+      </>}
       <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
 
+        {mode === 'full' && <>
         {/* ── Customers list ── */}
         <div style={{ flex: 1, minWidth: 0, maxHeight: 'calc(100dvh - 240px)', overflowY: 'auto', paddingLeft: '4px' }}>
           {filtered.length === 0 ? (
@@ -369,11 +390,13 @@ export default function CustomerDetailsTab({
           )}
         </div>
 
+        </>}
+
         {/* ── Detail panel ── */}
         {selected && (
           <>
             {/* Mobile backdrop */}
-            <div className="supplier-detail-backdrop" onClick={() => setSelected(null)} />
+            <div className="supplier-detail-backdrop" onClick={() => { setSelected(null); if (mode === 'panel') onClose?.() }} />
           <div className="supplier-detail-panel" style={{
             flex: 1, minWidth: 0,
             background: 'var(--bg-card)',
@@ -416,7 +439,7 @@ export default function CustomerDetailsTab({
               <Button variant="outline" size="sm" onClick={() => openModal(selected)}>ערוך</Button>
               <Button variant="danger" size="sm" onClick={() => deleteCustomer(selected)}>מחק</Button>
               <button
-                onClick={() => setSelected(null)}
+                onClick={() => { setSelected(null); if (mode === 'panel') onClose?.() }}
                 style={{ padding: '6px 10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', color: 'var(--text-muted)' }}
               >✕</button>
             </div>
@@ -525,11 +548,13 @@ export default function CustomerDetailsTab({
         )}
       </div>
 
+      </>}
+
       {/* ── ADD/EDIT MODAL ── */}
       {showModal && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          {...guardedBackdrop(() => setShowModal(false))}
+          {...guardedBackdrop(() => closeModal())}
         >
           <div
             style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '520px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto' }}
@@ -558,6 +583,12 @@ export default function CustomerDetailsTab({
                   </datalist>
                 </label>
               </div>
+              {hasContact && (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                  איש קשר
+                  <input value={fContact} onChange={e => setFContact(e.target.value)} placeholder="שם הסוכן / איש הקשר" className="form-input" />
+                </label>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
                   טלפון
@@ -583,7 +614,7 @@ export default function CustomerDetailsTab({
               </label>
             </div>
             <div className="sticky-actions">
-              <Button variant="secondary" onClick={() => setShowModal(false)}>ביטול</Button>
+              <Button variant="secondary" onClick={() => closeModal()}>ביטול</Button>
               <Button loading={saving} onClick={saveCustomer}>שמור</Button>
             </div>
           </div>

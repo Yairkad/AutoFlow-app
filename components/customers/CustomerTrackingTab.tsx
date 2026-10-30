@@ -49,6 +49,8 @@ interface CustomerTrackingTabProps {
   customerActions: CustomerAction[]
   openId: string | null
   reload: () => void
+  /** Customer card (contact details, recurring charges, quick actions) — from the ⋮ menu */
+  onOpenCard?: (customerId: string) => void
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -89,7 +91,7 @@ const tdSt: React.CSSProperties = { padding: '8px 10px', verticalAlign: 'middle'
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CustomerTrackingTab({
-  tenantId, tenantName, customers, customerDebts, customerPayments, recurringItems, customerActions, openId, reload,
+  tenantId, tenantName, customers, customerDebts, customerPayments, recurringItems, customerActions, openId, reload, onOpenCard,
 }: CustomerTrackingTabProps) {
   const supabase    = useRef(createClient()).current
   const { showToast } = useToast()
@@ -884,6 +886,7 @@ export default function CustomerTrackingTab({
                       )}
                       {group.cid && (() => {
                         const kebabActions = [
+                          ...(onOpenCard ? [{ key: 'card', label: 'כרטיס לקוח · חיובים חוזרים ופעולות', icon: '🪪', onClick: () => onOpenCard(group.cid!) }] : []),
                           ...(group.payments.length > 1 ? [{ key: 'merge', label: 'מזג תשלומים', icon: '🔗', onClick: () => { setMergeCid(group.cid); setMergeSelected(new Set()) } }] : []),
                           ...(group.payments.length > 0 ? [{ key: 'delpay', label: 'מחק כל התשלומים', icon: '🗑', danger: true, onClick: () => deleteAllPaymentsForCustomer(group.cid!, group.cust?.name ?? '', group.payments.length) }] : []),
                         ]

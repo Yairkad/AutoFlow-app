@@ -56,6 +56,9 @@
 - **Dictates requirements in a stream, expects them folded into the current task** (2026-07-06): during a single implementation pass on supplier-tracking payments, the user kept sending follow-up asks mid-edit (multi-debt payment picker → payment-method selector → quick-add-supplier → collapse-by-default accordion → color swap on charge/credit → per-line notes → retroactively link an already-issued check to a debt → Excel import → styled print). None were meant to interrupt or replace the current step — each was additive scope for the same feature. Pattern: finish the in-flight edit to a non-broken state first, then absorb the new ask into the same pass rather than asking "should I stop and redo?".
 
 ## Key Learnings
+- /suppliers and /customers now redirect to /accounts?tab=…; contact details live in /contacts. SupplierDetailsTab/CustomerDetailsTab take mode='edit' (form only) / 'panel' (card only) so other screens reuse their forms.
+- Dev StrictMode runs effects mount→cleanup→mount: a 'run once' ref must be set inside the deferred callback, not before it (else the timer is cleared and never re-armed).
+- Plain /scan redirects to /stock-count?tab=scan; /scan?count=1 stays the full-page scan count.
 - Suppliers now use a running account (lib/debts/supplierLedger.ts): balances = charges − credits − payments by date; unallocated payments count, future unallocated transfers don't until their date; manually-closed charges get a write-off. Customers already used lib/debts/ledger.ts.
 - Stock movements: tire_sales/product_sales; yard card close now inserts 'sale' rows (source='yard'); invoice arrivals source='invoice'; manual source='manual' (migration 109, inserts fall back without the column).
 - Extra barcodes: tires/products.alt_barcodes (migration 110); client loads use select('*') so nothing breaks before the migration.

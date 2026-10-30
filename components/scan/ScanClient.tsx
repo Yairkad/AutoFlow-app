@@ -46,7 +46,8 @@ interface CountEntry {
 type NotFoundAction = 'link' | 'newTire' | null
 type Mode = 'scan' | 'count'
 
-export default function ScanClient() {
+// embedded: a tab of the stock screen — no own title / outer padding while plain scanning
+export default function ScanClient({ embedded = false }: { embedded?: boolean } = {}) {
   const sb = createClient()
   const { profile } = useProfile()
   const router = useRouter()
@@ -332,14 +333,14 @@ export default function ScanClient() {
 
   // ══════════════════════════════════════════════════════════════════════════
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: isMobile ? '16px 12px' : '24px 16px' }}>
+    <div style={{ maxWidth: embedded ? 'none' : 860, margin: embedded ? 0 : '0 auto', padding: embedded ? 0 : isMobile ? '16px 12px' : '24px 16px' }}>
 
       {toast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] bg-green-700 text-white font-bold rounded-xl px-6 py-3 shadow-xl">{toast}</div>
       )}
 
       {/* Header */}
-      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`} style={{ marginBottom: 28 }}>
+      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`} style={{ marginBottom: 28, ...(embedded && mode === 'scan' ? { display: 'none' } : {}) }}>
         <div className="flex items-center gap-3">
           {isMobile && (
             <button onClick={() => router.back()} className="text-slate-500 font-bold active:text-slate-800 transition-colors" style={{ fontSize: '20px', lineHeight: 1 }}>←</button>

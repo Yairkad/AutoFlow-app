@@ -1202,6 +1202,7 @@ export default function SupplierTrackingTab({
                           <RowActionsMenu actions={[
                             { key: 'hist', label: 'היסטוריית תשלומים', icon: '📜', onClick: () => setQuickHistorySupplier(group.sid!) },
                             { key: 'rec', label: 'הוסף חיוב חוזר', icon: '🔁', onClick: () => openRecItemModal(group.sid!) },
+                            { key: 'card', label: 'כרטיס ספק (אנשי קשר)', icon: '🪪', onClick: () => { window.location.href = `/contacts?open=${group.sid}` } },
                           ]} />
                         )}
                       </div>

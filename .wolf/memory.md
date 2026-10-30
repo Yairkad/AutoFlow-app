@@ -2900,3 +2900,5 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 08:01 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/contacts-mock.html | — | ~3121 |
 | 08:05 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/1c0c30b6-a745-51d4-aa08-7214aa870e65/scratchpad/contacts-mock.html | — | ~4577 |
+| 08:12 | Created components/contacts/ContactsClient.tsx | — | ~4835 |
+| 08:30 | Accounts (/accounts tabs suppliers|customers, tracking only) + Contacts (/contacts list, card, vCard/Excel export, edit via details tabs mode='edit'); customers month view = suppliers; scan → stock tab; migration 112 customers.contact_name | accounts/, contacts/, Suppliers/CustomersClient, *DetailsTab, Sidebar, proxy, Header | done | ~40k |

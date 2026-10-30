@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-30T08:05:09.906Z
-> Files: 179 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-10-30T08:12:54.570Z
+> Files: 180 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -490,6 +490,10 @@
 
 ## components/checks/
 
+
+## components/contacts/
+
+- `ContactsClient.tsx` — KIND_LABEL (~4835 tok)
 
 ## components/customers/
 

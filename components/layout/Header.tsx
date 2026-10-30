@@ -285,16 +285,16 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
     const all: SearchResult[] = []
     debts.data?.forEach(r => all.push({ id: r.id, icon: '💳', category: 'חובות (מזדמנים)', primary: r.name, secondary: [r.phone, r.plate, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/debts' }))
-    suppliers.data?.forEach(r => all.push({ id: r.id, icon: '🏭', category: 'ספקים', primary: r.name, secondary: r.phone ?? undefined, href: '/suppliers' }))
+    suppliers.data?.forEach(r => all.push({ id: r.id, icon: '🏭', category: 'ספקים', primary: r.name, secondary: r.phone ?? undefined, href: '/contacts' }))
     employees.data?.forEach(r => all.push({ id: r.id, icon: '👷', category: 'עובדים', primary: r.full_name, secondary: r.phone ?? undefined, href: '/employees' }))
-    customers.data?.forEach(r => all.push({ id: r.id, icon: '👤', category: 'לקוחות', primary: r.name, secondary: r.phone ?? undefined, href: '/customers' }))
+    customers.data?.forEach(r => all.push({ id: r.id, icon: '👤', category: 'לקוחות', primary: r.name, secondary: r.phone ?? undefined, href: '/contacts' }))
     custInvoices.data?.forEach((r: any) => {
       if (!r.customer_id) return
-      all.push({ id: r.customer_id, icon: '🧾', category: 'חשבוניות לקוחות', primary: r.customers?.name ?? '—', secondary: [r.doc_number ? `מס' ${r.doc_number}` : null, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/customers' })
+      all.push({ id: r.customer_id, icon: '🧾', category: 'חשבוניות לקוחות', primary: r.customers?.name ?? '—', secondary: [r.doc_number ? `מס' ${r.doc_number}` : null, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/accounts?tab=customers' })
     })
     suppInvoices.data?.forEach((r: any) => {
       if (!r.supplier_id) return
-      all.push({ id: r.supplier_id, icon: '🧾', category: 'חשבוניות ספקים', primary: r.suppliers?.name ?? '—', secondary: [r.doc_number ? `מס' ${r.doc_number}` : null, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/suppliers' })
+      all.push({ id: r.supplier_id, icon: '🧾', category: 'חשבוניות ספקים', primary: r.suppliers?.name ?? '—', secondary: [r.doc_number ? `מס' ${r.doc_number}` : null, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/accounts?tab=suppliers' })
     })
     inspections.data?.forEach(r => all.push({ id: r.id, icon: '📝', category: 'בדיקות', primary: r.plate, secondary: [r.owner_name, r.owner_phone].filter(Boolean).join(' · '), href: '/inspections' }))
     cars.data?.forEach(r => all.push({ id: r.id, icon: '🚗', category: 'רכבים', primary: [r.make, r.model, r.plate].filter(Boolean).join(' '), secondary: (r.owner_name || r.buyer_name) ?? undefined, href: '/cars' }))
@@ -307,7 +307,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   }
 
   function go(r: SearchResult) {
-    router.push(`${r.href}?open=${r.id}`)
+    router.push(`${r.href}${r.href.includes('?') ? '&' : '?'}open=${r.id}`)
     setQ('')
     setResults([])
     setFocused(false)

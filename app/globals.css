@@ -915,3 +915,51 @@ button:not(:disabled):active {
 /* Supplier month at a glance (running account) */
 .month-sum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 8px 12px; margin-bottom: 10px; border-radius: 8px; background: var(--bg-soft); border: 1px solid var(--border); font-size: 12.5px; color: var(--text-muted); }
 .month-sum b { color: var(--text); font-weight: 700; margin-inline-start: 4px; direction: ltr; unicode-bidi: isolate; }
+
+/* ── Contacts page ── */
+.ct-seg { display: flex; gap: 3px; background: #E6E9F1; padding: 3px; border-radius: 9px }
+.ct-seg button { border: 0; background: none; padding: 6px 14px; border-radius: 7px; font: inherit; font-size: 13px; color: var(--text-muted); cursor: pointer }
+.ct-seg button[aria-pressed="true"] { background: #fff; color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.08) }
+.ct-sel { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--primary-soft, #E9ECF6); border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent); border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; font-size: 13px; color: var(--primary) }
+.ct-list { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden }
+.ct-row { display: grid; grid-template-columns: 26px minmax(0,1.4fr) minmax(0,.9fr) minmax(0,1fr) minmax(120px,auto) 74px; align-items: center; gap: 14px; padding: 11px 14px; border-top: 1px solid var(--border); cursor: pointer }
+.ct-row:first-child { border-top: 0 }
+.ct-row:not(.ct-th):hover { background: var(--bg-soft) }
+.ct-row.on { background: color-mix(in srgb, var(--primary) 5%, #fff); box-shadow: inset -3px 0 0 var(--primary) }
+.ct-th { background: var(--bg-soft); font-size: 12px; color: var(--text-muted); font-weight: 600; cursor: default; padding-block: 8px }
+.ct-nm { font-weight: 700; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.ct-cat { font-size: 13px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.ct-person { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.ct-ph { font-family: var(--font-num), ui-monospace, monospace; direction: ltr; text-align: right; font-size: 14.5px; font-weight: 600; letter-spacing: .3px; white-space: nowrap }
+.ct-tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; font-weight: 600; margin-inline-start: 6px; vertical-align: 1px }
+.ct-tag.supplier { background: color-mix(in srgb, var(--primary) 10%, #fff); color: var(--primary) }
+.ct-tag.customer { background: #F4EFDD; color: #7A5A00 }
+.ct-acts { display: flex; gap: 5px; justify-content: flex-end }
+.ct-ico { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); display: grid; place-items: center; background: #fff; font-size: 14px; text-decoration: none }
+.ct-ico:hover { border-color: var(--primary) }
+.ct-card { width: 340px; flex-shrink: 0; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; position: sticky; top: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow) }
+.ct-who { display: grid; gap: 4px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px; padding: 12px }
+.ct-btn { border: 1px solid var(--border); background: var(--bg-card); border-radius: 9px; padding: 7px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text); text-decoration: none }
+.ct-btn:hover { border-color: var(--primary) }
+.ct-x { border: 1px solid var(--border); background: none; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; color: var(--text-muted) }
+.ct-more { border: 1px solid var(--border); border-radius: 10px }
+.ct-more summary { cursor: pointer; padding: 10px 12px; font-weight: 600; font-size: 13px; color: var(--text-muted) }
+.ct-more dl { display: grid; grid-template-columns: 96px 1fr; gap: 7px 10px; font-size: 13px; margin: 0; padding: 0 12px 12px }
+.ct-more dt { color: var(--text-muted) } .ct-more dd { margin: 0; font-weight: 500; overflow-wrap: anywhere }
+.ct-backdrop { display: none }
+@media (max-width: 1100px) {
+  .ct-backdrop { display: block; position: fixed; inset: 0; background: rgba(20,26,46,.35); z-index: 150 }
+  .ct-card { position: fixed; top: auto; bottom: 0; left: 0; right: 0; width: auto; max-height: 85dvh; overflow-y: auto; z-index: 151; border-radius: 16px 16px 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)) }
+}
+@media (max-width: 760px) {
+  .ct-row { grid-template-columns: 24px minmax(0,1fr) auto; gap: 10px }
+  .ct-row > :nth-child(3), .ct-row > :nth-child(6) { display: none }
+  .ct-row > :nth-child(4) { grid-column: 2; grid-row: 2; font-size: 12.5px }
+  .ct-row > :nth-child(5) { grid-column: 3; grid-row: 1 / span 2 }
+}
+
+/* Accounts: customer card over the list */
+.acc-card-overlay { position: fixed; inset: 0; z-index: 180; background: rgba(20,26,46,.4); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto }
+.acc-card { width: 100%; max-width: 760px }
+.acc-card .supplier-detail-panel { position: static !important; transform: none !important; max-height: none !important; width: auto !important }
+.acc-card .supplier-detail-backdrop { display: none !important }

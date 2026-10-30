@@ -25,6 +25,9 @@ interface SupplierDetailsTabProps {
   categories: string[]
   scheduledPayments: ScheduledPayment[]
   openId: string | null
+  /** 'edit' = only the add/edit form (opened for openId, or empty for a new one); 'panel' = only the card of openId */
+  mode?: 'full' | 'edit' | 'panel'
+  onClose?: () => void
   onOpenTracking: (supplierId: string) => void
   reload: () => void
 }
@@ -52,7 +55,7 @@ const ISRAELI_BANKS: { name: string; code: string }[] = [
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SupplierDetailsTab({
-  tenantId, suppliers, debts, categories, scheduledPayments, openId, onOpenTracking, reload,
+  tenantId, suppliers, debts, categories, scheduledPayments, openId, onOpenTracking, reload, mode = 'full', onClose,
 }: SupplierDetailsTabProps) {
   const supabase = useRef(createClient()).current
   const { showToast } = useToast()
@@ -64,6 +67,7 @@ export default function SupplierDetailsTab({
 
   // Supplier form
   const [showModal, setShowModal] = useState(false)
+  const closeModal = () => { setShowModal(false); if (mode === 'edit') onClose?.() }
   const [editItem, setEditItem]   = useState<Supplier | null>(null)
   const [fName, setFName]         = useState('')
   const [fContact, setFContact]   = useState('')
@@ -88,6 +92,16 @@ export default function SupplierDetailsTab({
   }
   const [showBankDrop, setShowBankDrop]       = useState(false)
   const [saving, setSaving]       = useState(false)
+
+  // Edit-only mode (from the contacts page): open the form at once — for openId, or empty for a new one
+  const editOpened = useRef(false)
+  useEffect(() => {
+    if (mode !== 'edit' || editOpened.current) return
+    // flag set inside the timer: StrictMode's mount→cleanup→mount would otherwise cancel the only open
+    const t = setTimeout(() => { editOpened.current = true; openModal(suppliers.find(x => x.id === openId)) }, 0)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode])
 
   // Deep-link: ?open=<supplierId> (parsed once by the shell, passed down as `openId`)
   useEffect(() => {
@@ -156,7 +170,7 @@ export default function SupplierDetailsTab({
     if (cat && !categories.includes(cat)) {
       await supabase.from('supplier_categories').insert({ tenant_id: tid, name: cat })
     }
-    setSaving(false); setShowModal(false); reload()
+    setSaving(false); closeModal(); reload()
   }
 
   const deleteSupplier = async (s: Supplier) => {
@@ -201,6 +215,7 @@ export default function SupplierDetailsTab({
 
   return (
     <div>
+      {mode !== 'edit' && <>
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
         <Button onClick={() => openModal()}>+ הוסף ספק</Button>
@@ -321,7 +336,7 @@ export default function SupplierDetailsTab({
         {selected && (
           <>
             {/* Mobile backdrop */}
-            <div className="supplier-detail-backdrop" onClick={() => setSelected(null)} />
+            <div className="supplier-detail-backdrop" onClick={() => { setSelected(null); if (mode === 'panel') onClose?.() }} />
           <div className="supplier-detail-panel" style={{
             flex: 1, minWidth: 0,
             background: 'var(--bg-card)',
@@ -367,7 +382,7 @@ export default function SupplierDetailsTab({
               <Button variant="outline" size="sm" onClick={() => openModal(selected)}>ערוך</Button>
               <Button variant="danger" size="sm" onClick={() => deleteSupplier(selected)}>מחק</Button>
               <button
-                onClick={() => setSelected(null)}
+                onClick={() => { setSelected(null); if (mode === 'panel') onClose?.() }}
                 style={{ padding: '6px 10px', background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', color: 'var(--text-muted)' }}
               >✕</button>
             </div>
@@ -519,11 +534,13 @@ export default function SupplierDetailsTab({
         )}
       </div>
 
+      </>}
+
       {/* ── ADD/EDIT MODAL ── */}
       {showModal && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          {...guardedBackdrop(() => setShowModal(false))}
+          {...guardedBackdrop(() => closeModal())}
         >
           <div
             style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '520px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto' }}
@@ -667,7 +684,7 @@ export default function SupplierDetailsTab({
               </div>
             </div>
             <div className="sticky-actions">
-              <Button variant="secondary" onClick={() => setShowModal(false)}>ביטול</Button>
+              <Button variant="secondary" onClick={() => closeModal()}>ביטול</Button>
               <Button loading={saving} onClick={saveSupplier}>שמור</Button>
             </div>
           </div>
