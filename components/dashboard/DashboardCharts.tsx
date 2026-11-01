@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { fetchSupplierBalances } from '@/lib/debts/supplierBalances'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import {
   ResponsiveContainer,
@@ -107,7 +108,7 @@ export default function DashboardCharts() {
       finance ? supabase.from('expenses').select('date, amount, category').gte('date', fromStr).lte('date', toStr) : Promise.resolve({ data: [] }),
       finance ? supabase.from('income').select('date, amount, category').gte('date', fromStr).lte('date', toStr)   : Promise.resolve({ data: [] }),
       debts   ? supabase.from('customer_debts').select('amount, paid').eq('is_closed', false)                      : Promise.resolve({ data: [] }),
-      debts   ? supabase.from('supplier_debts').select('amount, paid').eq('is_closed', false)                      : Promise.resolve({ data: [] }),
+      debts   ? fetchSupplierBalances(supabase)                                                                    : Promise.resolve(new Map<string, number>()),
     ])
 
     // Build month map
@@ -171,7 +172,7 @@ export default function DashboardCharts() {
 
     // Debt breakdown
     const custBal = (custDebts.data ?? []).reduce((s, r) => s + Math.max(0, Number(r.amount) - Number(r.paid)), 0)
-    const suppBal = (suppDebts.data ?? []).reduce((s, r) => s + Math.max(0, Number(r.amount) - Number(r.paid)), 0)
+    const suppBal = [...suppDebts.values()].reduce((s, b) => s + Math.max(0, b), 0)
     setDebtData([
       { name: 'חובות לקוחות', value: Math.round(custBal) },
       { name: 'חובות לספקים', value: Math.round(suppBal) },

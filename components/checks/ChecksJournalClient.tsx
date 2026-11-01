@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
@@ -68,7 +67,6 @@ export default function ChecksJournalClient() {
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<ScheduledPayment[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [linkedIds, setLinkedIds] = useState<Set<string>>(new Set())
   const [expenseCats, setExpenseCats] = useState<string[]>(['ספקים', 'אחר'])
 
   // Filters
@@ -115,16 +113,14 @@ export default function ChecksJournalClient() {
     // Only the first load shows the spinner — background refreshes update in place
     if (!loadedRef.current) setLoading(true)
     await autoMarkOverdueChecksPaid(supabase, tenantId).catch(() => {})
-    const [payRes, suppRes, catRes, linkRes] = await Promise.all([
+    const [payRes, suppRes, catRes] = await Promise.all([
       supabase.from('scheduled_payments').select('*').eq('tenant_id', tenantId).eq('payment_method', 'check').order('due_date', { ascending: true }),
       supabase.from('suppliers').select('id,name').eq('tenant_id', tenantId).order('name'),
       supabase.from('expense_categories').select('name').eq('tenant_id', tenantId).order('created_at'),
-      supabase.from('supplier_debt_payments').select('scheduled_payment_id').eq('tenant_id', tenantId).not('scheduled_payment_id', 'is', null),
     ])
     setRows(payRes.data ?? [])
     setSuppliers(suppRes.data ?? [])
     if (catRes.data && catRes.data.length > 0) setExpenseCats(catRes.data.map(r => r.name))
-    setLinkedIds(new Set((linkRes.data ?? []).map(r => r.scheduled_payment_id).filter((id): id is string => !!id)))
     loadedRef.current = true
     setLoading(false)
   }, [supabase, tenantId])
@@ -147,7 +143,6 @@ export default function ChecksJournalClient() {
     if (!tenantId) return
     const ch = supabase.channel('checks-journal-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'scheduled_payments' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_debt_payments' }, load)
       .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [supabase, tenantId, load])
@@ -466,16 +461,12 @@ export default function ChecksJournalClient() {
                     {items.map((p, i) => {
                       const days = daysUntil(p.due_date)
                       const supName = suppliers.find(s => s.id === p.supplier_id)?.name
-                      const unlinked = !p.is_paid && !!p.supplier_id && !p.allocation_ignored && !linkedIds.has(p.id)
                       return (
                         <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderBottom: i < items.length - 1 ? '1px solid #f1f5f9' : 'none', flexWrap: 'wrap', opacity: p.is_paid ? 0.6 : 1 }}>
                           <span style={{ fontSize: '11px', background: '#fef9c3', color: '#92400e', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, flexShrink: 0 }}>
                             צ'ק{p.check_number ? ` #${p.check_number}` : ''}
                           </span>
                           {p.series_id && <span title="חלק מסדרת צ׳קים" style={{ fontSize: 12 }}>📚</span>}
-                          {unlinked && (
-                            <Link href={`/accounts?tab=suppliers&open=${p.supplier_id}`} title="לא משויך לחוב — לשיוך היכנסו למעקב ספקים" style={{ fontSize: 12, textDecoration: 'none' }}>⚠️</Link>
-                          )}
                           <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '90px' }}>{supName ?? '—'}</span>
                           <span style={{ fontSize: '13px', flex: 1, textDecoration: p.is_paid ? 'line-through' : 'none' }}>{p.description}</span>
                           <span style={{ fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{fmtDMY(p.due_date)}</span>

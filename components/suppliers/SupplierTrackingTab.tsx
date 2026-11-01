@@ -13,8 +13,6 @@ import ArrivalsModal, { emptyArrival, toArrivalInputs, type ArrivalDraft, type S
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
-import { reconcileSupplierPayment } from '@/lib/debts/reconcileSupplierPayment'
-import { netAllocation } from '@/lib/debts/netAllocation'
 import { supplierEvents, balanceAfter, monthSummaries, monthOf, paymentLedgerDate } from '@/lib/debts/supplierLedger'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
@@ -22,7 +20,7 @@ import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import VatToggle from '@/components/ui/VatToggle'
 import UnitToggle from '@/components/ui/UnitToggle'
 import { withVat, withoutVat } from '@/lib/utils/vat'
-import { Supplier, SupplierDebt, ScheduledPayment, SupplierDebtPayment, RecurringItem, Direction, fmt, bal, waUrl } from './shared'
+import { Supplier, SupplierDebt, ScheduledPayment, SupplierDebtPayment, RecurringItem, Direction, fmt, waUrl } from './shared'
 import { MAX_UPLOAD_BYTES, compressImageIfNeeded, compressPdfIfNeeded } from '@/lib/utils/uploadCompress'
 import { scanWithAgent, listScanners, getSavedScanner, saveScanner, ScannerAgentMissingError, ScannerAgentOutdatedError, ScannerDeviceNotFoundError, SCANNER_DOWNLOAD_URL, type ScannerDevice } from '@/lib/scannerAgent'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
@@ -99,7 +97,7 @@ const tdSt: React.CSSProperties = { padding: '8px 10px', verticalAlign: 'middle'
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SupplierTrackingTab({
-  tenantId, tenantName, tenant, suppliers, supplierDebts, scheduledPayments, debtPayments, recurringItems, expenseCats, openId, reload,
+  tenantId, tenantName, tenant, suppliers, supplierDebts, scheduledPayments, recurringItems, expenseCats, openId, reload,
 }: SupplierTrackingTabProps) {
   const supabase    = useRef(createClient()).current
   const { showToast } = useToast()
@@ -171,22 +169,14 @@ export default function SupplierTrackingTab({
   }, [tenantId])
 
   // Retroactively allocate an already-issued check/payment against open debts
-  const [allocatingPayment, setAllocatingPayment] = useState<ScheduledPayment | null>(null)
-  const [allocSelectedIds, setAllocSelectedIds] = useState<Set<string>>(new Set())
-  const [allocAmounts, setAllocAmounts] = useState<Record<string, string>>({})
-  const [allocSaving, setAllocSaving] = useState(false)
-  const [allocShowClosed, setAllocShowClosed] = useState(false)
 
   // Payment modal — pays one or several open debts of one supplier at once
   const [showPayModal, setShowPayModal]   = useState(false)
   const [paySupplierId, setPaySupplierId] = useState<string | null>(null)
-  const [paySelectedIds, setPaySelectedIds] = useState<Set<string>>(new Set())
-  const [payAllocAmounts, setPayAllocAmounts] = useState<Record<string, string>>({})
   const [payMethod, setPayMethod] = useState<PaymentMethod>('מזומן')
   const [payDate, setPayDate]     = useState(todayISO())
   const [payRefNumber, setPayRefNumber]     = useState('')
   const [payQuickAmount, setPayQuickAmount] = useState('')
-  const [payQuickTarget, setPayQuickTarget] = useState('auto')
   const [paySaving, setPaySaving] = useState(false)
 
   // Quick-add-supplier modal
@@ -239,8 +229,6 @@ export default function SupplierTrackingTab({
   // Scheduled payments (checks) modal
   const [schedModal, setSchedModal] = useState(false)
   const [schedInitialSupplierId, setSchedInitialSupplierId] = useState<string | undefined>(undefined)
-  const [schedInitialDebtIds, setSchedInitialDebtIds] = useState<string[] | undefined>(undefined)
-  const [schedInitialDebtAllocAmounts, setSchedInitialDebtAllocAmounts] = useState<Record<string, string> | undefined>(undefined)
   const [schedInitialAmount, setSchedInitialAmount] = useState<number | undefined>(undefined)
 
   // Styled printing — pick what to print, then render a hidden print-only area
@@ -701,259 +689,100 @@ export default function SupplierTrackingTab({
     setMrSaving(false); setMeterReadItem(null); reload()
   }
 
-  // ── Payment (one or several open debts of one supplier, in one action) ────
+  // ── Payment: one flat payment row — not tied to any invoice (running account) ────
 
-  const payOpenDebts = supplierDebts.filter(d => d.supplier_id === paySupplierId && !d.is_closed && d.direction === 'charge')
-  // Credits are always saved already-closed (see Decision Log), so they never
-  // appear in payOpenDebts above — but the amount owed still needs to net them
-  // out, or "שלם הכל" overstates the total by exactly the open credit.
-  const payOpenCredits = supplierDebts
-    .filter(d => d.supplier_id === paySupplierId && d.direction === 'credit')
-    .map(d => ({ date: d.date, amount: Number(d.amount) }))
-  const payOpenCreditTotal = payOpenCredits.reduce((s, c) => s + c.amount, 0)
-  const payNetMap = netAllocation(payOpenDebts, payOpenCredits)
-  const payDebtsByMonth = (() => {
-    const map: Record<string, SupplierDebt[]> = {}
-    payOpenDebts.forEach(d => {
-      const mk = monthKeyOf(d.date)
-      if (!map[mk]) map[mk] = []
-      map[mk].push(d)
-    })
-    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]))
-  })()
-  const payTotalSelected = Array.from(paySelectedIds).reduce((s, id) => s + (parseFloat(payAllocAmounts[id] ?? '0') || 0), 0)
-
-  const openPaySupplier = (supplierId: string | null, preselectId?: string) => {
+  const openPaySupplier = (supplierId: string | null) => {
     setPaySupplierId(supplierId)
     setPayMethod('מזומן'); setPayDate(todayISO())
-    setPayRefNumber(''); setPayQuickAmount(''); setPayQuickTarget('auto')
-    if (preselectId) {
-      const d = supplierDebts.find(x => x.id === preselectId)
-      setPaySelectedIds(new Set([preselectId]))
-      setPayAllocAmounts(d ? { [preselectId]: String(bal(d).toFixed(2)) } : {})
-    } else {
-      setPaySelectedIds(new Set()); setPayAllocAmounts({})
-    }
+    setPayRefNumber(''); setPayQuickAmount('')
     setShowPayModal(true)
   }
 
-  // Quick-fill: type one total amount, either spread oldest-open-first (auto)
-  // or apply the whole amount to one chosen invoice (partial payment support) —
-  // just pre-fills the manual checkbox/amount list below, user can still edit before confirming.
-  const applyQuickAmount = () => {
-    const amt = parseFloat(payQuickAmount) || 0
-    if (amt <= 0) { showToast('סכום לא תקין', 'error'); return }
-    if (payQuickTarget === 'auto') {
-      const sorted = [...payOpenDebts].sort((a, b) => a.date.localeCompare(b.date))
-      let remaining = amt
-      const ids = new Set<string>()
-      const allocs: Record<string, string> = {}
-      for (const d of sorted) {
-        if (remaining <= 0) break
-        const take = Math.min(payNetMap.get(d.id) ?? 0, remaining)
-        if (take <= 0) continue
-        ids.add(d.id)
-        allocs[d.id] = take.toFixed(2)
-        remaining -= take
-      }
-      setPaySelectedIds(ids)
-      setPayAllocAmounts(allocs)
-    } else {
-      const d = payOpenDebts.find(x => x.id === payQuickTarget)
-      if (!d) return
-      const take = Math.min(payNetMap.get(d.id) ?? 0, amt)
-      setPaySelectedIds(new Set([d.id]))
-      setPayAllocAmounts({ [d.id]: take.toFixed(2) })
-    }
-  }
-
-  const togglePayDebt = (d: SupplierDebt) => {
-    setPaySelectedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(d.id)) {
-        next.delete(d.id)
-        setPayAllocAmounts(a => { const c = { ...a }; delete c[d.id]; return c })
-      } else {
-        next.add(d.id)
-        setPayAllocAmounts(a => ({ ...a, [d.id]: a[d.id] ?? String((payNetMap.get(d.id) ?? 0).toFixed(2)) }))
-      }
-      return next
-    })
-  }
-
-  // "שלם הכל" — fills every open invoice at its net-of-credit balance (payNetMap already
-  // nets any open credit for this supplier out against the oldest invoices first).
-  const selectAllPayDebts = () => {
-    const ids = new Set<string>()
-    const allocs: Record<string, string> = {}
-    for (const [id, net] of payNetMap) {
-      ids.add(id)
-      allocs[id] = net.toFixed(2)
-    }
-    setPaySelectedIds(ids)
-    setPayAllocAmounts(allocs)
-  }
-
-  // Select/deselect every open debt of one month at once (net-of-credit amounts, same as selectAllPayDebts).
-  const toggleMonthPayDebts = (mk: string) => {
-    const monthDebts = payDebtsByMonth.find(([k]) => k === mk)?.[1] ?? []
-    const allSelected = monthDebts.length > 0 && monthDebts.every(d => paySelectedIds.has(d.id))
-    setPaySelectedIds(prev => {
-      const next = new Set(prev)
-      monthDebts.forEach(d => {
-        if (allSelected) next.delete(d.id)
-        else if ((payNetMap.get(d.id) ?? 0) > 0) next.add(d.id)
-      })
-      return next
-    })
-    setPayAllocAmounts(prev => {
-      const next = { ...prev }
-      monthDebts.forEach(d => {
-        if (allSelected) delete next[d.id]
-        else { const net = payNetMap.get(d.id); if (net && net > 0) next[d.id] = net.toFixed(2) }
-      })
-      return next
-    })
-  }
-
   const submitPayment = async () => {
-    if (paySelectedIds.size === 0) { showToast('בחר לפחות שורה אחת לתשלום', 'error'); return }
+    const amount = Math.round((parseFloat(payQuickAmount) || 0) * 100) / 100
+    if (amount <= 0) { showToast('סכום לא תקין', 'error'); return }
     const tid = tenantId
     if (!tid) return
 
     if (payMethod === "צ'ק") {
       setShowPayModal(false)
       setSchedInitialSupplierId(paySupplierId ?? undefined)
-      setSchedInitialDebtIds(Array.from(paySelectedIds))
-      setSchedInitialDebtAllocAmounts({ ...payAllocAmounts })
-      setSchedInitialAmount(payTotalSelected)
+      setSchedInitialAmount(amount)
       setSchedModal(true)
       return
     }
 
-    const allocations = Array.from(paySelectedIds)
-      .map(id => ({ supplier_debt_id: id, amount: parseFloat(payAllocAmounts[id] ?? '0') || 0 }))
-      .filter(a => a.amount > 0)
-    if (allocations.length === 0) { showToast('סכום לא תקין', 'error'); return }
-
     setPaySaving(true)
-    const { error } = await reconcileSupplierPayment(supabase, tid, allocations, null)
-    if (error) { showToast('שגיאה בתשלום: ' + error, 'error'); setPaySaving(false); return }
-
-    const total = allocations.reduce((s, a) => s + a.amount, 0)
     const suppName = suppliers.find(s => s.id === paySupplierId)?.name ?? 'ספק'
-    await supabase.from('expenses').insert({
+    const { data: exp } = await supabase.from('expenses').insert({
       tenant_id: tid, date: payDate, category: 'ספקים',
-      description: `תשלום לספק ${suppName}`, amount: total,
+      description: `תשלום לספק ${suppName}`, amount,
       supplier_id: paySupplierId, payment_method: payMethod,
       payment_ref: payMethod === 'העברה' ? (payRefNumber || null) : null,
+    }).select('id').single()
+    const { error } = await supabase.from('scheduled_payments').insert({
+      tenant_id: tid, supplier_id: paySupplierId, amount,
+      description: `תשלום ${payMethod}`,
+      due_date: payDate, payment_method: 'transfer',
+      is_paid: true, paid_date: payDate,
+      expense_id: (exp as { id: string } | null)?.id ?? null,
+      notes: payRefNumber || null,
     })
-
+    setPaySaving(false)
+    if (error) { showToast('שגיאה בתשלום: ' + error.message, 'error'); return }
     showToast('תשלום נרשם ✓', 'success')
-    setPaySaving(false); setShowPayModal(false); reload()
+    setShowPayModal(false); reload()
   }
 
-  const toggleClose = async (id: string, current: boolean) => {
-    if (!current) {
-      const d = supplierDebts.find(x => x.id === id)
-      const remaining = d ? Number(d.amount) - Number(d.paid) : 0
-      if (remaining > 0 && !confirm(`יתרה של ${fmt(remaining)} עדיין לא שולמה בחשבונית הזו. סגירה ידנית תמחק את היתרה הזו לצמיתות (לא תופיע יותר כחוב פתוח). להמשיך?`)) return
-    }
-    await supabase.from('supplier_debts').update({ is_closed: !current }).eq('id', id)
-    reload()
-  }
+  // Edit / delete a payment row (check, transfer, cash)
+  const [schedEditItem, setSchedEditItem] = useState<ScheduledPayment | undefined>(undefined)
 
-  // ── Retroactive allocation of an already-issued check/payment ─────────────
-
-  const allocOpenDebts = supplierDebts.filter(d => d.supplier_id === allocatingPayment?.supplier_id && (allocShowClosed || !d.is_closed) && d.direction === 'charge')
-  const allocOpenCredits = supplierDebts
-    .filter(d => d.supplier_id === allocatingPayment?.supplier_id && d.direction === 'credit')
-    .map(d => ({ date: d.date, amount: Number(d.amount) }))
-  const allocNetMap = netAllocation(allocOpenDebts.filter(d => !d.is_closed), allocOpenCredits)
-  const allocDebtsByMonth = (() => {
-    const map: Record<string, SupplierDebt[]> = {}
-    allocOpenDebts.forEach(d => {
-      const mk = monthKeyOf(d.date)
-      if (!map[mk]) map[mk] = []
-      map[mk].push(d)
-    })
-    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]))
-  })()
-  const allocTotalSelected = Array.from(allocSelectedIds).reduce((s, id) => s + (parseFloat(allocAmounts[id] ?? '0') || 0), 0)
-
-  const openAllocatePayment = (p: ScheduledPayment) => {
-    setAllocatingPayment(p); setAllocSelectedIds(new Set()); setAllocAmounts({}); setAllocShowClosed(false)
-  }
-
-  const ignoreAllocation = async (p: ScheduledPayment) => {
-    if (!confirm('להתעלם מהצ׳ק הזה? הוא לא יוצג יותר כלא-משובץ.')) return
-    await supabase.from('scheduled_payments').update({ allocation_ignored: true }).eq('id', p.id)
-    reload()
-  }
-
-  const toggleAllocDebt = (d: SupplierDebt) => {
-    setAllocSelectedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(d.id)) {
-        next.delete(d.id)
-        setAllocAmounts(a => { const c = { ...a }; delete c[d.id]; return c })
-      } else {
-        next.add(d.id)
-        const remaining = (allocatingPayment?.amount ?? 0) - allocTotalSelected
-        const net = allocNetMap.get(d.id) ?? bal(d)
-        setAllocAmounts(a => ({ ...a, [d.id]: a[d.id] ?? String(Math.max(0, Math.min(net, remaining || net)).toFixed(2)) }))
+  // ── Old invoices closed by hand without full payment: the user decides, per invoice ──
+  const [closedReviewOpen, setClosedReviewOpen] = useState(false)
+  const [closedBusy, setClosedBusy] = useState<string | null>(null)
+  const manualClosed = supplierDebts
+    .filter(d => d.direction !== 'credit' && d.is_closed && Number(d.amount) - Number(d.paid) > 0.005)
+    .sort((a, b) => a.date.localeCompare(b.date))
+  const resolveManualClosed = async (d: SupplierDebt, action: 'delete' | 'credit' | 'reopen') => {
+    const rest = Math.round((Number(d.amount) - Number(d.paid)) * 100) / 100
+    const name = suppliers.find(x => x.id === d.supplier_id)?.name ?? 'ספק'
+    const msg = action === 'delete' ? `למחוק את החשבונית${d.doc_number ? ` ${d.doc_number}` : ''} של ${name} (${fmt(Number(d.amount))}) לגמרי?`
+      : action === 'credit' ? `לרשום זיכוי של ${fmt(rest)} מול החשבונית${d.doc_number ? ` ${d.doc_number}` : ''}? היתרה לא תשתנה.`
+      : `לבטל את הסגירה הידנית? ${fmt(rest)} ייכנסו ליתרה של ${name}.`
+    if (!confirm(msg)) return
+    setClosedBusy(d.id)
+    let error: { message: string } | null = null
+    if (action === 'delete') {
+      ({ error } = await supabase.from('supplier_debts').delete().eq('id', d.id))
+    } else {
+      if (action === 'credit') {
+        ({ error } = await supabase.from('supplier_debts').insert({
+          tenant_id: d.tenant_id, supplier_id: d.supplier_id, amount: rest, paid: 0, date: d.date,
+          description: `מחיקת יתרה${d.doc_number ? ` — חשבונית ${d.doc_number}` : ''}`,
+          is_closed: true, doc_type: 'invoice', direction: 'credit', invoices: [],
+        }))
       }
-      return next
-    })
-  }
-
-  // Select/deselect every debt of one month at once, filling sequentially (oldest-first,
-  // net-of-credit) from whatever's left of the check's total — same cap logic as toggleAllocDebt.
-  const toggleMonthAllocDebts = (mk: string) => {
-    const monthDebts = (allocDebtsByMonth.find(([k]) => k === mk)?.[1] ?? [])
-      .slice().sort((a, b) => a.date.localeCompare(b.date))
-    const allSelected = monthDebts.length > 0 && monthDebts.every(d => allocSelectedIds.has(d.id))
-    if (allSelected) {
-      setAllocSelectedIds(prev => { const next = new Set(prev); monthDebts.forEach(d => next.delete(d.id)); return next })
-      setAllocAmounts(prev => { const next = { ...prev }; monthDebts.forEach(d => delete next[d.id]); return next })
-      return
+      if (!error) ({ error } = await supabase.from('supplier_debts').update({ is_closed: false }).eq('id', d.id))
     }
-    let remaining = (allocatingPayment?.amount ?? 0) - allocTotalSelected
-    const newIds: string[] = []
-    const newAmounts: Record<string, string> = {}
-    for (const d of monthDebts) {
-      if (allocSelectedIds.has(d.id)) continue
-      const net = allocNetMap.get(d.id) ?? bal(d)
-      const take = Math.max(0, Math.min(net, remaining || net))
-      if (take <= 0) continue
-      newIds.push(d.id)
-      newAmounts[d.id] = take.toFixed(2)
-      remaining -= take
-    }
-    setAllocSelectedIds(prev => { const next = new Set(prev); newIds.forEach(id => next.add(id)); return next })
-    setAllocAmounts(prev => ({ ...prev, ...newAmounts }))
+    setClosedBusy(null)
+    if (error) { showToast('שגיאה: ' + error.message, 'error'); return }
+    showToast('עודכן ✓', 'success')
+    reload()
   }
-
-  const submitAllocatePayment = async () => {
-    if (!allocatingPayment) return
-    if (allocSelectedIds.size === 0) { showToast('בחר לפחות שורה אחת', 'error'); return }
-    const tid = tenantId
-    if (!tid) return
-    const allocations = Array.from(allocSelectedIds)
-      .map(id => ({ supplier_debt_id: id, amount: parseFloat(allocAmounts[id] ?? '0') || 0 }))
-      .filter(a => a.amount > 0)
-    if (allocations.length === 0) { showToast('סכום לא תקין', 'error'); return }
-    setAllocSaving(true)
-    const { error } = await reconcileSupplierPayment(supabase, tid, allocations, allocatingPayment.id)
-    if (error) { showToast('שגיאה בשיבוץ: ' + error, 'error'); setAllocSaving(false); return }
-    showToast('שובץ ✓', 'success')
-    setAllocSaving(false); setAllocatingPayment(null); reload()
+  const editPayment = (p: ScheduledPayment) => { setSchedEditItem(p); setSchedModal(true) }
+  const deletePayment = async (p: ScheduledPayment) => {
+    if (!confirm(`למחוק את התשלום ${fmt(p.amount)} (${fmtDMY(paymentLedgerDate(p))})? היתרה של הספק תעלה בהתאם.`)) return
+    const { error } = await supabase.from('scheduled_payments').delete().eq('id', p.id)
+    if (error) { showToast('שגיאה במחיקה: ' + error.message, 'error'); return }
+    if (p.expense_id) await supabase.from('expenses').delete().eq('id', p.expense_id)
+    showToast('התשלום נמחק', 'success')
+    reload()
   }
 
   // ── Filters ───────────────────────────────────────────────────────────────
 
   const ledgerOf = (sid: string | null) => supplierEvents(
-    supplierDebts.filter(d => d.supplier_id === sid), debtPayments,
+    supplierDebts.filter(d => d.supplier_id === sid),
     sid ? scheduledPayments.filter(p => p.supplier_id === sid) : [], todayISO())
   const openSuppTotal = [...new Set(supplierDebts.map(d => d.supplier_id))]
     .reduce((s, sid) => s + Math.max(0, balanceAfter(ledgerOf(sid))), 0)
@@ -975,18 +804,15 @@ export default function SupplierTrackingTab({
     }}>{label}</button>
   )
 
+  // Running account: a line is just a charge or a credit. "סגור ידנית" stays visible only on old
+  // invoices closed by hand without full payment, until handled in "חשבוניות שנסגרו ידנית".
   const StatusChip = ({ debt }: { debt: SupplierDebt }) => {
     if (debt.direction === 'credit')
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>זיכוי</span>
-    if (debt.is_closed) {
-      const written = Number(debt.amount) - Number(debt.paid)
-      if (written > 0)
-        return <span title={`נסגר ידנית — ${fmt(written)} נמחקו מהיתרה`} style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fdf4ff', color: '#a21caf', fontWeight: 600 }}>סגור ידנית (−{fmt(written)})</span>
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>שולם ✓</span>
-    }
-    if (Number(debt.paid) > 0)
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef3c7', color: 'var(--warning)', fontWeight: 600 }}>חלקי</span>
-    return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>חיוב</span>
+    const written = debt.is_closed ? Number(debt.amount) - Number(debt.paid) : 0
+    if (written > 0.005)
+      return <span title={`נסגר ידנית — ${fmt(written)} לא נספרים ביתרה`} style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fdf4ff', color: '#a21caf', fontWeight: 600 }}>סגור ידנית (−{fmt(written)})</span>
+    return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f1f5f9', color: 'var(--text-muted)', fontWeight: 600 }}>חיוב</span>
   }
 
   const EmptyState = ({ icon, text }: { icon: string; text: string }) => (
@@ -1002,7 +828,7 @@ export default function SupplierTrackingTab({
     const wb = XLSX.utils.book_new()
     const rows = supplierDebts.map(d => ({
       ספק: suppliers.find(s => s.id === d.supplier_id)?.name ?? '', מספר: d.doc_number ?? '',
-      סוג: d.direction === 'credit' ? 'זיכוי' : 'חיוב', סכום: d.amount, שולם: d.paid, יתרה: bal(d),
+      סוג: d.direction === 'credit' ? 'זיכוי' : 'חיוב', סכום: d.amount,
       תאריך: d.date, סטטוס: d.is_closed ? 'סגור' : 'פתוח', תיאור: d.description ?? '',
     }))
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'חשבוניות וזיכויים')
@@ -1094,6 +920,7 @@ export default function SupplierTrackingTab({
               { key: 'sched', label: 'צ׳ק / סדרה לספק', icon: '📝', onClick: () => setSchedModal(true) },
               { key: 'checks', label: 'יומן צ׳קים', icon: '📅', onClick: () => { window.location.href = '/checks' } },
                 { key: 'print', label: 'הדפסה', icon: '🖨️', onClick: () => setShowPrintChoice(true) },
+                ...(manualClosed.length ? [{ key: 'closed', label: `חשבוניות שנסגרו ידנית (${manualClosed.length})`, icon: '🗂', onClick: () => setClosedReviewOpen(true) }] : []),
               ]}
             />
           </div>
@@ -1151,18 +978,11 @@ export default function SupplierTrackingTab({
               const suppPayments = scheduledPayments.filter(p => p.supplier_id === sid)
               const countedPayIds = new Set(events.filter(e => e.paymentId).map(e => e.paymentId!))
 
-              const debtIds = new Set(debts.map(d => d.id))
-              const linkedIds = new Set(
-                debtPayments.filter(dp => debtIds.has(dp.supplier_debt_id) && dp.scheduled_payment_id)
-                  .map(dp => dp.scheduled_payment_id!)
-              )
-              const unlinkedPayments = suppPayments.filter(p => !p.is_paid && !p.allocation_ignored && !linkedIds.has(p.id))
-
-              return { sid, supp, totalBal, monthMap, months, suppPayments, unlinkedPayments, summaries, countedPayIds }
+              return { sid, supp, totalBal, monthMap, months, suppPayments, summaries, countedPayIds }
             }).filter(Boolean) as {
               sid: string | null; supp: Supplier | undefined; totalBal: number
               monthMap: Record<string, SupplierDebt[]>; months: string[]
-              suppPayments: ScheduledPayment[]; unlinkedPayments: ScheduledPayment[]
+              suppPayments: ScheduledPayment[]
               summaries: ReturnType<typeof monthSummaries>; countedPayIds: Set<string>
             }[]
 
@@ -1212,26 +1032,6 @@ export default function SupplierTrackingTab({
 
                     {isOpen && (
                     <>
-
-                    {group.unlinkedPayments.length > 0 && (
-                      <div style={{ background: '#fffbeb', borderBottom: '1px solid #fde68a', padding: '10px 16px', fontSize: '12px', color: '#92400e' }}>
-                        <div>⚠ {group.unlinkedPayments.length} צ׳קים/תשלומים לספק זה טרם שובצו מול חוב — לחץ לשיבוץ רטרואקטיבי:</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
-                          {group.unlinkedPayments.map(p => (
-                            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                              <button onClick={() => openAllocatePayment(p)}
-                                style={{ padding: '3px 10px', background: '#fff', border: '1px solid #fde68a', borderRadius: '6px 0 0 6px', fontSize: '11px', cursor: 'pointer', color: '#92400e', fontWeight: 600 }}>
-                                {fmt(p.amount)} ({p.due_date}) →
-                              </button>
-                              <button onClick={() => ignoreAllocation(p)} title="התעלם מהצ׳ק הזה"
-                                style={{ padding: '3px 8px', background: '#fff', border: '1px solid #fde68a', borderLeft: 'none', borderRadius: '0 6px 6px 0', fontSize: '11px', cursor: 'pointer', color: '#92400e' }}>
-                                ✕ התעלם
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
 
                     {group.sid && (() => {
                       const items = recurringItems.filter(it => it.supplier_id === group.sid)
@@ -1369,13 +1169,9 @@ export default function SupplierTrackingTab({
                                         ...(suppliers.find(s => s.id === d.supplier_id)?.phone ? [{
                                           key: 'wa', label: 'ווצאפ', icon: '💬', onClick: () => {
                                             const supp = suppliers.find(s => s.id === d.supplier_id)!
-                                            setWaModal({ phone: supp.phone!, text: `שלום ${supp.name}, ברצוני לבדוק חוב בסך ${fmt(bal(d))}.\nתודה!\n${tenantName}` })
+                                            setWaModal({ phone: supp.phone!, text: `שלום ${supp.name}, ברצוני לבדוק את היתרה בסך ${fmt(Math.max(0, balanceAfter(ledgerOf(d.supplier_id))))}.\nתודה!\n${tenantName}` })
                                           },
                                         }] : []),
-                                        ...(!d.is_closed && bal(d) > 0 && d.direction === 'charge' ? [
-                                          { key: 'pay', label: 'שלם', icon: '₪', onClick: () => openPaySupplier(d.supplier_id, d.id) },
-                                        ] : []),
-                                        { key: 'close', label: d.is_closed ? 'פתח' : 'סגור', icon: d.is_closed ? '↩' : '✓', onClick: () => toggleClose(d.id, d.is_closed) },
                                         { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openSuppModal(d) },
                                         { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deleteSuppDebt(d.id) },
                                       ]} />
@@ -1402,7 +1198,7 @@ export default function SupplierTrackingTab({
 
                           {!monthCollapsed && monthPayments.length > 0 && (
                             <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '10px 12px' }}>
-                              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', marginBottom: '7px' }}>תשלומים מתוזמנים:</div>
+                              <div style={{ fontSize: '12px', fontWeight: 700, color: '#0369a1', marginBottom: '7px' }}>תשלומים:</div>
                               {monthPayments.map((p, pi) => {
                                 const days = daysUntilDate(p.due_date)
                                 return (
@@ -1424,6 +1220,10 @@ export default function SupplierTrackingTab({
                                             {days < 0 ? `באיחור ${Math.abs(days)} ימים` : days === 0 ? 'היום!' : `עוד ${days} ימים`}
                                           </span>}
                                     </span>
+                                    <RowActionsMenu align="end" actions={[
+                                      { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => editPayment(p) },
+                                      { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => deletePayment(p) },
+                                    ]} />
                                   </div>
                                 )
                               })}
@@ -1632,72 +1432,14 @@ export default function SupplierTrackingTab({
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>₪ תשלום ל{suppliers.find(s => s.id === paySupplierId)?.name ?? 'ספק'}</h3>
 
-            {payOpenDebts.length === 0 ? (
-              <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>אין חובות פתוחים לספק זה</div>
-            ) : (
-              <>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', margin: '14px 0', padding: '10px', background: '#f8fafc', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, flex: 1 }}>
-                    סכום ששולם
-                    <input type="number" step="0.01" value={payQuickAmount} onChange={e => setPayQuickAmount(e.target.value)} placeholder="0.00" className="form-input" style={{ margin: 0 }} />
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, flex: 1.6 }}>
-                    שיוך
-                    <select value={payQuickTarget} onChange={e => setPayQuickTarget(e.target.value)} className="form-input" style={{ margin: 0 }}>
-                      <option value="auto">אוטומטי (מהישן ביותר)</option>
-                      {payOpenDebts.map(d => (
-                        <option key={d.id} value={d.id}>{d.doc_number ? `#${d.doc_number} · ` : ''}{fmtDMY(d.date)} · יתרה {fmt(bal(d))}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <button type="button" onClick={applyQuickAmount} style={{ padding: '8px 14px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>החל</button>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0 8px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 600 }}>בחר אילו חודשים לשלם</span>
-                  <button type="button" onClick={selectAllPayDebts} style={{ padding: '4px 10px', background: 'var(--success-soft)', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>שלם הכל</button>
-                </div>
-                {payOpenCreditTotal > 0 && (
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '-4px 0 8px' }}>
-                    לספק זה זיכוי פתוח בסך {fmt(payOpenCreditTotal)} — מנוכה אוטומטית ב&quot;שלם הכל&quot; מהחשבוניות הישנות ביותר שתאריכן זהה או מאוחר לתאריך הזיכוי
-                  </div>
-                )}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
-                  {payDebtsByMonth.map(([mk, debts]) => (
-                    <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
-                        <button type="button" onClick={() => toggleMonthPayDebts(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
-                          {debts.every(d => paySelectedIds.has(d.id)) ? 'בטל בחירת חודש' : 'בחר חודש'}
-                        </button>
-                      </div>
-                      {debts.map(d => {
-                        const checked = paySelectedIds.has(d.id)
-                        return (
-                          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                            <input type="checkbox" checked={checked} onChange={() => togglePayDebt(d)} />
-                            <span style={{ fontSize: 12, flex: 1, color: 'var(--text-muted)' }}>
-                              {d.doc_number ? `#${d.doc_number} · ` : ''}{d.date} · יתרה {fmt(bal(d))}
-                            </span>
-                            {checked && (
-                              <input
-                                type="number" step="0.01"
-                                value={payAllocAmounts[d.id] ?? ''}
-                                onChange={e => setPayAllocAmounts(a => ({ ...a, [d.id]: e.target.value }))}
-                                style={{ width: 90, padding: '4px 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 6 }}
-                              />
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ))}
-                </div>
-                {paySelectedIds.size > 0 && (
-                  <div style={{ fontSize: 13, fontWeight: 700, marginTop: 8, textAlign: 'left' }}>
-                    סה&quot;כ לתשלום: {fmt(payTotalSelected)}
-                  </div>
-                )}
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+              יתרה נוכחית: <strong>{fmt(Math.max(0, balanceAfter(ledgerOf(paySupplierId))))}</strong> — התשלום מוריד את היתרה, בלי שיוך לחשבונית.
+            </div>
+            <>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 600 }}>
+                  סכום ששולם
+                  <input type="number" step="0.01" value={payQuickAmount} onChange={e => setPayQuickAmount(e.target.value)} placeholder="0.00" className="form-input" style={{ margin: 0 }} autoFocus />
+                </label>
 
                 <div style={{ marginTop: '16px' }}>
                   <label style={{ fontSize: '13px', fontWeight: 500 }}>אמצעי תשלום</label>
@@ -1730,16 +1472,13 @@ export default function SupplierTrackingTab({
                     <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="form-input" />
                   </label>
                 )}
-              </>
-            )}
+            </>
 
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowPayModal(false)}>ביטול</Button>
-              {payOpenDebts.length > 0 && (
-                <Button loading={paySaving} onClick={submitPayment} style={{ background: 'var(--success)', borderColor: 'var(--success)' }}>
-                  {payMethod === "צ'ק" ? 'המשך לצ׳ק ←' : '✓ אשר תשלום'}
-                </Button>
-              )}
+              <Button loading={paySaving} onClick={submitPayment} style={{ background: 'var(--success)', borderColor: 'var(--success)' }}>
+                {payMethod === "צ'ק" ? 'המשך לצ׳ק ←' : '✓ אשר תשלום'}
+              </Button>
             </div>
           </div>
         </div>
@@ -1762,73 +1501,34 @@ export default function SupplierTrackingTab({
         </div>
       )}
 
-      {/* ── ALLOCATE EXISTING CHECK/PAYMENT MODAL (retroactive) ── */}
-      {allocatingPayment && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setAllocatingPayment(null))}>
-          <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>שיבוץ תשלום מול חובות</h3>
-            <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
-              {allocatingPayment.payment_method === 'check' ? "צ'ק" : 'העברה'}{allocatingPayment.check_number ? ` #${allocatingPayment.check_number}` : ''} · <strong>{fmt(allocatingPayment.amount)}</strong> · {allocatingPayment.due_date}
-            </div>
-
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)', marginBottom: 10, cursor: 'pointer' }}>
-              <input type="checkbox" checked={allocShowClosed} onChange={e => setAllocShowClosed(e.target.checked)} />
-              הצג גם חובות סגורים
-            </label>
-
-            {allocOpenDebts.length === 0 ? (
-              <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>אין חובות {allocShowClosed ? '' : 'פתוחים '}לספק זה</div>
-            ) : (
-              <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '260px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px' }}>
-                  {allocDebtsByMonth.map(([mk, debts]) => (
-                    <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
-                        <button type="button" onClick={() => toggleMonthAllocDebts(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
-                          {debts.every(d => allocSelectedIds.has(d.id)) ? 'בטל בחירת חודש' : 'בחר חודש'}
-                        </button>
-                      </div>
-                      {debts.map(d => {
-                        const checked = allocSelectedIds.has(d.id)
-                        return (
-                          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                            <input type="checkbox" checked={checked} onChange={() => toggleAllocDebt(d)} />
-                            <span style={{ fontSize: 12, flex: 1, color: 'var(--text-muted)' }}>
-                              {d.doc_number ? `#${d.doc_number} · ` : ''}{d.date} · יתרה {fmt(bal(d))}
-                              {d.is_closed && (
-                                <span style={{ marginRight: 6, padding: '1px 6px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: 'var(--success-soft)', color: 'var(--success)' }}>✓ סגור</span>
-                              )}
-                            </span>
-                            {checked && (
-                              <input
-                                type="number" step="0.01"
-                                value={allocAmounts[d.id] ?? ''}
-                                onChange={e => setAllocAmounts(a => ({ ...a, [d.id]: e.target.value }))}
-                                style={{ width: 90, padding: '4px 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 6 }}
-                              />
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ))}
+      {/* ── OLD MANUALLY-CLOSED INVOICES: delete / credit / cancel the close ── */}
+      <Modal open={closedReviewOpen} onClose={() => setClosedReviewOpen(false)} title="🗂 חשבוניות שנסגרו ידנית" maxWidth={640}>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 10px' }}>
+          חשבוניות שסומנו &quot;סגור&quot; בלי ששולמו במלואן — היתרה שלהן כרגע לא נספרת. לכל אחת בחר: מחיקה, רישום זיכוי (היתרה לא משתנה) או ביטול הסגירה (היתרה נכנסת לחוב).
+        </p>
+        {manualClosed.length === 0 && <div style={{ color: 'var(--text-muted)' }}>אין חשבוניות כאלה ✓</div>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {manualClosed.map(d => {
+            const rest = Number(d.amount) - Number(d.paid)
+            return (
+              <div key={d.id} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px', opacity: closedBusy === d.id ? 0.5 : 1 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', fontSize: 13 }}>
+                  <b>{suppliers.find(x => x.id === d.supplier_id)?.name ?? '—'}</b>
+                  <span>{fmtDMY(d.date)}</span>
+                  {d.doc_number && <span>חשבונית {d.doc_number}</span>}
+                  <span>סכום {fmt(Number(d.amount))}</span>
+                  <span style={{ color: '#a21caf', fontWeight: 700 }}>לא שולם {fmt(rest)}</span>
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 600, marginTop: 8, color: Math.abs(allocTotalSelected - allocatingPayment.amount) > 0.01 ? 'var(--warning)' : 'var(--text-muted)' }}>
-                  סה&quot;כ משובץ: {fmt(allocTotalSelected)} מתוך {fmt(allocatingPayment.amount)}
+                <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                  <Button size="sm" variant="secondary" disabled={closedBusy !== null} onClick={() => resolveManualClosed(d, 'credit')}>רשום זיכוי</Button>
+                  <Button size="sm" variant="secondary" disabled={closedBusy !== null} onClick={() => resolveManualClosed(d, 'reopen')}>בטל סגירה</Button>
+                  <Button size="sm" variant="danger" disabled={closedBusy !== null} onClick={() => resolveManualClosed(d, 'delete')}>מחק חשבונית</Button>
                 </div>
-              </>
-            )}
-
-            <div className="sticky-actions">
-              <Button variant="secondary" onClick={() => setAllocatingPayment(null)}>ביטול</Button>
-              {allocOpenDebts.length > 0 && (
-                <Button loading={allocSaving} onClick={submitAllocatePayment}>✓ שבץ</Button>
-              )}
-            </div>
-          </div>
+              </div>
+            )
+          })}
         </div>
-      )}
+      </Modal>
 
       {/* ── SCHEDULED PAYMENTS (CHECKS) MODAL ── */}
       {tenantId && (
@@ -1837,9 +1537,8 @@ export default function SupplierTrackingTab({
           onClose={() => {
             setSchedModal(false)
             setSchedInitialSupplierId(undefined)
-            setSchedInitialDebtIds(undefined)
-            setSchedInitialDebtAllocAmounts(undefined)
             setSchedInitialAmount(undefined)
+            setSchedEditItem(undefined)
           }}
           suppliers={suppliers}
           tenantId={tenantId}
@@ -1848,9 +1547,8 @@ export default function SupplierTrackingTab({
           showToast={showToast}
           expenseCats={expenseCats}
           initialSupplierId={schedInitialSupplierId}
-          initialSelectedDebtIds={schedInitialDebtIds}
-          initialDebtAllocAmounts={schedInitialDebtAllocAmounts}
           initialAmount={schedInitialAmount}
+          initialEditItem={schedEditItem}
         />
       )}
 
@@ -2235,19 +1933,6 @@ export default function SupplierTrackingTab({
                 ? `${fmtDMY(printDateFrom || actualFrom || todayISO())} — ${fmtDMY(printDateTo || actualTo || todayISO())}`
                 : actualFrom && actualTo ? `${fmtDMY(actualFrom)} — ${fmtDMY(actualTo)}` : 'אין רשומות'
 
-            const supplierDebtIds = new Set(allDebts.map(d => d.id))
-            const recentPayments = debtPayments
-              .filter(p => supplierDebtIds.has(p.supplier_debt_id))
-              .map(p => {
-                const sp = p.scheduled_payment_id ? scheduledPayments.find(s => s.id === p.scheduled_payment_id) : null
-                const date = sp?.paid_date || sp?.due_date || (p.created_at ? p.created_at.slice(0, 10) : '')
-                const method = sp ? `צ'ק${sp.check_number ? ' מס׳ ' + sp.check_number : ''}` : 'תשלום ישיר'
-                return { id: p.id, date, amount: Number(p.amount), method }
-              })
-              .filter(p => p.date)
-              .sort((a, b) => b.date.localeCompare(a.date))
-              .slice(0, 8)
-
             return (
               <div>
                 <div className="lp-bsd">בס&quot;ד</div>
@@ -2286,16 +1971,19 @@ export default function SupplierTrackingTab({
                       if (e.kind === 'payment' || e.kind === 'writeoff') {
                         running -= e.amount
                         const sp = e.paymentId ? scheduledPayments.find(x => x.id === e.paymentId) : null
-                        const label = e.kind === 'writeoff' ? 'נסגר ידנית'
-                          : sp ? `${sp.payment_method === 'check' ? `צ'ק${sp.check_number ? ' מס׳ ' + sp.check_number : ''}` : 'העברה'}` : 'תשלום'
+                        const label = e.kind === 'writeoff' ? 'מחיקת יתרה (נסגר ידנית)'
+                          : sp ? (sp.payment_method === 'check'
+                            ? `צ'ק${sp.due_date !== e.date ? ` לפירעון ${fmtDMY(sp.due_date)}` : ''}`
+                            : (sp.description || 'העברה')) : 'תשלום'
                         return [(
-                          <tr key={`p-${ei}`}>
+                          <tr key={`p-${ei}`} className="cr">
                             <td>{fmtDMY(e.date)}</td>
-                            <td>—</td>
-                            <td style={{ width: 46, textAlign: 'left', fontWeight: 700 }}>תשלום</td>
+                            <td>{sp?.check_number || ''}</td>
+                            <td>{e.kind === 'writeoff' ? 'מחיקה' : 'תשלום'}</td>
                             <td>{label}</td>
-                            <td style={{ textAlign: 'left' }}>−{fmt(e.amount)}</td>
-                            <td>{fmt(running)}</td>
+                            <td className="n"></td>
+                            <td className="n">{fmtNum(e.amount)}</td>
+                            <td className="n b">{fmtNum(running)}</td>
                           </tr>
                         )]
                       }
@@ -2330,41 +2018,14 @@ export default function SupplierTrackingTab({
                   <div><span>יתרה בפועל</span>{fmt(actualBalance)}</div>
                 </div>
 
-                {recentPayments.length > 0 && (
-                  <div style={{ marginTop: 24 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>היסטוריית תשלומים אחרונים</div>
-                    <table>
-                      <thead><tr><th>תאריך</th><th>אמצעי תשלום</th><th>סכום</th></tr></thead>
-                      <tbody>
-                        {recentPayments.map(p => (
-                          <tr key={p.id}>
-                            <td>{fmtDMY(p.date)}</td>
-                            <td>{p.method}</td>
-                            <td>{fmt(p.amount)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
               </div>
             )
           })()}
 
           {printMode === 'open-summary' && (() => {
+            // Running account: one open balance per supplier (no per-invoice / per-month open amounts)
             const rows = suppliers
-              .map(s => {
-                const debts = supplierDebts.filter(d => d.supplier_id === s.id)
-                const byMonth = new Map<string, number>()
-                for (const d of debts) {
-                  const b = bal(d)
-                  if (!b) continue
-                  const mk = monthKeyOf(d.date)
-                  byMonth.set(mk, (byMonth.get(mk) ?? 0) + b)
-                }
-                const total = [...byMonth.values()].reduce((s2, v) => s2 + v, 0)
-                return { supplier: s, byMonth, total }
-              })
+              .map(s => ({ supplier: s, byMonth: new Map<string, number>(), total: Math.round(balanceAfter(ledgerOf(s.id)) * 100) / 100 }))
               .filter(r => r.total > 0)
               .sort((a, b) => a.supplier.name.localeCompare(b.supplier.name, 'he'))
 

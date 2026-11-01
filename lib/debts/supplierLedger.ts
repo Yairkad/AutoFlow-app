@@ -18,7 +18,6 @@ export interface SupplierMonthSummary {
 }
 
 interface DebtIn { id: string; date: string; amount: number; paid: number; direction?: string | null; is_closed?: boolean }
-interface AllocIn { supplier_debt_id: string; scheduled_payment_id: string | null; amount: number; created_at: string }
 interface PayIn { id: string; amount: number; due_date: string; is_paid: boolean; allocation_ignored?: boolean | null; payment_method?: string | null; handed_date?: string | null }
 
 /** Date a payment lowers the supplier's balance: a check on the day it was handed over (a whole
@@ -30,16 +29,13 @@ const sign = (k: SupplierLedgerKind) => (k === 'charge' ? 1 : -1)
 export const monthOf = (iso: string) => iso.slice(0, 7)
 
 /**
- * Events of one supplier. A payment counts when it was allocated to an invoice, marked paid,
- * or its date has arrived (a future transfer nobody allocated yet doesn't count early);
- * "allocation ignored" payments never count. A charge closed by hand ("✓ סגור") without being
- * fully paid gets a write-off for the rest, so its balance stays 0 as before.
+ * Events of one supplier — a plain running account: invoices add, credit notes and payments
+ * subtract, each on its own date. Payments are never tied to invoices. A payment counts once it
+ * was made: marked paid, or its ledger date (a check: the day it was handed over) has arrived.
+ * Old invoices closed by hand ("✓ סגור") without full payment keep a write-off for the rest
+ * until the user decides what to do with them (delete / credit / cancel the close).
  */
-export function supplierEvents(debts: DebtIn[], allocations: AllocIn[], payments: PayIn[], today: string): SupplierLedgerEvent[] {
-  const ids = new Set(debts.map(d => d.id))
-  const mine = allocations.filter(a => ids.has(a.supplier_debt_id))
-  const linked = new Set(mine.map(a => a.scheduled_payment_id).filter(Boolean) as string[])
-  const payIds = new Set(payments.map(p => p.id))
+export function supplierEvents(debts: DebtIn[], payments: PayIn[], today: string): SupplierLedgerEvent[] {
   const ev: SupplierLedgerEvent[] = []
   for (const d of debts) {
     const amt = Number(d.amount)
@@ -48,15 +44,9 @@ export function supplierEvents(debts: DebtIn[], allocations: AllocIn[], payments
     if (d.is_closed && amt - Number(d.paid) > 0.005) ev.push({ date: d.date, kind: 'writeoff', amount: amt - Number(d.paid), debtId: d.id })
   }
   for (const p of payments) {
-    if (p.allocation_ignored) continue
     const date = paymentLedgerDate(p)
-    if (!linked.has(p.id) && !p.is_paid && date > today) continue
+    if (!p.is_paid && date > today) continue
     ev.push({ date, kind: 'payment', amount: Number(p.amount), paymentId: p.id })
-  }
-  // Allocations with no payment row of this supplier (direct / bank-matched payments)
-  for (const a of mine) {
-    if (a.scheduled_payment_id && payIds.has(a.scheduled_payment_id)) continue
-    ev.push({ date: a.created_at.slice(0, 10), kind: 'payment', amount: Number(a.amount) })
   }
   return ev.sort((a, b) => a.date.localeCompare(b.date) || sign(b.kind) - sign(a.kind))
 }

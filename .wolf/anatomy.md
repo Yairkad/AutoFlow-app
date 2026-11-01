@@ -807,3 +807,5 @@
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
 - `113_check_handed_date.sql` — scheduled_payments.handed_date (check handed to supplier; supplier balance drops then); backfill least(created_at, due_date) (~120 tok)
+- `114_flat_supplier_payments.sql` — direct supplier payments (allocations w/o scheduled_payment) → scheduled_payments rows (transfer, is_paid); idempotent (~250 tok)
+- `supplierBalances.ts` — fetchSupplierBalances(supabase): Map supplier_id → running-account balance, for dashboard KPIs (~300 tok)

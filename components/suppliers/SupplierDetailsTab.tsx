@@ -1,12 +1,13 @@
 'use client'
 
+import { supplierEvents, balanceAfter } from '@/lib/debts/supplierLedger'
 import { useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
-import { Supplier, SupplierDebt, ScheduledPayment, fmt, bal, waUrl } from './shared'
+import { Supplier, SupplierDebt, ScheduledPayment, fmt, waUrl } from './shared'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -192,8 +193,9 @@ export default function SupplierDetailsTab({
   )
 
   const suppDebts      = (suppId: string) => debts.filter(d => d.supplier_id === suppId)
-  const totalDebt      = (suppId: string) => suppDebts(suppId).filter(d => !d.is_closed).reduce((s, d) => s + bal(d), 0)
-  const openDebtsCount = (suppId: string) => suppDebts(suppId).filter(d => !d.is_closed).length
+  // Running account: charges − credits − payments (lib/debts/supplierLedger.ts)
+  const todayIso       = new Date().toLocaleDateString('sv-SE')
+  const totalDebt      = (suppId: string) => Math.max(0, balanceAfter(supplierEvents(suppDebts(suppId), scheduledPayments.filter(p => p.supplier_id === suppId), todayIso)))
   const nextCheck = (suppId: string) =>
     scheduledPayments.filter(p => p.supplier_id === suppId && !p.is_paid).sort((a, b) => a.due_date.localeCompare(b.due_date))[0] ?? null
 
@@ -248,7 +250,6 @@ export default function SupplierDetailsTab({
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
               {filtered.map(s => {
                 const debt     = totalDebt(s.id)
-                const openCnt  = openDebtsCount(s.id)
                 const isActive = selected?.id === s.id
                 return (
                   <div
@@ -297,10 +298,9 @@ export default function SupplierDetailsTab({
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                       {/* Debt badge */}
-                      {openCnt > 0 ? (
+                      {debt > 0.005 ? (
                         <div style={{ textAlign: 'left', flexShrink: 0 }}>
                           <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--danger)' }}>{fmt(debt)}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{openCnt} חובות</div>
                         </div>
                       ) : (
                         <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 600, flexShrink: 0 }}>✓ נקי</span>
@@ -453,10 +453,10 @@ export default function SupplierDetailsTab({
             {/* Debts section */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>חובות לספק</h3>
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>חשבוניות ספק</h3>
                 {selectedOpenTotal > 0 && (
                   <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--danger)' }}>
-                    סה"כ: {fmt(selectedOpenTotal)}
+                    יתרה: {fmt(selectedOpenTotal)}
                   </span>
                 )}
               </div>
@@ -478,11 +478,10 @@ export default function SupplierDetailsTab({
                         <div
                           key={d.id}
                           style={{
-                            background: d.is_closed ? '#f9fafb' : '#fff',
-                            border: `1px solid ${d.is_closed ? 'var(--border)' : '#fecaca'}`,
+                            background: '#fff',
+                            border: '1px solid var(--border)',
                             borderRadius: '8px',
                             padding: '10px 14px',
-                            opacity: d.is_closed ? 0.65 : 1,
                             fontSize: '13px',
                           }}
                         >
@@ -506,11 +505,8 @@ export default function SupplierDetailsTab({
                               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{d.date}</div>
                             </div>
                             <div style={{ textAlign: 'left', flexShrink: 0 }}>
-                              <div style={{ fontWeight: 700, color: d.is_closed ? 'var(--success)' : 'var(--danger)' }}>
-                                {d.is_closed ? '✓ שולם' : `יתרה: ${fmt(bal(d))}`}
-                              </div>
-                              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                {fmt(d.paid)} / {fmt(d.amount)}
+                              <div style={{ fontWeight: 700, color: d.direction === 'credit' ? 'var(--success)' : 'var(--text)' }}>
+                                {d.direction === 'credit' ? `זיכוי −${fmt(d.amount)}` : fmt(d.amount)}
                               </div>
                             </div>
                           </div>

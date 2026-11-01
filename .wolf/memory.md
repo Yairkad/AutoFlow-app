@@ -2929,3 +2929,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 10:58 | Supplier ledger: checks credited on handed_date (new field 'תאריך מסירה' in ScheduledPaymentsModal), migration 113 | supplierLedger.ts, ScheduledPaymentsModal.tsx, SupplierTrackingTab.tsx | tsc clean | ~9000 |
+| 11:16 | Removed invoice allocation everywhere: supplier ledger flat (charges/credits/payments), pay = scheduled_payments row, edit/delete payments, manual-closed review modal; checks modal/journal no allocation; customers no 🏷 tag; dashboards via fetchSupplierBalances; migration 114 | SupplierTrackingTab, SupplierDetailsTab, ScheduledPaymentsModal, ChecksJournalClient, CustomerTrackingTab, supplierLedger.ts, Dashboard* | tsc clean | ~60000 |
