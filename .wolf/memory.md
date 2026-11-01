@@ -2918,3 +2918,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:25 | Yard drawer: click plate copies; closed-cards list + reopen (API restores deducted stock, blocks double close); tires list English brand primary, Hebrew secondary | components/layout/YardDrawer.tsx, app/api/yard/sessions/*, components/tires/TiresClient.tsx | tsc clean | ~12000 |
+
+## Session: 2026-11-01 10:20
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
