@@ -182,7 +182,7 @@ export default function DashboardStats() {
     const y    = now.getFullYear()
     const m    = String(now.getMonth() + 1).padStart(2, '0')
     const from = `${y}-${m}-01`
-    const to   = `${y}-${m}-31`
+    const to   = `${y}-${m}-${String(new Date(y, now.getMonth() + 1, 0).getDate()).padStart(2, '0')}`  // last day — '-31' is an invalid date in 30-day months (400)
 
     // Only fetch data the user is allowed to see
     const [expenses, incomeRes, custDebts, suppDebts, custLedgerDebts, custLedgerPayments, emps, products, tires, cars, inspections] = await Promise.all([

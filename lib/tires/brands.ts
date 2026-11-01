@@ -4,7 +4,7 @@ import { fuzzyIncludes, normalizeSearch } from '@/lib/search/fuzzy'
 
 export interface BrandName { name_en: string; name_he: string }
 
-const keyOf = (brand: string | null | undefined) => normalizeSearch(brand ?? '').replace(/\s+/g, '')
+export const keyOf = (brand: string | null | undefined) => normalizeSearch(brand ?? '').replace(/\s+/g, '')
 
 /** brand key → Hebrew name */
 export type BrandMap = Map<string, string>

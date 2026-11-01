@@ -1187,7 +1187,7 @@ export default function TiresClient() {
 
       {brandsOpen && (
         <BrandNamesModal open onClose={() => setBrandsOpen(false)} tenantId={profile?.tenantId ?? ''}
-          brands={[...new Set(tires.map(t => t.brand?.trim()).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b))}
+          tireBrands={tires.map(t => t.brand)}
           saved={brandRows} onSaved={load} showToast={showToast} />
       )}
 

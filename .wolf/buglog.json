@@ -1557,5 +1557,39 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-10-29T06:44:26.892805+00:00"
+  },
+  {
+    "id": "bug-082",
+    "timestamp": "2026-11-01T12:00:00Z",
+    "error_message": "Tires → 'שמות חברות בעברית' save fails (409 on tire_brands insert, toast 'שגיאה בשמירה')",
+    "file": "components/tires/BrandNamesModal.tsx",
+    "root_cause": "Brand list was distinct exact strings, so 'Michelin'/'MICHELIN' were separate rows; inserting both hit unique index (tenant_id, lower(name_en))",
+    "fix": "Group spellings by keyOf() (normalized, no spaces), one Hebrew-name row per group (name_en = most common spelling); delete old rows by exact .in('name_en') instead of ilike; added unify-spellings and merge-into-other-brand actions (renames tires.brand + suppliers.brands)",
+    "tags": [
+      "tires",
+      "brands",
+      "409",
+      "unique-index",
+      "duplicates"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-01T12:00:00Z"
+  },
+  {
+    "id": "bug-083",
+    "timestamp": "2026-11-01T12:00:00Z",
+    "error_message": "400 from /api/store on dashboard: date filter lte 2026-11-31",
+    "file": "components/dashboard/DashboardStats.tsx",
+    "root_cause": "Month-end hardcoded as `${y}-${m}-31` — invalid date in 30-day months/February",
+    "fix": "Compute last day via new Date(y, month+1, 0).getDate()",
+    "tags": [
+      "dashboard",
+      "date",
+      "400"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-01T12:00:00Z"
   }
 ]

@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-10-30T08:12:54.570Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-01T08:35:05.088Z
 > Files: 180 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
@@ -605,7 +605,7 @@
 
 ## components/tires/
 
-- `BrandNamesModal.tsx` — Brands as written on the tires (~1016 tok)
+- `BrandNamesModal.tsx` — tires.brand of every tire (with repeats — used to pick the most common spelling) (~2690 tok)
 - `TirePickerModal.tsx` — shared picker: search existing tires by size/brand/SKU (inventory count add/link, tires merge) (~900 tok)
 - `TirePickerModal.tsx` — TirePickerModal (~1047 tok)
 
