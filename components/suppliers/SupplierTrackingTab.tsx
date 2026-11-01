@@ -56,6 +56,7 @@ interface SupplierTrackingTabProps {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const fmtNum = (n: number) => Number(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmtDMY = (d: string | Date) => {
   if (typeof d === 'string') {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d)
@@ -2045,16 +2046,36 @@ export default function SupplierTrackingTab({
         <div id="print-area" style={{ display: 'none' }}>
           <style>{`
             @media print {
+              @page { size: A4 portrait; margin: 10mm 12mm; }
               body * { visibility: hidden; }
               main { height: auto !important; overflow: visible !important; }
               #supplier-tracking-root > *:not(#print-area) { display: none !important; }
               #print-area, #print-area * { visibility: visible; }
-              #print-area { display: block !important; position: absolute; top: 0; right: 0; width: 100%; padding: 24px; direction: rtl; }
-              #print-area table { width: 100%; border-collapse: collapse; font-size: 13px; }
-              #print-area th, #print-area td { border: 1px solid #333; padding: 6px 8px; text-align: right; }
-              #print-area th { background: #eee; }
-              #print-area tbody tr:nth-child(even) td { background: #f4f6f8; }
-              #print-area tbody tr:nth-child(odd) td { background: #fff; }
+              #print-area { display: block !important; position: absolute; top: 0; right: 0; width: 100%; direction: rtl; color: #111; font-family: 'Heebo', Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              #print-area .lp-bsd { font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+              #print-area .lp-hdr { display: flex; justify-content: space-between; align-items: center; padding-bottom: 3mm; border-bottom: 2px solid #000; margin-bottom: 4mm; }
+              #print-area .lp-biz { font-weight: 700; font-size: 12.5px; line-height: 1.45; }
+              #print-area .lp-biz-name { font-size: 18px; font-weight: 900; }
+              #print-area .lp-logo { max-height: 90px; max-width: 230px; object-fit: contain; display: block; }
+              #print-area .lp-ttl { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 3mm; }
+              #print-area .lp-ttl h1 { flex: 1; text-align: center; font-size: 22px; font-weight: 900; margin: 0; }
+              #print-area .lp-meta { min-width: 120px; font-size: 11px; line-height: 1.5; }
+              #print-area .lp-cust { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 2mm; }
+              #print-area .lp-cust b { font-size: 15px; font-weight: 800; }
+              #print-area table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+              #print-area thead { display: table-header-group; }
+              #print-area th { background: #e8e8e8; border: 1px solid #000; padding: 3px 5px; font-weight: 700; text-align: right; }
+              #print-area td { border-left: 1px solid #000; border-right: 1px solid #000; padding: 2px 5px; height: 19px; }
+              #print-area tbody tr:nth-child(even) td { background: #f6f6f6; }
+              #print-area tbody tr:last-child td { border-bottom: 1px solid #000; }
+              #print-area tr { page-break-inside: avoid; }
+              #print-area td.n { text-align: left; direction: ltr; font-variant-numeric: tabular-nums; white-space: nowrap; }
+              #print-area td.b, #print-area tr.cr td { font-weight: 700; }
+              #print-area tr.op td { font-weight: 700; background: #eee !important; border-bottom: 1px solid #000; }
+              #print-area .lp-sum { display: flex; margin-top: 4mm; border: 1.5px solid #000; font-size: 12px; page-break-inside: avoid; }
+              #print-area .lp-sum div { flex: 1; padding: 4px 8px; border-left: 1px solid #000; }
+              #print-area .lp-sum div:last-child { border-left: 0; background: #111; color: #fff; font-weight: 800; font-size: 14px; }
+              #print-area .lp-sum span { display: block; font-size: 10px; opacity: .75; font-weight: 400; }
             }
           `}</style>
 
@@ -2111,60 +2132,66 @@ export default function SupplierTrackingTab({
 
             return (
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #000', paddingBottom: 10, marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, lineHeight: 1.5 }}>
-                    <div style={{ fontSize: 18, fontWeight: 900 }}>{tenantName}</div>
-                    {tenant?.sub_title && <div>{tenant.sub_title}</div>}
-                    {tenant?.address && <div>{tenant.address}</div>}
-                    {tenant?.phone && <div>טל׳: {tenant.phone}</div>}
-                    {tenant?.license_number && <div>מס׳ רישיון מוסך: {tenant.license_number}</div>}
+                <div className="lp-bsd">בס&quot;ד</div>
+                <div className="lp-hdr">
+                  <div className="lp-biz">
+                    <div className="lp-biz-name">{tenantName}</div>
+                    {tenant?.sub_title && <div>{tenant.sub_title as string}</div>}
+                    {tenant?.address && <div>{tenant.address as string}</div>}
+                    {tenant?.phone && <div>טל׳: {tenant.phone as string}</div>}
+                    {tenant?.license_number && <div>מס׳ רישיון מוסך: {tenant.license_number as string}</div>}
                   </div>
-                  {tenant?.logo_base64 && (
-                    <img src={tenant.logo_base64 as string} alt="לוגו" style={{ maxHeight: 80, maxWidth: 200, objectFit: 'contain' }} />
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {tenant?.logo_base64 && <img src={tenant.logo_base64 as string} className="lp-logo" alt="לוגו" />}
                 </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
-                  <h2 style={{ margin: 0, fontSize: 16 }}>כרטסת ספק: {supp?.name ?? ''}</h2>
-                  <div style={{ fontSize: 12, color: '#555' }}>תאריך: {fmtDMY(new Date())}</div>
+                <div className="lp-ttl">
+                  <div className="lp-meta" />
+                  <h1>כרטיס ספק</h1>
+                  <div className="lp-meta" style={{ textAlign: 'left' }}>תאריך הדפסה: {fmtDMY(new Date())}</div>
                 </div>
-                <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תקופה: {rangeLabel}</div>
+                <div className="lp-cust">
+                  <div><b>{supp?.name ?? ''}</b>{supp?.phone ? <> &nbsp;·&nbsp; {supp.phone}</> : null}</div>
+                  <div>תקופה: {rangeLabel}</div>
+                </div>
 
                 <table>
-                  <thead><tr><th>תאריך</th><th>מספר</th><th style={{ width: 46 }}>סוג</th><th>הערה</th><th>סכום</th><th>יתרה בפועל</th></tr></thead>
+                  <thead><tr><th style={{ width: 62 }}>תאריך</th><th style={{ width: 64 }}>מספר</th><th style={{ width: 48 }}>סוג</th><th>הערה</th><th style={{ width: 80 }}>חיוב</th><th style={{ width: 80 }}>זיכוי</th><th style={{ width: 86 }}>יתרה</th></tr></thead>
                   <tbody>
                     {showOpeningRow && (
-                      <tr style={{ fontWeight: 700, background: '#f5f5f5' }}>
-                        <td>—</td>
-                        <td>—</td>
-                        <td>יתרת פתיחה</td>
-                        <td>—</td>
-                        <td>—</td>
-                        <td>{fmt(openingForReport)}</td>
+                      <tr className="op">
+                        <td>{rangeStart ? fmtDMY(rangeStart) : ''}</td><td></td><td></td>
+                        <td>יתרת פתיחה</td><td className="n"></td><td className="n"></td>
+                        <td className="n b">{fmtNum(openingForReport)}</td>
                       </tr>
                     )}
                     {debts.flatMap(d => {
                       const items = Array.isArray(d.invoices) && d.invoices.length > 0
                         ? [...d.invoices].sort((a, b) => invNumOf(a.number) - invNumOf(b.number))
                         : [{ number: d.doc_number ?? '', amount: Number(d.amount) }]
+                      const isCredit = d.direction === 'credit'
                       return items.map((item, idx) => {
-                        running += d.direction === 'credit' ? -Number(item.amount) : Number(item.amount)
+                        running += isCredit ? -Number(item.amount) : Number(item.amount)
                         return (
-                          <tr key={`${d.id}-${idx}`}>
+                          <tr key={`${d.id}-${idx}`} className={isCredit ? 'cr' : undefined}>
                             <td>{fmtDMY(d.date)}</td>
-                            <td>{item.number || '—'}</td>
-                            <td style={{ width: 46, textAlign: d.direction === 'credit' ? 'left' : 'right', fontWeight: d.direction === 'credit' ? 700 : 400 }}>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
+                            <td>{item.number || ''}</td>
+                            <td>{isCredit ? 'זיכוי' : 'חיוב'}</td>
                             <td>{d.description || ''}</td>
-                            <td style={{ textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}</td>
-                            <td>{fmt(running)}</td>
+                            <td className="n">{isCredit ? '' : fmtNum(Number(item.amount))}</td>
+                            <td className="n">{isCredit ? fmtNum(Number(item.amount)) : ''}</td>
+                            <td className="n b">{fmtNum(running)}</td>
                           </tr>
                         )
                       })
                     })}
                   </tbody>
                 </table>
-                <div style={{ marginTop: 16, fontWeight: 700, fontSize: 14 }}>
-                  סה&quot;כ חיוב: {fmt(chargeTotal)} &nbsp; | &nbsp; סה&quot;כ זיכוי: {fmt(creditTotal)} &nbsp; | &nbsp; שולם: {fmt(paidTotal)} &nbsp; | &nbsp; יתרה בפועל: {fmt(actualBalance)}
+                <div className="lp-sum">
+                  <div><span>יתרת פתיחה</span>{fmtNum(openingForReport)}</div>
+                  <div><span>סה&quot;כ חיוב</span>{fmtNum(chargeTotal)}</div>
+                  <div><span>סה&quot;כ זיכוי</span>{fmtNum(creditTotal)}</div>
+                  <div><span>שולם</span>{fmtNum(paidTotal)}</div>
+                  <div><span>יתרה בפועל</span>{fmt(actualBalance)}</div>
                 </div>
 
                 {recentPayments.length > 0 && (

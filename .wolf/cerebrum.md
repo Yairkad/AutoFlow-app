@@ -5,6 +5,8 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+
+- [2026-11-01] Ledger print (customers + suppliers): style modelled on the garage's accounting-system 'כרטיס לקוח' — logo header like all docs, compact zebra rows, separate debit/credit columns, summary box. Show ONLY our own recorded fields (no invented customer number etc.). NO status icons (🏷/🧾/💰) in print.
 - [2026-10-26] User cares about Israeli web-accessibility compliance (IS 5568 / WCAG AA, lawsuit risk). Always write accessible code: semantic landmarks (everything inside header/main/aside/footer), one H1 + no heading skips, labels for inputs, aria-label on icon-only buttons, never role on non-interactive elements (use a real <button>), visible focus, contrast ≥4.5:1, underline inline links. Verify with axe-core (scratchpad axe/run.js pattern) incl. open dialogs/menus.
 - [2026-10-26] Homepage v4 prefs: header full width, separate, sticky; hero with photo of the place in background; services = gallery tiles with image, square corners, small hover/tap animation; wording "מכירת רכב" (not סוכנות), "מחירון שירות" + note that actual price is set on site (info only); inspection prices by קבוצת רישוי with a license illustration.
 - [2026-10-26] Homepage feedback: big logo in a designed header; no price list section on home (tire prices in popup from the פנצריה card); no cars section on home (link from service card only); WhatsApp/call = one round floating button bottom-left opening a choice; curves soft (not sharp), varied directions, some edges straight, footer straight; reviews auto-scroll, no scrollbar.

@@ -2796,3 +2796,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 08:11 | Ledger print redesign mockup (garage-style table + tenant logo header), awaiting user answers | .wolf/ledger-print-mockup.png | mockup sent | ~3000 |
+| 08:17 | Customer+supplier ledger print restyled: logo header, כרטיס לקוח/ספק title, חובה/זכות (supplier: חיוב/זיכוי) columns, compact rows, summary box; status icons removed | components/customers/CustomerTrackingTab.tsx, components/suppliers/SupplierTrackingTab.tsx | tsc clean | ~15000 |

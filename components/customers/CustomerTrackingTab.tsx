@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { useProfile } from '@/lib/contexts/ProfileContext'
 import ExcelMenu from '@/components/ui/ExcelMenu'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
@@ -49,6 +50,7 @@ interface CustomerTrackingTabProps {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const fmtNum = (n: number) => Number(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmtDMY = (d: string | Date) => {
   if (typeof d === 'string') {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d)
@@ -89,6 +91,7 @@ export default function CustomerTrackingTab({
 }: CustomerTrackingTabProps) {
   const supabase    = useRef(createClient()).current
   const { showToast } = useToast()
+  const tenantInfo = useProfile().profile?.tenant as { sub_title?: string | null; address?: string | null; phone?: string | null; license_number?: string | null; logo_base64?: string | null } | null | undefined
 
   const [filter, setFilter] = useState<Filter>('open')
   const [search, setSearch] = useState('')
@@ -1417,13 +1420,35 @@ export default function CustomerTrackingTab({
         <div id="print-area" style={{ display: 'none' }}>
           <style>{`
             @media print {
+              @page { size: A4 portrait; margin: 10mm 12mm; }
               body * { visibility: hidden; }
               main { height: auto !important; overflow: visible !important; }
               #print-area, #print-area * { visibility: visible; }
-              #print-area { display: block !important; position: absolute; top: 0; right: 0; width: 100%; padding: 24px; direction: rtl; }
-              #print-area table { width: 100%; border-collapse: collapse; font-size: 13px; }
-              #print-area th, #print-area td { border: 1px solid #333; padding: 6px 8px; text-align: right; }
-              #print-area th { background: #eee; }
+              #print-area { display: block !important; position: absolute; top: 0; right: 0; width: 100%; direction: rtl; color: #111; font-family: 'Heebo', Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              #print-area .lp-bsd { font-size: 11px; font-weight: 700; margin-bottom: 3px; }
+              #print-area .lp-hdr { display: flex; justify-content: space-between; align-items: center; padding-bottom: 3mm; border-bottom: 2px solid #000; margin-bottom: 4mm; }
+              #print-area .lp-biz { font-weight: 700; font-size: 12.5px; line-height: 1.45; }
+              #print-area .lp-biz-name { font-size: 18px; font-weight: 900; }
+              #print-area .lp-logo { max-height: 90px; max-width: 230px; object-fit: contain; display: block; }
+              #print-area .lp-ttl { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 3mm; }
+              #print-area .lp-ttl h1 { flex: 1; text-align: center; font-size: 22px; font-weight: 900; margin: 0; }
+              #print-area .lp-meta { min-width: 120px; font-size: 11px; line-height: 1.5; }
+              #print-area .lp-cust { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 2mm; }
+              #print-area .lp-cust b { font-size: 15px; font-weight: 800; }
+              #print-area table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+              #print-area thead { display: table-header-group; }
+              #print-area th { background: #e8e8e8; border: 1px solid #000; padding: 3px 5px; font-weight: 700; text-align: right; }
+              #print-area td { border-left: 1px solid #000; border-right: 1px solid #000; padding: 2px 5px; height: 19px; }
+              #print-area tbody tr:nth-child(even) td { background: #f6f6f6; }
+              #print-area tbody tr:last-child td { border-bottom: 1px solid #000; }
+              #print-area tr { page-break-inside: avoid; }
+              #print-area td.n { text-align: left; direction: ltr; font-variant-numeric: tabular-nums; white-space: nowrap; }
+              #print-area td.b, #print-area tr.cr td { font-weight: 700; }
+              #print-area tr.op td { font-weight: 700; background: #eee !important; border-bottom: 1px solid #000; }
+              #print-area .lp-sum { display: flex; margin-top: 4mm; border: 1.5px solid #000; font-size: 12px; page-break-inside: avoid; }
+              #print-area .lp-sum div { flex: 1; padding: 4px 8px; border-left: 1px solid #000; }
+              #print-area .lp-sum div:last-child { border-left: 0; background: #111; color: #fff; font-weight: 800; font-size: 14px; }
+              #print-area .lp-sum span { display: block; font-size: 10px; opacity: .75; font-weight: 400; }
             }
           `}</style>
 
@@ -1498,58 +1523,75 @@ export default function CustomerTrackingTab({
 
             return (
               <div>
-                <h2 style={{ margin: '0 0 4px' }}>{tenantName} — כרטסת לקוח: {cust?.name ?? ''}</h2>
-                <div style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>תקופה: {rangeLabel}</div>
-                <div style={{ fontSize: 12, color: '#555', marginBottom: 16 }}>תאריך הדפסה: {fmtDMY(new Date())}</div>
+                <div className="lp-bsd">בס&quot;ד</div>
+                <div className="lp-hdr">
+                  <div className="lp-biz">
+                    <div className="lp-biz-name">{tenantName}</div>
+                    {tenantInfo?.sub_title && <div>{tenantInfo.sub_title}</div>}
+                    {tenantInfo?.address && <div>{tenantInfo.address}</div>}
+                    {tenantInfo?.phone && <div>טל׳: {tenantInfo.phone}</div>}
+                    {tenantInfo?.license_number && <div>מס׳ רישיון מוסך: {tenantInfo.license_number}</div>}
+                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {tenantInfo?.logo_base64 && <img src={tenantInfo.logo_base64} className="lp-logo" alt="לוגו" />}
+                </div>
+                <div className="lp-ttl">
+                  <div className="lp-meta" />
+                  <h1>כרטיס לקוח</h1>
+                  <div className="lp-meta" style={{ textAlign: 'left' }}>תאריך הדפסה: {fmtDMY(new Date())}</div>
+                </div>
+                <div className="lp-cust">
+                  <div><b>{cust?.name ?? ''}</b>{cust?.phone ? <> &nbsp;·&nbsp; {cust.phone}</> : null}</div>
+                  <div>תקופה: {rangeLabel}</div>
+                </div>
                 <table>
-                  <thead><tr><th>תאריך</th><th>מספר</th><th style={{ width: 46 }}>סוג</th><th style={{ width: 30 }}>🏷</th><th style={{ width: 70 }}>רכב</th><th>הערה</th><th>סכום</th><th>יתרה</th></tr></thead>
+                  <thead><tr><th style={{ width: 62 }}>תאריך</th><th style={{ width: 60 }}>מספר</th><th style={{ width: 48 }}>סוג</th><th style={{ width: 72 }}>רכב</th><th>הערה</th><th style={{ width: 78 }}>חובה</th><th style={{ width: 78 }}>זכות</th><th style={{ width: 84 }}>יתרה</th></tr></thead>
                   <tbody>
                     {showOpeningRow && (
-                      <tr style={{ fontWeight: 700, background: '#f5f5f5' }}>
-                        <td>—</td>
-                        <td>—</td>
-                        <td>יתרת פתיחה</td>
-                        <td>—</td>
-                        <td>—</td>
-                        <td>—</td>
-                        <td>—</td>
-                        <td>{fmt(openingForReport)}</td>
+                      <tr className="op">
+                        <td>{rangeStart ? fmtDMY(rangeStart) : ''}</td><td></td><td></td><td></td>
+                        <td>יתרת פתיחה</td><td className="n"></td><td className="n"></td>
+                        <td className="n b">{fmtNum(openingForReport)}</td>
                       </tr>
                     )}
                     {ledgerEvents.map((ev, idx) => {
                       if (ev.data.kind === 'debt') {
                         const { d, number, amount } = ev.data
+                        const isCredit = d.direction === 'credit'
                         return (
-                          <tr key={`d-${d.id}-${idx}`}>
+                          <tr key={`d-${d.id}-${idx}`} className={isCredit ? 'cr' : undefined}>
                             <td>{fmtDMY(d.date)}</td>
-                            <td>{number || '—'}</td>
-                            <td style={{ width: 46, textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? 'זיכוי' : 'חיוב'}</td>
-                            <td style={{ width: 30, textAlign: 'center' }}>{d.is_closed ? '🏷' : ''}</td>
-                            <td style={{ width: 70 }}>{d.plate || ''}</td>
+                            <td>{number || ''}</td>
+                            <td>{isCredit ? 'זיכוי' : 'חיוב'}</td>
+                            <td>{d.plate || ''}</td>
                             <td>{d.description || ''}</td>
-                            <td style={{ textAlign: d.direction === 'credit' ? 'left' : 'right' }}>{d.direction === 'credit' ? '−' : ''}{fmt(amount)}</td>
-                            <td>{fmt(ev.runningBalance)}</td>
+                            <td className="n">{isCredit ? '' : fmtNum(amount)}</td>
+                            <td className="n">{isCredit ? fmtNum(amount) : ''}</td>
+                            <td className="n b">{fmtNum(ev.runningBalance)}</td>
                           </tr>
                         )
                       }
                       const { first, amount } = ev.data
                       return (
-                        <tr key={`p-${first.id}-${idx}`} style={{ background: '#f5faf6' }}>
+                        <tr key={`p-${first.id}-${idx}`} className="cr">
                           <td>{fmtDMY(paymentDateOf(first))}</td>
-                          <td>—</td>
-                          <td style={{ width: 46 }}>תשלום</td>
-                          <td style={{ width: 30, textAlign: 'center' }}>{first.receipt_issued ? '🧾' : '💰'}</td>
-                          <td style={{ width: 70 }}></td>
-                          <td>{first.receipt_issued ? `קבלה #${first.receipt_number || '—'}` : first.payment_method}</td>
-                          <td style={{ textAlign: 'left' }}>−{fmt(amount)}</td>
-                          <td>{fmt(ev.runningBalance)}</td>
+                          <td>{first.receipt_issued ? (first.receipt_number || '') : ''}</td>
+                          <td>{first.receipt_issued ? 'קבלה' : 'תשלום'}</td>
+                          <td></td>
+                          <td>{first.payment_method || ''}</td>
+                          <td className="n"></td>
+                          <td className="n">{fmtNum(amount)}</td>
+                          <td className="n b">{fmtNum(ev.runningBalance)}</td>
                         </tr>
                       )
                     })}
                   </tbody>
                 </table>
-                <div style={{ marginTop: 16, fontWeight: 700, fontSize: 14 }}>
-                  סה&quot;כ חיוב: {fmt(chargeTotal)} &nbsp; | &nbsp; סה&quot;כ זיכוי: {fmt(creditTotal)} &nbsp; | &nbsp; שולם: {fmt(paidTotal)} &nbsp; | &nbsp; יתרה: {fmt(closingBalance)}
+                <div className="lp-sum">
+                  <div><span>יתרת פתיחה</span>{fmtNum(openingForReport)}</div>
+                  <div><span>סה&quot;כ חובה</span>{fmtNum(chargeTotal)}</div>
+                  <div><span>סה&quot;כ זכות (זיכויים + תשלומים)</span>{fmtNum(creditTotal + paidTotal)}</div>
+                  <div><span>יתרה לתשלום</span>{fmt(closingBalance)}</div>
                 </div>
               </div>
             )
