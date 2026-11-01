@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
@@ -1446,15 +1447,16 @@ export default function CustomerTrackingTab({
       )}
 
       {/* ── HIDDEN PRINT AREA — only visible via @media print ── */}
-      {printMode && (
+      {printMode && createPortal(
         <div id="print-area" style={{ display: 'none' }}>
           <style>{`
             @media print {
               @page { size: A4 portrait; margin: 10mm 12mm; }
-              body * { visibility: hidden; }
-              main { height: auto !important; overflow: visible !important; }
+              /* print-area is portaled to <body>: drop everything else from layout so no blank pages follow */
+              body > *:not(#print-area) { display: none !important; }
+              html, body { height: auto !important; overflow: visible !important; }
               #print-area, #print-area * { visibility: visible; }
-              #print-area { display: block !important; position: absolute; top: 0; right: 0; width: 100%; direction: rtl; color: #111; font-family: 'Heebo', Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              #print-area { display: block !important; position: static; width: 100%; direction: rtl; color: #111; font-family: 'Heebo', Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               #print-area .lp-bsd { font-size: 11px; font-weight: 700; margin-bottom: 3px; }
               #print-area .lp-hdr { display: flex; justify-content: space-between; align-items: center; padding-bottom: 3mm; border-bottom: 2px solid #000; margin-bottom: 4mm; }
               #print-area .lp-biz { font-weight: 700; font-size: 12.5px; line-height: 1.45; }
@@ -1626,7 +1628,8 @@ export default function CustomerTrackingTab({
               </div>
             )
           })()}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

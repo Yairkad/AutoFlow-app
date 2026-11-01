@@ -1591,5 +1591,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-01T12:00:00Z"
+  },
+  {
+    "id": "bug-084",
+    "timestamp": "2026-11-01T14:00:00Z",
+    "error_message": "Ledger print (customer/supplier) prints blank pages after the ledger",
+    "file": "components/customers/CustomerTrackingTab.tsx, components/suppliers/SupplierTrackingTab.tsx",
+    "root_cause": "visibility:hidden print hack keeps the whole app's layout height (long lists in main) → extra blank pages; bug-013's main height override no longer enough",
+    "fix": "createPortal #print-area to document.body; @media print: body > *:not(#print-area){display:none}, print-area position:static",
+    "tags": [
+      "print",
+      "blank-page",
+      "portal"
+    ],
+    "related_bugs": [
+      "bug-013"
+    ],
+    "occurrences": 2,
+    "last_seen": "2026-11-01T14:00:00Z"
   }
 ]
