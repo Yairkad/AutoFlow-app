@@ -122,6 +122,8 @@
 
 ## Do-Not-Repeat
 
+- [2026-11-01] useConfirm() defaults to confirmLabel 'מחק' + danger variant — for non-delete actions always pass confirmLabel + variant:'primary'. User also wants to SEE and pick each item before bulk changes (checkbox per item), not a blanket confirm.
+
 - [2026-11-01] Production (auto-flow-app.vercel.app) ran code from branch ccr-1cf7f467-kc8ek4, NOT origin/main. Before fixing a user-reported prod bug, grep all remote branches for the feature/log string (`git grep <str> origin/<branch>`) — main may not contain it.
 - [2026-11-01] tire_brands unique index is on lower(name_en): never insert one row per exact spelling; group by keyOf() first.
 - [2026-10-29] Replied to the user in English twice although they asked for Hebrew — EVERY reply to this user must be in Hebrew only, no exceptions (code/commits stay English).

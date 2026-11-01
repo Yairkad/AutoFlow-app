@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -38,6 +38,10 @@ export default function BrandNamesModal({ open, onClose, tenantId, tireBrands, s
   const [filter, setFilter] = useState('')
   const [mergeKey, setMergeKey] = useState<string | null>(null)
   const [mergeTarget, setMergeTarget] = useState('')
+  // Unify review: which spellings to change, and which one to keep
+  const [unifyKey, setUnifyKey] = useState<string | null>(null)
+  const [unifySel, setUnifySel] = useState<Set<string>>(new Set())
+  const [unifyKeep, setUnifyKeep] = useState('')
 
   const groups = useMemo<Group[]>(() => {
     const byKey = new Map<string, Map<string, number>>()
@@ -107,21 +111,35 @@ export default function BrandNamesModal({ open, onClose, tenantId, tireBrands, s
     return null
   }
 
+  function openUnify(g: Group) {
+    if (unifyKey === g.key) { setUnifyKey(null); return }
+    setUnifyKey(g.key)
+    setUnifyKeep(g.main)
+    setUnifySel(new Set(g.variants.map(v => v.name)))
+  }
+
   async function unify(g: Group) {
-    const ok = await confirm({ msg: `לאחד את כל הכתיבים ל-"${g.main}"?\n${g.variants.map(v => `${v.name} (${v.count})`).join(', ')}` })
+    const from = g.variants.filter(v => unifySel.has(v.name) && v.name !== unifyKeep)
+    if (!from.length) return
+    const count = from.reduce((s, v) => s + v.count, 0)
+    const ok = await confirm({
+      msg: `לשנות ל-"${unifyKeep}" את הכתיבים:\n${from.map(v => `${v.name} (${v.count} צמיגים)`).join('\n')}\n\nסה״כ ${count} צמיגים יקבלו את השם ${unifyKeep}.`,
+      confirmLabel: 'אחד', variant: 'primary',
+    })
     if (!ok) return
     setBusy(g.key)
-    const error = await renameTires(g.variants.map(v => v.name), g.main, g.key, g.key)
+    const error = await renameTires([...from.map(v => v.name), unifyKeep], unifyKeep, g.key, g.key)
     setBusy(null)
     if (error) { console.error('[tires] unify brand', error); showToast('שגיאה באיחוד', 'error'); return }
-    showToast(`אוחד ל-${g.main} ✓`, 'success')
+    setUnifyKey(null)
+    showToast(`אוחד ל-${unifyKeep} ✓ — צמיגים באותה מידה יופיעו עכשיו ב"🔁 כפילויות" למיזוג המלאי`, 'success')
     await onSaved()
   }
 
   async function mergeInto(src: Group) {
     const target = groups.find(g => g.key === mergeTarget)
     if (!target) return
-    const ok = await confirm({ msg: `למזג את "${src.main}" (${src.total} צמיגים) לתוך "${target.main}"?\nכל הצמיגים של ${src.main} יעברו לשם ${target.main}.` })
+    const ok = await confirm({ msg: `למזג את "${src.main}" (${src.total} צמיגים) לתוך "${target.main}"?\nכל הצמיגים של ${src.main} יעברו לשם ${target.main}.`, confirmLabel: 'מזג', variant: 'primary' })
     if (!ok) return
     setBusy(src.key)
     const error = await renameTires(src.variants.map(v => v.name), target.main, src.key, target.key)
@@ -171,7 +189,32 @@ export default function BrandNamesModal({ open, onClose, tenantId, tireBrands, s
             {g.variants.length > 1 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, fontSize: 12, color: 'var(--text-muted)', flexWrap: 'wrap' }}>
                 <span dir="ltr">{g.variants.map(v => `${v.name} (${v.count})`).join(' · ')}</span>
-                <Button size="sm" loading={busy === g.key} onClick={() => unify(g)}>איחוד ל-{g.main}</Button>
+                <Button size="sm" variant={unifyKey === g.key ? 'secondary' : 'primary'} onClick={() => openUnify(g)}>
+                  {unifyKey === g.key ? 'סגור' : 'איחוד כתיבים…'}
+                </Button>
+              </div>
+            )}
+            {unifyKey === g.key && (
+              <div style={{ marginTop: 6, padding: '8px 10px', background: 'var(--bg-soft)', borderRadius: 8, fontSize: 13 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', gap: '4px 10px', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 600 }}>לאחד</span><span style={{ fontWeight: 600 }}>כתיב</span>
+                  <span style={{ fontWeight: 600 }}>צמיגים</span><span style={{ fontWeight: 600 }}>להשאיר</span>
+                  {g.variants.map(v => (
+                    <Fragment key={v.name}>
+                      <input type="checkbox" aria-label={`לאחד ${v.name}`} checked={unifySel.has(v.name) || v.name === unifyKeep} disabled={v.name === unifyKeep}
+                        onChange={e => setUnifySel(prev => { const n = new Set(prev); if (e.target.checked) n.add(v.name); else n.delete(v.name); return n })} />
+                      <span dir="ltr" style={{ textAlign: 'right' }}>{v.name}</span>
+                      <span>{v.count}</span>
+                      <input type="radio" name={`keep-${g.key}`} aria-label={`להשאיר ${v.name}`} checked={unifyKeep === v.name}
+                        onChange={() => { setUnifyKeep(v.name); setUnifySel(prev => new Set(prev).add(v.name)) }} />
+                    </Fragment>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                  <Button size="sm" loading={busy === g.key}
+                    disabled={!g.variants.some(v => unifySel.has(v.name) && v.name !== unifyKeep)}
+                    onClick={() => unify(g)}>אחד ל-{unifyKeep}</Button>
+                </div>
               </div>
             )}
             {mergeKey === g.key && (

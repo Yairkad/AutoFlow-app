@@ -2910,3 +2910,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 08:30 | Accounts (/accounts tabs suppliers|customers, tracking only) + Contacts (/contacts list, card, vCard/Excel export, edit via details tabs mode='edit'); customers month view = suppliers; scan → stock tab; migration 112 customers.contact_name | accounts/, contacts/, Suppliers/CustomersClient, *DetailsTab, Sidebar, proxy, Header | done | ~40k |
 | 08:35 | Created components/tires/BrandNamesModal.tsx | — | ~2690 |
 | 08:35 | Merged deployed branch ccr-1cf7f467-kc8ek4; fixed tire brand-names save (409 dup case variants) + unify/merge brand spellings; dashboard month-end date fix | components/tires/BrandNamesModal.tsx, TiresClient.tsx, lib/tires/brands.ts, DashboardStats.tsx | tsc clean | ~25000 |
+| 08:45 | Brand unify: review panel (checkbox per spelling + keep radio), confirm labels fixed (was default 'מחק') | components/tires/BrandNamesModal.tsx | tsc clean | ~4000 |
