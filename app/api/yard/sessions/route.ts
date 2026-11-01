@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getYardTenantId } from '@/lib/auth/yard-token'
 import { createServiceClient } from '@/lib/supabase/service'
 
-// GET /api/yard/sessions?status=active|pending_office|all
+// GET /api/yard/sessions?status=active|pending_office|archived|all
 export async function GET(req: NextRequest) {
   const tenantId = getYardTenantId()
   if (!tenantId) return new Response('Unauthorized', { status: 401 })
@@ -21,6 +21,12 @@ export async function GET(req: NextRequest) {
     .order('opened_at', { ascending: true })
 
   if (status !== 'all') query = query.eq('status', status)
+  // Closed cards: newest first, last N days only (?days=, default 7)
+  if (status === 'archived') {
+    const days = Math.min(90, Math.max(1, Number(req.nextUrl.searchParams.get('days')) || 7))
+    query = query.gte('closed_at', new Date(Date.now() - days * 86_400_000).toISOString())
+      .order('closed_at', { ascending: false }).limit(100)
+  }
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -19,6 +19,10 @@ export default function YardDrawer() {
   const [cards, setCards]       = useState<YardSession[]>([])
   const [editingId, setEditing] = useState<string | null>(null)
   const [busy, setBusy]         = useState<string | null>(null)
+  const [copied, setCopied]     = useState<string | null>(null)
+  const [showClosed, setShowClosed] = useState(false)
+  const [closed, setClosed]     = useState<YardSession[]>([])
+  const [closedDays, setClosedDays] = useState(3)
 
   const load = useCallback(async () => {
     try {
@@ -31,6 +35,34 @@ export default function YardDrawer() {
       setCards([...pending, ...active])
     } catch { /* network hiccup — keep the last list */ }
   }, [])
+
+  const loadClosed = useCallback(async (days: number) => {
+    try {
+      const r = await fetch(`/api/yard/sessions?status=archived&days=${days}`)
+      if (r.ok) setClosed(await r.json())
+    } catch { /* keep the last list */ }
+  }, [])
+
+  useEffect(() => {
+    if (!showClosed) return
+    const t = setTimeout(() => loadClosed(closedDays), 0)
+    return () => clearTimeout(t)
+  }, [showClosed, closedDays, loadClosed])
+
+  async function copyPlate(id: string, plate: string) {
+    try { await navigator.clipboard.writeText(plate) } catch { return }
+    setCopied(id)
+    setTimeout(() => setCopied(c => (c === id ? null : c)), 1500)
+  }
+
+  async function reopen(id: string) {
+    setBusy(id)
+    await fetch(`/api/yard/sessions/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'pending_office' }),
+    })
+    setBusy(null)
+    await Promise.all([load(), loadClosed(closedDays)])
+  }
 
   useEffect(() => {
     const first = setTimeout(load, 0)
@@ -56,6 +88,7 @@ export default function YardDrawer() {
     })
     setBusy(null); setEditing(null)
     load()
+    if (showClosed) loadClosed(closedDays)
   }
 
   const waiting = cards.filter(c => c.status === 'pending_office').length
@@ -93,7 +126,7 @@ export default function YardDrawer() {
           return (
             <article key={s.id} className={`yd-card${isWaiting ? ' wait' : ''}`} style={{ opacity: busy === s.id ? 0.55 : 1 }}>
               <div className="yd-card-h">
-                <span className="plate-chip">{formatPlate(s.plate)}</span>
+                <PlateCopy plate={s.plate} copied={copied === s.id} onCopy={() => copyPlate(s.id, s.plate)} />
                 <b>{[s.make, s.model].filter(Boolean).join(' ') || 'רכב'}</b>
                 <span className="num" style={{ color: 'var(--text-muted)', fontSize: 12 }}>{minutesSince(s.opened_at)} דק׳</span>
                 <span className={`yd-st ${isWaiting ? 'wait' : ''}`}>{isWaiting ? 'ממתין לסגירה' : 'בעבודה'}</span>
@@ -129,8 +162,66 @@ export default function YardDrawer() {
             </article>
           )
         })}
+
+        {/* Closed cards — view and reopen (stock deducted on close is returned) */}
+        <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+          <button type="button" onClick={() => setShowClosed(v => !v)}
+            style={{ background: 'none', border: 0, cursor: 'pointer', fontWeight: 700, fontSize: 14, color: 'var(--text)', padding: 0 }}>
+            {showClosed ? '▾' : '▸'} כרטיסים שנסגרו
+          </button>
+          {showClosed && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                הצג מ-
+                <select value={closedDays} onChange={e => setClosedDays(Number(e.target.value))} aria-label="טווח ימים" className="form-input" style={{ width: 'auto', padding: '2px 6px', fontSize: 12 }}>
+                  <option value={1}>היום</option>
+                  <option value={3}>3 ימים</option>
+                  <option value={7}>שבוע</option>
+                  <option value={30}>חודש</option>
+                </select>
+              </label>
+              {closed.length === 0 && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>אין כרטיסים סגורים בטווח הזה</div>}
+              {closed.map(s => {
+                const items = s.yard_session_items ?? []
+                return (
+                  <article key={s.id} className="yd-card" style={{ opacity: busy === s.id ? 0.55 : 0.9 }}>
+                    <div className="yd-card-h">
+                      <PlateCopy plate={s.plate} copied={copied === s.id} onCopy={() => copyPlate(s.id, s.plate)} />
+                      <b>{[s.make, s.model].filter(Boolean).join(' ') || 'רכב'}</b>
+                      <span className="num" style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                        {s.closed_at ? new Date(s.closed_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                      <span className="yd-st">נסגר</span>
+                    </div>
+                    <ul className="yd-items">
+                      {items.map(it => (
+                        <li key={it.id}><span className="nm">{it.name}</span><span className="num">{it.quantity} × {it.unit_price.toLocaleString()}₪</span></li>
+                      ))}
+                    </ul>
+                    <div className="yd-card-f">
+                      <span className="num yd-total">{sessionTotal(items).toLocaleString()}₪</span>
+                      <span style={{ marginInlineStart: 'auto' }} />
+                      <button type="button" className="yd-close" disabled={busy !== null} onClick={() => reopen(s.id)}>
+                        {busy === s.id ? '...' : '↩ פתח מחדש'}
+                      </button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </aside>
+  )
+}
+
+function PlateCopy({ plate, copied, onCopy }: { plate: string; copied: boolean; onCopy: () => void }) {
+  return (
+    <button type="button" className="plate-chip" onClick={onCopy} title="לחץ להעתקה" aria-label={`העתק מספר רכב ${formatPlate(plate)}`}
+      style={{ cursor: 'pointer', border: 0, font: 'inherit', ...(copied ? { background: '#16a34a', color: '#fff' } : {}) }}>
+      {copied ? '✓ הועתק' : formatPlate(plate)}
+    </button>
   )
 }
 

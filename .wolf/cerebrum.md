@@ -6,6 +6,9 @@
 
 ## User Preferences
 
+- [2026-11-01] Tire lists: English brand name primary, Hebrew name small underneath (not the reverse).
+- [2026-11-01] 'הכרטיס שפתוח במשרד' = YardDrawer (left-edge yard drawer in the main app), not /yard-office.
+
 - [2026-11-01] Ledger print (customers + suppliers): style modelled on the garage's accounting-system 'כרטיס לקוח' — logo header like all docs, compact zebra rows, separate debit/credit columns, summary box. Show ONLY our own recorded fields (no invented customer number etc.). NO status icons (🏷/🧾/💰) in print.
 - User reviews on the Vercel preview and sends screen-by-screen fixes; answer their questions and confirm unclear points before coding, then do everything in the same PR with one combined migrations file.
 - Footer text is exactly: מדיניות פרטיות · הצהרת נגישות | v{version} | © Yair Kadosh (no year, no "designed by" line). Version line started at 6.2.81; patch counts up without rollover (6.2.82, 6.2.83…).
@@ -58,6 +61,8 @@
 - **Dictates requirements in a stream, expects them folded into the current task** (2026-07-06): during a single implementation pass on supplier-tracking payments, the user kept sending follow-up asks mid-edit (multi-debt payment picker → payment-method selector → quick-add-supplier → collapse-by-default accordion → color swap on charge/credit → per-line notes → retroactively link an already-issued check to a debt → Excel import → styled print). None were meant to interrupt or replace the current step — each was additive scope for the same feature. Pattern: finish the in-flight edit to a non-broken state first, then absorb the new ask into the same pass rather than asking "should I stop and redo?".
 
 ## Key Learnings
+
+- [2026-11-01] Closing a yard session (PATCH status archived) deducts stock (decrement clamps at 0, short qty → no_stock_qty) and inserts tire_sales/product_sales with session_id. Reopening (archived → other) now restores quantity − no_stock_qty and deletes those movements; archived→archived is a no-op.
 - /suppliers and /customers now redirect to /accounts?tab=…; contact details live in /contacts. SupplierDetailsTab/CustomerDetailsTab take mode='edit' (form only) / 'panel' (card only) so other screens reuse their forms.
 - Dev StrictMode runs effects mount→cleanup→mount: a 'run once' ref must be set inside the deferred callback, not before it (else the timer is cleared and never re-armed).
 - Plain /scan redirects to /stock-count?tab=scan; /scan?count=1 stays the full-page scan count.

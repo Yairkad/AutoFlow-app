@@ -2912,3 +2912,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 08:35 | Merged deployed branch ccr-1cf7f467-kc8ek4; fixed tire brand-names save (409 dup case variants) + unify/merge brand spellings; dashboard month-end date fix | components/tires/BrandNamesModal.tsx, TiresClient.tsx, lib/tires/brands.ts, DashboardStats.tsx | tsc clean | ~25000 |
 | 08:45 | Brand unify: review panel (checkbox per spelling + keep radio), confirm labels fixed (was default 'מחק') | components/tires/BrandNamesModal.tsx | tsc clean | ~4000 |
 | 08:47 | Ledger print blank pages fixed via portal to body + display:none siblings | CustomerTrackingTab.tsx, SupplierTrackingTab.tsx | verified 1 page in PDF test | ~5000 |
+
+## Session: 2026-11-01 09:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:25 | Yard drawer: click plate copies; closed-cards list + reopen (API restores deducted stock, blocks double close); tires list English brand primary, Hebrew secondary | components/layout/YardDrawer.tsx, app/api/yard/sessions/*, components/tires/TiresClient.tsx | tsc clean | ~12000 |

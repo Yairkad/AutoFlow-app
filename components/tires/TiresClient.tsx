@@ -810,8 +810,8 @@ export default function TiresClient() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
                               {brandHe(brands, t.brand) ? (
                                 <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 1.2 }}>
-                                  <span>{brandHe(brands, t.brand)}</span>
-                                  <span dir="ltr" style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'right' }}>{t.brand}</span>
+                                  <span dir="ltr" style={{ textAlign: 'right' }}>{t.brand}</span>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{brandHe(brands, t.brand)}</span>
                                 </span>
                               ) : (t.brand || <span style={{ color: 'var(--text-muted)' }}>—</span>)}
                               {t.condition === 'used' && (

@@ -60,6 +60,42 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const update: Record<string, unknown> = { status }
 
+  const { data: current } = await supabase.from('yard_sessions').select('status')
+    .eq('id', id).eq('tenant_id', profile.tenant_id).single()
+  // Already closed — closing again must not deduct the stock a second time
+  if (status === 'archived' && current?.status === 'archived') {
+    const { data } = await supabase.from('yard_sessions').select().eq('id', id).eq('tenant_id', profile.tenant_id).single()
+    return NextResponse.json(data)
+  }
+
+  // Reopening a closed card: put back the stock the close deducted (decrement stops at 0, so
+  // only quantity − no_stock_qty actually left the shelf) and remove its sale movements.
+  if (current?.status === 'archived' && status !== 'archived') {
+    update.closed_at = null
+    const { data: session } = await supabase
+      .from('yard_sessions')
+      .select('yard_session_items(id, item_type, ref_id, quantity, no_stock_qty)')
+      .eq('id', id).eq('tenant_id', profile.tenant_id).single()
+    type RItem = { id: string; item_type: string; ref_id: string | null; quantity: number; no_stock_qty: number | null }
+    const items = ((session?.yard_session_items ?? []) as RItem[]).filter(i => i.ref_id && (i.item_type === 'tire' || i.item_type === 'product'))
+    for (const item of items) {
+      const back = Math.max(0, item.quantity - (item.no_stock_qty ?? 0))
+      if (back > 0) {
+        const table = item.item_type === 'tire' ? 'tires' : 'products'
+        const { data: row } = await supabase.from(table).select('qty').eq('id', item.ref_id!).eq('tenant_id', profile.tenant_id).single()
+        if (row) {
+          const { error: incErr } = await supabase.from(table).update({ qty: (Number(row.qty) || 0) + back }).eq('id', item.ref_id!)
+          if (incErr) console.error('restore qty failed', item.ref_id, incErr.message)
+        }
+      }
+      await supabase.from('yard_session_items').update({ no_stock_qty: null }).eq('id', item.id)
+    }
+    for (const table of ['tire_sales', 'product_sales']) {
+      const { error: delErr } = await supabase.from(table).delete().eq('tenant_id', profile.tenant_id).eq('session_id', id)
+      if (delErr && !/session_id|column/i.test(delErr.message)) console.error('remove sale movements failed', table, delErr.message)
+    }
+  }
+
   if (status === 'archived') {
     update.closed_at = new Date().toISOString()
     update.closed_by = null
