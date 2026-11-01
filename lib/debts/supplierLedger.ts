@@ -19,7 +19,12 @@ export interface SupplierMonthSummary {
 
 interface DebtIn { id: string; date: string; amount: number; paid: number; direction?: string | null; is_closed?: boolean }
 interface AllocIn { supplier_debt_id: string; scheduled_payment_id: string | null; amount: number; created_at: string }
-interface PayIn { id: string; amount: number; due_date: string; is_paid: boolean; allocation_ignored?: boolean | null }
+interface PayIn { id: string; amount: number; due_date: string; is_paid: boolean; allocation_ignored?: boolean | null; payment_method?: string | null; handed_date?: string | null }
+
+/** Date a payment lowers the supplier's balance: a check on the day it was handed over (a whole
+ *  series at once — the user paid then), a transfer on its own date. */
+export const paymentLedgerDate = (p: { due_date: string; payment_method?: string | null; handed_date?: string | null }) =>
+  p.payment_method === 'check' && p.handed_date ? p.handed_date : p.due_date
 
 const sign = (k: SupplierLedgerKind) => (k === 'charge' ? 1 : -1)
 export const monthOf = (iso: string) => iso.slice(0, 7)
@@ -44,8 +49,9 @@ export function supplierEvents(debts: DebtIn[], allocations: AllocIn[], payments
   }
   for (const p of payments) {
     if (p.allocation_ignored) continue
-    if (!linked.has(p.id) && !p.is_paid && p.due_date > today) continue
-    ev.push({ date: p.due_date, kind: 'payment', amount: Number(p.amount), paymentId: p.id })
+    const date = paymentLedgerDate(p)
+    if (!linked.has(p.id) && !p.is_paid && date > today) continue
+    ev.push({ date, kind: 'payment', amount: Number(p.amount), paymentId: p.id })
   }
   // Allocations with no payment row of this supplier (direct / bank-matched payments)
   for (const a of mine) {

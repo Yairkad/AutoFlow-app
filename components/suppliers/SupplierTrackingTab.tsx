@@ -15,7 +15,7 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
 import { reconcileSupplierPayment } from '@/lib/debts/reconcileSupplierPayment'
 import { netAllocation } from '@/lib/debts/netAllocation'
-import { supplierEvents, balanceAfter, monthSummaries, monthOf } from '@/lib/debts/supplierLedger'
+import { supplierEvents, balanceAfter, monthSummaries, monthOf, paymentLedgerDate } from '@/lib/debts/supplierLedger'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
@@ -255,7 +255,7 @@ export default function SupplierTrackingTab({
   const printSupplierMonths = (() => {
     const set = new Set([
       ...supplierDebts.filter(d => d.supplier_id === printSupplierId).map(d => monthKeyOf(d.date)),
-      ...scheduledPayments.filter(p => p.supplier_id === printSupplierId).map(p => monthKeyOf(p.due_date)),
+      ...scheduledPayments.filter(p => p.supplier_id === printSupplierId).map(p => monthKeyOf(paymentLedgerDate(p))),
     ])
     return [...set].sort().reverse()
   })()
@@ -1271,7 +1271,7 @@ export default function SupplierTrackingTab({
                       const monthDebts = group.monthMap[mk]
                       const sum = group.summaries[mk] ?? { opening: 0, charges: 0, credits: 0, payments: 0, closing: 0 }
                       // Payments shown in the month they were made (by date), not the invoice they paid
-                      const monthPayments = group.suppPayments.filter(p => group.countedPayIds.has(p.id) && monthOf(p.due_date) === mk)
+                      const monthPayments = group.suppPayments.filter(p => group.countedPayIds.has(p.id) && monthOf(paymentLedgerDate(p)) === mk)
                       const monthChargeTotal = monthDebts.filter(d => d.direction !== 'credit').reduce((s, d) => s + Number(d.amount), 0)
                       const monthCreditTotal = monthDebts.filter(d => d.direction === 'credit').reduce((s, d) => s + Number(d.amount), 0)
                       const monthNetTotal    = monthChargeTotal - monthCreditTotal
@@ -1412,7 +1412,11 @@ export default function SupplierTrackingTab({
                                     </span>
                                     {p.description && <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{p.description}</span>}
                                     <span style={{ fontWeight: 700 }}>{fmt(p.amount)}</span>
-                                    <span style={{ color: 'var(--text-muted)', fontSize: '12px', whiteSpace: 'nowrap' }}>{p.due_date}</span>
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                      {p.payment_method === 'check' && p.handed_date && p.handed_date !== p.due_date
+                                        ? <>נמסר {fmtDMY(p.handed_date)} · פירעון {fmtDMY(p.due_date)}</>
+                                        : fmtDMY(p.due_date)}
+                                    </span>
                                     <span style={{ marginRight: 'auto' }}>
                                       {p.is_paid
                                         ? <span style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 700 }}>✓ שולם</span>

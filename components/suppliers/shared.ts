@@ -69,6 +69,7 @@ export interface ScheduledPayment {
   supplier_id: string | null; category: string | null
   is_paid: boolean; paid_date: string | null; expense_id: string | null; notes: string | null
   check_number: string | null; series_id: string | null; allocation_ignored: boolean
+  handed_date?: string | null
 }
 
 export interface SupplierDebtPayment {

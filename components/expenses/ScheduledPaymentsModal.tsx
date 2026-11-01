@@ -22,6 +22,7 @@ export interface ScheduledPayment {
   description: string
   amount: number
   due_date: string        // ISO date YYYY-MM-DD
+  handed_date?: string | null  // check handed to the supplier (balance drops then) — migration 113
   payment_method: 'check' | 'transfer'
   supplier_id: string | null
   category: string | null
@@ -45,6 +46,7 @@ interface SeriesRow {
   description: string
   amount: number
   due_date: string
+  handed_date?: string | null
   payment_method: 'check' | 'transfer'
   supplier_id: string | null
   notes: string | null
@@ -156,6 +158,7 @@ export default function ScheduledPaymentsModal({
   const [fDesc,    setFDesc]    = useState('')
   const [fAmount,  setFAmount]  = useState('')
   const [fDue,     setFDue]     = useState('')
+  const [fHanded,  setFHanded]  = useState('')
   const [fMethod,  setFMethod]  = useState<'check' | 'transfer'>('check')
   const [fSupplier, setFSupplier] = useState('')
   const [fNotes,   setFNotes]   = useState('')
@@ -275,7 +278,7 @@ export default function ScheduledPaymentsModal({
 
   const openAdd = () => {
     setEditItem(null)
-    setFDesc(''); setFAmount(''); setFDue(todayIso())
+    setFDesc(''); setFAmount(''); setFDue(todayIso()); setFHanded(todayIso())
     setFMethod('check'); setFSupplier(initialSupplierId ?? ''); setFNotes(''); setFCheckNumber('')
     setFSeriesMode(false); setFSeriesCount('3'); setFSeriesInterval('month'); setFSeriesDays('30')
     setFSeriesSplit('equal'); setFSeriesRoundAmt(''); setFSeriesRemainderPos('last')
@@ -285,7 +288,7 @@ export default function ScheduledPaymentsModal({
 
   const openEdit = (p: ScheduledPayment) => {
     setEditItem(p)
-    setFDesc(p.description); setFAmount(String(p.amount)); setFDue(p.due_date)
+    setFDesc(p.description); setFAmount(String(p.amount)); setFDue(p.due_date); setFHanded(p.handed_date ?? '')
     setFMethod(p.payment_method); setFSupplier(p.supplier_id ?? ''); setFNotes(p.notes ?? '')
     setFCheckNumber(p.check_number ?? '')
     setFSeriesMode(false)
@@ -342,6 +345,7 @@ export default function ScheduledPaymentsModal({
       rowsToInsert.push({
         tenant_id: tenantId, description: fDesc, amount: amt,
         due_date: toLocalISODate(dueDate),
+        ...(fMethod === 'check' && fHanded ? { handed_date: fHanded } : {}),
         payment_method: fMethod, supplier_id: fSupplier || null, notes: fNotes || null,
         check_number: baseCheckNum !== null ? String(baseCheckNum + i) : null,
         series_id: seriesId,
@@ -414,6 +418,7 @@ export default function ScheduledPaymentsModal({
         description: fDesc, amount, due_date: fDue,
         payment_method: fMethod, supplier_id: fSupplier || null,
         notes: fNotes || null, check_number: fCheckNumber || null,
+        ...(fMethod === 'check' && fHanded ? { handed_date: fHanded } : {}),
       }
       const res = await supabase.from('scheduled_payments').update(payload).eq('id', editItem.id)
       setSaving(false)
@@ -442,6 +447,7 @@ export default function ScheduledPaymentsModal({
       supplier_id: fSupplier || null,
       notes: fNotes || null,
       check_number: fCheckNumber || null,
+      ...(fMethod === 'check' && fHanded ? { handed_date: fHanded } : {}),
     }
     const insRes = await supabase.from('scheduled_payments').insert(payload).select('id').single()
     if (insRes.error) { setSaving(false); showToast('שגיאה: ' + insRes.error.message, 'error'); return }
@@ -1052,6 +1058,10 @@ export default function ScheduledPaymentsModal({
                 <Input label="מספר צ׳ק (אופציונלי)" value={fCheckNumber} onChange={e => setFCheckNumber(e.target.value)} />
               )}
             </>
+          )}
+
+          {fMethod === 'check' && (
+            <Input label="תאריך מסירה לספק (היתרה יורדת בתאריך הזה)" type="date" value={fHanded} onChange={e => setFHanded(e.target.value)} />
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

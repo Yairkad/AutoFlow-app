@@ -2928,3 +2928,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 10:58 | Supplier ledger: checks credited on handed_date (new field 'תאריך מסירה' in ScheduledPaymentsModal), migration 113 | supplierLedger.ts, ScheduledPaymentsModal.tsx, SupplierTrackingTab.tsx | tsc clean | ~9000 |
