@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getOAuthUrl } from '@/lib/drive'
+import { sessionTenant } from '@/lib/auth/sessionTenant'
 
 export async function GET(req: Request) {
   // Get tenant_id from session
   const { searchParams } = new URL(req.url)
-  const tenantId = searchParams.get('tenant_id')
-  if (!tenantId) return NextResponse.json({ error: 'Missing tenant_id' }, { status: 400 })
+  const guard = await sessionTenant(searchParams.get('tenant_id'), { adminOnly: true })
+  if ('error' in guard) return guard.error
+  const tenantId = guard.tenantId
 
   // Verify tenant exists
   const sb = createClient(

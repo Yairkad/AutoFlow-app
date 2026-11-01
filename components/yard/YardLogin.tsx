@@ -56,7 +56,7 @@ export default function YardLogin({ onCancel, currentName }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ background: '#0f172a', direction: 'rtl', padding: 16 }}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center" style={{ background: '#141A2E', direction: 'rtl', padding: 16 }}>
       <div className="bg-white rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: 520, maxHeight: '100%', padding: 20 }}>
         <div className="flex items-center justify-between mb-1">
           <h1 className="font-black text-slate-900" style={{ fontSize: 22 }}>

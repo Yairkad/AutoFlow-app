@@ -8,6 +8,8 @@ export interface Customer {
   name: string
   category: string | null
   phone: string | null
+  /** Person to talk to (migration 112) */
+  contact_name?: string | null
   email: string | null
   address: string | null
   notes: string | null

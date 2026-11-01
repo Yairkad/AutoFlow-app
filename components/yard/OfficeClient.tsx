@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { YardSession, YardSessionItem, YardService } from '@/lib/yard/types'
 import { sessionTotal, minutesSince, formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
+import SessionItemsEditor from '@/components/yard/SessionItemsEditor'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 const VAT = 1.18
@@ -16,7 +17,6 @@ interface Props {
 }
 
 export default function OfficeClient({ initialActive, initialPending }: Props) {
-  const router  = useRouter()
   const [tab,     setTab]     = useState<'pending' | 'active' | 'history'>('pending')
   const [unread,  setUnread]  = useState(0)
   const [historyPlate,  setHistoryPlate]  = useState('')
@@ -36,6 +36,8 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
   const [pending, setPending] = useState(initialPending)
   const [closing,      setClosing]      = useState<string | null>(null)
   const [sendingBack,  setSendingBack]  = useState<string | null>(null)
+  // Card whose items are being edited in place (price / qty / add / remove)
+  const [editingId,    setEditingId]    = useState<string | null>(null)
   const [, setTick] = useState(0)
   const [priceModal,   setPriceModal]   = useState(false)
   const [services,     setServices]     = useState<YardService[]>([])
@@ -351,8 +353,8 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
             className="text-base font-semibold transition-colors"
             style={{
               padding: '14px 24px',
-              borderBottom: tab === t ? '3px solid #2563eb' : '3px solid transparent',
-              color: tab === t ? '#1d4ed8' : '#94a3b8',
+              borderBottom: tab === t ? '3px solid #26357A' : '3px solid transparent',
+              color: tab === t ? '#1E2B66' : '#94a3b8',
               marginBottom: '-2px',
             }}
           >
@@ -373,8 +375,8 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
           className="text-base font-semibold transition-colors"
           style={{
             padding: '14px 24px',
-            borderBottom: tab === 'history' ? '3px solid #2563eb' : '3px solid transparent',
-            color: tab === 'history' ? '#1d4ed8' : '#94a3b8',
+            borderBottom: tab === 'history' ? '3px solid #26357A' : '3px solid transparent',
+            color: tab === 'history' ? '#1E2B66' : '#94a3b8',
             marginBottom: '-2px',
           }}
         >
@@ -419,6 +421,10 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                     </div>
                   </div>
 
+                  {/* Items: read-only table, or edited in place (no trip to the yard terminal) */}
+                  {editingId === s.id ? (
+                    <SessionItemsEditor session={s} onChanged={fetchSessions} onDone={() => setEditingId(null)} />
+                  ) : (<>
                   {/* Items table */}
                   <table className="w-full border-collapse">
                     <thead>
@@ -461,26 +467,17 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                       ))}
                     </tbody>
                   </table>
+                  </>)}
 
                   {/* Footer */}
                   <div className="flex items-center justify-between border-t-2 border-slate-100" style={{ padding: '14px 20px', background: '#f8fafc' }}>
                     <div className="font-black" style={{ fontSize: '18px' }}>סה״כ: {total.toLocaleString()}₪</div>
                     <div className="flex items-center" style={{ gap: '8px' }}>
-                      <button
-                        onClick={() => router.push(`/yard/${s.id}`)}
-                        className="bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold transition-colors"
-                        style={{ padding: '10px 18px', fontSize: '14px' }}
-                      >
-                        ✏️ עריכת נתונים
-                      </button>
-                      <button
-                        onClick={() => sendBackToYard(s.id)}
-                        disabled={sendingBack === s.id}
-                        className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-xl font-bold transition-colors"
-                        style={{ padding: '10px 18px', fontSize: '14px' }}
-                      >
-                        {sendingBack === s.id ? '...' : '🔄 החזרה לרחבה'}
-                      </button>
+                      {editingId === s.id && (
+                        <button onClick={() => setEditingId(null)}
+                          className="bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold transition-colors"
+                          style={{ padding: '10px 18px', fontSize: '14px' }}>✓ סיום עריכה</button>
+                      )}
                       <button
                         onClick={() => closeSession(s.id)}
                         disabled={closing === s.id}
@@ -489,6 +486,10 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                       >
                         {closing === s.id ? '...' : '✓ סגור כרטיס'}
                       </button>
+                      <RowActionsMenu align="end" actions={[
+                        { key: 'edit', label: editingId === s.id ? 'סיום עריכה' : 'עריכת נתונים', icon: '✏️', onClick: () => setEditingId(id => id === s.id ? null : s.id) },
+                        { key: 'back', label: sendingBack === s.id ? 'מחזיר...' : 'החזרה לרחבה', icon: '🔄', disabled: sendingBack === s.id, onClick: () => sendBackToYard(s.id) },
+                      ]} />
                     </div>
                   </div>
                 </div>

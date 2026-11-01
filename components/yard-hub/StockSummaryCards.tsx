@@ -9,7 +9,7 @@ const ils = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`
 // Freshness colour: green ≤ 7 days, amber ≤ 30, red beyond / never
 function freshColor(days: number | null): string {
   if (days === null) return '#dc2626'
-  if (days <= 7) return '#16a34a'
+  if (days <= 7) return 'var(--success)'
   if (days <= 30) return '#d97706'
   return '#dc2626'
 }
@@ -40,12 +40,12 @@ export default function StockSummaryCards() {
 
   return (
     <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-      <Card title="💰 שווי מלאי צמיגים (עלות)" color="#0f172a">
+      <Card title="💰 שווי מלאי צמיגים (עלות)" color="#141A2E">
         <span className="font-black text-slate-900" style={{ fontSize: '26px' }}>{ils(s.costValue)}</span>
         <span className="text-xs text-slate-500">{s.tireCount.toLocaleString('he-IL')} צמיגים · {s.tireModels} דגמים</span>
         {s.missingCost > 0 && <span className="text-xs font-bold text-amber-700">⚠ {s.missingCost} דגמים בלי מחיר עלות — לא נספרו</span>}
       </Card>
-      <Card title="🏷 שווי מלאי לפי מחיר מכירה" color="#2563eb">
+      <Card title="🏷 שווי מלאי לפי מחיר מכירה" color="#26357A">
         <span className="font-black text-slate-900" style={{ fontSize: '26px' }}>{ils(s.sellValue)}</span>
         {s.costValue > 0 && <span className="text-xs text-slate-500">רווח פוטנציאלי {ils(s.sellValue - s.costValue)}</span>}
       </Card>

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { tireSizeText } from '@/lib/tires/size'
+import { likePatterns } from '@/lib/search/fuzzy'
+import { brandsMatchingHe } from '@/lib/tires/brands'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 
 // ── Hebrew numeral conversion ──────────────────────────────────────────────
@@ -88,7 +90,7 @@ function ChangePasswordModal({ onClose, userEmail }: { onClose: () => void; user
         background: 'var(--bg-card)', borderRadius: '14px', padding: '28px',
         width: 'min(340px, calc(100vw - 32px))', zIndex: 300, direction: 'rtl', boxShadow: '0 20px 60px rgba(0,0,0,.25)',
       }}>
-        <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '20px' }}>🔑 שינוי סיסמא</div>
+        <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '20px' }}>שינוי סיסמא</div>
         {success ? (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{ fontSize: '36px', marginBottom: '8px' }}>✅</div>
@@ -206,8 +208,6 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const [showDropdown, setShowDropdown] = useState(false)
 
   // Notification bell
-  const [pendingQuotes,       setPendingQuotes]       = useState(0)
-  const [pendingAlignment,    setPendingAlignment]    = useState(0)
   const [pendingTestTransfer, setPendingTestTransfer] = useState(0)
   const [showBell,            setShowBell]            = useState(false)
 
@@ -230,12 +230,8 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
     const tid = profile?.tenantId
     if (!tid) return
     Promise.all([
-      supabase.from('quotes').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'open'),
-      supabase.from('alignment_jobs').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'waiting'),
       supabase.from('test_transfers').select('*', { count: 'exact', head: true }).eq('tenant_id', tid).eq('status', 'ממתין'),
-    ]).then(([pq, pa, pt]) => {
-      setPendingQuotes(pq.count ?? 0)
-      setPendingAlignment(pa.count ?? 0)
+    ]).then(([pt]) => {
       setPendingTestTransfer(pt.count ?? 0)
     })
   }, [profile?.tenantId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -270,17 +266,18 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
   async function runSearch(term: string) {
     const like = `%${term}%`
-    const [debts, suppliers, employees, quotes, alignments, inspections, cars, expenses, products, tires, customers, custInvoices, suppInvoices] = await Promise.all([
+    // A Hebrew brand name (tire_brands) finds that brand's tires too
+    const { data: brandRows } = await supabase.from('tire_brands').select('name_en, name_he')
+    const heBrands = brandsMatchingHe(brandRows, term)
+    const [debts, suppliers, employees, inspections, cars, expenses, products, tires, customers, custInvoices, suppInvoices] = await Promise.all([
       supabase.from('customer_debts').select('id, name, phone, plate, amount').or(`name.ilike.${like},phone.ilike.${like},plate.ilike.${like}`).limit(4),
       supabase.from('suppliers').select('id, name, phone, contact_name').or(`name.ilike.${like},phone.ilike.${like},contact_name.ilike.${like}`).limit(4),
       supabase.from('employees').select('id, full_name, phone').or(`full_name.ilike.${like},phone.ilike.${like}`).limit(4),
-      supabase.from('quotes').select('id, client_name, phone, plate').or(`client_name.ilike.${like},phone.ilike.${like},plate.ilike.${like}`).limit(4),
-      supabase.from('alignment_jobs').select('id, plate, customer_name, customer_phone').or(`plate.ilike.${like},customer_name.ilike.${like},customer_phone.ilike.${like}`).limit(4),
       supabase.from('car_inspections').select('id, plate, owner_name, owner_phone').or(`plate.ilike.${like},owner_name.ilike.${like},owner_phone.ilike.${like}`).limit(4),
       supabase.from('cars').select('id, plate, make, model, owner_name, buyer_name').or(`plate.ilike.${like},make.ilike.${like},model.ilike.${like},owner_name.ilike.${like},buyer_name.ilike.${like}`).limit(4),
       supabase.from('expenses').select('id, description, amount').ilike('description', like).limit(4),
-      supabase.from('products').select('id, name, sku').or(`name.ilike.${like},sku.ilike.${like}`).limit(3),
-      supabase.from('tires').select('id, brand, width, profile, rim, sku').or(`brand.ilike.${like},sku.ilike.${like}`).limit(3),
+      likePatterns(term).reduce((q, w) => q.or(`name.ilike.${w},sku.ilike.${w},barcode.ilike.${w}`), supabase.from('products').select('id, name, sku')).limit(3),
+      supabase.from('tires').select('id, brand, width, profile, rim, sku').or([`brand.ilike.${like}`, `sku.ilike.${like}`, ...heBrands.map(b => `brand.ilike."${b.replace(/["\\]/g, '')}"`)].join(',')).limit(3),
       supabase.from('customers').select('id, name, phone').or(`name.ilike.${like},phone.ilike.${like}`).limit(4),
       supabase.from('customer_ledger_debts').select('customer_id, doc_number, amount, customers(name)').ilike('doc_number', like).limit(4),
       supabase.from('supplier_debts').select('supplier_id, doc_number, amount, suppliers(name)').ilike('doc_number', like).limit(4),
@@ -288,19 +285,17 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
     const all: SearchResult[] = []
     debts.data?.forEach(r => all.push({ id: r.id, icon: '💳', category: 'חובות (מזדמנים)', primary: r.name, secondary: [r.phone, r.plate, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/debts' }))
-    suppliers.data?.forEach(r => all.push({ id: r.id, icon: '🏭', category: 'ספקים', primary: r.name, secondary: r.phone ?? undefined, href: '/suppliers' }))
+    suppliers.data?.forEach(r => all.push({ id: r.id, icon: '🏭', category: 'ספקים', primary: r.name, secondary: r.phone ?? undefined, href: '/contacts' }))
     employees.data?.forEach(r => all.push({ id: r.id, icon: '👷', category: 'עובדים', primary: r.full_name, secondary: r.phone ?? undefined, href: '/employees' }))
-    customers.data?.forEach(r => all.push({ id: r.id, icon: '👤', category: 'לקוחות', primary: r.name, secondary: r.phone ?? undefined, href: '/customers' }))
+    customers.data?.forEach(r => all.push({ id: r.id, icon: '👤', category: 'לקוחות', primary: r.name, secondary: r.phone ?? undefined, href: '/contacts' }))
     custInvoices.data?.forEach((r: any) => {
       if (!r.customer_id) return
-      all.push({ id: r.customer_id, icon: '🧾', category: 'חשבוניות לקוחות', primary: r.customers?.name ?? '—', secondary: [r.doc_number ? `מס' ${r.doc_number}` : null, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/customers' })
+      all.push({ id: r.customer_id, icon: '🧾', category: 'חשבוניות לקוחות', primary: r.customers?.name ?? '—', secondary: [r.doc_number ? `מס' ${r.doc_number}` : null, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/accounts?tab=customers' })
     })
     suppInvoices.data?.forEach((r: any) => {
       if (!r.supplier_id) return
-      all.push({ id: r.supplier_id, icon: '🧾', category: 'חשבוניות ספקים', primary: r.suppliers?.name ?? '—', secondary: [r.doc_number ? `מס' ${r.doc_number}` : null, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/suppliers' })
+      all.push({ id: r.supplier_id, icon: '🧾', category: 'חשבוניות ספקים', primary: r.suppliers?.name ?? '—', secondary: [r.doc_number ? `מס' ${r.doc_number}` : null, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/accounts?tab=suppliers' })
     })
-    quotes.data?.forEach(r => all.push({ id: r.id, icon: '💬', category: 'הצעות', primary: r.client_name ?? '—', secondary: [r.phone, r.plate].filter(Boolean).join(' · '), href: '/quotes' }))
-    alignments.data?.forEach(r => all.push({ id: r.id, icon: '🔩', category: 'פרונט', primary: r.plate, secondary: [r.customer_name, r.customer_phone].filter(Boolean).join(' · '), href: '/alignment' }))
     inspections.data?.forEach(r => all.push({ id: r.id, icon: '📝', category: 'בדיקות', primary: r.plate, secondary: [r.owner_name, r.owner_phone].filter(Boolean).join(' · '), href: '/inspections' }))
     cars.data?.forEach(r => all.push({ id: r.id, icon: '🚗', category: 'רכבים', primary: [r.make, r.model, r.plate].filter(Boolean).join(' '), secondary: (r.owner_name || r.buyer_name) ?? undefined, href: '/cars' }))
     expenses.data?.forEach(r => all.push({ id: r.id, icon: '💰', category: 'הוצאות', primary: r.description ?? '—', secondary: r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : undefined, href: '/expenses' }))
@@ -312,7 +307,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   }
 
   function go(r: SearchResult) {
-    router.push(`${r.href}?open=${r.id}`)
+    router.push(`${r.href}${r.href.includes('?') ? '&' : '?'}open=${r.id}`)
     setQ('')
     setResults([])
     setFocused(false)
@@ -466,7 +461,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
       {/* Clock */}
       <div className="header-clock" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-        <div className="header-clock-time" style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '0.06em', color: 'var(--text)', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{timeStr}</div>
+        <div className="header-clock-time num" style={{ fontSize: '17px', fontWeight: 600, color: 'var(--text)', lineHeight: 1 }}>{timeStr}</div>
         <div className="header-clock-date" style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{dateStr}</div>
       </div>
 
@@ -478,7 +473,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
           className="header-search-mobile-btn"
           onClick={() => { setMobileSearchOpen(true); setTimeout(() => mobileInputRef.current?.focus(), 50) }}
           aria-label="חיפוש"
-        >🔍</button>
+        ><svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
 
         {/* Desktop / tablet: full inline search */}
         <div ref={searchRef} className="header-search-desktop" style={{ position: 'relative' }}>
@@ -486,7 +481,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
             <span style={{ position: 'absolute', right: '10px', fontSize: '15px', pointerEvents: 'none', zIndex: 1 }}>
               {loading ? (
                 <span style={{ width: 14, height: 14, border: '2px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', display: 'inline-block', animation: 'spin .6s linear infinite' }} />
-              ) : '🔍'}
+              ) : <span style={{ color: 'var(--text-muted)', display: 'flex' }}><svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>}
             </span>
             <input
               type="search"
@@ -500,12 +495,13 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
               spellCheck={false}
               data-lpignore="true"
               data-1p-ignore="true"
-              placeholder="חיפוש..."
+              placeholder="חיפוש בכל המערכת — לקוח, רכב, חשבונית, צמיג"
+              aria-label="חיפוש בכל המערכת"
               style={{
-                paddingRight: '34px', paddingLeft: q ? '10px' : '62px', height: '36px',
+                paddingRight: '34px', paddingLeft: q ? '10px' : '62px', height: '38px',
                 border: `1px solid ${focused ? 'var(--primary)' : 'var(--border)'}`,
                 borderRadius: showDropdownResults ? '8px 8px 0 0' : '8px',
-                background: 'var(--bg)', fontSize: '13px', width: '240px',
+                background: 'var(--bg-card)', fontSize: '13.5px', width: 'min(420px, 34vw)',
                 outline: 'none', direction: 'rtl', color: 'var(--text)',
                 transition: 'border-color .15s',
               }}
@@ -570,7 +566,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
         {/* Bell */}
         {(() => {
-          const total = pendingQuotes + pendingAlignment + pendingTestTransfer
+          const total = pendingTestTransfer
           return (
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <button
@@ -610,32 +606,6 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                       <div style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
                         הכל מטופל ✓
                       </div>
-                    )}
-                    {pendingQuotes > 0 && (
-                      <Link
-                        href="/quotes"
-                        onClick={() => setShowBell(false)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px', textDecoration: 'none', color: 'var(--text)', borderBottom: pendingAlignment > 0 ? '1px solid var(--border)' : 'none' }}
-                      >
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>💬</span>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 600 }}>{pendingQuotes} הצעות מחיר</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ממתינות לטיפול</div>
-                        </div>
-                      </Link>
-                    )}
-                    {pendingAlignment > 0 && (
-                      <Link
-                        href="/alignment"
-                        onClick={() => setShowBell(false)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '11px 14px', textDecoration: 'none', color: 'var(--text)', borderBottom: pendingTestTransfer > 0 ? '1px solid var(--border)' : 'none' }}
-                      >
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>🔩</span>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 600 }}>{pendingAlignment} עבודות פרונט</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ממתינות להתחלה</div>
-                        </div>
-                      </Link>
                     )}
                     {pendingTestTransfer > 0 && (
                       <Link

@@ -29,6 +29,6 @@ export async function backupTenantToDrive(sb: SupabaseClient, tenantId: string, 
     console.error('backup retention cleanup failed:', e)
   }
 
-  await markBackup(sb, tenantId, kind)
-  return { fileId: file.id, name: file.name, counts: backup._counts }
+  const at = await markBackup(sb, tenantId, kind)
+  return { fileId: file.id, name: file.name, at, counts: backup._counts }
 }

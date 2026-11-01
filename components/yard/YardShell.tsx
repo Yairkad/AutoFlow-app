@@ -89,7 +89,7 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
             href={s.href}
             className={`relative flex flex-col items-center justify-center text-center rounded-xl font-bold transition-all active:scale-95 ${active ? 'bg-white text-slate-900' : 'text-slate-200 hover:bg-slate-700'}`}
             // inline colour: globals.css styles <a> outside Tailwind's layers, so a text-* class loses
-            style={{ padding: '10px 4px', fontSize: '12px', lineHeight: 1.2, textDecoration: 'none', minHeight: '64px', color: active ? '#0f172a' : '#e2e8f0' }}
+            style={{ padding: '10px 4px', fontSize: '12px', lineHeight: 1.2, textDecoration: 'none', minHeight: '64px', color: active ? '#141A2E' : '#e2e8f0' }}
           >
             <span style={{ fontSize: '24px', marginBottom: '3px' }}>{s.icon}</span>
             {s.label}
@@ -117,7 +117,7 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
             href={s.href}
             onClick={() => setOpen(false)}
             className={`flex items-center gap-3 rounded-xl font-bold ${active ? 'bg-white text-slate-900' : 'text-slate-100 active:bg-slate-700'}`}
-            style={{ padding: '12px 14px', fontSize: '17px', textDecoration: 'none', minHeight: '54px', color: active ? '#0f172a' : '#f1f5f9' }}
+            style={{ padding: '12px 14px', fontSize: '17px', textDecoration: 'none', minHeight: '54px', color: active ? '#141A2E' : '#f1f5f9' }}
           >
             <span style={{ fontSize: '24px', width: 30, textAlign: 'center' }}>{s.icon}</span>
             <span className="flex-1">{s.label}</span>

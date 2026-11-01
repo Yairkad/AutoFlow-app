@@ -8,7 +8,9 @@ import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import GuideEditor from '@/components/settings/GuideEditor'
+import DriveFilesPanel from '@/components/documents/DriveFilesPanel'
 import { BACKUP_TABLES, CHILD_TABLES } from '@/lib/backup/backup'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 type ToastFn = (msg: string, type?: 'success' | 'error' | 'info') => void
 
@@ -67,7 +69,7 @@ interface InviteToken {
   expires_at: string | null
 }
 
-type Tab = 'business' | 'users' | 'vault' | 'landing' | 'backup'
+type Tab = 'users' | 'vault' | 'landing' | 'backup' | 'drive'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -80,10 +82,8 @@ const ALL_MODULES = [
   { key: 'products',   label: '📦 מוצרים' },
   { key: 'tires',      label: '🔘 צמיגים' },
   { key: 'cars',       label: '🚗 רכבים' },
-  { key: 'quotes',     label: '💬 הצעות מחיר' },
   { key: 'suppliers',  label: '🏭 ספקים' },
   { key: 'customers',  label: '💳 לקוחות (כרטסת)' },
-  { key: 'alignment',  label: '🔩 פרונט / כיוון' },
   { key: 'inspections',label: '📝 בדיקות קניה' },
   { key: 'reminders',  label: '🔔 תזכורות' },
   { key: 'documents',  label: '📄 מסמכים' },
@@ -114,12 +114,14 @@ function field(label: string, el: React.ReactNode) {
 
 // ── BusinessTab ────────────────────────────────────────────────────────────
 
-function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn }) {
-  const [tenant,     setTenant]     = useState<Tenant | null>(null)
-  const [origTenant, setOrigTenant] = useState<Tenant | null>(null)
+function BusinessTab({ supabase, tenantId, showToast, initial }: { supabase: ReturnType<typeof createClient>; tenantId: string; showToast: ToastFn; initial?: Tenant | null }) {
+  // Shown at once from the tenant row the app already loaded; refreshed in the background
+  const seed = initial ? { ...initial, public_info: initial.public_info ?? {} } : null
+  const [tenant,     setTenant]     = useState<Tenant | null>(seed)
+  const [origTenant, setOrigTenant] = useState<Tenant | null>(seed)
   const [saving,     setSaving]     = useState(false)
   const [editing,    setEditing]    = useState(false)
-  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(initial?.logo_base64 ?? null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
@@ -211,20 +213,20 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
           </div>
         </div>
 
-        <Button variant="secondary" style={{ flexShrink: 0 }} onClick={() => setEditing(true)}>✏️ עריכה</Button>
+        <Button variant="secondary" style={{ flexShrink: 0 }} onClick={() => setEditing(true)}>עריכה</Button>
       </div>
 
       {/* ── Edit Modal ── */}
       {editing && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={cancel}
+          {...guardedBackdrop(cancel)}
         >
           <div
             style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', maxWidth: '560px', width: '100%', margin: '16px', maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto', direction: 'rtl' }}
             onClick={e => e.stopPropagation()}
           >
-            <h3 style={{ margin: '0 0 20px', fontSize: '16px', fontWeight: 700 }}>✏️ עריכת פרטי עסק</h3>
+            <h3 style={{ margin: '0 0 20px', fontSize: '16px', fontWeight: 700 }}>עריכת פרטי עסק</h3>
 
             {/* Logo row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
@@ -253,7 +255,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {/* פרטי העסק */}
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>🏢 פרטי העסק</div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px' }}>פרטי העסק</div>
               <div className="settings-grid-3">
                 {field('שם עסק *', <input className="form-input" value={tenant.name} onChange={e => setTenant(t => t ? { ...t, name: e.target.value } : t)} placeholder="שם העסק" />)}
                 {field('כותרת משנה', <input className="form-input" value={tenant.sub_title ?? ''} onChange={e => setTenant(t => t ? { ...t, sub_title: e.target.value } : t)} placeholder="מוסך ופנצריה" />)}
@@ -265,7 +267,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
               {field('אימייל (ליצירת קשר)', <input className="form-input" dir="ltr" type="email" value={tenant.public_info?.email ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, email: e.target.value } } : t)} placeholder="info@example.com" />)}
 
               {/* דף ציבורי */}
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginTop: '4px' }}>🌐 דף ציבורי</div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', paddingBottom: '6px', marginTop: '4px' }}>דף ציבורי</div>
               {field('שעות פעילות', <input className="form-input" value={tenant.public_info?.hours ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, hours: e.target.value } } : t)} placeholder="א׳-ה׳ 08:00–18:00 | ו׳ 08:00–13:00" />)}
               <div className="settings-grid-2">
                 {field('קישור Waze', <input className="form-input" dir="ltr" value={tenant.public_info?.waze_url ?? ''} onChange={e => setTenant(t => t ? { ...t, public_info: { ...t.public_info, waze_url: e.target.value } } : t)} placeholder="https://waze.com/ul/..." />)}
@@ -298,7 +300,7 @@ function BusinessTab({ supabase, tenantId, showToast }: { supabase: ReturnType<t
             {/* Action buttons */}
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '22px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
               <Button variant="secondary" onClick={cancel}>ביטול</Button>
-              <Button loading={saving} onClick={save}>💾 שמור</Button>
+              <Button loading={saving} onClick={save}>שמור</Button>
             </div>
           </div>
         </div>
@@ -404,7 +406,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
 
       {/* Add user button */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontWeight: 600, fontSize: '14px' }}>👥 משתמשים</div>
+        <div style={{ fontWeight: 600, fontSize: '14px' }}>משתמשים</div>
         <Button size="sm" onClick={() => setCreateOpen(v => !v)}>
           {createOpen ? '✕ ביטול' : '+ הוסף משתמש'}
         </Button>
@@ -423,8 +425,8 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
           </div>
           {field('תפקיד', (
             <select className="form-input" value={createForm.role} onChange={e => setCreateForm(f => ({ ...f, role: e.target.value }))}>
-              <option value="admin">👑 מנהל</option>
-              <option value="employee">👤 עובד</option>
+              <option value="admin">מנהל</option>
+              <option value="employee">עובד</option>
             </select>
           ))}
           {createForm.role === 'employee' && (
@@ -437,7 +439,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
                     <button key={m.key} onClick={() => toggleCreateModule(m.key)} style={{
                       padding: '4px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
                       border: active ? '1px solid var(--primary)' : '1px solid var(--border)',
-                      background: active ? '#f0fdf4' : 'transparent',
+                      background: active ? 'var(--success-soft)' : 'transparent',
                       color: active ? 'var(--primary)' : 'var(--text-muted)',
                       fontWeight: active ? 600 : 400,
                     }}>{m.label}</button>
@@ -471,9 +473,9 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
 
               {field('תפקיד', (
                 <select className="form-input" value={editData.role} onChange={e => setEditData(d => ({ ...d, role: e.target.value }))}>
-                  <option value="super_admin">🔧 מפתח</option>
-                  <option value="admin">👑 מנהל</option>
-                  <option value="employee">👤 עובד</option>
+                  <option value="super_admin">מפתח</option>
+                  <option value="admin">מנהל</option>
+                  <option value="employee">עובד</option>
                 </select>
               ))}
 
@@ -490,7 +492,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
                           style={{
                             padding: '5px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
                             border: active ? '1px solid var(--primary)' : '1px solid var(--border)',
-                            background: active ? '#f0fdf4' : 'transparent',
+                            background: active ? 'var(--success-soft)' : 'transparent',
                             color: active ? 'var(--primary)' : 'var(--text-muted)',
                             fontWeight: active ? 600 : 400,
                           }}
@@ -515,7 +517,7 @@ function UsersTab({ supabase, tenantId, myId, showToast }: { supabase: ReturnTyp
               </div>
 
               <div style={{ display: 'flex', gap: '8px' }}>
-                <Button loading={saving} onClick={saveEdit}>💾 שמור</Button>
+                <Button loading={saving} onClick={saveEdit}>שמור</Button>
                 <Button variant="secondary" onClick={() => setEditing(null)}>ביטול</Button>
               </div>
             </div>
@@ -623,7 +625,7 @@ function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType
   return (
     <div style={{ marginBottom: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div style={{ fontWeight: 600, fontSize: '14px' }}>🔗 הזמנת עובד חדש</div>
+        <div style={{ fontWeight: 600, fontSize: '14px' }}>הזמנת עובד חדש</div>
         <Button size="sm" onClick={() => setOpen(v => !v)}>
           {open ? '✕ ביטול' : '+ צור קישור'}
         </Button>
@@ -641,7 +643,7 @@ function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType
                   <button key={m.key} onClick={() => toggleMod(m.key)} style={{
                     padding: '4px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer',
                     border: active ? '1px solid var(--primary)' : '1px solid var(--border)',
-                    background: active ? '#f0fdf4' : 'transparent',
+                    background: active ? 'var(--success-soft)' : 'transparent',
                     color: active ? 'var(--primary)' : 'var(--text-muted)',
                     fontWeight: active ? 600 : 400,
                   }}>{m.label}</button>
@@ -661,7 +663,7 @@ function InviteSection({ supabase, tenantId, showToast }: { supabase: ReturnType
                 <option value="30">חודש</option>
               </select>
             </div>
-            <Button loading={creating} onClick={createToken}>🔗 צור קישור</Button>
+            <Button loading={creating} onClick={createToken}>צור קישור</Button>
           </div>
         </div>
       )}
@@ -858,7 +860,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                 autoFocus
               />
               {pinError && <div style={{ color: 'var(--danger)', fontSize: '13px', marginBottom: '12px' }}>{pinError}</div>}
-              <Button fullWidth onClick={verifyPin}>🔓 פתח כספת</Button>
+              <Button fullWidth onClick={verifyPin}>פתח כספת</Button>
             </>
           )}
         </div>
@@ -868,7 +870,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
 
   // ── Unlocked vault ──
   return (
-    <div style={{ maxWidth: '720px' }}>
+    <div style={{ width: '100%', maxWidth: '1100px' }}>
       {/* Header row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -877,8 +879,8 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>({items.length} פריטים)</span>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <Button variant="secondary" size="sm" onClick={() => { setChangingPin(true); setNewPin(''); setNewPinConfirm(''); setPinError('') }}>🔑 שינוי קוד</Button>
-          <Button variant="secondary" size="sm" onClick={() => { setUnlocked(false); setPinInput(''); setPinError('') }}>🔒 נעל</Button>
+          <Button variant="secondary" size="sm" onClick={() => { setChangingPin(true); setNewPin(''); setNewPinConfirm(''); setPinError('') }}>שינוי קוד</Button>
+          <Button variant="secondary" size="sm" onClick={() => { setUnlocked(false); setPinInput(''); setPinError('') }}>נעל</Button>
           <Button size="sm" onClick={openAdd}>+ הוסף</Button>
         </div>
       </div>
@@ -886,9 +888,10 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
       {/* Change PIN modal */}
       {changingPin && (
         <>
-          <div onClick={() => setChangingPin(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 299 }} />
+          {/* Form window: a click outside must not close it (typed details would be lost) */}
+          <div aria-hidden="true" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 299 }} />
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'var(--bg-card)', borderRadius: '14px', padding: '28px', width: 'min(320px, calc(100vw - 32px))', zIndex: 300, direction: 'rtl', boxShadow: '0 20px 60px rgba(0,0,0,.25)' }}>
-            <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '20px' }}>🔑 שינוי קוד כספת</div>
+            <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '20px' }}>שינוי קוד כספת</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <label className="form-label">קוד נוכחי</label>
@@ -945,7 +948,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
             <textarea className="form-input" style={{ height: '70px', resize: 'vertical' }} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="פרטים נוספים..." />
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button loading={saving} onClick={save}>שמור</Button>
             <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
@@ -972,7 +975,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', flexWrap: 'wrap' }}>
                         <span style={{ color: 'var(--text-muted)', fontSize: '12px', minWidth: '80px' }}>שם משתמש:</span>
                         <code style={{ flex: 1, minWidth: '80px', direction: 'ltr', fontSize: '12px', wordBreak: 'break-all' }}>{item.username}</code>
-                        <button onClick={() => copyText(item.username!, 'שם משתמש')} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>📋 העתק</button>
+                        <button onClick={() => copyText(item.username!, 'שם משתמש')} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>העתק</button>
                       </div>
                     )}
                     {item.password && (
@@ -981,8 +984,8 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
                         <code style={{ flex: 1, minWidth: '80px', direction: 'ltr', fontSize: '12px', letterSpacing: isRevealed ? 'normal' : '2px', wordBreak: 'break-all' }}>
                           {isRevealed ? item.password : '•'.repeat(Math.min(item.password.length, 12))}
                         </code>
-                        <button onClick={() => toggleReveal(item.id)} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', flexShrink: 0 }}>{isRevealed ? '🙈 הסתר' : '👁 הצג'}</button>
-                        <button onClick={() => copyText(item.password!, 'סיסמא')} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>📋 העתק</button>
+                        <button onClick={() => toggleReveal(item.id)} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', flexShrink: 0 }}>{isRevealed ? 'הסתר' : 'הצג'}</button>
+                        <button onClick={() => copyText(item.password!, 'סיסמא')} style={{ padding: '4px 10px', border: '1px solid var(--border)', borderRadius: '6px', background: 'var(--bg)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>העתק</button>
                       </div>
                     )}
                     {item.notes && (
@@ -1024,9 +1027,9 @@ function LandingTab({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
   ]
 
   return (
-    <div style={{ maxWidth: '720px' }}>
+    <div style={{ width: '100%', maxWidth: '1100px' }}>
       <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-        ניהול תוכן דף הנחיתה הציבורי. פרטי העסק (שם, טלפון, כתובת) מנוהלים בטאב &quot;פרטי עסק&quot;.
+        מה שמוצג באתר הציבורי של העסק. פרטי העסק (שם, טלפון, כתובת) נערכים בכרטיס פרטי העסק בראש העמוד.
       </p>
       <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid var(--border)', overflowX: 'auto', whiteSpace: 'nowrap' }}>
         {subTabs.map(t => (
@@ -1141,7 +1144,7 @@ function ServicesSection({ supabase, tenantId, showToast }: { supabase: ReturnTy
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button loading={saving} onClick={save}>שמור</Button>
             <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
@@ -1275,7 +1278,7 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button loading={saving} onClick={save}>שמור</Button>
             <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
@@ -1295,7 +1298,7 @@ function PromotionsSection({ supabase, tenantId, showToast }: { supabase: Return
                 {i.start_date && `מ-${i.start_date}`}{i.end_date && ` עד ${i.end_date}`}
               </div>
             </div>
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? '#dcfce7' : '#f1f5f9', color: i.is_active ? '#16a34a' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? 'var(--success-soft)' : '#f1f5f9', color: i.is_active ? 'var(--success)' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
             <Button variant="secondary" size="sm" onClick={() => openEdit(i)}>✏️</Button>
             <Button variant="danger" size="sm" onClick={() => del(i.id)}>🗑</Button>
           </div>
@@ -1384,7 +1387,7 @@ function FaqSection({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button loading={saving} onClick={save}>שמור</Button>
             <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
@@ -1401,7 +1404,7 @@ function FaqSection({ supabase, tenantId, showToast }: { supabase: ReturnType<ty
               <div style={{ fontWeight: 600, fontSize: '13px' }}>{i.question}</div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{i.answer.slice(0, 80)}{i.answer.length > 80 ? '...' : ''}</div>
             </div>
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? '#dcfce7' : '#f1f5f9', color: i.is_active ? '#16a34a' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: i.is_active ? 'var(--success-soft)' : '#f1f5f9', color: i.is_active ? 'var(--success)' : 'var(--text-muted)', fontWeight: 600 }}>{i.is_active ? 'פעיל' : 'מושבת'}</span>
             <Button variant="secondary" size="sm" onClick={() => openEdit(i)}>✏️</Button>
             <Button variant="danger" size="sm" onClick={() => del(i.id)}>🗑</Button>
           </div>
@@ -1469,7 +1472,7 @@ function PricesSection({ supabase, tenantId, showToast }: { supabase: ReturnType
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button loading={saving} onClick={save}>💾 שמור</Button>
+            <Button loading={saving} onClick={save}>שמור</Button>
             <Button variant="secondary" onClick={() => setShowForm(false)}>ביטול</Button>
           </div>
         </div>
@@ -1519,9 +1522,12 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
   const [restoring, setRestoring] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const [lastFile, setLastFile] = useState<string | null>(null)
   const loadLast = useCallback(async () => {
-    const { data } = await supabase.from('tenants').select('last_backup_at, last_backup_kind, last_backup_error').eq('id', tenantId).maybeSingle()
-    if (data) setLast({ at: data.last_backup_at, kind: data.last_backup_kind, error: data.last_backup_error })
+    const { data, error } = await supabase.from('tenants').select('last_backup_at, last_backup_kind, last_backup_error').eq('id', tenantId).maybeSingle()
+    if (error) console.error('backup status', error.message)
+    // Keep a status we just set locally if the read fails or lags behind
+    if (data) setLast(prev => prev?.at && (!data.last_backup_at || prev.at > data.last_backup_at) ? prev : { at: data.last_backup_at, kind: data.last_backup_kind, error: data.last_backup_error })
   }, [supabase, tenantId])
   useEffect(() => { loadLast() }, [loadLast])
 
@@ -1549,8 +1555,10 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
     try {
       const res = await fetch('/api/backup/drive', { method: 'POST' })
       const j = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(j.error ?? `HTTP ${res.status}`)
+      if (!res.ok) throw new Error(j.error ?? (res.status === 504 ? 'הגיבוי לקח יותר מדי זמן — נסה שוב' : `HTTP ${res.status}`))
       showToast('הגיבוי נשמר בדרייב ✓', 'success')
+      setLast({ at: j.at ?? new Date().toISOString(), kind: 'drive', error: null })
+      setLastFile(j.name ?? null)
       loadLast()
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'שגיאה בגיבוי לדרייב', 'error')
@@ -1619,12 +1627,13 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
     <div>
       {/* Status */}
       {last && (
-        <div style={{ ...cardSt, padding: '14px 20px', background: last.at && Date.now() - new Date(last.at).getTime() < 7 * 86_400_000 ? '#f0fdf6' : '#fffbeb' }}>
+        <div style={{ ...cardSt, padding: '14px 20px', background: last.at && Date.now() - new Date(last.at).getTime() < 7 * 86_400_000 ? 'var(--success-soft)' : '#fffbeb' }}>
           <div style={{ fontWeight: 700, fontSize: '14px' }}>
             {last.at
               ? `גיבוי אחרון: ${fmtBackupDate(last.at)} (${last.kind === 'auto' ? 'אוטומטי לדרייב' : last.kind === 'drive' ? 'ידני לדרייב' : 'הורדה למחשב'})`
               : '⚠️ עדיין לא בוצע גיבוי'}
           </div>
+          {lastFile && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 4 }}>נשמר בדרייב בתיקייה &quot;גיבויים&quot;: {lastFile}</div>}
           {last.error && (
             <div style={{ fontSize: '12px', color: 'var(--danger)', marginTop: 4 }}>הגיבוי האוטומטי האחרון נכשל: {last.error}</div>
           )}
@@ -1633,11 +1642,11 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
 
       {/* Drive */}
       <div style={cardSt}>
-        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>☁️ גיבוי לגוגל דרייב</div>
+        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>גיבוי לגוגל דרייב</div>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: 1.6 }}>
           {driveConnected
             ? <>כל לילה נשמר אוטומטית גיבוי מלא בתיקייה &quot;גיבויים&quot; בדרייב של העסק (נשמרים 30 הגיבויים האחרונים). הקבצים פרטיים – רק לבעל הדרייב.</>
-            : <>חבר את Google Drive (למעלה בעמוד) כדי שיישמר גיבוי אוטומטי כל לילה – גם אם המערכת לא זמינה, הגיבוי נשאר אצלך.</>}
+            : <>חבר את Google Drive (בכפתור &quot;Drive&quot; בראש העמוד) כדי שיישמר גיבוי אוטומטי כל לילה – גם אם המערכת לא זמינה, הגיבוי נשאר אצלך.</>}
         </div>
         <button
           onClick={doDriveBackup}
@@ -1649,13 +1658,13 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
             opacity: drivingUp || !driveConnected ? 0.6 : 1, fontFamily: 'inherit',
           }}
         >
-          {drivingUp ? 'מגבה...' : '☁️ גבה עכשיו לדרייב'}
+          {drivingUp ? 'מגבה...' : 'גבה עכשיו לדרייב'}
         </button>
       </div>
 
       {/* Export */}
       <div style={cardSt}>
-        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>📤 ייצוא גיבוי מלא</div>
+        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>ייצוא גיבוי מלא</div>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
           מוריד קובץ JSON עם כל הנתונים של העסק — צמיגים, מוצרים, הוצאות, חובות, לקוחות, ספקים, בנק, מסוף רחבה, בדיקות קנייה ועוד.
           לא כולל את הכספת (סיסמאות) ואת הקבצים שבדרייב.
@@ -1670,13 +1679,13 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
             opacity: exporting ? 0.7 : 1, fontFamily: 'inherit',
           }}
         >
-          {exporting ? 'מייצא...' : '⬇️ ייצא גיבוי'}
+          {exporting ? 'מייצא...' : 'ייצא גיבוי'}
         </button>
       </div>
 
       {/* Restore */}
       <div style={{ ...cardSt, borderColor: '#fca5a5' }}>
-        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>📥 שחזור גיבוי</div>
+        <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>שחזור גיבוי</div>
         <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '14px' }}>
           מעלה קובץ גיבוי ומשחזר את הנתונים. ידרש אימות סיסמת מנהל. נתונים קיימים עם אותו מזהה יידרסו.
         </div>
@@ -1702,7 +1711,7 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
             background: 'var(--bg-card)', borderRadius: '14px', padding: '28px',
             width: '90%', maxWidth: '380px', direction: 'rtl',
           }}>
-            <div style={{ fontWeight: 700, fontSize: '17px', marginBottom: '8px' }}>🔒 אימות מנהל</div>
+            <div style={{ fontWeight: 700, fontSize: '17px', marginBottom: '8px' }}>אימות מנהל</div>
             <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
               הזן את סיסמתך כדי לאשר את שחזור הגיבוי:
               <br /><strong style={{ color: '#ef4444' }}>{restoreFile?.name}</strong>
@@ -1756,14 +1765,14 @@ function BackupTab({ supabase, tenantId, showToast, driveConnected }: { supabase
 // ── Main ───────────────────────────────────────────────────────────────────
 
 export default function SettingsClient() {
-  const supabase      = useRef(createClient()).current
+  const [supabase]    = useState(createClient)
   const { showToast } = useToast()
   const { profile, loading } = useProfile()
   const [tab,            setTab]            = useState<Tab | null>(null)
   // Deep link, e.g. the "no recent backup" reminder → /settings?tab=backup
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('tab')
-    if (t === 'backup' || t === 'business' || t === 'users' || t === 'landing' || t === 'vault') setTab(t)
+    if (t === 'backup' || t === 'drive' || t === 'users' || t === 'landing' || t === 'vault') setTab(t)
   }, [])
 
   const tenantId  = profile?.tenantId ?? null
@@ -1775,36 +1784,22 @@ export default function SettingsClient() {
   const canVault = myRole === 'super_admin'
 
   const [driveConnected, setDriveConnected] = useState<boolean | null>(null)
-  const [driveMerging, setDriveMerging] = useState(false)
+  const [driveExpired, setDriveExpired] = useState(false)
 
   useEffect(() => {
     if (!isAdmin || !tenantId) return
-    fetch(`/api/drive/status?tenant_id=${tenantId}`)
-      .then(r => r.json()).then(d => setDriveConnected(d.connected)).catch(() => setDriveConnected(false))
+    fetch(`/api/drive/status?tenant_id=${tenantId}&verify=1`)
+      .then(r => r.json()).then(d => { setDriveConnected(d.connected); setDriveExpired(!!d.expired) }).catch(() => setDriveConnected(false))
     const params = new URLSearchParams(window.location.search)
     if (params.get('drive') === 'connected') { setDriveConnected(true); window.history.replaceState({}, '', '/settings') }
     if (params.get('drive') === 'error') { showToast('שגיאה בחיבור Drive', 'error'); window.history.replaceState({}, '', '/settings') }
   }, [isAdmin, tenantId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleDriveMerge() {
-    if (!tenantId || driveMerging) return
-    setDriveMerging(true)
-    try {
-      const res = await fetch('/api/drive/merge', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tenant_id: tenantId }) })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      showToast(`✅ מוזג! הועברו ${data.moved} קבצים, נמחקו ${data.deleted} תיקיות כפולות`, 'success')
-    } catch {
-      showToast('שגיאה באיחוד תיקיות', 'error')
-    } finally {
-      setDriveMerging(false)
-    }
-  }
 
   const tabs: { key: Tab; label: string; icon: string }[] = [
-    { key: 'business', label: 'פרטי עסק',    icon: '🏢' },
-    { key: 'users',    label: 'משתמשים',      icon: '👥' },
-    { key: 'landing',  label: 'דף נחיתה',     icon: '🌐' },
+    { key: 'users',    label: 'משתמשים',          icon: '👥' },
+    { key: 'landing',  label: 'תוכן אתר ציבורי',  icon: '🌐' },
+    { key: 'drive',    label: 'קבצים ב-Drive',    icon: '📂' },
     ...(canVault ? [{ key: 'vault' as Tab, label: 'כספת סיסמאות', icon: '🔒' }] : []),
     ...(isAdmin ? [{ key: 'backup' as Tab, label: 'גיבוי', icon: '🗄️' }] : []),
   ]
@@ -1817,7 +1812,7 @@ export default function SettingsClient() {
   }
 
   const tabContent: Record<Tab, React.ReactNode> = {
-    business: <BusinessTab supabase={supabase} tenantId={tenantId} showToast={showToast} />,
+    drive:    <DriveFilesPanel />,
     users:    <UsersTab    supabase={supabase} tenantId={tenantId} myId={myId} showToast={showToast} />,
     landing:  <LandingTab  supabase={supabase} tenantId={tenantId} showToast={showToast} />,
     vault:    canVault ? <VaultTab supabase={supabase} tenantId={tenantId} showToast={showToast} /> : null,
@@ -1833,58 +1828,20 @@ export default function SettingsClient() {
         title="הגדרות"
         subtitle="ניהול עסק, משתמשים והרשאות"
         marginBottom={24}
+        actions={isAdmin && driveConnected !== null && tenantId ? (
+          // Small Drive indicator; the status is verified with Google, not just "a token is saved"
+          <a href={`/api/drive/auth?tenant_id=${tenantId}`} className="drive-pill" data-ok={String(driveConnected)}
+            title={driveConnected ? 'Google Drive מחובר — לחץ לחיבור מחדש' : driveExpired ? 'החיבור ל-Drive פג — לחץ לחיבור מחדש' : 'לחץ לחיבור Google Drive'}>
+            <span className="dot" aria-hidden="true" />
+            Drive · {driveConnected ? 'מחובר' : driveExpired ? 'החיבור פג — חבר מחדש' : 'לא מחובר — חבר'}
+          </a>
+        ) : undefined}
       />
 
-      {/* Google Drive status — admins only */}
-      {isAdmin && driveConnected !== null && (
-        <div style={{
-          // wraps on phones: the buttons drop below the text instead of squeezing it to one word per line
-          display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', marginBottom: '20px',
-          background: driveConnected ? '#f0fdf6' : '#fffbeb',
-          border: `1px solid ${driveConnected ? '#bbf7d0' : '#fcd34d'}`,
-          borderRadius: '10px', padding: '12px 16px',
-        }}>
-          <span style={{ fontSize: '22px' }}>📂</span>
-          <div style={{ flex: '1 1 200px', minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: '13px' }}>
-              Google Drive — {driveConnected ? '✓ מחובר' : 'לא מחובר'}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              {driveConnected ? 'תמונות ומסמכים מועלים ישירות לדרייב של העסק' : 'חבר כדי להעלות תמונות ומסמכים ישירות מהמערכת'}
-            </div>
-          </div>
-          {tenantId && (
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end', marginInlineStart: 'auto' }}>
-              {driveConnected && (
-                <button
-                  onClick={handleDriveMerge}
-                  disabled={driveMerging}
-                  style={{
-                    padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
-                    cursor: driveMerging ? 'wait' : 'pointer', border: '1px solid var(--border)',
-                    background: 'transparent', color: 'var(--text-muted)', whiteSpace: 'nowrap',
-                  }}
-                >
-                  {driveMerging ? '⏳ ממזג...' : '🗂️ מזג תיקיות כפולות'}
-                </button>
-              )}
-              <a
-                href={`/api/drive/auth?tenant_id=${tenantId}`}
-                style={{
-                  padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
-                  textDecoration: 'none',
-                  background: driveConnected ? 'transparent' : 'var(--primary)',
-                  color: driveConnected ? 'var(--text-muted)' : '#fff',
-                  border: driveConnected ? '1px solid var(--border)' : 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {driveConnected ? '🔄 חבר מחדש' : 'חבר Drive →'}
-              </a>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Business details: always visible (read-only, with an edit button) */}
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 20px', marginBottom: 20 }}>
+        <BusinessTab supabase={supabase} tenantId={tenantId} showToast={showToast} initial={profile?.tenant as Tenant | null | undefined} />
+      </div>
 
       {/* Desktop: horizontal scrollable tabs */}
       <div className="settings-desktop-tabs scrollable-tabs" style={{ marginBottom: '24px', display: 'flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px', width: 'fit-content' }}>
@@ -1937,7 +1894,7 @@ export default function SettingsClient() {
 
       {/* Desktop content */}
       <div className="settings-desktop-content">
-        {tab === 'business' && tabContent.business}
+        {tab === 'drive'    && tabContent.drive}
         {tab === 'users'    && tabContent.users}
         {tab === 'landing'  && tabContent.landing}
         {tab === 'backup'   && tabContent.backup}

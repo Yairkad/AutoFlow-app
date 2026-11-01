@@ -16,6 +16,6 @@ export const viewport: Viewport = {
 
 export default function YardOfficeLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ToastProvider><ConfirmProvider>{children}</ConfirmProvider></ToastProvider>
+    <ToastProvider><ConfirmProvider><div className="yard-theme">{children}</div></ConfirmProvider></ToastProvider>
   )
 }

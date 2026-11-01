@@ -57,9 +57,9 @@ export default function UnifiedReportTab({ tenantId }: Props) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>יתרת לקוחות פתוחה כוללת (כרטסת, נכון להיום)</span>
-          <span style={{ fontSize: '16px', fontWeight: 800, color: totalOpenCustomerLedger >= 0 ? '#16a34a' : 'var(--danger)' }}>{fmt(totalOpenCustomerLedger)}</span>
+          <span style={{ fontSize: '16px', fontWeight: 800, color: totalOpenCustomerLedger >= 0 ? 'var(--success)' : 'var(--danger)' }}>{fmt(totalOpenCustomerLedger)}</span>
         </div>
-        <Button variant="secondary" size="sm" onClick={exportExcel} loading={exporting}>📊 ייצוא Excel</Button>
+        <Button variant="secondary" size="sm" onClick={exportExcel} loading={exporting}>ייצוא Excel</Button>
       </div>
 
       <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
@@ -85,14 +85,14 @@ export default function UnifiedReportTab({ tenantId }: Props) {
             {rows.map(r => (
               <tr key={r.month}>
                 <td style={{ ...td, fontWeight: 600 }}>{fmtMonth(r.month)}</td>
-                <td style={{ ...td, color: '#16a34a' }}>{fmt(r.incomeActual)}</td>
+                <td style={{ ...td, color: 'var(--success)' }}>{fmt(r.incomeActual)}</td>
                 <td style={{ ...td, color: 'var(--danger)' }}>{fmt(r.expenseActual)}</td>
-                <td style={{ ...td, fontWeight: 700, color: r.profitActual >= 0 ? '#16a34a' : 'var(--danger)' }}>{fmt(r.profitActual)}</td>
+                <td style={{ ...td, fontWeight: 700, color: r.profitActual >= 0 ? 'var(--success)' : 'var(--danger)' }}>{fmt(r.profitActual)}</td>
                 <td style={td}>{fmt(r.customerLedgerRecognized)}</td>
                 <td style={td}>{fmt(r.occasionalCustomerOpen)}</td>
                 <td style={td}>{fmt(r.supplierOpen)}</td>
                 <td style={td}>{fmt(r.scheduledUnpaid)}</td>
-                <td style={{ ...td, fontWeight: 700, color: r.adjustedProfit >= 0 ? '#16a34a' : 'var(--danger)' }}>{fmt(r.adjustedProfit)}</td>
+                <td style={{ ...td, fontWeight: 700, color: r.adjustedProfit >= 0 ? 'var(--success)' : 'var(--danger)' }}>{fmt(r.adjustedProfit)}</td>
               </tr>
             ))}
           </tbody>

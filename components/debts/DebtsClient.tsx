@@ -13,6 +13,8 @@ import CallLogModal, { CustomerDebtCall } from './CallLogModal'
 import PaymentHistoryModal, { CustomerDebtPayment } from './PaymentHistoryModal'
 import { insertCustomerDebtPayment } from '@/lib/debts/customerDebtPayments'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
+import ContractPaymentsPanel from '@/components/cars/ContractPaymentsPanel'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -22,7 +24,7 @@ interface CustomerDebt {
   date: string; due_date: string | null; is_closed: boolean; created_at: string
 }
 
-type Tab    = 'customers' | 'transfers'
+type Tab    = 'customers' | 'transfers' | 'cars'
 type Filter = 'open' | 'closed' | 'all'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -146,6 +148,28 @@ export default function DebtsClient() {
 
   // Reset filter on tab change
   useEffect(() => { setFilter('open'); setSearch('') }, [tab])
+
+  // Deep link from a dashboard alert: /debts?focus=<id> → scroll to that row and highlight it;
+  // /debts?tab=cars&focus=<contractId> → car-sales tab with that contract's payments opened
+  const [focusId, setFocusId]   = useState<string | null>(null)
+  const [carFocus, setCarFocus] = useState<string | null>(null)
+  useEffect(() => {
+    if (loading) return
+    const q  = new URLSearchParams(window.location.search)
+    const id = q.get('focus')
+    if (q.get('tab') === 'cars') {
+      const t = setTimeout(() => { setTab('cars'); setCarFocus(id); window.history.replaceState(null, '', window.location.pathname) }, 0)
+      return () => clearTimeout(t)
+    }
+    if (!id) return
+    const t = setTimeout(() => {
+      setFocusId(id)
+      document.getElementById(`debt-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      window.history.replaceState(null, '', window.location.pathname)
+    }, 50)
+    const clear = setTimeout(() => setFocusId(null), 4000)
+    return () => { clearTimeout(t); clearTimeout(clear) }
+  }, [loading])
 
   // ── Realtime ──────────────────────────────────────────────────────────────
 
@@ -297,8 +321,8 @@ export default function DebtsClient() {
       {label}
       {count != null && count > 0 && (
         <span style={{
-          background: tab === t ? '#dcfce7' : '#e2e8f0',
-          color: tab === t ? '#15803d' : 'var(--text-muted)',
+          background: tab === t ? 'var(--success-soft)' : '#e2e8f0',
+          color: tab === t ? 'var(--success)' : 'var(--text-muted)',
           borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: 700,
         }}>{count}</span>
       )}
@@ -309,7 +333,7 @@ export default function DebtsClient() {
     <button onClick={() => setFilter(f)} style={{
       padding: '5px 14px', border: '1px solid',
       borderColor: filter === f ? 'var(--primary)' : 'var(--border)',
-      background: filter === f ? '#f0fdf6' : 'transparent',
+      background: filter === f ? 'var(--success-soft)' : 'transparent',
       color: filter === f ? 'var(--primary)' : 'var(--text-muted)',
       borderRadius: '20px', fontSize: '12px', fontWeight: filter === f ? 600 : 400,
       cursor: 'pointer', transition: 'all .12s',
@@ -318,7 +342,7 @@ export default function DebtsClient() {
 
   const StatusChip = ({ debt }: { debt: CustomerDebt }) => {
     if (debt.is_closed)
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f0fdf6', color: '#16a34a', fontWeight: 600 }}>שולם ✓</span>
+      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>שולם ✓</span>
     if (Number(debt.paid) > 0)
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef3c7', color: 'var(--warning)', fontWeight: 600 }}>חלקי</span>
     return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>פתוח</span>
@@ -387,6 +411,7 @@ export default function DebtsClient() {
         <div style={{ display: 'inline-flex', gap: '4px', padding: '4px', background: '#f1f5f9', borderRadius: '11px' }}>
           <TabBtn t="customers" label="💳 לקוחות מזדמנים" count={customerDebts.filter(d => !d.is_closed).length} />
           <TabBtn t="transfers" label="🏦 העברות לאימות" count={pendingTransfers.length} />
+          <TabBtn t="cars" label="🚗 תשלומי מכירות רכב" />
         </div>
       </div>
 
@@ -414,10 +439,12 @@ export default function DebtsClient() {
                     return (
                       <tr
                         key={d.id}
+                        id={`debt-${d.id}`}
                         onClick={() => setHistoryDebtId(d.id)}
                         style={{
                           borderBottom: '1px solid var(--border)',
-                          background: d.is_closed ? '#fafafa' : i % 2 === 0 ? '#fff' : '#fdfefe',
+                          transition: 'background .4s',
+                          background: focusId === d.id ? 'color-mix(in srgb, var(--highlight) 22%, #fff)' : d.is_closed ? '#fafafa' : i % 2 === 0 ? '#fff' : '#fdfefe',
                           opacity: d.is_closed ? 0.65 : 1,
                           cursor: 'pointer',
                         }}
@@ -433,8 +460,8 @@ export default function DebtsClient() {
                             : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                         </td>
                         <td style={{ ...tdSt, fontWeight: 600 }}>{fmt(d.amount)}</td>
-                        <td style={{ ...tdSt, color: '#16a34a' }}>{fmt(d.paid)}</td>
-                        <td style={{ ...tdSt, fontWeight: 700, color: bal(d) > 0 ? 'var(--danger)' : '#16a34a' }}>{fmt(bal(d))}</td>
+                        <td style={{ ...tdSt, color: 'var(--success)' }}>{fmt(d.paid)}</td>
+                        <td style={{ ...tdSt, fontWeight: 700, color: bal(d) > 0 ? 'var(--danger)' : 'var(--success)' }}>{fmt(bal(d))}</td>
                         <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
                         <td style={{ ...tdSt, whiteSpace: 'nowrap', color: isOverdue ? 'var(--danger)' : 'var(--text-muted)', fontWeight: isOverdue ? 700 : 400 }}>
                           {d.due_date ? (isOverdue ? `⚠ ${d.due_date}` : d.due_date) : '—'}
@@ -460,13 +487,16 @@ export default function DebtsClient() {
         </div>
       )}
 
+      {/* ── CAR SALES TAB — buyers' payments on signed sale contracts ── */}
+      {tab === 'cars' && <ContractPaymentsPanel focusContractId={carFocus} />}
+
       {/* ── TRANSFERS TAB — bank-transfer payments pending verification ── */}
       {tab === 'transfers' && (
         <div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
             <Button onClick={openTransferModal}>+ הוסף העברה לבדיקה</Button>
             {visibleTransfers.length > 0 && (
-              <Button variant="secondary" onClick={() => setPrintTransfersOpen(true)}>🖨 הדפס לאימות</Button>
+              <Button variant="secondary" onClick={() => setPrintTransfersOpen(true)}>הדפס לאימות</Button>
             )}
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', cursor: 'pointer' }}>
               <input type="checkbox" checked={showVerifiedTransfers} onChange={e => setShowVerifiedTransfers(e.target.checked)} />
@@ -508,7 +538,7 @@ export default function DebtsClient() {
                           {!p.transfer_verified && (
                             <button
                               onClick={() => verifyTransfer(p.id)}
-                              style={{ padding: '4px 10px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}
+                              style={{ padding: '4px 10px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}
                             >✓ אומת בחשבון</button>
                           )}
                         </td>
@@ -524,7 +554,7 @@ export default function DebtsClient() {
 
       {/* ── CUSTOMER MODAL ── */}
       {showCustModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowCustModal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowCustModal(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '500px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 20px', fontSize: '17px', fontWeight: 700 }}>{editCust ? '✏️ עריכת חוב לקוח' : '+ חוב לקוח חדש'}</h3>
             <div style={{ display: 'grid', gap: '14px' }}>
@@ -544,7 +574,7 @@ export default function DebtsClient() {
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowCustModal(false)}>ביטול</Button>
-              <Button loading={cSaving} onClick={saveCustDebt}>💾 שמור</Button>
+              <Button loading={cSaving} onClick={saveCustDebt}>שמור</Button>
             </div>
           </div>
         </div>
@@ -552,22 +582,22 @@ export default function DebtsClient() {
 
       {/* ── ADD TRANSFER-TO-VERIFY MODAL ── */}
       {showTransferModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowTransferModal(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowTransferModal(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '420px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>🏦 הוסף העברה לבדיקה</h3>
+            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>הוסף העברה לבדיקה</h3>
             <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--text-muted)' }}>רישום חשבונית/העברה שצריך לוודא שהתקבלה בחשבון הבנק</p>
 
             <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
               <button type="button" onClick={() => setTrMode('existing')} style={{
                 flex: 1, padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
                 border: `1px solid ${trMode === 'existing' ? 'var(--primary)' : 'var(--border)'}`,
-                background: trMode === 'existing' ? '#f0fdf4' : '#f8fafc',
+                background: trMode === 'existing' ? 'var(--success-soft)' : '#f8fafc',
                 color: trMode === 'existing' ? 'var(--primary)' : 'var(--text-muted)',
               }}>לקוח קיים</button>
               <button type="button" onClick={() => setTrMode('new')} style={{
                 flex: 1, padding: '7px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 600,
                 border: `1px solid ${trMode === 'new' ? 'var(--primary)' : 'var(--border)'}`,
-                background: trMode === 'new' ? '#f0fdf4' : '#f8fafc',
+                background: trMode === 'new' ? 'var(--success-soft)' : '#f8fafc',
                 color: trMode === 'new' ? 'var(--primary)' : 'var(--text-muted)',
               }}>חשבונית / לקוח חדש</button>
             </div>
@@ -605,7 +635,7 @@ export default function DebtsClient() {
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowTransferModal(false)}>ביטול</Button>
-              <Button loading={trSaving} onClick={saveTransfer}>💾 שמור</Button>
+              <Button loading={trSaving} onClick={saveTransfer}>שמור</Button>
             </div>
           </div>
         </div>
@@ -613,9 +643,9 @@ export default function DebtsClient() {
 
       {/* ── WHATSAPP EDIT MODAL ── */}
       {waModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setWaModal(null)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setWaModal(null))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '24px', width: 'min(420px, calc(100vw - 32px))', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', direction: 'rtl' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>💬 שלח הודעת ווצאפ</h3>
+            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>שלח הודעת ווצאפ</h3>
             <p style={{ margin: '0 0 12px', fontSize: '12px', color: 'var(--text-muted)' }}>ערוך את הטקסט לפני השליחה</p>
             <textarea
               value={waModal.text}
@@ -630,7 +660,7 @@ export default function DebtsClient() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setWaModal(null)}
-                style={{ padding: '8px 18px', background: '#16a34a', color: '#fff', border: '1.5px solid #16a34a', borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                style={{ padding: '8px 18px', background: 'var(--success)', color: '#fff', border: '1.5px solid #16a34a', borderRadius: 9, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
                 📲 פתח ווצאפ
               </a>

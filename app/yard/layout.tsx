@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#1e293b',
+  themeColor: '#1B2448',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -26,12 +26,12 @@ export default async function YardLayout({ children }: { children: React.ReactNo
   // The terminal is open to anyone at the counter: everyone picks their name + types their PIN.
   // Office (Gmail) sessions don't count here — only the PIN cookie does.
   const user = await getYardEmployee()
-  if (!user) return <YardLogin />
+  if (!user) return <div className="yard-theme"><YardLogin /></div>
 
   return (
     <ToastProvider>
       <ConfirmProvider>
-        <div style={{ width: '100vw', height: '100dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div className="yard-theme" style={{ width: '100vw', height: '100dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <YardShell isAdmin={user.isAdmin} modules={user.modules} userName={user.name}>
             {children}
           </YardShell>

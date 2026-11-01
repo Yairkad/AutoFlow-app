@@ -21,6 +21,8 @@ interface InventoryItem {
   name: string
   sku: string | null
   barcode: string | null
+  /** Extra barcodes of the same item (migration 110) */
+  alt: string[]
   qty: number
   cost_price: number | null
   sell_price: number | null
@@ -44,7 +46,8 @@ interface CountEntry {
 type NotFoundAction = 'link' | 'newTire' | null
 type Mode = 'scan' | 'count'
 
-export default function ScanClient() {
+// embedded: a tab of the stock screen — no own title / outer padding while plain scanning
+export default function ScanClient({ embedded = false }: { embedded?: boolean } = {}) {
   const sb = createClient()
   const { profile } = useProfile()
   const router = useRouter()
@@ -93,16 +96,17 @@ export default function ScanClient() {
   const load = useCallback(async (tenantId: string) => {
     setLoading(true)
     const [{ data: tires }, { data: products }] = await Promise.all([
-      sb.from('tires').select('id,brand,width,profile,rim,sku,qty,cost_price,sell_price').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
-      sb.from('products').select('id,name,sku,barcode,qty,buy_price,sell_price').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+      // '*' so alt_barcodes comes along once migration 110 ran (and nothing breaks before it)
+      sb.from('tires').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+      sb.from('products').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
     ])
     const tireItems: InventoryItem[] = (tires ?? []).map(t => ({
       id: t.id, type: 'tire', name: `${t.brand ?? ''} ${tireSizeText(t) || 'ללא מידה'}`.trim(),
-      sku: t.sku ?? null, barcode: t.sku ?? null, qty: t.qty,
+      sku: t.sku ?? null, barcode: t.sku ?? null, alt: t.alt_barcodes ?? [], qty: t.qty,
       cost_price: t.cost_price ?? null, sell_price: t.sell_price ?? null,
     }))
     const prodItems: InventoryItem[] = (products ?? []).map(p => ({
-      id: p.id, type: 'product', name: p.name, sku: p.sku ?? null, barcode: p.barcode ?? null, qty: p.qty,
+      id: p.id, type: 'product', name: p.name, sku: p.sku ?? null, barcode: p.barcode ?? null, alt: p.alt_barcodes ?? [], qty: p.qty,
       cost_price: p.buy_price ?? null, sell_price: p.sell_price ?? null,
     }))
     setItems([...tireItems, ...prodItems])
@@ -130,7 +134,7 @@ export default function ScanClient() {
 
   // ── Normal scan ───────────────────────────────────────────────────────────
   function findItem(code: string) {
-    return items.find(i => (i.barcode && i.barcode === code) || (i.sku && i.sku === code))
+    return items.find(i => (i.barcode && i.barcode === code) || (i.sku && i.sku === code) || i.alt.includes(code))
   }
 
   function handleScan(code: string) {
@@ -165,6 +169,11 @@ export default function ScanClient() {
     setMode('count')
     refocus()
   }
+
+  // /scan?count=1 (from the "ספירת מלאי" page) opens straight in count mode
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('count') === '1') startCount()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function cancelCount() {
     setMode('scan')
@@ -256,8 +265,13 @@ export default function ScanClient() {
   // ── Link barcode ──────────────────────────────────────────────────────────
   async function saveBarcode(item: InventoryItem, code: string) {
     setSavingLink(true)
-    if (item.type === 'tire') await sb.from('tires').update({ sku: code }).eq('id', item.id)
-    else await sb.from('products').update({ barcode: code }).eq('id', item.id)
+    const table = item.type === 'tire' ? 'tires' : 'products'
+    const main  = item.type === 'tire' ? item.sku : item.barcode
+    // Already has a barcode → keep it and add this one as an extra barcode of the same item
+    const { error } = main
+      ? await sb.from(table).update({ alt_barcodes: [...item.alt, code] }).eq('id', item.id)
+      : await sb.from(table).update(item.type === 'tire' ? { sku: code } : { barcode: code }).eq('id', item.id)
+    if (error && main) await sb.from(table).update(item.type === 'tire' ? { sku: code } : { barcode: code }).eq('id', item.id)   // before migration 110
     setSavingLink(false); setNotFoundCode(null); setAction(null)
     showToast(`ברקוד שויך ל-${item.name} ✓`); await load(tenantIdRef.current); refocus()
   }
@@ -319,14 +333,14 @@ export default function ScanClient() {
 
   // ══════════════════════════════════════════════════════════════════════════
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: isMobile ? '16px 12px' : '24px 16px' }}>
+    <div style={{ maxWidth: embedded ? 'none' : 860, margin: embedded ? 0 : '0 auto', padding: embedded ? 0 : isMobile ? '16px 12px' : '24px 16px' }}>
 
       {toast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] bg-green-700 text-white font-bold rounded-xl px-6 py-3 shadow-xl">{toast}</div>
       )}
 
       {/* Header */}
-      <div className={`flex mb-5 ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`}>
+      <div className={`flex ${isMobile ? 'flex-col gap-3' : 'items-center justify-between'}`} style={{ marginBottom: 28, ...(embedded && mode === 'scan' ? { display: 'none' } : {}) }}>
         <div className="flex items-center gap-3">
           {isMobile && (
             <button onClick={() => router.back()} className="text-slate-500 font-bold active:text-slate-800 transition-colors" style={{ fontSize: '20px', lineHeight: 1 }}>←</button>
@@ -334,11 +348,8 @@ export default function ScanClient() {
           <svg viewBox="0 0 28 22" width="22" height="17" fill="#334155"><rect x="0" y="0" width="2" height="22"/><rect x="4" y="0" width="1" height="22"/><rect x="7" y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/><rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/><rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/></svg>
           <h1 className="font-black text-slate-800" style={{ fontSize: isMobile ? '20px' : '24px' }}>{mode === 'count' ? '📦 ספירת מלאי' : 'סריקת ברקוד'}</h1>
         </div>
-        {mode === 'scan' ? (
-          <button onClick={startCount} className={`bg-slate-800 text-white font-bold rounded-xl active:brightness-90 transition-all ${isMobile ? 'w-full' : ''}`} style={{ padding: '10px 18px', fontSize: '14px' }}>
-            📦 התחל ספירת מלאי
-          </button>
-        ) : (
+        {/* Stock counts start from the stock screen (/stock-count → ?count=1); plain scanning stays here */}
+        {mode === 'scan' ? null : (
           <div className={`flex gap-2 ${isMobile ? 'w-full' : ''}`}>
             <button onClick={() => setShowConfirm(true)} disabled={countEntries.length === 0}
               className="flex-1 bg-green-700 text-white font-bold rounded-xl active:brightness-90 disabled:opacity-40 transition-all" style={{ padding: '10px 14px', fontSize: isMobile ? '13px' : '14px' }}>
@@ -352,24 +363,26 @@ export default function ScanClient() {
       </div>
 
       {/* Scan input */}
-      <div className={`rounded-2xl shadow-md mb-6 border-2 ${mode === 'count' ? 'border-amber-400 bg-amber-50' : 'border-blue-400 bg-white'}`} style={{ padding: '16px 20px' }}>
-        <label className={`block text-sm font-bold mb-2 ${mode === 'count' ? 'text-amber-700' : 'text-blue-700'}`}>
-          {mode === 'count' ? '📦 סורק לספירה — סרוק כל פריט בזה אחר זה' : 'סרוק ברקוד'}
+      <div className="scan-field-wrap" data-mode={mode} style={{ marginBottom: 32 }}>
+        <label htmlFor="scan-input" className="scan-field-label">
+          {mode === 'count' ? 'ספירה — סרוק כל פריט בזה אחר זה' : 'סרוק או הקלד ברקוד'}
         </label>
-        <input
-          ref={scanRef}
-          type="text" inputMode="none"
-          value={barcodeInput}
-          onChange={e => setBarcodeInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) { setBarcodeInput(''); if (modeRef.current === 'count') handleCountScan(v); else handleScan(v) } } }}
-          placeholder={mode === 'count' ? 'פוקוס כאן — סרוק...' : 'הכנס פוקוס כאן וסרוק...'}
-          className={`w-full border-2 rounded-xl font-bold outline-none transition-colors ${mode === 'count' ? 'border-amber-300 bg-amber-100 focus:border-amber-500' : 'border-slate-200 bg-blue-50 focus:border-blue-500'}`}
-          style={{ padding: '12px 16px', fontSize: '18px', letterSpacing: '3px', direction: 'ltr' }}
-        />
-        {mode === 'count' && lastScanned && (
-          <p className="text-sm font-semibold mt-2 text-amber-800">↳ נסרק: {lastScanned}</p>
-        )}
-        {mode !== 'count' && <p className="text-xs text-slate-400 mt-2">הסורק מזהה אוטומטית · אפשר גם להקליד ולחוץ Enter</p>}
+        <div className="scan-field">
+          <svg aria-hidden="true" viewBox="0 0 28 22" width="22" height="17" fill="currentColor"><rect x="0" y="0" width="2" height="22"/><rect x="4" y="0" width="1" height="22"/><rect x="7" y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/><rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/><rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/></svg>
+          <input
+            id="scan-input"
+            ref={scanRef}
+            type="text" inputMode="none" autoComplete="off"
+            value={barcodeInput}
+            onChange={e => setBarcodeInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { const v = e.currentTarget.value.trim(); if (v) { setBarcodeInput(''); if (modeRef.current === 'count') handleCountScan(v); else handleScan(v) } } }}
+            placeholder="ממתין לסריקה…"
+          />
+          <kbd>Enter</kbd>
+        </div>
+        {mode === 'count' && lastScanned
+          ? <p className="scan-field-hint" style={{ color: 'var(--warning)', fontWeight: 600 }}>↳ נסרק: {lastScanned}</p>
+          : <p className="scan-field-hint">הסורק מזהה אוטומטית · אפשר גם להקליד וללחוץ Enter</p>}
       </div>
 
       {/* COUNT MODE — running list */}
@@ -404,7 +417,7 @@ export default function ScanClient() {
                         {!isMobile && <td style={tdSt}>{BADGE(e.item.type)}</td>}
                         <td style={{ ...tdSt, textAlign: 'center', fontWeight: 800, fontSize: '16px', color: '#d97706' }}>{e.counted}</td>
                         <td style={{ ...tdSt, textAlign: 'center', color: '#64748b' }}>{e.item.qty}</td>
-                        <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: diff > 0 ? '#16a34a' : diff < 0 ? '#ef4444' : '#94a3b8' }}>
+                        <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: diff > 0 ? 'var(--success)' : diff < 0 ? '#ef4444' : '#94a3b8' }}>
                           {diff > 0 ? `+${diff}` : diff === 0 ? '—' : diff}
                         </td>
                       </tr>
@@ -452,7 +465,7 @@ export default function ScanClient() {
                         {item.name}
                         {isMobile && <span style={{ display: 'block', fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{item.type === 'tire' ? 'צמיג' : 'מוצר'}{item.sku ? ` · ${item.sku}` : ''}</span>}
                       </td>
-                      <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: item.qty === 0 ? '#ef4444' : item.qty <= 2 ? '#f59e0b' : '#16a34a' }}>{item.qty}</td>
+                      <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: item.qty === 0 ? '#ef4444' : item.qty <= 2 ? '#f59e0b' : 'var(--success)' }}>{item.qty}</td>
                       <td style={tdSt}>
                         <button onClick={() => openEdit(item)} className="text-blue-600 font-bold hover:underline" style={{ fontSize: '12px' }}>ערוך ←</button>
                       </td>
@@ -489,7 +502,7 @@ export default function ScanClient() {
                       <td style={{ ...tdSt, fontWeight: 600 }}>{e.item.name}</td>
                       <td style={{ ...tdSt, textAlign: 'center', color: '#64748b' }}>{e.item.qty}</td>
                       <td style={{ ...tdSt, textAlign: 'center', fontWeight: 800, color: '#d97706' }}>{e.counted}</td>
-                      <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: diff > 0 ? '#16a34a' : diff < 0 ? '#ef4444' : '#94a3b8' }}>
+                      <td style={{ ...tdSt, textAlign: 'center', fontWeight: 700, color: diff > 0 ? 'var(--success)' : diff < 0 ? '#ef4444' : '#94a3b8' }}>
                         {diff > 0 ? `+${diff}` : diff === 0 ? '—' : diff}
                       </td>
                     </tr>
@@ -520,13 +533,13 @@ export default function ScanClient() {
           <div className="flex items-center gap-2 mb-3">{BADGE(foundItem.type)}<span className="text-green-600 font-bold text-sm">✓ נמצא</span></div>
           <p className="font-black text-slate-800 text-xl mb-1">{foundItem.name}</p>
           {foundItem.sku && <p className="text-slate-400 text-sm mb-1">מק״ט: {foundItem.sku}</p>}
-          <p className="text-slate-500 text-sm mb-1">כמות: <span style={{ fontWeight: 700, color: foundItem.qty === 0 ? '#ef4444' : '#16a34a' }}>{foundItem.qty}</span></p>
+          <p className="text-slate-500 text-sm mb-1">כמות: <span style={{ fontWeight: 700, color: foundItem.qty === 0 ? '#ef4444' : 'var(--success)' }}>{foundItem.qty}</span></p>
           <div className="flex gap-4 mb-5">
             <p className="text-slate-500 text-sm">מחיר קנייה: <span style={{ fontWeight: 700, color: '#1e293b' }}>{foundItem.cost_price != null ? `₪${foundItem.cost_price}` : '—'}</span></p>
             <p className="text-slate-500 text-sm">מחיר מכירה: <span style={{ fontWeight: 700, color: '#1e293b' }}>{foundItem.sell_price != null ? `₪${foundItem.sell_price}` : '—'}</span></p>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => openEdit(foundItem)} className="flex-1 bg-blue-600 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '11px' }}>✏️ ערוך כאן</button>
+            <button onClick={() => openEdit(foundItem)} className="flex-1 bg-blue-600 text-white rounded-xl font-bold active:brightness-90 transition-all" style={{ padding: '11px' }}>ערוך כאן</button>
             <button onClick={closeModal} className="flex-1 border-2 border-slate-200 rounded-xl font-bold text-slate-600 active:bg-slate-50 transition-all" style={{ padding: '11px' }}>סגור</button>
           </div>
         </Modal>
@@ -629,10 +642,10 @@ export default function ScanClient() {
                       <button key={c} type="button" onClick={() => ntf('condition', c)} style={{
                         flex: 1, padding: '8px', border: `2px solid ${newTireForm.condition === c ? (c === 'used' ? '#f59e0b' : '#16a34a') : '#e2e8f0'}`,
                         borderRadius: '8px', cursor: 'pointer', fontWeight: newTireForm.condition === c ? 700 : 400, fontSize: '13px',
-                        background: newTireForm.condition === c ? (c === 'used' ? '#fef3c7' : '#f0fdf4') : '#fff',
-                        color: newTireForm.condition === c ? (c === 'used' ? '#92400e' : '#16a34a') : '#64748b',
+                        background: newTireForm.condition === c ? (c === 'used' ? '#fef3c7' : 'var(--success-soft)') : '#fff',
+                        color: newTireForm.condition === c ? (c === 'used' ? '#92400e' : 'var(--success)') : '#64748b',
                       }}>
-                        {c === 'new' ? '✓ חדש' : '♻ משומש'}
+                        {c === 'new' ? '✓ חדש' : 'משומש'}
                       </button>
                     ))}
                   </div>
@@ -717,10 +730,10 @@ export default function ScanClient() {
                   <button key={c} type="button" onClick={() => setEF('condition', c)} style={{
                     flex: 1, padding: '8px', border: `2px solid ${editForm.condition === c ? (c === 'used' ? '#f59e0b' : '#16a34a') : '#e2e8f0'}`,
                     borderRadius: '8px', cursor: 'pointer', fontWeight: editForm.condition === c ? 700 : 400, fontSize: '13px',
-                    background: editForm.condition === c ? (c === 'used' ? '#fef3c7' : '#f0fdf4') : '#fff',
-                    color: editForm.condition === c ? (c === 'used' ? '#92400e' : '#16a34a') : '#64748b',
+                    background: editForm.condition === c ? (c === 'used' ? '#fef3c7' : 'var(--success-soft)') : '#fff',
+                    color: editForm.condition === c ? (c === 'used' ? '#92400e' : 'var(--success)') : '#64748b',
                   }}>
-                    {c === 'new' ? '✓ חדש' : '♻ משומש'}
+                    {c === 'new' ? '✓ חדש' : 'משומש'}
                   </button>
                 ))}
               </div>

@@ -140,7 +140,7 @@ export default function YardDashboard({ initialSessions }: Props) {
           className="w-full text-white font-bold flex items-center justify-center gap-2.5 transition-all"
           style={{
             borderRadius: '12px', padding: '20px', fontSize: '20px',
-            background: newCarLoading ? '#64748b' : '#15803d',
+            background: newCarLoading ? '#6B7490' : '#26357A',
             animation: newCarLoading ? 'btn-loading 0.7s ease-in-out infinite' : 'none',
           }}
         >

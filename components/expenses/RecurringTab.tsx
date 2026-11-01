@@ -172,7 +172,7 @@ export default function RecurringTab({ rows, suppliers, tenantId, supabase, onRe
                   {fmt(r.amount)}
                 </td>
                 <td style={TD}>
-                  <span style={{ background: r.frequency === 'bimonthly' ? '#fef3c7' : '#f0fdf4', color: r.frequency === 'bimonthly' ? 'var(--warning)' : 'var(--primary)', borderRadius: '6px', padding: '2px 8px', fontSize: '12px' }}>
+                  <span style={{ background: r.frequency === 'bimonthly' ? '#fef3c7' : 'var(--success-soft)', color: r.frequency === 'bimonthly' ? 'var(--warning)' : 'var(--primary)', borderRadius: '6px', padding: '2px 8px', fontSize: '12px' }}>
                     {FREQ_LABELS[r.frequency]}
                   </span>
                 </td>
@@ -213,7 +213,7 @@ export default function RecurringTab({ rows, suppliers, tenantId, supabase, onRe
         footer={
           <>
             <Button variant="secondary" onClick={() => setModal(false)}>ביטול</Button>
-            <Button onClick={save} loading={saving}>💾 שמור</Button>
+            <Button onClick={save} loading={saving}>שמור</Button>
           </>
         }
       >

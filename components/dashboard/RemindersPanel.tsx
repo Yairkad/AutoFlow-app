@@ -53,7 +53,8 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
 
       setReminders(
         all
-          .filter(i => (i.type ?? 'reminder') === 'reminder' && !i.is_done)
+          // Tasks and reminders are one list now (2026-10): open items with a due date show first
+          .filter(i => !i.is_done && i.status !== 'closed' && !!i.due_date)
           .sort((a, b) => {
             if (!a.due_date && !b.due_date) return 0
             if (!a.due_date) return 1
@@ -64,7 +65,7 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
       )
       setTasks(
         all
-          .filter(i => (i.type ?? 'reminder') === 'task' && i.status !== 'closed')
+          .filter(i => !i.is_done && i.status !== 'closed' && !i.due_date)
           .sort((a, b) => {
             const po: Record<string, number> = { high: 0, medium: 1, low: 2 }
             return (po[a.priority] ?? 1) - (po[b.priority] ?? 1)
@@ -105,7 +106,7 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
           }}
         >
           <span>🔔</span>
-          <span>תזכורות</span>
+          <span>משימות</span>
           {!loading && total > 0 && (
             <span style={{ background: 'var(--danger)', color: '#fff', borderRadius: '999px', fontSize: '12px', fontWeight: 700, padding: '2px 9px', lineHeight: 1.4 }}>{total}</span>
           )}
@@ -128,13 +129,13 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
               direction: 'rtl',
             }}>
               <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
-                🔔 תזכורות ומשימות
+                משימות פתוחות
                 <button onClick={() => setPopupOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--text-muted)' }}>✕</button>
               </div>
               {loading ? (
                 <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>טוען...</div>
               ) : total === 0 ? (
-                <div style={{ color: 'var(--primary)', fontSize: '13px' }}>✓ אין תזכורות פעילות</div>
+                <div style={{ color: 'var(--primary)', fontSize: '13px' }}>✓ אין משימות פתוחות</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {reminders.map(r => {
@@ -155,7 +156,7 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
                 </div>
               )}
               <a href="/reminders" style={{ display: 'block', textAlign: 'center', marginTop: '12px', fontSize: '12px', color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>
-                → כל התזכורות
+                → כל המשימות
               </a>
             </div>
           </>
@@ -179,7 +180,7 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
         <span style={{ fontSize: '18px' }}>🔔</span>
-        <h3 style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>תזכורות ומשימות</h3>
+        <h3 style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>משימות פתוחות</h3>
         {total > 0 && (
           <span style={{
             marginRight: 'auto',
@@ -201,7 +202,7 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
           {/* Reminders */}
           {reminders.length > 0 && (
             <>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 2 }}>תזכורות</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 2 }}>עם תאריך יעד</div>
               {reminders.map(r => {
                 const isOverdue = r.due_date && r.due_date < today
                 return (
@@ -229,7 +230,7 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
           {/* Tasks */}
           {tasks.length > 0 && (
             <>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginTop: 6, marginBottom: 2 }}>משימות</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginTop: 6, marginBottom: 2 }}>ללא תאריך</div>
               {tasks.map(t => (
                 <div key={t.id} style={{
                   padding: '9px 11px', borderRadius: '8px', background: 'var(--bg)',
@@ -263,7 +264,7 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
               fontWeight: 600,
             }}
           >
-            לכל התזכורות ←
+            לכל המשימות ←
           </a>
         </div>
       )}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Button from '@/components/ui/Button'
+import { printHtml } from '@/lib/print/printHtml'
 
 // ── 21 systems per Ministry of Transportation guidelines ──────────────────────
 
@@ -444,10 +445,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 <script>window.onload=function(){window.print()}<\/script>
 </body></html>`
 
-  const w = window.open('', '_blank')
-  if (!w) { alert('אפשר חלונות קופצים בדפדפן'); return }
-  w.document.write(html)
-  w.document.close()
+  printHtml(html)
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
@@ -534,7 +532,8 @@ export default function InspectionChecklistModal({ inspection, business, inspect
   return (
     <>
       {/* Backdrop */}
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 499, background: 'rgba(0,0,0,0.5)' }} />
+      {/* Form window: a click outside must not close it (typed details would be lost) */}
+      <div aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 499, background: 'rgba(0,0,0,0.5)' }} />
 
       {/* Drawer */}
       <div style={{
@@ -553,7 +552,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
         }}>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--text-muted)', padding: 4, lineHeight: 1 }}>✕</button>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 14 }}>📋 ממצאי בדיקה — <span style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{inspection.plate}</span></div>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>ממצאי בדיקה — <span style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{inspection.plate}</span></div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
               {[inspection.make, inspection.model, inspection.year].filter(Boolean).join(' ')}
               {inspection.owner_name ? ` · ${inspection.owner_name}` : ''}
@@ -561,7 +560,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
             </div>
           </div>
           <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-            <span style={{ background: '#f0fdf4', color: 'var(--primary)', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>✓ {okCount}</span>
+            <span style={{ background: 'var(--success-soft)', color: 'var(--primary)', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>✓ {okCount}</span>
             {failCount > 0 && <span style={{ background: '#fef2f2', color: 'var(--danger)', padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>✗ {failCount}</span>}
           </div>
         </div>
@@ -585,7 +584,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
             const it = items[i]
             const isActive = i === step && !isSummary
             const isNaPill = it.status === 'na'
-            const bg = isNaPill ? '#f1f5f9' : it.status === 'ok' ? '#f0fdf4' : it.status === 'fail' ? '#fef2f2' : isActive ? '#eff6ff' : '#f1f5f9'
+            const bg = isNaPill ? '#f1f5f9' : it.status === 'ok' ? 'var(--success-soft)' : it.status === 'fail' ? '#fef2f2' : isActive ? '#eff6ff' : '#f1f5f9'
             const color = isNaPill ? '#ccc' : it.status === 'ok' ? 'var(--primary)' : it.status === 'fail' ? 'var(--danger)' : isActive ? 'var(--accent)' : 'var(--text-muted)'
             return (
               <button
@@ -613,7 +612,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
             style={{
               flexShrink: 0, width: 28, height: 28, borderRadius: '50%',
               border: isSummary ? '2px solid var(--primary)' : '2px solid transparent',
-              background: isSummary ? '#f0fdf4' : '#f1f5f9',
+              background: isSummary ? 'var(--success-soft)' : '#f1f5f9',
               color: isSummary ? 'var(--primary)' : 'var(--text-muted)',
               cursor: 'pointer', fontSize: 11, fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -734,7 +733,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
               {/* Stats bar */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 20 }}>
                 {[
-                  { label: 'תקין', value: okCount,    color: 'var(--primary)',  bg: '#f0fdf4' },
+                  { label: 'תקין', value: okCount,    color: 'var(--primary)',  bg: 'var(--success-soft)' },
                   { label: 'ליקויים', value: failCount,  color: 'var(--danger)',   bg: '#fef2f2' },
                   { label: 'לא בדוק', value: TOTAL - okCount - failCount, color: 'var(--text-muted)', bg: '#f1f5f9' },
                 ].map(s => (
@@ -818,7 +817,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
                             key={i}
                             style={{
                               borderBottom: '1px solid var(--border)',
-                              background: isNaRow ? '#f9fafb' : it.status === 'fail' ? '#fef2f2' : it.status === 'ok' ? '#f0fdf4' : undefined,
+                              background: isNaRow ? '#f9fafb' : it.status === 'fail' ? '#fef2f2' : it.status === 'ok' ? 'var(--success-soft)' : undefined,
                               cursor: isNaRow ? 'default' : 'pointer',
                               opacity: isNaRow ? 0.65 : 1,
                             }}
@@ -898,7 +897,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
                 loading={saving}
                 style={{ fontSize: 14, fontWeight: 800, padding: '10px 0' }}
               >
-                🖨️ שמור והדפס ממצאים
+                שמור והדפס ממצאים
               </Button>
               <Button
                 variant="secondary"
@@ -906,7 +905,7 @@ export default function InspectionChecklistModal({ inspection, business, inspect
                 loading={saving}
                 style={{ flexShrink: 0, padding: '10px 18px', fontWeight: 700, whiteSpace: 'nowrap' }}
               >
-                💾 שמור
+                שמור
               </Button>
               <button
                 onClick={() => jumpTo(0)}
@@ -940,7 +939,7 @@ export function ChecklistBadge({ findings }: { findings: string | null }) {
         ✗ {failCount} ליקוי{failCount !== 1 ? 'ים' : ''}
       </span>
     ) : (
-      <span style={{ background: '#f0fdf4', color: 'var(--primary)', fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20 }}>
+      <span style={{ background: 'var(--success-soft)', color: 'var(--primary)', fontSize: 11, fontWeight: 700, padding: '2px 9px', borderRadius: 20 }}>
         ✓ תקין
       </span>
     )

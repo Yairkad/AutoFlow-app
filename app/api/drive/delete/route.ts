@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAccessToken, deleteFile } from '@/lib/drive'
+import { sessionTenant } from '@/lib/auth/sessionTenant'
 
 export async function DELETE(req: Request) {
   try {
-    const { tenant_id, file_id } = await req.json()
+    const body = await req.json()
+    const guard = await sessionTenant(body.tenant_id)
+    if ('error' in guard) return guard.error
+    const tenant_id = guard.tenantId, file_id = body.file_id
     if (!tenant_id || !file_id) {
       return NextResponse.json({ error: 'Missing params' }, { status: 400 })
     }

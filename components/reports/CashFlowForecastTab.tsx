@@ -71,7 +71,7 @@ export default function CashFlowForecastTab({ tenantId }: Props) {
         </div>
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 16px' }}>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>יתרה צפויה בעוד {horizon} ימים</span>
-          <div style={{ fontSize: '18px', fontWeight: 800, color: finalBalance >= 0 ? '#16a34a' : 'var(--danger)' }}>{fmt(finalBalance)}</div>
+          <div style={{ fontSize: '18px', fontWeight: 800, color: finalBalance >= 0 ? 'var(--success)' : 'var(--danger)' }}>{fmt(finalBalance)}</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginRight: 'auto' }}>
           <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>טווח תחזית</label>
@@ -120,7 +120,7 @@ export default function CashFlowForecastTab({ tenantId }: Props) {
                   <td style={{ padding: '6px 10px' }}>{fmtDMY(ev.date)}</td>
                   <td style={{ padding: '6px 10px' }}>{ev.label}</td>
                   <td style={{ padding: '6px 10px', color: 'var(--text-muted)' }}>{SOURCE_LABEL[ev.source]}</td>
-                  <td style={{ padding: '6px 10px', color: ev.amount < 0 ? 'var(--danger)' : '#16a34a', fontWeight: 600 }}>{fmt(ev.amount)}</td>
+                  <td style={{ padding: '6px 10px', color: ev.amount < 0 ? 'var(--danger)' : 'var(--success)', fontWeight: 600 }}>{fmt(ev.amount)}</td>
                   <td style={{ padding: '6px 10px', fontWeight: 700, color: ev.runningBalance >= 0 ? 'var(--text)' : 'var(--danger)' }}>{fmt(ev.runningBalance)}</td>
                 </tr>
               ))}

@@ -81,20 +81,28 @@ const CHECK_ALERT_DAYS = 5
 // Buyers' payments on car sale contracts: late / bounced, or due within this many days
 const CONTRACT_ALERT_DAYS = 3
 
+// Every alert opens the screen that handles it — on the exact row where there is one
+const contractHref = (p: ExpectedPayment) => `/debts?tab=cars&focus=${p.contractId}`
+const LINK: React.CSSProperties = { textDecoration: 'none', cursor: 'pointer' }
+const CHIP: React.CSSProperties = {
+  ...LINK, display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '16px',
+  fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0,
+}
+
 function ContractChip({ p, wide }: { p: ExpectedPayment; wide?: boolean }) {
   const bounced = p.receipt?.status === 'bounced'
   const days = daysFromToday(p.due)
   const cs = chipStyle(bounced ? -1 : days)
   const when = bounced ? '↩ חזר' : dayLabel(days)
   return wide ? (
-    <a href="/reminders" style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', textDecoration: 'none', ...cs }}>
+    <a href={contractHref(p)} style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', textDecoration: 'none', ...cs }}>
       <div style={{ fontWeight: 700 }}>🚗 {p.buyer} · {KIND_LABEL[p.kind]}{p.checkNum && ` ${p.checkNum}`}</div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
         <span style={{ fontWeight: 800 }}>{fmt(p.amount)}</span><span>{when}</span>
       </div>
     </a>
   ) : (
-    <a href="/reminders" style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '16px', fontSize: '12px', fontWeight: 600, textDecoration: 'none', ...cs }}>
+    <a href={contractHref(p)} style={{ ...CHIP, ...cs }}>
       <span>🚗 {p.buyer}</span>
       <span style={{ opacity: 0.65, fontWeight: 400 }}>· {KIND_LABEL[p.kind]}</span>
       <span style={{ fontWeight: 800 }}>{fmt(p.amount)}</span>
@@ -114,6 +122,7 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
   const dismissed = new Set<string>()
   const [loading,   setLoading]   = useState(true)
   const [popupOpen, setPopupOpen] = useState(false)
+  const [expanded,  setExpanded]  = useState(false)
   const supabase = useRef(createClient()).current
 
   const load = async () => {
@@ -250,13 +259,13 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
                   {checkGroups.map(g => {
                     const cs = chipStyle(g.minDays)
                     return (
-                      <div key={`checks-${g.key}`} style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', ...cs }}>
+                      <a key={`checks-${g.key}`} href="/checks" style={{ ...LINK, padding: '10px 14px', borderRadius: '10px', fontSize: '13px', ...cs }}>
                         <div style={{ fontWeight: 700 }}>📝 {g.count} צ׳קים · {monthLabel(g.monthPeriod)}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
                           <span style={{ fontWeight: 800 }}>{fmt(g.total)}</span>
                           <span>{dayLabel(g.minDays)}</span>
                         </div>
-                      </div>
+                      </a>
                     )
                   })}
                   {visibleTransfers.map(p => {
@@ -264,35 +273,35 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
                     const cs   = chipStyle(days)
                     const sup  = suppliers.find(s => s.id === p.supplier_id)?.name
                     return (
-                      <div key={p.id} style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', ...cs }}>
+                      <a key={p.id} href="/checks" style={{ ...LINK, padding: '10px 14px', borderRadius: '10px', fontSize: '13px', ...cs }}>
                         <div style={{ fontWeight: 700 }}>{p.description}{sup && ` · ${sup}`}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
                           <span style={{ fontWeight: 800 }}>₪{Number(p.amount).toLocaleString('he-IL')}</span>
                           <span>{dayLabel(days)} · העברה</span>
                         </div>
-                      </div>
+                      </a>
                     )
                   })}
                   {visibleSalaries.map(s => {
                     const emp = employees.find(e => e.id === s.employee_id)?.full_name ?? 'עובד'
                     return (
-                      <div key={s.id} style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', ...SALARY_CHIP }}>
+                      <a key={s.id} href="/employees" style={{ ...LINK, padding: '10px 14px', borderRadius: '10px', fontSize: '13px', ...SALARY_CHIP }}>
                         <div style={{ fontWeight: 700 }}>👷 {emp} · {monthLabel(s.month)}</div>
                         <div style={{ fontWeight: 800, marginTop: '4px' }}>₪{Number(s.total).toLocaleString('he-IL')} · לא שולם</div>
-                      </div>
+                      </a>
                     )
                   })}
                   {visibleCustDebts.map(d => {
                     const days = daysSince(d.date)
                     const cs   = debtChipStyle(days)
                     return (
-                      <div key={d.id} style={{ padding: '10px 14px', borderRadius: '10px', fontSize: '13px', ...cs }}>
+                      <a key={d.id} href={`/debts?focus=${d.id}`} style={{ ...LINK, padding: '10px 14px', borderRadius: '10px', fontSize: '13px', ...cs }}>
                         <div style={{ fontWeight: 700 }}>👤 {d.name}{d.description ? ` · ${d.description}` : ''}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
                           <span style={{ fontWeight: 800 }}>₪{Number(d.amount - d.paid).toLocaleString('he-IL')} חוב</span>
                           <span>{days}י' ממתין</span>
                         </div>
-                      </div>
+                      </a>
                     )
                   })}
                 </div>
@@ -313,7 +322,7 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
       borderRadius: 'var(--radius)',
       boxShadow: 'var(--shadow)',
       display: 'flex',
-      alignItems: 'center',
+      alignItems: expanded ? 'flex-start' : 'center',
       gap: '12px',
       minHeight: '48px',
     }}>
@@ -343,19 +352,19 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
           ✓ אין התראות פעילות
         </span>
       ) : (
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', flex: 1 }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: expanded ? 'wrap' : 'nowrap', overflow: 'hidden', alignItems: 'center', flex: 1, minWidth: 0 }}>
 
           {/* Buyers' payments on car sale contracts */}
           {contractPays.map(p => <ContractChip key={p.contractId + p.key} p={p} />)}
 
           {/* Checks — summarized per due-month, not one chip per check */}
           {checkGroups.map(g => (
-            <div key={`checks-${g.key}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '16px', fontSize: '12px', fontWeight: 600, ...chipStyle(g.minDays) }}>
+            <a key={`checks-${g.key}`} href="/checks" style={{ ...CHIP, ...chipStyle(g.minDays) }}>
               <span>📝 {g.count} צ׳קים</span>
               <span style={{ opacity: 0.65, fontWeight: 400 }}>· {monthLabel(g.monthPeriod)}</span>
               <span style={{ fontWeight: 800 }}>{fmt(g.total)}</span>
               <span style={{ opacity: 0.75, fontWeight: 500 }}>{dayLabel(g.minDays)}</span>
-            </div>
+            </a>
           ))}
 
           {/* Scheduled transfers */}
@@ -364,13 +373,13 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
             const cs   = chipStyle(days)
             const sup  = suppliers.find(s => s.id === p.supplier_id)?.name
             return (
-              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '16px', fontSize: '12px', fontWeight: 600, ...cs }}>
+              <a key={p.id} href="/checks" style={{ ...CHIP, ...cs }}>
                 <span>{p.description}</span>
                 {sup && <span style={{ opacity: 0.65, fontWeight: 400 }}>· {sup}</span>}
                 <span style={{ fontWeight: 800 }}>{fmt(Number(p.amount))}</span>
                 <span style={{ opacity: 0.75, fontWeight: 500 }}>{dayLabel(days)}</span>
                 <span style={{ opacity: 0.55, fontSize: '11px', fontWeight: 400 }}>העברה</span>
-              </div>
+              </a>
             )
           })}
 
@@ -378,13 +387,13 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
           {visibleSalaries.map(s => {
             const emp = employees.find(e => e.id === s.employee_id)?.full_name ?? 'עובד'
             return (
-              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '16px', fontSize: '12px', fontWeight: 600, ...SALARY_CHIP }}>
+              <a key={s.id} href="/employees" style={{ ...CHIP, ...SALARY_CHIP }}>
                 <span>👷</span>
                 <span>{emp}</span>
                 <span style={{ opacity: 0.65, fontWeight: 400 }}>· {monthLabel(s.month)}</span>
                 <span style={{ fontWeight: 800 }}>{fmt(Number(s.total))}</span>
                 <span style={{ opacity: 0.7, fontSize: '11px' }}>לא שולם</span>
-              </div>
+              </a>
             )
           })}
 
@@ -393,16 +402,23 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
             const days = daysSince(d.date)
             const cs   = debtChipStyle(days)
             return (
-              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '16px', fontSize: '12px', fontWeight: 600, ...cs }}>
+              <a key={d.id} href={`/debts?focus=${d.id}`} style={{ ...CHIP, ...cs }}>
                 <span>👤</span>
                 <span>{d.name}</span>
                 <span style={{ fontWeight: 800 }}>{fmt(d.amount - d.paid)}</span>
                 <span style={{ opacity: 0.75, fontSize: '11px' }}>{days}י' ממתין</span>
-              </div>
+              </a>
             )
           })}
 
         </div>
+      )}
+      {!loading && totalCount > 0 && (
+        <button type="button" onClick={() => setExpanded(v => !v)} aria-expanded={expanded}
+          aria-label={expanded ? 'צמצם התראות' : 'הצג את כל ההתראות'}
+          style={{ flexShrink: 0, border: '1px solid var(--border)', background: 'var(--bg-card)', borderRadius: '8px', width: 30, height: 28, cursor: 'pointer', color: 'var(--text-muted)', transition: 'transform .15s', transform: expanded ? 'rotate(180deg)' : 'none' }}>
+          ▾
+        </button>
       )}
     </div>
   )

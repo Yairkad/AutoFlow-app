@@ -8,6 +8,8 @@ import { useToast } from '@/components/ui/Toast'
 import Button from '@/components/ui/Button'
 import { tireSizeText, parseTireSize } from '@/lib/tires/size'
 import TirePickerModal from '@/components/tires/TirePickerModal'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
+import { itemCodes } from '@/lib/stock/barcodes'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -19,6 +21,7 @@ interface TireRow {
   profile: number | null
   rim: number | null
   qty: number
+  alt_barcodes?: string[]
 }
 
 interface ScanEntry {
@@ -97,7 +100,7 @@ export default function InventoryCountClient() {
       tenantId.current = tid
 
       const [{ data: ts }, { data: sessions }] = await Promise.all([
-        sb.from('tires').select('id, sku, brand, width, profile, rim, qty').eq('tenant_id', tid),
+        sb.from('tires').select('*').eq('tenant_id', tid),   // '*' → alt_barcodes when present
         sb.from('tire_inventory_count_sessions')
           .select('id, counted_at, notes, is_first')
           .eq('tenant_id', tid)
@@ -130,7 +133,7 @@ export default function InventoryCountClient() {
 
   const skuMap = useMemo(() => {
     const m = new Map<string, TireRow>()
-    tires.forEach(t => { if (t.sku) m.set(t.sku.toLowerCase().trim(), t) })
+    tires.forEach(t => { for (const c of itemCodes(t)) m.set(c.toLowerCase(), t) })
     return m
   }, [tires])
 
@@ -344,7 +347,7 @@ export default function InventoryCountClient() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 900, margin: 0 }}>📦 ספירת מלאי</h1>
+          <h1 style={{ fontSize: '22px', fontWeight: 900, margin: 0 }}>ספירת מלאי</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '6px', marginBottom: 0 }}>
             {isFirst
               ? 'ספירה מקיפה ראשונה — תיצור בסיס השוואה לספירות עתידיות'
@@ -359,7 +362,7 @@ export default function InventoryCountClient() {
 
       {/* Banners */}
       {isFirst && (
-        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#15803d' }}>
+        <div style={{ background: 'var(--success-soft)', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: 'var(--success)' }}>
           🟢 <strong>ספירה ראשונה:</strong> תוצאות יישמרו כנקודת בסיס. ספירות עתידיות ישוו מולה בהתחשב בתנועות מלאי אוטומטיות.
         </div>
       )}
@@ -404,8 +407,8 @@ export default function InventoryCountClient() {
           </div>
 
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '-6px', marginBottom: '16px' }}>
-            <button onClick={() => setPicker({ mode: 'add' })} style={addBtn}>📋 בחר צמיג מהרשימה</button>
-            <button onClick={() => setNewTireOpen(true)} style={addBtn}>🆕 צמיג חדש בלי מקט</button>
+            <button onClick={() => setPicker({ mode: 'add' })} style={addBtn}>בחר צמיג מהרשימה</button>
+            <button onClick={() => setNewTireOpen(true)} style={addBtn}>צמיג חדש בלי מקט</button>
           </div>
 
           <input ref={scanRef} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
@@ -414,7 +417,7 @@ export default function InventoryCountClient() {
 
           {scanMode && (
             <div style={{ background: '#2563eb', color: '#fff', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 600 }}>📡 ממתין לסריקה...</span>
+              <span style={{ fontWeight: 600 }}>ממתין לסריקה...</span>
               <button onClick={() => setScanMode(false)} style={{ background: 'rgba(255,255,255,.2)', border: '1px solid rgba(255,255,255,.4)', color: '#fff', borderRadius: '8px', padding: '4px 12px', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>ביטול</button>
             </div>
           )}
@@ -442,7 +445,7 @@ export default function InventoryCountClient() {
                       {isUnknown && (
                         <button onClick={() => { setLinkSaveSku(false); setPicker({ mode: 'link', key: e.key }) }}
                           style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, color: 'var(--accent)', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>
-                          🔗 שייך לצמיג קיים
+                          שייך לצמיג קיים
                         </button>
                       )}
                     </div>
@@ -571,7 +574,7 @@ export default function InventoryCountClient() {
                         {!e.newTire && (
                           <button onClick={() => { setLinkSaveSku(false); setPicker({ mode: 'link', key: e.key }) }}
                             style={{ display: 'block', margin: '4px auto 0', background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 600, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>
-                            🔗 זה צמיג קיים? שייך אליו
+                            זה צמיג קיים? שייך אליו
                           </button>
                         )}
                       </td>
@@ -631,9 +634,9 @@ export default function InventoryCountClient() {
       )}
 
       {newTireOpen && (
-        <div onClick={() => setNewTireOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div {...guardedBackdrop(() => setNewTireOpen(false))} style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div onClick={e => e.stopPropagation()} role="dialog" aria-label="צמיג חדש בלי מקט" style={{ background: 'var(--bg-card)', borderRadius: 14, padding: 18, width: 'min(400px, 100%)', boxShadow: '0 10px 40px rgba(0,0,0,.25)', direction: 'rtl' }}>
-            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>🆕 צמיג חדש בלי מקט</div>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>צמיג חדש בלי מקט</div>
             <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 12 }}>יישמר במלאי וישאר ב&quot;חסרי נתונים&quot; עד שתשלים פרטים בדף הצמיגים.</div>
             <label className="form-label">מידה</label>
             <input className="form-input" autoFocus placeholder="205/55R16" value={newTireForm.size} onChange={e => setNewTireForm(f => ({ ...f, size: e.target.value }))} />

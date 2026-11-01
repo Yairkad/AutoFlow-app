@@ -93,7 +93,7 @@ function daysUntil(isoDate: string) {
 }
 
 function statusInfo(p: ScheduledPayment): { label: string; color: string; bg: string } {
-  if (p.is_paid) return { label: 'שולם', color: '#16a34a', bg: '#f0fdf4' }
+  if (p.is_paid) return { label: 'שולם', color: 'var(--success)', bg: 'var(--success-soft)' }
   const d = daysUntil(p.due_date)
   if (d < 0)  return { label: `באיחור ${Math.abs(d)} ימים`, color: 'var(--danger)', bg: '#fef2f2' }
   if (d === 0) return { label: 'היום!', color: 'var(--danger)', bg: '#fef2f2' }
@@ -292,10 +292,19 @@ export default function ScheduledPaymentsModal({
     setFormOpen(true)
   }
 
+  // Opened straight into the form (checks journal, supplier tracking) → cancelling the form closes
+  // everything instead of falling back to the list behind it.
+  const directOpen = useRef(false)
+  const closeForm = () => {
+    setFormOpen(false); setSeriesPreview(null)
+    if (directOpen.current) onClose()
+  }
+
   // Auto-open the add form (pre-filled to the given supplier) or the edit form for a
   // specific row when opened this way (e.g. from the checks journal page or supplier-tracking).
   useEffect(() => {
     if (!open) return
+    directOpen.current = !!(initialEditItem || initialSupplierId || initialOpenAdd)
     if (initialEditItem) { openEdit(initialEditItem); return }
     if (initialSupplierId || initialOpenAdd) {
       pendingInitialAllocRef.current = initialSupplierId && initialSelectedDebtIds && initialSelectedDebtIds.length > 0
@@ -757,7 +766,7 @@ export default function ScheduledPaymentsModal({
       <Modal
         open={open && !formOpen && !payOpen}
         onClose={onClose}
-        title="📅 תשלומים מתוזמנים"
+        title="📅 צ׳קים ותשלומים עתידיים"
         maxWidth={780}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -782,7 +791,7 @@ export default function ScheduledPaymentsModal({
                   cursor: 'pointer',
                 }}
               >
-                📥 ייבא Excel
+                ייבא Excel
               </button>
               {rows.length > 0 && (
                 <button
@@ -791,11 +800,11 @@ export default function ScheduledPaymentsModal({
                   title="ייצא לאקסל"
                   style={{
                     padding: '6px 12px', borderRadius: '8px', border: '1px solid #16a34a',
-                    background: '#f0fdf4', color: '#16a34a', fontSize: '13px', fontWeight: 600,
+                    background: 'var(--success-soft)', color: 'var(--success)', fontSize: '13px', fontWeight: 600,
                     cursor: exporting ? 'wait' : 'pointer', opacity: exporting ? 0.6 : 1,
                   }}
                 >
-                  {exporting ? 'מכין...' : '📊 ייצא Excel'}
+                  {exporting ? 'מכין...' : 'ייצא Excel'}
                 </button>
               )}
               <Button size="sm" onClick={openAdd}>+ הוסף תשלום</Button>
@@ -855,7 +864,7 @@ export default function ScheduledPaymentsModal({
                           <button
                             onClick={() => openPay(p)}
                             title="סמן כנפרע"
-                            style={{ ...ICON_BTN, fontSize: '13px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', borderRadius: '6px', padding: '3px 8px', opacity: 1, fontWeight: 600 }}
+                            style={{ ...ICON_BTN, fontSize: '13px', background: 'var(--success-soft)', border: '1px solid #bbf7d0', color: 'var(--success)', borderRadius: '6px', padding: '3px 8px', opacity: 1, fontWeight: 600 }}
                           >
                             ✓ שולם
                           </button>
@@ -890,7 +899,7 @@ export default function ScheduledPaymentsModal({
                         {suppliers.find(s => s.id === p.supplier_id)?.name || '—'}
                       </td>
                       <td style={TD}>
-                        <span style={{ fontSize: '12px', fontWeight: 600, color: '#16a34a', background: '#f0fdf4', borderRadius: '6px', padding: '3px 8px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--success)', background: 'var(--success-soft)', borderRadius: '6px', padding: '3px 8px' }}>
                           שולם {p.paid_date ? fmtDate(p.paid_date) : ''}
                         </span>
                       </td>
@@ -909,26 +918,26 @@ export default function ScheduledPaymentsModal({
       {/* ── Add / Edit form modal ─────────────────────────────────────────────── */}
       <Modal
         open={formOpen}
-        onClose={() => { setFormOpen(false); setSeriesPreview(null) }}
-        title={seriesPreview ? 'סיכום סדרת צ׳קים' : editItem ? 'עריכת תשלום מתוזמן' : fSeriesMode ? 'סדרת צ׳קים חדשה' : 'תשלום מתוזמן חדש'}
+        onClose={closeForm}
+        title={seriesPreview ? 'סיכום סדרת צ׳קים' : editItem ? 'עריכת צ׳ק / תשלום' : fSeriesMode ? 'סדרת צ׳קים חדשה' : 'צ׳ק / תשלום חדש'}
         maxWidth={520}
         footer={
           seriesPreview ? (
             <>
-              <Button variant="secondary" onClick={backToEditSeries}>✏️ חזרה לעריכה</Button>
+              <Button variant="secondary" onClick={backToEditSeries}>חזרה לעריכה</Button>
               <Button onClick={confirmSeriesCreate} loading={saving}>✓ אשר וצור</Button>
             </>
           ) : (
             <>
-              <Button variant="secondary" onClick={() => setFormOpen(false)}>ביטול</Button>
-              <Button onClick={save} loading={saving}>💾 שמור</Button>
+              <Button variant="secondary" onClick={closeForm}>ביטול</Button>
+              <Button onClick={save} loading={saving}>שמור</Button>
             </>
           )
         }
       >
         {seriesPreview ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ padding: '12px 16px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+            <div style={{ padding: '12px 16px', background: 'var(--success-soft)', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
               <div style={{ fontSize: '14px', fontWeight: 700 }}>נוצרו {seriesPreview.length} צ׳קים</div>
               <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary)', marginTop: '4px' }}>{fmt(seriesPreview.reduce((s, r) => s + r.amount, 0))}</div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>סכום כולל לסדרה</div>
@@ -991,7 +1000,7 @@ export default function ScheduledPaymentsModal({
                     <button key={iv} type="button" onClick={() => setFSeriesInterval(iv)} style={{
                       padding: '7px 12px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 500,
                       border: `1px solid ${fSeriesInterval === iv ? 'var(--primary)' : 'var(--border)'}`,
-                      background: fSeriesInterval === iv ? '#f0fdf4' : '#f8fafc',
+                      background: fSeriesInterval === iv ? 'var(--success-soft)' : '#f8fafc',
                       color: fSeriesInterval === iv ? 'var(--primary)' : 'var(--text-muted)',
                     }}>{iv === 'month' ? 'כל חודש' : 'כל X ימים'}</button>
                   ))}
@@ -1008,7 +1017,7 @@ export default function ScheduledPaymentsModal({
                     <button key={sp} type="button" onClick={() => setFSeriesSplit(sp)} style={{
                       flex: 1, padding: '7px 8px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 500,
                       border: `1px solid ${fSeriesSplit === sp ? 'var(--primary)' : 'var(--border)'}`,
-                      background: fSeriesSplit === sp ? '#f0fdf4' : '#f8fafc',
+                      background: fSeriesSplit === sp ? 'var(--success-soft)' : '#f8fafc',
                       color: fSeriesSplit === sp ? 'var(--primary)' : 'var(--text-muted)',
                     }}>{sp === 'equal' ? 'חלוקה שווה' : 'סכום עגול + שארית'}</button>
                   ))}
@@ -1025,7 +1034,7 @@ export default function ScheduledPaymentsModal({
                         <button key={pos} type="button" onClick={() => setFSeriesRemainderPos(pos)} style={{
                           padding: '7px 10px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 500,
                           border: `1px solid ${fSeriesRemainderPos === pos ? 'var(--primary)' : 'var(--border)'}`,
-                          background: fSeriesRemainderPos === pos ? '#f0fdf4' : '#f8fafc',
+                          background: fSeriesRemainderPos === pos ? 'var(--success-soft)' : '#f8fafc',
                           color: fSeriesRemainderPos === pos ? 'var(--primary)' : 'var(--text-muted)',
                         }}>{pos === 'first' ? 'ראשון' : 'אחרון'}</button>
                       ))}
@@ -1052,10 +1061,10 @@ export default function ScheduledPaymentsModal({
                 <button key={m} type="button" onClick={() => setFMethod(m)} style={{
                   flex: 1, padding: '8px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 500,
                   border: `1px solid ${fMethod === m ? 'var(--primary)' : 'var(--border)'}`,
-                  background: fMethod === m ? '#f0fdf4' : '#f8fafc',
+                  background: fMethod === m ? 'var(--success-soft)' : '#f8fafc',
                   color: fMethod === m ? 'var(--primary)' : 'var(--text-muted)',
                 }}>
-                  {m === 'check' ? "📝 צ'ק" : '🏦 העברה בנקאית'}
+                  {m === 'check' ? "צ'ק" : 'העברה בנקאית'}
                 </button>
               ))}
             </div>
@@ -1101,7 +1110,7 @@ export default function ScheduledPaymentsModal({
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonthShort(mk)}</span>
                     <button type="button" onClick={() => toggleMonthDebtSelected(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
-                      {debts.every(d => selectedDebtIds.has(d.id)) ? '☐ בטל בחירת חודש' : '☑ בחר חודש'}
+                      {debts.every(d => selectedDebtIds.has(d.id)) ? 'בטל בחירת חודש' : 'בחר חודש'}
                     </button>
                   </div>
                   {debts.map(d => {
@@ -1145,14 +1154,14 @@ export default function ScheduledPaymentsModal({
         footer={
           <>
             <Button variant="secondary" onClick={() => setPayOpen(false)}>ביטול</Button>
-            <Button onClick={markPaid} loading={paySaving}>✅ אשר תשלום</Button>
+            <Button variant="success" onClick={markPaid} loading={paySaving}>אשר תשלום</Button>
           </>
         }
       >
         {payItem && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {/* Payment summary */}
-            <div style={{ padding: '12px 16px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+            <div style={{ padding: '12px 16px', background: 'var(--success-soft)', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
               <div style={{ fontSize: '14px', fontWeight: 700 }}>{payItem.description}</div>
               <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary)', marginTop: '4px' }}>{fmt(Number(payItem.amount))}</div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>

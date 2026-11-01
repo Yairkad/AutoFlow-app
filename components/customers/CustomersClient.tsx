@@ -9,10 +9,12 @@ import CustomerDetailsTab from './CustomerDetailsTab'
 import CustomerTrackingTab from './CustomerTrackingTab'
 import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, RecurringItem, CustomerAction } from './shared'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
+import { guardedBackdrop } from '@/lib/ui/backdrop'
 
 type Tab = 'details' | 'tracking'
 
-export default function CustomersClient() {
+// embedded: inside the accounts screen (its tab bar + header) — the account tracking only
+export default function CustomersClient({ embedded = false }: { embedded?: boolean } = {}) {
   const supabase = useRef(createClient()).current
   const { profile, loading: profileLoading } = useProfile()
   const tenantIdRef = useRef<string | null>(null)
@@ -23,6 +25,7 @@ export default function CustomersClient() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('tracking')
   const [openId, setOpenId] = useState<string | null>(null)
+  const [cardId, setCardId] = useState<string | null>(null)   // customer card over the accounts screen
 
   const [customers, setCustomers] = useState<Customer[]>([])
   const [customerDebts, setCustomerDebts] = useState<CustomerLedgerDebt[]>([])
@@ -112,6 +115,38 @@ export default function CustomersClient() {
     </div>
   )
 
+  const tracking = (
+    <CustomerTrackingTab
+      tenantId={tenantIdRef.current!}
+      tenantName={tenantName}
+      customers={customers}
+      customerDebts={customerDebts}
+      customerPayments={customerPayments}
+      recurringItems={recurringItems}
+      customerActions={customerActions}
+      openId={openId}
+      reload={loadAll}
+      onOpenCard={embedded ? setCardId : undefined}
+    />
+  )
+  // Contact details, recurring charges and quick actions of one customer — the details tab's card
+  const card = cardId && (
+    <div className="acc-card-overlay" {...guardedBackdrop(() => setCardId(null))}>
+      <div className="acc-card" onClick={e => e.stopPropagation()}>
+        <CustomerDetailsTab mode="panel" key={cardId} tenantId={profile?.tenantId ?? ""} customers={customers} debts={customerDebts}
+          payments={customerPayments} recurringItems={recurringItems} customerActions={customerActions} categories={categories}
+          openId={cardId} onOpenTracking={() => setCardId(null)} reload={loadAll} onClose={() => setCardId(null)} />
+      </div>
+    </div>
+  )
+
+  if (embedded) return (
+    <div>
+      {tracking}
+      {card}
+    </div>
+  )
+
   return (
     <div>
       <PageHeader
@@ -141,17 +176,7 @@ export default function CustomersClient() {
       </div>
 
       {tab === 'tracking' ? (
-        <CustomerTrackingTab
-          tenantId={tenantIdRef.current!}
-          tenantName={tenantName}
-          customers={customers}
-          customerDebts={customerDebts}
-          customerPayments={customerPayments}
-          recurringItems={recurringItems}
-          customerActions={customerActions}
-          openId={openId}
-          reload={loadAll}
-        />
+        tracking
       ) : (
         <CustomerDetailsTab
           tenantId={tenantIdRef.current!}

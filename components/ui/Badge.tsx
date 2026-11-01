@@ -1,7 +1,7 @@
 type Variant = 'green' | 'red' | 'yellow' | 'blue' | 'gray' | 'orange'
 
 const COLORS: Record<Variant, { bg: string; color: string }> = {
-  green:  { bg: '#dcfce7', color: '#16a34a' },
+  green:  { bg: 'var(--success-soft)', color: 'var(--success)' },
   red:    { bg: '#fee2e2', color: '#dc2626' },
   yellow: { bg: '#fef9c3', color: '#ca8a04' },
   blue:   { bg: '#dbeafe', color: '#2563eb' },

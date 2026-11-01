@@ -7,7 +7,8 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import Input from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
-import ExcelMenu from '@/components/ui/ExcelMenu'
+import MoreMenu from '@/components/ui/MoreMenu'
+import FilterBar from '@/components/ui/FilterBar'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { createClient } from '@/lib/supabase/client'
@@ -71,6 +72,9 @@ function monthLabel(ym: string) {
   return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })
 }
 
+function fmtDay(iso: string) {
+  const [y, m, d] = iso.split('-'); return `${d}/${m}/${y.slice(2)}`
+}
 function fmt(n: number) {
   return '₪' + Number(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
@@ -118,7 +122,7 @@ const ICON_BTN: React.CSSProperties = { background: 'none', border: 'none', curs
 function SummaryCard({ label, value, color, icon }: { label: string; value: number; color: string; icon: string }) {
   return (
     <div style={{ background: '#fff', borderRadius: 'var(--radius)', border: '1px solid var(--border)', borderTop: `3px solid ${color}`, boxShadow: 'var(--shadow)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-      <div style={{ width: 40, height: 40, borderRadius: '10px', background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>{icon}</div>
+      <div style={{ width: 40, height: 40, borderRadius: '10px', background: `color-mix(in srgb, ${color} 9%, transparent)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>{icon}</div>
       <div>
         <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)' }}>{fmt(value)}</div>
         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{label}</div>
@@ -178,7 +182,7 @@ function CategorySelect({
             onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') setAdding(false) }}
             className="form-input" style={{ flex: 1 }}
           />
-          <button onClick={submit} style={{ padding: '7px 12px', borderRadius: '9px', border: '1.5px solid #bbf7d0', background: '#f0fdf9', color: '#15803d', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>הוסף</button>
+          <button onClick={submit} style={{ padding: '7px 12px', borderRadius: '9px', border: '1.5px solid #bbf7d0', background: 'var(--bg-soft)', color: 'var(--success)', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}>הוסף</button>
           <button onClick={() => setAdding(false)} style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '13px', color: 'var(--text-muted)' }}>✕</button>
         </div>
       ) : managing ? (
@@ -229,6 +233,11 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   const [search,    setSearch]    = useState('')
   const [filterCat, setFilterCat] = useState('')
   const [filterSup, setFilterSup] = useState('')
+  // Amount (±1₪) and date range; a date range replaces the month view so it can span months
+  const [filterAmt,  setFilterAmt]  = useState('')
+  const [filterFrom, setFilterFrom] = useState('')
+  const [filterTo,   setFilterTo]   = useState('')
+  const rangeActive = !!(filterFrom || filterTo)
 
   // Summary tab
   const [sumPreset,      setSumPreset]      = useState<SumPreset>('6m')
@@ -367,9 +376,9 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     const tenantId = await resolveTenant()
 
     const [y, m] = month.split('-')
-    const from    = `${y}-${m}-01`
     const lastDay = new Date(Number(y), Number(m), 0).getDate()
-    const to      = `${y}-${m}-${String(lastDay).padStart(2, '0')}`
+    const from    = rangeActive ? (filterFrom || '2000-01-01') : `${y}-${m}-01`
+    const to      = rangeActive ? (filterTo || '2999-12-31') : `${y}-${m}-${String(lastDay).padStart(2, '0')}`
 
     const [expRes, incRes, supRes, recRes] = await Promise.all([
       supabase.from('expenses').select('*').gte('date', from).lte('date', to).order('date', { ascending: false }),
@@ -396,7 +405,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         setExpenses(fresh.data ?? [])
       }
     }
-  }, [month, profile]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [month, profile, filterFrom, filterTo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchData() }, [fetchData])
 
@@ -705,6 +714,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     }
     if (filterCat && row.category !== filterCat) return false
     if (filterSup && tab === 'expenses' && (row as Expense).supplier_id !== filterSup) return false
+    if (filterAmt && Math.abs(Number(row.amount) - Number(filterAmt)) > 1) return false
     return true
   })
 
@@ -745,7 +755,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         const exp = row as Expense
         const pm  = exp.payment_method
         const pmColors: Record<string, { color: string; bg: string }> = {
-          'מזומן':   { color: '#16a34a', bg: '#f0fdf4' },
+          'מזומן':   { color: 'var(--success)', bg: 'var(--success-soft)' },
           'אשראי':   { color: '#2563eb', bg: '#eff6ff' },
           "צ'ק":    { color: '#92400e', bg: '#fef9c3' },
           'העברה':   { color: '#6d28d9', bg: '#f5f3ff' },
@@ -863,11 +873,10 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         actions={tab !== 'summary' ? <>
           <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: '#f1f5f9', borderRadius: '10px', padding: '4px 6px' }}>
             <button onClick={() => shiftMonth(1)}  style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '2px 6px', lineHeight: 1 }}>›</button>
-            <span style={{ fontSize: '14px', fontWeight: 600, minWidth: '130px', textAlign: 'center' }}>{monthLabel(month)}</span>
+            <span style={{ fontSize: '14px', fontWeight: 600, minWidth: '130px', textAlign: 'center' }}>{rangeActive ? 'טווח מסונן' : monthLabel(month)}</span>
             <button onClick={() => shiftMonth(-1)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '18px', padding: '2px 6px', lineHeight: 1 }}>‹</button>
           </div>
           <Button onClick={openAdd}>+ הוסף {tab === 'expenses' ? 'הוצאה' : 'הכנסה'}</Button>
-          <Button variant="secondary" onClick={() => setQuickAddOpen(true)}>⚡ הוספה מהירה</Button>
         </> : undefined}
       />
 
@@ -911,82 +920,53 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           ))}
         </div>
 
-        {/* Action buttons – far left (RTL) */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-          {/* Scheduled payments button */}
-          <button
-            onClick={() => setSchedModal(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              border: '1px solid var(--border)', borderRadius: '8px',
-              padding: '6px 12px', background: '#fff', cursor: 'pointer',
-              fontSize: '13px', color: 'var(--text-muted)',
-            }}
-          >
-            📅 תשלומים
-          </button>
-
-          {/* Recurring button */}
-          <button
-            onClick={() => setRecListModal(true)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              border: '1px solid var(--border)', borderRadius: '8px',
-              padding: '6px 12px', background: '#fff', cursor: 'pointer',
-              fontSize: '13px', color: 'var(--text-muted)',
-            }}
-          >
-            🔁 קבועות
-            {activeRec.length > 0 && (
-              <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: '10px', padding: '0 6px', fontSize: '11px' }}>
-                {activeRec.length}
-              </span>
-            )}
-          </button>
-          <ExcelMenu
-            onExportExcel={exportExcel}
-            onImportExcel={tab !== 'summary' ? importExcel : undefined}
-          />
-        </div>
+        {/* Secondary actions – far left (RTL) */}
+        <MoreMenu
+          excel={{ onExport: exportExcel, onImport: tab !== 'summary' ? importExcel : undefined }}
+          actions={[
+            ...(tab !== 'summary' ? [{ key: 'quick', label: 'הוספה מהירה', icon: '⚡', onClick: () => setQuickAddOpen(true) }] : []),
+            { key: 'sched', label: 'תשלומים', icon: '📅', onClick: () => setSchedModal(true) },
+            { key: 'rec', label: `קבועות${activeRec.length ? ` (${activeRec.length})` : ''}`, icon: '🔁', onClick: () => setRecListModal(true) },
+          ]}
+        />
       </div>
 
       {/* ── Search / filter bar ───────────────────────────────────────────────── */}
       {(tab === 'expenses' || tab === 'income') && (
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-            <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: '14px' }}>🔍</span>
-            <input
-              type="text"
-              placeholder="חיפוש לפי תיאור, קטגוריה, ספק..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="form-input" style={{ paddingRight: '32px' }}
-            />
-          </div>
-          <select value={filterCat} onChange={e => setFilterCat(e.target.value)} className="form-input" style={{ minWidth: '130px', width: 'auto' }}>
+        <FilterBar storageKey="expenses" search={search} onSearch={setSearch} placeholder="חיפוש לפי תיאור, קטגוריה, ספק..."
+          chips={[
+            ...(filterCat ? [{ key: 'c', label: filterCat, onRemove: () => setFilterCat('') }] : []),
+            ...(filterSup ? [{ key: 's', label: suppliers.find(x => x.id === filterSup)?.name ?? 'ספק', onRemove: () => setFilterSup('') }] : []),
+            ...(filterAmt ? [{ key: 'a', label: `סכום ${Number(filterAmt).toLocaleString()}₪`, onRemove: () => setFilterAmt('') }] : []),
+            ...(rangeActive ? [{ key: 'd', label: `${filterFrom ? fmtDay(filterFrom) : '…'} – ${filterTo ? fmtDay(filterTo) : '…'}`, onRemove: () => { setFilterFrom(''); setFilterTo('') } }] : []),
+          ]}
+          onClearAll={() => { setSearch(''); setFilterCat(''); setFilterSup(''); setFilterAmt(''); setFilterFrom(''); setFilterTo('') }}>
+          <select value={filterCat} onChange={e => setFilterCat(e.target.value)} aria-label="קטגוריה" className="form-input" style={{ minWidth: '130px', width: 'auto', margin: 0 }}>
             <option value="">כל הקטגוריות</option>
             {cats.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           {tab === 'expenses' && suppliers.length > 0 && (
-            <select value={filterSup} onChange={e => setFilterSup(e.target.value)} className="form-input" style={{ minWidth: '130px', width: 'auto' }}>
+            <select value={filterSup} onChange={e => setFilterSup(e.target.value)} aria-label="ספק" className="form-input" style={{ minWidth: '130px', width: 'auto', margin: 0 }}>
               <option value="">כל הספקים</option>
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           )}
-          {(search || filterCat || filterSup) && (
-            <button
-              onClick={() => { setSearch(''); setFilterCat(''); setFilterSup('') }}
-              style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 12px', background: '#fff', cursor: 'pointer', fontSize: '13px', color: 'var(--danger)', whiteSpace: 'nowrap' }}
-            >
-              ✕ נקה
-            </button>
-          )}
-          <div style={{ display: 'flex', gap: '2px', padding: '3px', background: '#f1f5f9', borderRadius: '9px' }}>
+          <input type="number" inputMode="decimal" min="0" value={filterAmt} onChange={e => setFilterAmt(e.target.value)}
+            aria-label="סכום" placeholder="סכום ₪" className="form-input" style={{ width: '110px', margin: 0 }} />
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
+            מתאריך
+            <input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} className="form-input" style={{ width: 'auto', margin: 0 }} />
+          </label>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
+            עד
+            <input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} className="form-input" style={{ width: 'auto', margin: 0 }} />
+          </label>
+          <div role="group" aria-label="תצוגה" style={{ display: 'flex', gap: '2px', padding: '3px', background: '#f1f5f9', borderRadius: '9px' }}>
             {([
               [true,  '📁 מקובץ'],
               [false, '📋 רשימה'],
             ] as [boolean, string][]).map(([v, label]) => (
-              <button key={String(v)} onClick={() => setGroupedView(v)} style={{
+              <button key={String(v)} onClick={() => setGroupedView(v)} aria-pressed={groupedView === v} style={{
                 border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '5px 12px', fontSize: '12px',
                 fontWeight: groupedView === v ? 600 : 400,
                 color: groupedView === v ? 'var(--text)' : 'var(--text-muted)',
@@ -995,7 +975,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               }}>{label}</button>
             ))}
           </div>
-        </div>
+        </FilterBar>
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
@@ -1066,7 +1046,6 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                 <label style={{ fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>עד תאריך</label>
                 <input type="date" value={sumDateTo} onChange={e => setSumDateTo(e.target.value)} className="form-input" style={{ width: 'auto' }} />
               </div>
-              <Button size="sm" onClick={fetchSummary}>רענן</Button>
             </div>
           )}
 
@@ -1094,7 +1073,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                       <tr
                         key={r.month}
                         className={!isCurrent ? 'tr-hover' : undefined}
-                        style={{ borderBottom: '1px solid var(--border)', background: isCurrent ? '#f0fdf4' : '' }}
+                        style={{ borderBottom: '1px solid var(--border)', background: isCurrent ? 'var(--success-soft)' : '' }}
                       >
                         <td style={{ ...TD, fontWeight: isCurrent ? 700 : 400 }}>
                           {monthLabel(r.month)}
@@ -1137,7 +1116,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           <>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
             {(search || filterCat || filterSup) && (
-              <div style={{ padding: '8px 14px', background: '#f0fdf4', borderBottom: '1px solid var(--border)', fontSize: '13px', color: 'var(--primary)' }}>
+              <div style={{ padding: '8px 14px', background: 'var(--success-soft)', borderBottom: '1px solid var(--border)', fontSize: '13px', color: 'var(--primary)' }}>
                 {filteredRows.length} תוצאות מתוך {baseRows.length}
               </div>
             )}
@@ -1207,7 +1186,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         open={modal}
         onClose={() => setModal(false)}
         title={editItem ? `עריכת ${tab === 'expenses' ? 'הוצאה' : 'הכנסה'}` : `הוספת ${tab === 'expenses' ? 'הוצאה' : 'הכנסה'}`}
-        footer={<><Button variant="secondary" onClick={() => setModal(false)}>ביטול</Button><Button onClick={save} loading={saving}>💾 שמור</Button></>}
+        footer={<><Button variant="secondary" onClick={() => setModal(false)}>ביטול</Button><Button onClick={save} loading={saving}>שמור</Button></>}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <Input label="תאריך" type="date" value={fDate} onChange={e => setFDate(e.target.value)} />
@@ -1234,7 +1213,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                   display: 'flex', alignItems: 'center', gap: '5px',
                   border: `1px solid ${fVatMode === 'with' ? 'var(--primary)' : 'var(--border)'}`,
                   borderRadius: '6px', padding: '3px 10px', cursor: 'pointer',
-                  background: fVatMode === 'with' ? '#f0fdf4' : '#f8fafc',
+                  background: fVatMode === 'with' ? 'var(--success-soft)' : '#f8fafc',
                   fontSize: '12px', fontWeight: 500,
                   color: fVatMode === 'with' ? 'var(--primary)' : 'var(--text-muted)',
                   transition: 'all .15s',
@@ -1266,7 +1245,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                   <button key={m} type="button" onClick={() => setFPayMethod(m)} style={{
                     padding: '7px 4px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', fontWeight: 500,
                     border: `1px solid ${fPayMethod === m ? 'var(--primary)' : 'var(--border)'}`,
-                    background: fPayMethod === m ? '#f0fdf4' : '#f8fafc',
+                    background: fPayMethod === m ? 'var(--success-soft)' : '#f8fafc',
                     color: fPayMethod === m ? 'var(--primary)' : 'var(--text-muted)',
                     textAlign: 'center',
                   }}>
@@ -1328,7 +1307,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                           background: fSchedMethod === m ? '#e0f2fe' : '#fff',
                           color: fSchedMethod === m ? '#0369a1' : 'var(--text-muted)',
                         }}>
-                          {m === 'check' ? "📝 צ'ק" : '🏦 העברה בנקאית'}
+                          {m === 'check' ? "צ'ק" : 'העברה בנקאית'}
                         </button>
                       ))}
                     </div>
@@ -1355,7 +1334,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                           <button key={f} type="button" onClick={() => setFRecurFreq(f)} style={{
                             padding: '5px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
                             border: `1px solid ${fRecurFreq === f ? 'var(--primary)' : 'var(--border)'}`,
-                            background: fRecurFreq === f ? '#f0fdf4' : '#f8fafc',
+                            background: fRecurFreq === f ? 'var(--success-soft)' : '#f8fafc',
                             color: fRecurFreq === f ? 'var(--primary)' : 'var(--text-muted)',
                           }}>{f === 'monthly' ? 'חודשי' : 'דו-חודשי'}</button>
                         ))}
@@ -1418,7 +1397,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         onClose={() => { setRecFormModal(false); setRecListModal(true) }}
         title={editRec ? 'עריכת הוצאה קבועה' : 'הוצאה קבועה חדשה'}
         maxWidth={460}
-        footer={<><Button variant="secondary" onClick={() => { setRecFormModal(false); setRecListModal(true) }}>ביטול</Button><Button onClick={saveRec} loading={recSaving}>💾 שמור</Button></>}
+        footer={<><Button variant="secondary" onClick={() => { setRecFormModal(false); setRecListModal(true) }}>ביטול</Button><Button onClick={saveRec} loading={recSaving}>שמור</Button></>}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <Input label="תיאור" placeholder="חשמל, שכירות..." value={rfDesc} onChange={e => setRfDesc(e.target.value)} />
@@ -1437,7 +1416,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               <button key={f} type="button" onClick={() => setRfFreq(f)} style={{
                 padding: '5px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
                 border: `1px solid ${rfFreq === f ? 'var(--primary)' : 'var(--border)'}`,
-                background: rfFreq === f ? '#f0fdf4' : '#f8fafc',
+                background: rfFreq === f ? 'var(--success-soft)' : '#f8fafc',
                 color: rfFreq === f ? 'var(--primary)' : 'var(--text-muted)',
               }}>{f === 'monthly' ? 'חודשי' : 'דו-חודשי'}</button>
             ))}
@@ -1476,7 +1455,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           footer={
             <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
               <Button variant="secondary" onClick={handleVarSkip} style={{ marginLeft: 'auto' }}>דלג לחודש זה</Button>
-              <Button onClick={handleVarAdd} loading={varSaving}>✅ הוסף</Button>
+              <Button onClick={handleVarAdd} loading={varSaving}>הוסף</Button>
             </div>
           }
         >

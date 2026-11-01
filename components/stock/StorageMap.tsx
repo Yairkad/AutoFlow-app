@@ -110,7 +110,7 @@ export default function StorageMap({ layout: given, selected, highlight, done, d
                             }}>
                             {s}
                             {badge !== undefined && badge !== '' && (
-                              <span style={{ position: 'absolute', top: 0, left: 1, fontSize: 9, fontWeight: 900, color: sel || hi ? '#fff' : '#16a34a' }}>{badge}</span>
+                              <span style={{ position: 'absolute', top: 0, left: 1, fontSize: 9, fontWeight: 900, color: sel || hi ? '#fff' : 'var(--success)' }}>{badge}</span>
                             )}
                             {dot?.has(s) && <span style={DOT} />}
                           </button>
@@ -143,7 +143,7 @@ export default function StorageMap({ layout: given, selected, highlight, done, d
                             }}>
                             {s}
                             {badge !== undefined && badge !== '' && (
-                              <span style={{ position: 'absolute', top: 1, left: 2, fontSize: 10, fontWeight: 900, color: sel || hi ? '#fff' : '#16a34a' }}>{badge}</span>
+                              <span style={{ position: 'absolute', top: 1, left: 2, fontSize: 10, fontWeight: 900, color: sel || hi ? '#fff' : 'var(--success)' }}>{badge}</span>
                             )}
                             {dot?.has(s) && <span style={DOT} />}
                           </button>

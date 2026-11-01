@@ -293,7 +293,7 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
 
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
             <Button variant="secondary" onClick={() => setStep('upload')}>← חזרה</Button>
-            <Button onClick={saveMappingAndParse} loading={busy}>💾 שמור מיפוי והמשך</Button>
+            <Button onClick={saveMappingAndParse} loading={busy}>שמור מיפוי והמשך</Button>
           </div>
         </div>
       )}

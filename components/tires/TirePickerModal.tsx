@@ -54,7 +54,7 @@ export default function TirePickerModal<T extends PickableTire>({ tires, title, 
               padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', fontFamily: 'inherit',
             }}>
               <span>
-                <strong style={{ color: 'var(--accent)', fontSize: 14 }}>{tireSizeText(t) || '⚠ ללא מידה'}</strong>
+                <strong style={{ color: 'var(--accent)', fontSize: 14 }}>{tireSizeText(t) || 'ללא מידה'}</strong>
                 {t.brand && <span style={{ marginRight: 8, fontSize: 13 }}>{t.brand}</span>}
                 {t.sku && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{t.sku}</span>}
               </span>

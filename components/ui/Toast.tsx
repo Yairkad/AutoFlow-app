@@ -21,13 +21,13 @@ export function useToast() {
 }
 
 const COLORS: Record<ToastType, string> = {
-  success: '#16a34a',
+  success: 'var(--success)',
   error:   '#dc2626',
   info:    '#2563eb',
 }
 
 const ICON_BG: Record<ToastType, string> = {
-  success: '#dcfce7',
+  success: 'var(--success-soft)',
   error:   '#fee2e2',
   info:    '#dbeafe',
 }

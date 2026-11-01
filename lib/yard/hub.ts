@@ -58,6 +58,9 @@ export interface CustomerRequest {
   supplier_name:   string | null
   install_at:      string | null
   updated_at:      string
+  /** Calls that went unanswered (0 = none); the marker clears when the customer is reached */
+  no_answer_count?: number
+  no_answer_at?:    string | null
 }
 
 export const OPEN_REQUEST_STATUSES: RequestStatus[] = ['new', 'ordered', 'arrived', 'notified']

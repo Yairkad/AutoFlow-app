@@ -1,5 +1,6 @@
 'use client'
 
+import { printHtml } from '@/lib/print/printHtml'
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import Button from '@/components/ui/Button'
@@ -11,10 +12,8 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 const ACCENT = '#0b5c55'
 
 function printPoster(qr: string, url: string, businessName: string) {
-  const w = window.open('', '_blank')
-  if (!w) return
   const esc = (t: string) => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!))
-  w.document.write(`<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>בדיקת קנייה – ברקוד</title>
+  printHtml(`<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>בדיקת קנייה – ברקוד</title>
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@600;800&display=block" rel="stylesheet">
 <style>@page{size:A4;margin:16mm}body{margin:0;font-family:'Assistant',sans-serif;color:#15201e;text-align:center}
 .wrap{display:flex;flex-direction:column;align-items:center;gap:18px;padding-top:10mm}
@@ -26,7 +25,6 @@ function printPoster(qr: string, url: string, businessName: string) {
 <img src="${qr}" onload="setTimeout(function(){window.focus();window.print()},400)">
 <div class="steps">1. פרטים אישיים · 2. פרטי הרכב · 3. צילום תעודת זהות ורישיון רכב</div>
 <div class="url">${esc(url)}</div></div></body></html>`)
-  w.document.close()
 }
 
 export default function IntakeQrModal({ businessName, onClose }: { businessName: string; onClose: () => void }) {

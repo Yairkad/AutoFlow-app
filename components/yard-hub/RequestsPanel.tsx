@@ -205,6 +205,8 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
         const line = `${pad2(now.getDate())}/${pad2(now.getMonth() + 1)}: ${note}`
         changes.notes = r.notes ? `${r.notes}\n${line}` : line
       }
+      // A logged conversation means the customer was reached
+      if ((r.no_answer_count ?? 0) > 0) { changes.no_answer_count = 0; changes.no_answer_at = null }
     }
     if (withStatus) setStatus(r, withStatus, changes)
     else if (Object.keys(changes).length) patch(r, changes)
@@ -285,6 +287,8 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                   </span>
                   <RowActionsMenu align="end" actions={[
                     ...(r.phone ? [{ key: 'wa', icon: '💬', label: 'שליחת וואטסאפ', onClick: () => window.open(whatsappLink(r.phone!, r.status === 'arrived' ? `שלום ${r.customer_name}, הצמיג שהזמנת (${r.item_desc}) הגיע אלינו 🙂` : undefined), '_blank') }] : []),
+                    ...(isOpen ? [{ key: 'noans', icon: '📵', label: 'חייגנו — לא ענה', onClick: () => patch(r, { no_answer_count: (r.no_answer_count ?? 0) + 1, no_answer_at: new Date().toISOString() }) }] : []),
+                    ...((r.no_answer_count ?? 0) > 0 ? [{ key: 'reached', icon: '✓', label: 'ענה — נקה סימון', onClick: () => patch(r, { no_answer_count: 0, no_answer_at: null }) }] : []),
                     { key: 'call', icon: '📞', label: 'סיכום שיחה (מועד התקנה / הערה)', onClick: () => openCall(r) },
                     { key: 'edit', icon: '✏️', label: 'עריכת נתונים', onClick: () => startEdit(r) },
                     ...(isOpen ? [{ key: 'cancel', icon: '✕', label: 'ביטול הבקשה', onClick: () => setStatus(r, 'cancelled') }] : []),
@@ -295,9 +299,15 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                 <div className="flex items-center gap-2" style={{ marginTop: -4 }}>
                   <div className="flex-1 min-w-0">
                     {r.phone
-                      ? <a href={`tel:${r.phone}`} className="font-bold" style={{ fontSize: 14, color: '#1d4ed8', direction: 'ltr', whiteSpace: 'nowrap', display: 'inline-block' }}>📞 {fmtPhone(r.phone)}</a>
+                      ? <a href={`tel:${r.phone}`} className="font-bold" style={{ fontSize: 14, color: '#1E2B66', direction: 'ltr', whiteSpace: 'nowrap', display: 'inline-block' }}>📞 {fmtPhone(r.phone)}</a>
                       : <span className="text-slate-300" style={{ fontSize: 13 }}>אין טלפון</span>}
                   </div>
+                  {isOpen && (r.no_answer_count ?? 0) > 0 && (
+                    <span title={r.no_answer_at ? `ניסיון אחרון: ${fmtDate(r.no_answer_at)}` : undefined}
+                      className="rounded-full font-bold text-xs flex-shrink-0 bg-red-50 text-red-700 border border-red-200" style={{ padding: '2px 8px', whiteSpace: 'nowrap' }}>
+                      📵 לא ענה{(r.no_answer_count ?? 0) > 1 ? ` ×${r.no_answer_count}` : ''}{r.no_answer_at ? ` · ${fmtDate(r.no_answer_at)}` : ''}
+                    </span>
+                  )}
                   <span className={`rounded-full font-bold text-xs flex-shrink-0 ${STATUS_COLOR[r.status]}`} style={{ padding: '3px 9px', whiteSpace: 'nowrap' }}>
                     {REQUEST_STATUS_LABEL[r.status]}
                   </span>
@@ -324,7 +334,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
 
                 {/* Small details sit right above the button, pinned to the bottom */}
                 <div className="text-slate-500 flex flex-wrap gap-x-2" style={{ fontSize: 12, marginTop: 'auto' }}>
-                  {r.supplier_name && <span>📦 ספק: {r.supplier_name}</span>}
+                  {r.supplier_name && <span>ספק: {r.supplier_name}</span>}
                   {r.plate && <span>🚗 {r.plate}</span>}
                   {r.notes && <span style={{ whiteSpace: 'pre-line' }}>📝 {r.notes}</span>}
                   {r.created_by_name && <span className="text-slate-400">· {r.created_by_name}</span>}
@@ -349,7 +359,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
           <Toggle value={payStatus} onChange={setPayStatus} options={[
             { value: 'unpaid',  label: 'לא שולם',    color: '#dc2626' },
             { value: 'partial', label: 'שולם חלקית', color: '#d97706' },
-            { value: 'paid',    label: 'שולם',       color: '#16a34a' },
+            { value: 'paid',    label: 'שולם',       color: 'var(--success)' },
           ]} />
           {payStatus === 'partial' && (
             <Field label={`כמה שולם (₪)${payFor.quoted_price != null ? ` — מתוך ₪${payFor.quoted_price}` : ''}`}>
@@ -359,7 +369,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
           {payStatus === 'partial' && payFor.quoted_price != null && Number(payAmount) > 0 && (
             <div className="font-bold text-amber-800" style={{ fontSize: 15 }}>נשאר לתשלום: ₪{round2(payFor.quoted_price - Number(payAmount))}</div>
           )}
-          <button onClick={savePayment} className="bg-green-600 text-white rounded-xl font-black" style={{ padding: '14px', fontSize: '18px' }}>💾 שמור</button>
+          <button onClick={savePayment} className="bg-green-600 text-white rounded-xl font-black" style={{ padding: '14px', fontSize: '18px' }}>שמור</button>
         </Sheet>
       )}
 
@@ -394,7 +404,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
               className={inputCls} style={inputStyle} />
           </Field>
           <button onClick={() => saveCall()} className="bg-green-600 text-white rounded-xl font-black" style={{ padding: '14px', fontSize: '18px' }}>
-            {callFor.withStatus ? '✓ עודכן הלקוח' : '💾 שמור'}
+            {callFor.withStatus ? '✓ עודכן הלקוח' : 'שמור'}
           </button>
           {callFor.withStatus && (
             <button onClick={() => saveCall(true)} className="text-slate-500 font-semibold" style={{ padding: 6 }}>
@@ -409,7 +419,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
       {form && (
         <Sheet title={editId ? 'עריכת בקשה' : 'לקוח חדש'} onClose={() => setForm(null)}>
           <Toggle value={form.kind} onChange={v => f('kind', v)} options={[
-            { value: 'order',   label: '📦 מחכה לצמיג', color: '#15803d' },
+            { value: 'order',   label: '📦 מחכה לצמיג', color: 'var(--success)' },
             { value: 'inquiry', label: '❓ צריך לברר',  color: '#7c3aed' },
           ]} />
           <Field label="שם לקוח *">
@@ -437,7 +447,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
           <Field label="רכב"><input value={form.plate} onChange={e => f('plate', e.target.value)} className={inputCls} style={inputStyle} /></Field>
           <Field label="הערות"><input value={form.notes} onChange={e => f('notes', e.target.value)} className={inputCls} style={inputStyle} /></Field>
           <button onClick={save} disabled={saving} className="bg-green-600 text-white rounded-xl font-black disabled:opacity-60" style={{ padding: '14px', fontSize: '18px' }}>
-            {saving ? 'שומר...' : '💾 שמור'}
+            {saving ? 'שומר...' : 'שמור'}
           </button>
         </Sheet>
       )}

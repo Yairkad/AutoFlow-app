@@ -8,6 +8,8 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
+import MoreMenu from '@/components/ui/MoreMenu'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
@@ -364,18 +366,11 @@ export default function ChecksJournalClient() {
       {/* Filters */}
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center', marginBottom: '16px' }}>
         <Button onClick={() => setAddOpen(true)}>+ צ׳ק / סדרה חדשה</Button>
-        <button
-          onClick={() => setListOpen(true)}
-          title="ייבוא Excel"
-          style={{ padding: '8px 14px', borderRadius: '9px', border: '1px solid #2563eb', background: '#eff6ff', color: '#2563eb', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
-        >📥 ייבוא Excel</button>
-        <button
-          onClick={exportExcel}
-          disabled={exporting || filtered.length === 0}
-          title="ייצוא Excel (לפי הסינון הנוכחי)"
-          style={{ padding: '8px 14px', borderRadius: '9px', border: '1px solid #16a34a', background: '#f0fdf4', color: '#16a34a', fontSize: '13px', fontWeight: 600, cursor: exporting ? 'wait' : 'pointer', opacity: filtered.length === 0 ? 0.5 : 1 }}
-        >{exporting ? 'מכין...' : '📊 ייצוא Excel'}</button>
-        <Button variant="secondary" onClick={() => setPrintOpen(true)} disabled={filtered.length === 0}>🖨️ הדפסה</Button>
+        <MoreMenu actions={[
+          { key: 'print', label: 'הדפסה', icon: '🖨️', disabled: filtered.length === 0, onClick: () => setPrintOpen(true) },
+          { key: 'export', label: exporting ? 'מכין...' : 'ייצוא Excel (לפי הסינון)', icon: '📤', disabled: exporting || filtered.length === 0, onClick: exportExcel },
+          { key: 'import', label: 'ייבוא Excel', icon: '📥', onClick: () => setListOpen(true) },
+        ]} />
       </div>
 
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
@@ -413,7 +408,7 @@ export default function ChecksJournalClient() {
               <button key={f} onClick={() => setFStatus(f)} style={{
                 padding: '7px 14px', border: '1px solid',
                 borderColor: fStatus === f ? 'var(--primary)' : 'var(--border)',
-                background: fStatus === f ? '#f0fdf6' : 'transparent',
+                background: fStatus === f ? 'var(--success-soft)' : 'transparent',
                 color: fStatus === f ? 'var(--primary)' : 'var(--text-muted)',
                 borderRadius: '20px', fontSize: '12px', fontWeight: fStatus === f ? 600 : 400,
                 cursor: 'pointer', transition: 'all .12s',
@@ -446,7 +441,7 @@ export default function ChecksJournalClient() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)' }}>סה״כ ששולם (לפי הסינון)</span>
-              <span style={{ fontSize: '20px', fontWeight: 800, color: '#16a34a' }}>{fmt(grandPaidTotal)}</span>
+              <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--success)' }}>{fmt(grandPaidTotal)}</span>
             </div>
           </div>
 
@@ -479,21 +474,23 @@ export default function ChecksJournalClient() {
                           </span>
                           {p.series_id && <span title="חלק מסדרת צ׳קים" style={{ fontSize: 12 }}>📚</span>}
                           {unlinked && (
-                            <Link href={`/suppliers?tab=tracking&open=${p.supplier_id}`} title="לא משויך לחוב — לשיוך היכנסו למעקב ספקים" style={{ fontSize: 12, textDecoration: 'none' }}>⚠️</Link>
+                            <Link href={`/accounts?tab=suppliers&open=${p.supplier_id}`} title="לא משויך לחוב — לשיוך היכנסו למעקב ספקים" style={{ fontSize: 12, textDecoration: 'none' }}>⚠️</Link>
                           )}
                           <span style={{ color: 'var(--text-muted)', fontSize: '13px', minWidth: '90px' }}>{supName ?? '—'}</span>
                           <span style={{ fontSize: '13px', flex: 1, textDecoration: p.is_paid ? 'line-through' : 'none' }}>{p.description}</span>
                           <span style={{ fontSize: '13px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{fmtDMY(p.due_date)}</span>
                           <span style={{ fontWeight: 700, minWidth: '90px', textAlign: 'left' }}>{fmt(p.amount)}</span>
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: p.is_paid ? '#16a34a' : days < 0 ? 'var(--danger)' : days <= 7 ? 'var(--warning)' : '#2563eb', whiteSpace: 'nowrap', minWidth: 80 }}>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: p.is_paid ? 'var(--success)' : days < 0 ? 'var(--danger)' : days <= 7 ? 'var(--warning)' : '#2563eb', whiteSpace: 'nowrap', minWidth: 80 }}>
                             {p.is_paid ? `שולם ${p.paid_date ? fmtDMY(p.paid_date) : ''}` : days < 0 ? `באיחור ${Math.abs(days)} ימים` : days === 0 ? 'היום!' : `עוד ${days} ימים`}
                           </span>
                           <div style={{ display: 'flex', gap: 4 }}>
                             {!p.is_paid && (
-                              <button onClick={() => openPay(p)} title="סמן כנפרע" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a', borderRadius: '6px', padding: '3px 8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✓</button>
+                              <button onClick={() => openPay(p)} title="סמן כנפרע" style={{ background: 'var(--success-soft)', border: '1px solid #bbf7d0', color: 'var(--success)', borderRadius: '6px', padding: '3px 8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✓</button>
                             )}
-                            <button onClick={() => setEditItem(p)} title="עריכה" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', fontSize: '14px' }}>✏️</button>
-                            <button onClick={() => deleteRow(p.id)} title="מחיקה" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', fontSize: '14px' }}>🗑️</button>
+                            <RowActionsMenu align="end" actions={[
+                              { key: 'edit', label: 'עריכה', icon: '✏️', onClick: () => setEditItem(p) },
+                              { key: 'del', label: 'מחיקה', icon: '🗑️', danger: true, onClick: () => deleteRow(p.id) },
+                            ]} />
                           </div>
                         </div>
                       )
@@ -529,13 +526,13 @@ export default function ChecksJournalClient() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setPayItem(null)}>ביטול</Button>
-            <Button onClick={confirmPay} loading={paySaving}>✅ אשר תשלום</Button>
+            <Button variant="success" onClick={confirmPay} loading={paySaving}>אשר תשלום</Button>
           </>
         }
       >
         {payItem && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ padding: '12px 16px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+            <div style={{ padding: '12px 16px', background: 'var(--success-soft)', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
               <div style={{ fontSize: '14px', fontWeight: 700 }}>{payItem.description}</div>
               <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary)', marginTop: '4px' }}>{fmt(Number(payItem.amount))}</div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>פירעון {fmtDMY(payItem.due_date)}</div>

@@ -124,12 +124,12 @@ export default function CarContractsPanel({ carId, prefill, onOpen }: Props) {
                 <div style={{ fontWeight: 700, fontSize: 13.5, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                   {r.plate && <span style={{ direction: 'ltr', background: '#fef9c3', border: '1px solid #eab308', borderRadius: 5, padding: '0 6px', fontSize: 12.5 }}>{r.plate}</span>}
                   <span>{r.car_desc || 'רכב'}</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 8, background: r.status === 'signed' ? '#dcfce7' : '#f1f5f9', color: r.status === 'signed' ? '#166534' : '#64748b' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 8, background: r.status === 'signed' ? 'var(--success-soft)' : '#f1f5f9', color: r.status === 'signed' ? '#166534' : '#64748b' }}>
                     {r.status === 'signed' ? 'נחתם' : 'טיוטה'}
                   </span>
                   {r.signed_file && (
                     <a href={signedFileUrl(r.signed_file)} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
-                      style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>📎 חוזה חתום</a>
+                      style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--primary)', textDecoration: 'none' }}>חוזה חתום</a>
                   )}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>

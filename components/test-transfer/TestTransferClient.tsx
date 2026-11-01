@@ -43,9 +43,9 @@ const STATUS_COLOR: Record<TransferStatus, { bg: string; text: string }> = {
   'ממתין':  { bg: '#f1f5f9', text: '#475569' },
   'בדרך':   { bg: '#eff6ff', text: '#2563eb' },
   'בטסט':   { bg: '#fefce8', text: '#b45309' },
-  'עבר':    { bg: '#f0fdf4', text: '#15803d' },
+  'עבר':    { bg: 'var(--success-soft)', text: 'var(--success)' },
   'נכשל':   { bg: '#fef2f2', text: '#dc2626' },
-  'הושלם':  { bg: '#f0fdf4', text: '#059669' },
+  'הושלם':  { bg: 'var(--success-soft)', text: '#059669' },
 }
 
 const emptyForm = {
@@ -493,7 +493,7 @@ export default function TestTransferClient() {
             </div>
             <div style={{ paddingTop: 20 }}>
               <Button size="sm" onClick={handlePlateSearch} disabled={plateLoading}>
-                {plateLoading ? '...' : '🔍 מלא אוטומטית'}
+                {plateLoading ? '...' : 'מלא אוטומטית'}
               </Button>
             </div>
           </div>
@@ -627,7 +627,7 @@ export default function TestTransferClient() {
               disabled={saving}
               style={{ fontSize: 15, fontWeight: 800, padding: '10px 0' }}
             >
-              {saving ? 'שומר...' : '💾 שמור שינוע'}
+              {saving ? 'שומר...' : 'שמור שינוע'}
             </Button>
             <button
               onClick={clearForm}
@@ -639,7 +639,7 @@ export default function TestTransferClient() {
                 color: 'var(--text-muted)', whiteSpace: 'nowrap',
               }}
             >
-              🗑️ נקה
+              נקה
             </button>
           </div>
         </div>
@@ -839,7 +839,8 @@ export default function TestTransferClient() {
       {/* ── Edit Modal ── */}
       {editModalOpen && (
         <>
-          <div onClick={clearForm} style={{
+          {/* Form window: a click outside must not close it (typed details would be lost) */}
+          <div aria-hidden="true" style={{
             position: 'fixed', inset: 0, zIndex: 499,
             background: 'rgba(0,0,0,0.45)',
           }} />
@@ -878,7 +879,7 @@ export default function TestTransferClient() {
               }}>
                 <Button fullWidth onClick={handleSave} disabled={saving}
                   style={{ fontSize: 15, fontWeight: 800, padding: '10px 0' }}>
-                  {saving ? 'שומר...' : '💾 שמור'}
+                  {saving ? 'שומר...' : 'שמור'}
                 </Button>
                 <button onClick={clearForm} style={{
                   flexShrink: 0, padding: '10px 16px',

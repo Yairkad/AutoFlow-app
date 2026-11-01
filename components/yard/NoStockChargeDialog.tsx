@@ -64,7 +64,7 @@ export default function NoStockChargeDialog({ kind, initialText = '', barcode = 
       {barcode && <p className="text-sm text-slate-500">ברקוד <span style={{ fontFamily: 'monospace' }}>{barcode}</span> לא נמצא במערכת</p>}
       {kind === 'choose' && (
         <Toggle value={type} onChange={setType} options={[
-          { value: 'tire',    label: '🔘 צמיג', color: '#1d4ed8' },
+          { value: 'tire',    label: '🔘 צמיג', color: '#1E2B66' },
           { value: 'product', label: '📦 מוצר', color: '#7c3aed' },
         ]} />
       )}

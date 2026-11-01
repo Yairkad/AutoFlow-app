@@ -105,7 +105,7 @@ export default function StorageClient() {
     <div style={{ direction: 'rtl', maxWidth: 900, margin: '0 auto', padding: 20 }}>
       <div className="flex justify-between items-start gap-3 flex-wrap" style={{ marginBottom: 16 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>🗄 ארונות וספירה לפי אזור</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>ארונות וספירה לפי אזור</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '6px 0 0' }}>מיקום = אות הארון + מספר המדף מלמעלה (B3 = ארון B, מדף שלישי)</p>
         </div>
         <button onClick={() => router.push('/tires')} style={{ padding: '8px 16px', border: '1px solid var(--border)', borderRadius: 8, background: 'var(--bg)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>
@@ -133,7 +133,7 @@ export default function StorageClient() {
               cabinetTint={Object.fromEntries(cabinetCodes(map.layout).map(c => [c, countFreshness(map.lastCount[c])]))} />
             <div className="flex flex-wrap gap-3 text-slate-600" style={{ fontSize: 12, marginTop: 10 }}>
               <span>צבע הארון = מתי נספר:</span>
-              <span style={{ color: '#15803d', fontWeight: 700 }}>■ עד 30 יום</span>
+              <span style={{ color: 'var(--success)', fontWeight: 700 }}>■ עד 30 יום</span>
               <span style={{ color: '#b45309', fontWeight: 700 }}>■ עד 90 יום</span>
               <span style={{ color: '#b91c1c', fontWeight: 700 }}>■ מעל / לא נספר</span>
             </div>
@@ -153,8 +153,8 @@ export default function StorageClient() {
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <button onClick={() => setTab('count')} className="bg-blue-700 text-white rounded-xl font-bold" style={{ padding: '10px 18px' }}>🔢 התחל ספירה לפי אזור</button>
-            {profile?.isAdmin && <button onClick={() => setEditing(true)} className="bg-white border-2 border-slate-300 rounded-xl font-bold text-slate-700" style={{ padding: '10px 18px' }}>✏️ ערוך תרשים</button>}
+            <button onClick={() => setTab('count')} className="bg-blue-700 text-white rounded-xl font-bold" style={{ padding: '10px 18px' }}>התחל ספירה לפי אזור</button>
+            {profile?.isAdmin && <button onClick={() => setEditing(true)} className="bg-white border-2 border-slate-300 rounded-xl font-bold text-slate-700" style={{ padding: '10px 18px' }}>ערוך תרשים</button>}
           </div>
         </div>
       )}
@@ -173,7 +173,7 @@ export default function StorageClient() {
           </div>
           {autoFixable > 0 && (
             <button onClick={autoFormatAll} className="self-start bg-blue-700 text-white rounded-xl font-bold" style={{ padding: '10px 16px' }}>
-              ✨ תקן אוטומטית {autoFixable} מיקומים (a3 → A3)
+              תקן אוטומטית {autoFixable} מיקומים (a3 → A3)
             </button>
           )}
           {!fix && <div className="text-slate-400">טוען...</div>}

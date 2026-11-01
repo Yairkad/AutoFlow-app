@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { exchangeCode, getAccessToken, setupRootFolders } from '@/lib/drive'
+import { sessionTenant } from '@/lib/auth/sessionTenant'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const code     = searchParams.get('code')
-  const tenantId = searchParams.get('state')   // we passed tenant_id as state
+  // state carries the tenant id from /api/drive/auth; it must match the admin who is signed in
+  const guard = await sessionTenant(searchParams.get('state'), { adminOnly: true })
+  if ('error' in guard) return guard.error
+  const tenantId = guard.tenantId
   const error    = searchParams.get('error')
 
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://auto-flow-app.vercel.app').replace(/\/$/, '')

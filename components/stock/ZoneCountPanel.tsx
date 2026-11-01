@@ -7,6 +7,7 @@ import { api } from '@/components/yard-hub/ui'
 import TirePickerModal from '@/components/tires/TirePickerModal'
 import StorageMap from './StorageMap'
 import { allShelves, cabinetOf, findCabinet, parseLocation, shelvesOfCabinet, sortShelves, type StorageLayout } from '@/lib/stock/storage'
+import { itemCodes } from '@/lib/stock/barcodes'
 import {
   ROUND_DAYS, buildReview, expandScope, expectedTires, shelfSizeChanges, tireLabel, toSave,
   type CountRound, type OutsideChoice, type ReviewRow, type ZoneEntry, type ZoneTire,
@@ -84,7 +85,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
   const tires = useMemo(() => data?.tires ?? [], [data])
   const skuMap = useMemo(() => {
     const m = new Map<string, ZoneTire>()
-    tires.forEach(t => { if (t.sku) m.set(t.sku.toLowerCase().trim(), t) })
+    tires.forEach(t => { for (const c of itemCodes(t)) m.set(c.toLowerCase(), t) })
     return m
   }, [tires])
   const tireById = useMemo(() => new Map(tires.map(t => [t.id, t])), [tires])
@@ -309,7 +310,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
                 className={`${btn} bg-slate-50 text-slate-700 border border-slate-200`} style={{ padding: '7px 10px', fontSize: 13 }}>בחר הכל</button>
               {round.done.size > 0 && (
                 <button onClick={newRound} className={`${btn} bg-white text-orange-800 border border-orange-300`} style={{ padding: '7px 10px', fontSize: 13 }}>
-                  🔄 סבב ספירה חדש
+                  סבב ספירה חדש
                 </button>
               )}
             </div>
@@ -358,7 +359,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
       <div>
         <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
           <span className="font-bold text-slate-700" style={{ fontSize: 14 }}>על איזה מדף אתה סורק?</span>
-          <button onClick={() => setShowMap(m => !m)} className="text-blue-700 font-bold" style={{ fontSize: 13 }}>{showMap ? 'הסתר תרשים' : '🗺 תרשים'}</button>
+          <button onClick={() => setShowMap(m => !m)} className="text-blue-700 font-bold" style={{ fontSize: 13 }}>{showMap ? 'הסתר תרשים' : 'תרשים'}</button>
         </div>
         {showMap ? (
           <div className="bg-white rounded-xl border border-slate-200" style={{ padding: 10 }}>
@@ -379,18 +380,20 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
         )}
       </div>
 
-      <form onSubmit={e => { e.preventDefault(); scan(code) }} className="flex gap-2">
-        <input ref={inputRef} value={code} onChange={e => setCode(e.target.value)} autoComplete="off"
-          placeholder={`סרוק ברקוד — מדף ${active}`} aria-label="ברקוד"
-          className="flex-1 border-2 border-blue-600 rounded-xl outline-none font-bold" style={{ padding: '12px 14px', fontSize: 17, minWidth: 0 }} />
-        <button type="submit" className={`${btn} bg-blue-700 text-white`} style={{ padding: '0 18px', fontSize: 16 }}>הוסף</button>
+      <form onSubmit={e => { e.preventDefault(); scan(code) }} className="flex gap-2" style={{ margin: '8px 0' }}>
+        <div className="scan-field" style={{ flex: 1 }}>
+          <svg aria-hidden="true" viewBox="0 0 28 22" width="22" height="17" fill="currentColor"><rect x="0" y="0" width="2" height="22"/><rect x="4" y="0" width="1" height="22"/><rect x="7" y="0" width="3" height="22"/><rect x="12" y="0" width="1" height="22"/><rect x="15" y="0" width="2" height="22"/><rect x="19" y="0" width="1" height="22"/><rect x="22" y="0" width="3" height="22"/><rect x="27" y="0" width="1" height="22"/></svg>
+          <input ref={inputRef} value={code} onChange={e => setCode(e.target.value)} autoComplete="off"
+            placeholder={`סרוק ברקוד — מדף ${active}`} aria-label="ברקוד" />
+        </div>
+        <button type="submit" className={`${btn} bg-blue-700 text-white`} style={{ padding: '0 20px', fontSize: 16, borderRadius: 16 }}>הוסף</button>
       </form>
       {flash && (
         <div className={`rounded-xl font-bold ${flash.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-amber-50 text-amber-900 border border-amber-300'}`}
           style={{ padding: '8px 12px', fontSize: 14 }}>{flash.text}</div>
       )}
       <button onClick={() => setPicker({ mode: 'add' })} className="self-start text-blue-700 font-bold" style={{ fontSize: 14 }}>
-        📋 צמיג בלי ברקוד? בחר מהרשימה
+        צמיג בלי ברקוד? בחר מהרשימה
       </button>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -417,7 +420,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
               <div className="font-bold text-slate-800 truncate" style={{ fontSize: 15 }}>{r.n > 0 ? '✓ ' : ''}{r.label}</div>
               <div className="text-slate-500" style={{ fontSize: 12 }}>
                 {r.tire ? <>במערכת: {r.tire.qty}{r.tire.location ? <> · רשום ב-<bdi dir="ltr">{r.tire.location}</bdi></> : ''}</> : <span style={{ direction: 'ltr' }}>{r.sku}</span>}
-                {!r.tire && <button onClick={() => setPicker({ mode: 'link', key: r.key })} className="text-blue-700 font-bold underline" style={{ marginRight: 8 }}>🔗 שייך לצמיג קיים</button>}
+                {!r.tire && <button onClick={() => setPicker({ mode: 'link', key: r.key })} className="text-blue-700 font-bold underline" style={{ marginRight: 8 }}>שייך לצמיג קיים</button>}
               </div>
             </div>
             <button aria-label="פחות" onClick={() => r.tire ? addTire(r.tire, active, -1) : bump(r.key, { key: r.key, tireId: null, sku: r.sku, label: r.label }, active, -1)}
@@ -471,7 +474,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
     )
     const box = (title: string, color: string, rows: React.ReactNode) => (
       <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: color }}>
-        <div className="font-black" style={{ padding: '10px 12px', fontSize: 15, color, background: color + '14' }}>{title}</div>
+        <div className="font-black" style={{ padding: '10px 12px', fontSize: 15, color, background: `color-mix(in srgb, ${color} 8%, transparent)` }}>{title}</div>
         {rows}
       </div>
     )
@@ -479,7 +482,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
       <div className="text-slate-600" style={{ fontSize: 14 }}>מדפים: {scope.join(', ')}</div>
 
       {warn.length > 0 && box(`⚠ לבדיקה (${warn.length})`, '#b91c1c', warn.map(r => line(r, <>
-        {r.split && <div className="text-red-700 font-bold" style={{ fontSize: 13 }}>⚠ נמצא בשני מקומות לא צמודים — כדאי לרכז במקום אחד</div>}
+        {r.split && <div className="text-red-700 font-bold" style={{ fontSize: 13 }}>נמצא בשני מקומות לא צמודים — כדאי לרכז במקום אחד</div>}
         {r.kind === 'moved' && r.tire && (
           <div className="flex flex-col gap-1.5" style={{ fontSize: 13 }}>
             <span className="text-amber-800 font-bold">היה רשום ב-{r.outside.join(', ')} (מחוץ לספירה)</span>
@@ -521,7 +524,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
     </>, <>
       <button onClick={() => setStep('scan')} className={`${btn} bg-slate-100 text-slate-700`} style={{ padding: '14px 16px' }}>→ חזרה לסריקה</button>
       <button onClick={save} disabled={saving || review.length === 0} className={`${btn} bg-green-700 text-white flex-1`} style={{ padding: 14, fontSize: 17 }}>
-        {saving ? '⏳ שומר...' : '✓ אשר ועדכן מלאי'}
+        {saving ? 'שומר...' : '✓ אשר ועדכן מלאי'}
       </button>
     </>)
   }
