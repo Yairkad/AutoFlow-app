@@ -5,11 +5,11 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import {
-  PAYMENT_LABEL, REQUEST_KIND_LABEL, REQUEST_NEXT, REQUEST_STATUS_LABEL, daysSince, whatsappLink,
+  PAYMENT_LABEL, REQUEST_NEXT, REQUEST_STATUS_LABEL, daysSince, whatsappLink,
   type CustomerRequest, type PaymentStatus, type RequestKind, type RequestStatus,
 } from '@/lib/yard/hub'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
-import { AddButton, Badge, Chips, Empty, Field, HubCard, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle } from './ui'
+import { AddButton, Chips, Empty, Field, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle } from './ui'
 
 type View = 'order' | 'inquiry' | 'closed'
 
@@ -36,31 +36,46 @@ function fmtPhone(p: string): string {
   return d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}` : p
 }
 
-const PAY_COLOR: Record<PaymentStatus, string> = {
-  unpaid:  'bg-red-50 text-red-700 border-red-200',
-  partial: 'bg-amber-50 text-amber-800 border-amber-200',
-  paid:    'bg-green-50 text-green-700 border-green-200',
+// Table rows in the app tokens (same language as the loans table)
+const PAY_PILL: Record<PaymentStatus, string> = { unpaid: 'rq-dan', partial: 'rq-warn', paid: 'rq-ok' }
+const STATUS_PILL: Record<RequestStatus, string> = {
+  new: 'rq-gray', ordered: 'rq-warn', arrived: 'rq-ok-solid', notified: 'rq-pri', closed: 'rq-ok', cancelled: 'rq-dan',
 }
+const NEXT_BTN: Partial<Record<RequestStatus, string>> = { new: 'rq-n-warn', ordered: 'rq-n-ok', arrived: 'rq-n-pri', notified: 'rq-n-dark' }
 
-// Compact grid: more cards per row than the shared 320px grid
-const requestGrid: React.CSSProperties = { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))' }
-
-const STATUS_COLOR: Record<RequestStatus, string> = {
-  new:       'bg-slate-200 text-slate-800',
-  ordered:   'bg-amber-100 text-amber-800',
-  arrived:   'bg-green-600 text-white',
-  notified:  'bg-blue-100 text-blue-800',
-  closed:    'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-700',
-}
-
-// Next-step button colour per stage, so the stage reads at a glance
-const NEXT_COLOR: Partial<Record<RequestStatus, string>> = {
-  new:      'bg-amber-500 hover:bg-amber-600',
-  ordered:  'bg-green-600 hover:bg-green-700',
-  arrived:  'bg-blue-600 hover:bg-blue-700',
-  notified: 'bg-slate-700 hover:bg-slate-800',
-}
+const CSS = `
+.rq-steps{display:flex;align-items:center;flex-wrap:wrap;gap:4px;font-size:12.5px;color:var(--text-muted)}
+.rq-steps i{font-style:normal;background:var(--bg);border-radius:6px;padding:1px 8px}
+.rq-pill{font-size:12px;font-weight:600;border-radius:99px;padding:1px 9px;white-space:nowrap;display:inline-flex;gap:4px;align-items:center;border:0;font-family:inherit;line-height:18px}
+button.rq-pill{cursor:pointer}
+.rq-pri{background:var(--primary-soft);color:var(--primary)}.rq-warn{background:var(--warning-soft);color:var(--warning)}
+.rq-dan{background:var(--danger-soft);color:var(--danger)}.rq-ok{background:var(--success-soft);color:var(--success)}
+.rq-ok-solid{background:var(--success);color:#fff}.rq-gray{background:var(--bg);color:var(--text-muted)}
+.rq-tbl{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg-card)}
+.rq-cols,.rq-row{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(150px,1.3fr) minmax(110px,.9fr) minmax(120px,.9fr) 104px 172px;gap:12px;align-items:center;padding:0 14px}
+.rq-cols{font-size:11.5px;color:var(--text-muted);font-weight:600;padding-top:8px;padding-bottom:8px;background:var(--bg-soft);border-bottom:1px solid var(--border)}
+.rq-row{padding-top:10px;padding-bottom:10px;border-bottom:1px solid #EEF0F5;font-size:14px}
+.rq-row:last-child{border-bottom:0}.rq-row:hover{background:#FAFBFD}
+.rq-row.arrived{background:color-mix(in srgb,var(--success-soft) 60%,#fff);box-shadow:inset -4px 0 0 var(--success)}
+.rq-row.noans{box-shadow:inset -4px 0 0 var(--danger)}
+.rq-name{font-weight:700;font-size:15px;overflow-wrap:anywhere}
+.rq-sub{font-size:12px;color:var(--text-muted);overflow-wrap:anywhere}
+.rq-item{font-weight:600;direction:ltr;text-align:right;overflow-wrap:anywhere}
+.rq-cell{display:flex;flex-direction:column;gap:3px;min-width:0;align-items:flex-start}
+.rq-line{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.rq-tel{color:var(--primary);font-weight:600;font-size:13px;text-decoration:none;direction:ltr}
+.rq-acts{display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.rq-next{flex:1;border-radius:8px;padding:6px 10px;font-weight:600;font-size:13px;white-space:nowrap;cursor:pointer;font-family:inherit;color:#fff;border:0}
+.rq-n-warn{background:var(--warning)}.rq-n-ok{background:var(--success)}.rq-n-pri{background:var(--primary)}.rq-n-dark{background:#3A4360}
+.rq-n-re{background:var(--bg-card);color:var(--text);border:1px solid var(--border)}
+.rq-lbl{display:none}
+@media(max-width:860px){
+  .rq-cols{display:none}
+  .rq-row{grid-template-columns:1fr auto;gap:8px 10px}
+  .rq-row .rq-wide{grid-column:1/-1}
+  .rq-row .rq-acts{grid-column:1/-1}
+  .rq-lbl{display:inline;font-size:12px;color:var(--text-muted)}
+}`
 
 const NEXT_LABEL: Partial<Record<RequestStatus, string>> = {
   new:      '📦 הוזמן מספק',
@@ -250,11 +265,12 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
         { value: 'inquiry', label: '❓ לברר וחזור', count: countOf('inquiry') },
         { value: 'closed',  label: '✓ סגורים' },
       ]} />
+      <style>{CSS}</style>
       {view === 'order' && (
-        <div className="flex items-center flex-wrap gap-1 text-slate-500" style={{ fontSize: 12.5 }}>
-          <span className="font-bold">שלבים:</span>
-          {['חדש', 'הוזמן מספק', 'הגיע', 'עודכן הלקוח', 'סגור'].map((s, i) => (
-            <span key={s} className="flex items-center gap-1">{i > 0 && <span className="text-slate-300">←</span>}<span className="bg-slate-100 rounded-md" style={{ padding: '1px 7px' }}>{s}</span></span>
+        <div className="rq-steps">
+          <b>שלבים:</b>
+          {['חדש', 'הוזמן מספק', 'הגיע', 'עודכן הלקוח', 'סגור'].map((st, k) => (
+            <span key={st} className="rq-line">{k > 0 && <span style={{ color: '#A6ADBF' }}>←</span>}<i>{st}</i></span>
           ))}
         </div>
       )}
@@ -266,27 +282,76 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
             action={<AddButton onClick={startNew}>+ לקוח חדש</AddButton>} />
         )
       ) : (
-        <div style={requestGrid}>
+        <div className="rq-tbl">
+          <div className="rq-cols"><span>לקוח</span><span>{view === 'inquiry' ? 'מה לברר' : 'צמיג / פריט'}</span><span>סטטוס</span><span>מחיר / תשלום</span><span>נפתח</span><span /></div>
           {list.map(r => {
             const days = daysSince(r.created_at)
             // An inquiry is done once checked; an order walks ordered → arrived → notified → closed
             const next = r.kind === 'inquiry' && r.status === 'new' ? 'closed' : REQUEST_NEXT[r.status]
             const isOpen = r.status !== 'closed' && r.status !== 'cancelled'
+            const noAns = isOpen && (r.no_answer_count ?? 0) > 0
             const pay = r.payment_status ?? 'unpaid'
             const left = pay === 'partial' && r.paid_amount != null && r.quoted_price != null ? round2(r.quoted_price - r.paid_amount) : null
             const payText = pay === 'partial' && r.paid_amount != null
               ? `שולם ₪${r.paid_amount}${left != null ? ` · נשאר ₪${left}` : ''}`
               : PAYMENT_LABEL[pay]
             return (
-              <HubCard key={r.id} accent={r.status === 'arrived' ? '#16a34a' : (isOpen && (r.no_answer_count ?? 0) > 0 ? '#ef4444' : undefined)}>
-                {/* Header: name (wraps, never clipped) + menu; date line underneath */}
-                <div className="flex items-start gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-black text-slate-900" style={{ fontSize: 16, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{r.customer_name}</div>
-                    <div className="text-slate-400" style={{ fontSize: 12, marginTop: 1 }}>
-                      {fmtDate(r.created_at)}{isOpen && days > 0 ? ` · ${days} ימים` : ''}{r.created_by_name ? ` · ${r.created_by_name}` : ''}
-                    </div>
-                  </div>
+              <div key={r.id} className={`rq-row${r.status === 'arrived' ? ' arrived' : noAns ? ' noans' : ''}`}>
+                {/* Customer */}
+                <div className="rq-cell">
+                  <span className="rq-name">{r.customer_name}</span>
+                  <span className="rq-line">
+                    {r.phone ? <a className="rq-tel num" href={`tel:${r.phone}`}>{fmtPhone(r.phone)}</a> : <span className="rq-sub">אין טלפון</span>}
+                    {r.plate && <span className="plate-chip" style={{ fontSize: 12 }}>{r.plate}</span>}
+                  </span>
+                </div>
+
+                {/* Item */}
+                <div className="rq-cell rq-wide">
+                  <span className="rq-item num">{r.item_desc}{r.qty > 1 ? ` × ${r.qty}` : ''}</span>
+                  {r.supplier_name && <span className="rq-sub">ספק: {r.supplier_name}</span>}
+                  {r.install_at && (
+                    <button onClick={() => openCall(r)} className="rq-pill rq-pri">🗓 התקנה: {fmtInstall(r.install_at)}</button>
+                  )}
+                  {r.notes && <span className="rq-sub" style={{ whiteSpace: 'pre-line' }}>📝 {r.notes}</span>}
+                </div>
+
+                {/* Status */}
+                <div className="rq-line rq-wide">
+                  <span className={`rq-pill ${STATUS_PILL[r.status]}`}>{REQUEST_STATUS_LABEL[r.status]}</span>
+                  {noAns && (
+                    <span className="rq-pill rq-dan" title={r.no_answer_at ? `ניסיון אחרון: ${fmtDate(r.no_answer_at)}` : undefined}>
+                      📵 לא ענה{(r.no_answer_count ?? 0) > 1 ? ` ×${r.no_answer_count}` : ''}{r.no_answer_at ? ` · ${fmtDate(r.no_answer_at)}` : ''}
+                    </span>
+                  )}
+                </div>
+
+                {/* Price + payment */}
+                <div className="rq-line rq-wide">
+                  {r.quoted_price != null
+                    ? <span className="num" style={{ fontWeight: 600 }}>₪{r.quoted_price}{r.qty > 1 && <span className="rq-sub"> (₪{round2(r.quoted_price / r.qty)} ליח&apos;)</span>}</span>
+                    : <span className="rq-sub">אין מחיר</span>}
+                  <button className={`rq-pill ${PAY_PILL[pay]}`} onClick={() => openPayment(r)}>{payText}</button>
+                </div>
+
+                {/* Opened */}
+                <div className="rq-cell rq-wide">
+                  <span className="rq-line">
+                    <span className="rq-lbl">נפתח:</span>
+                    <span className="num">{fmtDate(r.created_at)}</span>
+                    {isOpen && days > 0 && <span className={`rq-pill ${days >= 7 ? 'rq-dan' : 'rq-gray'}`}>{days} ימים</span>}
+                  </span>
+                  {r.created_by_name && <span className="rq-sub">{r.created_by_name}</span>}
+                </div>
+
+                {/* Actions */}
+                <div className="rq-acts">
+                  {next && (
+                    <button onClick={() => advance(r, next)} className={`rq-next ${r.kind === 'inquiry' ? 'rq-n-pri' : NEXT_BTN[r.status]}`}>
+                      {r.kind === 'inquiry' && r.status === 'new' ? '✓ בירור בוצע' : NEXT_LABEL[r.status]}
+                    </button>
+                  )}
+                  {!isOpen && <button onClick={() => setStatus(r, 'new')} className="rq-next rq-n-re">פתח מחדש</button>}
                   <RowActionsMenu align="end" actions={[
                     ...(r.phone ? [{ key: 'wa', icon: '💬', label: 'שליחת וואטסאפ', onClick: () => window.open(whatsappLink(r.phone!, r.status === 'arrived' ? `שלום ${r.customer_name}, הצמיג שהזמנת (${r.item_desc}) הגיע אלינו 🙂` : undefined), '_blank') }] : []),
                     ...(isOpen ? [{ key: 'noans', icon: '📵', label: 'חייגנו — לא ענה', onClick: () => patch(r, { no_answer_count: (r.no_answer_count ?? 0) + 1, no_answer_at: new Date().toISOString() }) }] : []),
@@ -297,60 +362,7 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                     { key: 'del', icon: '🗑', label: 'מחיקת הפנייה', danger: true, onClick: () => remove(r) },
                   ]} />
                 </div>
-
-                {/* Badges wrap onto a new line instead of covering each other */}
-                <div className="flex flex-wrap items-center" style={{ gap: 6 }}>
-                  <Badge className={STATUS_COLOR[r.status]}>{REQUEST_STATUS_LABEL[r.status]}</Badge>
-                  {isOpen && (r.no_answer_count ?? 0) > 0 && (
-                    <Badge className="bg-red-50 text-red-700 border border-red-200" title={r.no_answer_at ? `ניסיון אחרון: ${fmtDate(r.no_answer_at)}` : undefined}>
-                      📵 לא ענה{(r.no_answer_count ?? 0) > 1 ? ` ×${r.no_answer_count}` : ''}{r.no_answer_at ? ` · ${fmtDate(r.no_answer_at)}` : ''}
-                    </Badge>
-                  )}
-                  <Badge className={`border ${PAY_COLOR[pay]}`} onClick={() => openPayment(r)}>{payText}</Badge>
-                </div>
-
-                {/* Item + price block */}
-                <div className="bg-slate-50 rounded-xl" style={{ padding: '8px 10px' }}>
-                  <div className="font-bold text-slate-800" style={{ direction: 'ltr', textAlign: 'right', fontSize: 15, overflowWrap: 'anywhere' }}>
-                    {r.item_desc}{r.qty > 1 ? ` × ${r.qty}` : ''}
-                  </div>
-                  <div style={{ fontSize: 13, marginTop: 2 }}>
-                    {r.quoted_price != null
-                      ? <span className="font-bold text-slate-700">₪{r.quoted_price}{r.qty > 1 && <span className="text-slate-400 font-normal" style={{ fontSize: 12 }}> (₪{round2(r.quoted_price / r.qty)} ליח&apos;)</span>}</span>
-                      : <span className="text-slate-400">אין מחיר</span>}
-                  </div>
-                </div>
-
-                {/* Contact + details: each on its own line, wrapping */}
-                <div className="flex flex-col text-slate-600" style={{ fontSize: 13, gap: 3 }}>
-                  {r.phone
-                    ? <a href={`tel:${r.phone}`} className="font-bold self-start" style={{ fontSize: 14, color: '#1E2B66' }}>📞 <span dir="ltr">{fmtPhone(r.phone)}</span></a>
-                    : <span className="text-slate-400">אין טלפון</span>}
-                  {(r.plate || r.supplier_name) && (
-                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                      {r.plate && <span>🚗 {r.plate}</span>}
-                      {r.supplier_name && <span>ספק: {r.supplier_name}</span>}
-                    </div>
-                  )}
-                  {r.install_at && (
-                    <button onClick={() => openCall(r)} className="self-start bg-blue-50 text-blue-800 border border-blue-200 rounded-lg font-bold" style={{ padding: '2px 8px', fontSize: 13 }}>
-                      🗓 התקנה: {fmtInstall(r.install_at)}
-                    </button>
-                  )}
-                  {r.notes && <span className="text-slate-500" style={{ whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>📝 {r.notes}</span>}
-                </div>
-
-                <div style={{ marginTop: 'auto' }}>
-                  {next && (
-                    <button onClick={() => advance(r, next)} className={`w-full ${r.kind === 'inquiry' ? 'bg-violet-600 hover:bg-violet-700' : NEXT_COLOR[r.status]} text-white rounded-xl font-bold`} style={{ padding: '9px', fontSize: 14 }}>
-                      {r.kind === 'inquiry' && r.status === 'new' ? '✓ בירור בוצע' : NEXT_LABEL[r.status]}
-                    </button>
-                  )}
-                  {!isOpen && (
-                    <button onClick={() => setStatus(r, 'new')} className="w-full bg-slate-100 text-slate-700 rounded-xl font-bold" style={{ padding: '9px', fontSize: 14 }}>פתח מחדש</button>
-                  )}
-                </div>
-              </HubCard>
+              </div>
             )
           })}
         </div>

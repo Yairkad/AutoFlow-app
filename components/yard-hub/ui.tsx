@@ -151,30 +151,6 @@ export function IconBtn({ onClick, href, title, tone = 'plain', children }: {
     : <button type="button" onClick={onClick} title={title} aria-label={title} className={cls} style={style}>{children}</button>
 }
 
-/** Inner card inside a section — same language as the office HubFrame (rounded-2xl, thin border,
- *  soft shadow). `accent` paints a colored stripe on the start edge for an attention state. */
-export function HubCard({ accent, className = '', style, children }: {
-  accent?: string; className?: string; style?: React.CSSProperties; children: React.ReactNode
-}) {
-  return (
-    <div className={`bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-0 ${className}`}
-      style={{ padding: '12px 14px', gap: 8, ...(accent ? { borderInlineStartWidth: 4, borderInlineStartColor: accent } : {}), ...style }}>
-      {children}
-    </div>
-  )
-}
-
-/** Small rounded label; wraps with its siblings instead of overlapping them */
-export function Badge({ className, title, onClick, children }: { className: string; title?: string; onClick?: () => void; children: React.ReactNode }) {
-  const cls = `rounded-full font-bold inline-flex items-center gap-1 ${className}`
-  const style: React.CSSProperties = { padding: '2px 9px', fontSize: 12, lineHeight: '18px', whiteSpace: 'nowrap', maxWidth: '100%' }
-  return onClick
-    ? <button type="button" onClick={onClick} title={title} className={cls} style={style}>{children}</button>
-    : <span title={title} className={cls} style={style}>{children}</span>
-}
-
-export const cardGrid: React.CSSProperties = { display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))' }
-
 /** Main action button of a section ("+ לקוח חדש") */
 export function AddButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
