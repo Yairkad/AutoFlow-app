@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-01T08:35:05.088Z
-> Files: 180 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-02T08:14:08.634Z
+> Files: 182 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -89,6 +89,10 @@
 - `Main.dc.html` — טופס בדיקת קנייה – עיצוב א (~3369 tok)
 - `PreviewA.dc.html` — תמונת לינק א (~493 tok)
 - `PreviewB.dc.html` — תמונת לינק ב (~940 tok)
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/ec738802-4884-583f-a4a0-e2755f311fa4/scratchpad/
+
+- `loans-mock.html` — השאלות — 2 עיצובים (~2411 tok)
 
 ## ./
 
@@ -797,6 +801,7 @@
 
 ## tools/scanner-agent/
 
+- `113_check_handed_date.sql` — scheduled_payments.handed_date (check handed to supplier; supplier balance drops then); backfill least(created_at, due_date) (~120 tok)
 - `intakeImage.tsx` — renderIntakeOgImage(name, logoBase64): branded 1200x630 link preview (logo card + inspection badge, colours from logo) via next/og ImageResponse (~1100 tok)
 - `intakeTenant.ts` — getIntakeTenant(token): tenant name+logo for personal/fixed intake link (~250 tok)
 - `lib/cars/contractPayments.ts` — expectedPayments() from contract data + receipts, loadExpectedPayments / setReceipt (~1300 tok)
@@ -806,4 +811,3 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-- `113_check_handed_date.sql` — scheduled_payments.handed_date (check handed to supplier; supplier balance drops then); backfill least(created_at, due_date) (~120 tok)

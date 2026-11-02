@@ -2929,3 +2929,10 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 10:58 | Supplier ledger: checks credited on handed_date (new field 'תאריך מסירה' in ScheduledPaymentsModal), migration 113 | supplierLedger.ts, ScheduledPaymentsModal.tsx, SupplierTrackingTab.tsx | tsc clean | ~9000 |
+
+## Session: 2026-11-02 08:08
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:14 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/ec738802-4884-583f-a4a0-e2755f311fa4/scratchpad/loans-mock.html | — | ~2411 |
+| 08:40 | Yard tracking inner cards → shared HubCard/Badge (wrapping rows, no overlap); getYardUser prefers office login unless referer is /yard (leftover PIN cookie stamped office rows as terminal employee); loans redesign mockups A/B sent | components/yard-hub/*, lib/auth/yard-token.ts | tsc clean, pushed | ~20000 |

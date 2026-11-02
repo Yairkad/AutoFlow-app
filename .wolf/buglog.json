@@ -1609,5 +1609,37 @@
     ],
     "occurrences": 2,
     "last_seen": "2026-11-01T14:00:00Z"
+  },
+  {
+    "id": "bug-087",
+    "timestamp": "2026-11-02T08:14:21.087355Z",
+    "error_message": "Requests entered from the office מעקב רחבה show created_by as a yard employee (טל)",
+    "file": "lib/auth/yard-token.ts",
+    "root_cause": "getYardUser() checked the yard PIN cookie before the office session; a PIN cookie left in the same browser won",
+    "fix": "Pick order by referer: /yard pages → PIN employee first, otherwise office login first",
+    "tags": [
+      "yard",
+      "auth",
+      "created_by_name"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-02T08:14:21.087355Z"
+  },
+  {
+    "id": "bug-088",
+    "timestamp": "2026-11-02T08:14:21.087355Z",
+    "error_message": "Yard request card: phone hidden under 'לא ענה'/status badges, name truncated",
+    "file": "components/yard-hub/RequestsPanel.tsx",
+    "root_cause": "single nowrap flex row with phone + badges in a 240px card",
+    "fix": "Badges in their own flex-wrap row, phone on own line, overflowWrap anywhere; shared HubCard",
+    "tags": [
+      "yard",
+      "layout",
+      "overlap"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-02T08:14:21.087355Z"
   }
 ]
