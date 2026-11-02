@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import type { YardSession, YardSessionItem, YardService, TirePosition } from '@/lib/yard/types'
 import { sessionTotal, formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
@@ -38,7 +37,6 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   const [scanTireResult, setScanTireResult] = useState<SearchResult | null>(null)
   const [noStockBarcode, setNoStockBarcode] = useState<string | null>(null)
   const scanRef = useRef<HTMLInputElement>(null)
-  const supabase = createClient()
   const items = session.yard_session_items ?? []
   // Real ids deleted on this card — a refresh racing the DELETE must not bring them back
   const deletedRef = useRef(new Set<string>())
@@ -86,31 +84,6 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     router.prefetch(`/yard/${session.id}/service`)
     router.prefetch(`/yard/${session.id}/search?type=product`)
     router.prefetch(`/yard/${session.id}/search?type=all`)
-  }, [session.id]) // eslint-disable-line
-
-  useEffect(() => {
-    const ch = supabase
-      .channel(`session-${session.id}`)
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'yard_session_items',
-          filter: `session_id=eq.${session.id}` },
-        () => router.refresh()
-      )
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'yard_sessions',
-          filter: `id=eq.${session.id}` },
-        (payload) => {
-          const n = payload.new as Partial<YardSession>
-          setSession(s => ({
-            ...s,
-            make:  n.make  ?? s.make,
-            model: n.model ?? s.model,
-            year:  n.year  ?? s.year,
-          }))
-        }
-      )
-      .subscribe()
-    return () => { supabase.removeChannel(ch) }
   }, [session.id]) // eslint-disable-line
 
   // ── Saving items ────────────────────────────────────────────────────────────

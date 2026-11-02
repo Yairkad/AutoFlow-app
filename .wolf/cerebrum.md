@@ -130,6 +130,8 @@
 
 ## Do-Not-Repeat
 
+- [2026-11-02] Do NOT use Supabase Realtime (supabase.channel / postgres_changes) — it consumed ~84% of DB time (realtime.list_changes) and exhausted the Disk IO budget → whole app 504/500. Use startLiveRefresh/useLiveRefresh polling only.
+
 - [2026-11-01] useConfirm() defaults to confirmLabel 'מחק' + danger variant — for non-delete actions always pass confirmLabel + variant:'primary'. User also wants to SEE and pick each item before bulk changes (checkbox per item), not a blanket confirm.
 
 - [2026-11-01] Production (auto-flow-app.vercel.app) ran code from branch ccr-1cf7f467-kc8ek4, NOT origin/main. Before fixing a user-reported prod bug, grep all remote branches for the feature/log string (`git grep <str> origin/<branch>`) — main may not contain it.

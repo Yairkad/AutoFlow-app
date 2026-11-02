@@ -2976,3 +2976,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 10:20 | User reports 504 /api/store + 500 /api/yard/sessions — Supabase not responding (unrelated to branch); asked user to check Supabase dashboard/status | — | awaiting user | ~2000 |
+| 10:40 | Outage fix: removed all Supabase realtime channels (84% of DB time) — polling only; office bell via pending-id diff | 11 components | tsc clean, pushed | ~30000 |

@@ -91,13 +91,9 @@ export default function RemindersClient() {
 
   useEffect(() => {
     const first = setTimeout(load, 0)
-    const ch = supabase.channel('tasks-client')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reminder_updates' }, load)
-      .subscribe()
-    return () => { clearTimeout(first); supabase.removeChannel(ch) }
-  }, [load, supabase])
-  // Other devices' changes show up without a page refresh (realtime alone is unreliable on Netfree)
+    return () => clearTimeout(first)
+  }, [load])
+  // Other devices' changes show up without a page refresh (no Supabase realtime — it ate the DB's disk IO)
   useLiveRefresh(load)
 
   // ── List ─────────────────────────────────────────────────────────────────

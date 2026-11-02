@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { YARD_SECTIONS, canYard, sectionForPath, type YardKey } from '@/lib/yard/access'
-import { createClient } from '@/lib/supabase/client'
 import YardLogin from './YardLogin'
 import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
@@ -41,15 +40,10 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
   }, [countsTick, pathname])
 
   useEffect(() => {
-    const sb = createClient()
     let timer: ReturnType<typeof setTimeout> | undefined
     const soon = () => { clearTimeout(timer); timer = setTimeout(() => setCountsTick(t => t + 1), 500) }
-    const ch = sb.channel('yard-shell-counts')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tire_loans' }, soon)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_requests' }, soon)
-      .subscribe()
-    const stopLive = startLiveRefresh(soon, 30_000)   // focus + every 30s — realtime is unreliable on Netfree
-    return () => { clearTimeout(timer); stopLive(); sb.removeChannel(ch) }
+    const stopLive = startLiveRefresh(soon, 30_000)   // focus + every 30s (no Supabase realtime — it ate the DB's disk IO)
+    return () => { clearTimeout(timer); stopLive() }
   }, [])
 
   // No idle logout — the employee stays signed in until "יציאה". Renew the 30-day

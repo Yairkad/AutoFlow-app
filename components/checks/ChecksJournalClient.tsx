@@ -142,16 +142,6 @@ export default function ChecksJournalClient() {
     if (sid) setFSupplier(sid)
   }, [])
 
-  // Realtime
-  useEffect(() => {
-    if (!tenantId) return
-    const ch = supabase.channel('checks-journal-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'scheduled_payments' }, load)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_debt_payments' }, load)
-      .subscribe()
-    return () => { supabase.removeChannel(ch) }
-  }, [supabase, tenantId, load])
-
   // ── Filtering & grouping ────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {

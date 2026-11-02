@@ -77,14 +77,10 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
 
     fetch()
 
-    const channel = supabase
-      .channel('reminders-panel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reminders' }, fetch)
-      .subscribe()
-    // Realtime alone is unreliable on Netfree — also refresh on focus / every 30s
+    // Refresh on focus / every 30s (no Supabase realtime — it ate the DB's disk IO)
     const stopLive = startLiveRefresh(fetch, 30_000)
 
-    return () => { stopLive(); supabase.removeChannel(channel) }
+    return () => { stopLive() }
   }, [])
 
   const today = new Date().toISOString().split('T')[0]

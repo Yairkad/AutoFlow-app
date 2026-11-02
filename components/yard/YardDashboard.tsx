@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import type { YardSession } from '@/lib/yard/types'
 import { minutesSince, sessionTotal, formatPlate } from '@/lib/yard/types'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
@@ -14,24 +13,12 @@ export default function YardDashboard({ initialSessions }: Props) {
   const [sessions, setSessions] = useState<YardSession[]>(initialSessions)
   const [, setTick] = useState(0)
   const [newCarLoading, setNewCarLoading] = useState(false)
-  const supabase = createClient()
 
   useEffect(() => {
     // Also refetch: a PIN-login terminal has no Supabase session, so realtime below gets nothing there
     const id = setInterval(() => { setTick(t => t + 1); router.refresh() }, 30_000)
     return () => clearInterval(id)
   }, [router])
-
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined
-    const refreshSoon = () => { clearTimeout(timer); timer = setTimeout(() => router.refresh(), 400) }
-    const channel = supabase
-      .channel('yard-dashboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_sessions' }, refreshSoon)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'yard_session_items' }, refreshSoon)
-      .subscribe()
-    return () => { clearTimeout(timer); supabase.removeChannel(channel) }
-  }, []) // eslint-disable-line
 
   // Also refresh the moment the screen comes back into view (realtime is unreliable on Netfree)
   useLiveRefresh(() => router.refresh(), 30_000)

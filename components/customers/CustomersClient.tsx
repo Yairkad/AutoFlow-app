@@ -91,19 +91,6 @@ export default function CustomersClient({ embedded = false }: { embedded?: boole
     if (openParam) setOpenId(openParam)
   }, [])
 
-  // ── Realtime ───────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    const ch = supabase.channel('customers-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_ledger_debts' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_ledger_payments' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_items' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_actions' }, loadAll)
-      .subscribe()
-    return () => { supabase.removeChannel(ch) }
-  }, [supabase, loadAll])
-
   const openTracking = (customerId: string) => {
     setOpenId(customerId)
     setTab('tracking')

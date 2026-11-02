@@ -171,17 +171,6 @@ export default function DebtsClient() {
     return () => { clearTimeout(t); clearTimeout(clear) }
   }, [loading])
 
-  // ── Realtime ──────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    const ch = supabase.channel('debts-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_debts' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_debt_calls' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_debt_payments' }, loadAll)
-      .subscribe()
-    return () => { supabase.removeChannel(ch) }
-  }, [supabase, loadAll])
-
   // ── Customer CRUD ─────────────────────────────────────────────────────────
 
   const openCustModal = (d?: CustomerDebt) => {
