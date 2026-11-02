@@ -598,7 +598,7 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
 
               {returnMode ? (<>
                 {qty > (found.stock ?? 0) && (
-                  <p role="alert" className="text-amber-700 text-sm font-semibold text-center">⚠ במלאי רשומות רק {found.stock ?? 0} יח׳ — המלאי ירד ל-0</p>
+                  <p role="alert" className="text-amber-700 text-sm font-semibold text-center">⚠ במלאי רשומות רק {found.stock ?? 0} יח׳ — המלאי יירד למינוס</p>
                 )}
                 <button onClick={confirmReturn} disabled={!supplier.trim()}
                   className="w-full bg-red-700 text-white font-bold rounded-2xl disabled:opacity-40 active:scale-[.98] transition-all"

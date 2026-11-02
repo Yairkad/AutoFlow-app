@@ -135,7 +135,7 @@ export default function StockClient() {
     const table = kind === 'tire' ? 'tires' : 'products'
     const { data, error } = await sb.from(table).select('qty').eq('id', id).single()
     if (error) return error
-    return (await sb.from(table).update({ qty: Math.max(0, Number(data.qty) + delta) }).eq('id', id)).error
+    return (await sb.from(table).update({ qty: Number(data.qty) + delta }).eq('id', id)).error
   }
 
   async function saveManual() {

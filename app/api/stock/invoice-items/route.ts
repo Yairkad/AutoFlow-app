@@ -137,7 +137,7 @@ export async function DELETE(req: NextRequest) {
   if (line.ref_id) {
     const tbl = line.item_type === 'tire' ? 'tires' : 'products'
     const { data: cur } = await sb.from(tbl).select('qty').eq('id', line.ref_id).eq('tenant_id', tenantId).maybeSingle()
-    if (cur) await sb.from(tbl).update({ qty: Math.max(0, (cur.qty ?? 0) - line.qty) }).eq('id', line.ref_id).eq('tenant_id', tenantId)
+    if (cur) await sb.from(tbl).update({ qty: (cur.qty ?? 0) - line.qty }).eq('id', line.ref_id).eq('tenant_id', tenantId)
     if (line.movement_id) await sb.from(line.item_type === 'tire' ? 'tire_sales' : 'product_sales').delete().eq('id', line.movement_id)
   }
   const { error } = await sb.from('supplier_invoice_items').delete().eq('id', id)

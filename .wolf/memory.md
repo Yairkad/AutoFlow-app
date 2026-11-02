@@ -3000,3 +3000,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 11:20 | Discussed no-stock flow; proposed negative stock + 'שייך לצמיג' for unlinked charges; awaiting answer on existing rows | — | discussion | ~3000 |
+| 11:45 | Negative stock on card close + 'שייך' in no-stock list + one-off apply for old rows; removed qty>=0 clamps (stock screen, invoice line delete, return) | sessions/[id], no-stock route, NoStockPanel, StockClient, invoice-items, return | tsc+eslint clean | ~20000 |

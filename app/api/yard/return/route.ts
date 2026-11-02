@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const { data: cur } = await sb.from(tbl).select('qty').eq('id', id).eq('tenant_id', tenantId).maybeSingle()
   if (!cur) return new Response('Not Found', { status: 404 })
 
-  const newQty = Math.max(0, (cur.qty ?? 0) - n)
+  const newQty = (cur.qty ?? 0) - n   // may go below zero, like every other stock change
   const { error } = await sb.from(tbl).update({ qty: newQty }).eq('id', id).eq('tenant_id', tenantId)
   if (error) return new Response('DB Error', { status: 500 })
 

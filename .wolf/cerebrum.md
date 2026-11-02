@@ -238,6 +238,8 @@
 
 ## Decision Log
 
+- [2026-11-02] NEGATIVE STOCK allowed everywhere. Closing a yard card deducts the FULL qty of linked items (tires/products) even below 0 (no more decrement_*_qty RPC, which clamped at 0); no_stock_qty is now only set for UNLINKED items (free charge / unknown barcode). 'נמכר ללא מלאי' (NoStockPanel) = unlinked lines with '🔗 שייך' (pick tire/product or create new tire → deduct, set ref_id, resolve; unknown barcode saved as alt_barcode). One-off '⬇ הורד מהמלאי' (POST action apply_linked) handles old linked lines that stopped at 0 — user chose to convert existing rows too. Reopen logic unchanged (back = quantity − no_stock_qty).
+
 - [2026-11-02] Return to supplier (wrong delivery): a '↩ החזרה לספק' mode inside ReceiveClient (so yard AND office get it). Stock movement = movement_type 'order' with NEGATIVE qty + source 'return' (no schema change; received reports net it out; stock-summary last-receive date filters qty>0). Undo from /stock-count (✕ like manual). Supplier credit note stays MANUAL in the supplier ledger — user's explicit choice.
 - [2026-11-02] מעקב רחבה panels (loans, waiting customers) = bordered table blocks with column headers, pills/buttons from app tokens (--primary/--success/--warning/--danger soft), stacked on <860px. User wants "more rows and tables", not cards.
 - [2026-11-02] Yard close_type: charged (default/NULL) | free = stock out, revenue 0 | cancelled = no stock change, hidden from vehicle history. Loans section → design B (grouped by shop, table rows) in system tokens (IBM Plex, navy, 10px radius).
