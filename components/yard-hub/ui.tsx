@@ -151,8 +151,6 @@ export function IconBtn({ onClick, href, title, tone = 'plain', children }: {
     : <button type="button" onClick={onClick} title={title} aria-label={title} className={cls} style={style}>{children}</button>
 }
 
-export const cardGrid: React.CSSProperties = { display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))' }
-
 /** Main action button of a section ("+ לקוח חדש") */
 export function AddButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (

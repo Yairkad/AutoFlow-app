@@ -7,6 +7,7 @@ import { sessionTotal, minutesSince, formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
 import SessionItemsEditor from '@/components/yard/SessionItemsEditor'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 const VAT = 1.18
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function OfficeClient({ initialActive, initialPending }: Props) {
+  const { confirm } = useConfirm()
   const [tab,     setTab]     = useState<'pending' | 'active' | 'history'>('pending')
   const [unread,  setUnread]  = useState(0)
   const [historyPlate,  setHistoryPlate]  = useState('')
@@ -240,14 +242,17 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     setDirty(d => { const n = new Set(d); n.delete(id); return n })
   }
 
-  async function closeSession(id: string) {
+  async function closeSession(id: string, closeType: 'charged' | 'free' | 'cancelled' = 'charged') {
+    if (closeType === 'free' && !await confirm({ msg: 'לסגור ללא חיוב? המלאי יירד, אבל הכרטיס לא ייספר כהכנסה.', icon: '🎁', confirmLabel: 'סגור ללא חיוב', variant: 'primary' })) return
+    if (closeType === 'cancelled' && !await confirm({ msg: 'לבטל את הכרטיס? הוא ייסגר בלי חיוב ובלי להוריד מלאי.', icon: '✕', confirmLabel: 'בטל כרטיס', variant: 'danger' })) return
     setClosing(id)
-    await fetch(`/api/yard/sessions/${id}`, {
+    const r = await fetch(`/api/yard/sessions/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'archived' }),
+      body: JSON.stringify({ status: 'archived', close_type: closeType }),
     })
-    setPending(p => p.filter(s => s.id !== id))
+    if (r.ok) setPending(p => p.filter(s => s.id !== id))
+    else alert((await r.json().catch(() => null))?.error ?? 'הסגירה נכשלה')
     setClosing(null)
   }
 
@@ -489,6 +494,8 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
                       <RowActionsMenu align="end" actions={[
                         { key: 'edit', label: editingId === s.id ? 'סיום עריכה' : 'עריכת נתונים', icon: '✏️', onClick: () => setEditingId(id => id === s.id ? null : s.id) },
                         { key: 'back', label: sendingBack === s.id ? 'מחזיר...' : 'החזרה לרחבה', icon: '🔄', disabled: sendingBack === s.id, onClick: () => sendBackToYard(s.id) },
+                        { key: 'free', label: 'סגירה ללא חיוב', icon: '🎁', onClick: () => closeSession(s.id, 'free') },
+                        { key: 'cancel', label: 'ביטול כרטיס (בלי להוריד מלאי)', icon: '✕', danger: true, onClick: () => closeSession(s.id, 'cancelled') },
                       ]} />
                     </div>
                   </div>
