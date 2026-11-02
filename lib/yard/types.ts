@@ -33,6 +33,8 @@ export interface YardSession {
   opened_by:          string | null
   closed_at:          string | null
   closed_by:          string | null
+  /** How it was closed (migration 114); null on older rows = charged */
+  close_type?:        'charged' | 'free' | 'cancelled' | null
   yard_session_items: YardSessionItem[]
 }
 
@@ -84,4 +86,10 @@ export interface SearchResult {
   location?: string   // tires only — warehouse shelf location
   brand_en?: string   // tires only — English brand when the name shows its Hebrew name
   dup_count?: number  // barcode lookup: how many records share this barcode (>1 = duplicates)
+}
+
+export const CLOSE_TYPE_LABEL: Record<'charged' | 'free' | 'cancelled', string> = {
+  charged:   'נסגר',
+  free:      'נסגר ללא חיוב',
+  cancelled: 'בוטל',
 }

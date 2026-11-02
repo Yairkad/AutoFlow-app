@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { YardSession } from '@/lib/yard/types'
-import { sessionTotal, minutesSince, formatPlate } from '@/lib/yard/types'
+import { sessionTotal, minutesSince, formatPlate, CLOSE_TYPE_LABEL } from '@/lib/yard/types'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 import SessionItemsEditor from '@/components/yard/SessionItemsEditor'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 
@@ -23,6 +24,7 @@ export default function YardDrawer() {
   const [showClosed, setShowClosed] = useState(false)
   const [closed, setClosed]     = useState<YardSession[]>([])
   const [closedDays, setClosedDays] = useState(3)
+  const { confirm } = useConfirm()
 
   const load = useCallback(async () => {
     try {
@@ -81,17 +83,27 @@ export default function YardDrawer() {
     try { localStorage.setItem(OPEN_KEY, next ? '1' : '0') } catch {}
   }
 
-  async function setStatus(id: string, status: 'archived' | 'active') {
+  async function setStatus(id: string, status: 'archived' | 'active', closeType?: 'charged' | 'free' | 'cancelled') {
     setBusy(id)
-    await fetch(`/api/yard/sessions/${id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
+    const r = await fetch(`/api/yard/sessions/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, close_type: closeType }),
     })
+    if (!r.ok) alert((await r.json().catch(() => null))?.error ?? 'הפעולה נכשלה')
     setBusy(null); setEditing(null)
     load()
     if (showClosed) loadClosed(closedDays)
   }
 
   const waiting = cards.filter(c => c.status === 'pending_office').length
+
+  async function closeFree(s: YardSession) {
+    if (!await confirm({ msg: `לסגור את ${formatPlate(s.plate)} ללא חיוב? המלאי יירד, אבל הכרטיס לא ייספר כהכנסה.`, icon: '🎁', confirmLabel: 'סגור ללא חיוב', variant: 'primary' })) return
+    setStatus(s.id, 'archived', 'free')
+  }
+  async function cancelCard(s: YardSession) {
+    if (!await confirm({ msg: `לבטל את הכרטיס של ${formatPlate(s.plate)}? הוא ייסגר בלי חיוב ובלי להוריד מלאי.`, icon: '✕', confirmLabel: 'בטל כרטיס', variant: 'danger' })) return
+    setStatus(s.id, 'archived', 'cancelled')
+  }
 
   if (!open) {
     return (
@@ -149,13 +161,14 @@ export default function YardDrawer() {
               <div className="yd-card-f">
                 <span className="num yd-total">{sessionTotal(items).toLocaleString()}₪</span>
                 <span style={{ marginInlineStart: 'auto' }} />
-                {isWaiting && (
-                  <button type="button" className="yd-close" disabled={busy !== null} onClick={() => setStatus(s.id, 'archived')}>
-                    {busy === s.id ? '...' : '✓ סגור כרטיס'}
-                  </button>
-                )}
+                {/* Office can close any card — also one still in work (car left, nothing done) */}
+                <button type="button" className="yd-close" disabled={busy !== null} onClick={() => setStatus(s.id, 'archived', 'charged')}>
+                  {busy === s.id ? '...' : '✓ סגור כרטיס'}
+                </button>
                 <RowActionsMenu align="end" actions={[
                   { key: 'edit', label: editingId === s.id ? 'סיום עריכה' : 'עריכת נתונים', icon: '✏️', onClick: () => setEditing(id => id === s.id ? null : s.id) },
+                  { key: 'free', label: 'סגירה ללא חיוב', icon: '🎁', onClick: () => closeFree(s) },
+                  { key: 'cancel', label: 'ביטול כרטיס (בלי להוריד מלאי)', icon: '✕', danger: true, onClick: () => cancelCard(s) },
                   ...(isWaiting ? [{ key: 'back', label: 'החזרה לרחבה', icon: '🔄', onClick: () => setStatus(s.id, 'active') }] : []),
                 ]} />
               </div>
@@ -191,7 +204,9 @@ export default function YardDrawer() {
                       <span className="num" style={{ color: 'var(--text-muted)', fontSize: 12 }}>
                         {s.closed_at ? new Date(s.closed_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
                       </span>
-                      <span className="yd-st">נסגר</span>
+                      <span className="yd-st" style={s.close_type === 'cancelled' ? { background: '#fee2e2', color: '#b91c1c' } : s.close_type === 'free' ? { background: '#ede9fe', color: '#6d28d9' } : undefined}>
+                        {CLOSE_TYPE_LABEL[s.close_type ?? 'charged']}
+                      </span>
                     </div>
                     <ul className="yd-items">
                       {items.map(it => (

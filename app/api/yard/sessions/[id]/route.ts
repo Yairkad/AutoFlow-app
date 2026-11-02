@@ -33,6 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const body = await req.json()
   const { status, make, model, year } = body
+  const closeType: 'charged' | 'free' | 'cancelled' = ['free', 'cancelled'].includes(body.close_type) ? body.close_type : 'charged'
 
   const supabase = createServiceClient()
 
@@ -60,8 +61,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const update: Record<string, unknown> = { status }
 
-  const { data: current } = await supabase.from('yard_sessions').select('status')
-    .eq('id', id).eq('tenant_id', profile.tenant_id).single()
+  // close_type arrives with migration 114 — fall back to status alone before it runs
+  let { data: current } = await supabase.from('yard_sessions').select('status, close_type')
+    .eq('id', id).eq('tenant_id', profile.tenant_id).single() as { data: { status: string; close_type?: string | null } | null }
+  if (!current) ({ data: current } = await supabase.from('yard_sessions').select('status')
+    .eq('id', id).eq('tenant_id', profile.tenant_id).single())
   // Already closed — closing again must not deduct the stock a second time
   if (status === 'archived' && current?.status === 'archived') {
     const { data } = await supabase.from('yard_sessions').select().eq('id', id).eq('tenant_id', profile.tenant_id).single()
@@ -70,8 +74,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // Reopening a closed card: put back the stock the close deducted (decrement stops at 0, so
   // only quantity − no_stock_qty actually left the shelf) and remove its sale movements.
+  // A cancelled card deducted nothing, so there is nothing to put back.
   if (current?.status === 'archived' && status !== 'archived') {
     update.closed_at = null
+    if ('close_type' in current) update.close_type = null
+  }
+  if (current?.status === 'archived' && status !== 'archived' && current.close_type !== 'cancelled') {
     const { data: session } = await supabase
       .from('yard_sessions')
       .select('yard_session_items(id, item_type, ref_id, quantity, no_stock_qty)')
@@ -99,6 +107,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (status === 'archived') {
     update.closed_at = new Date().toISOString()
     update.closed_by = null
+    const hasCol = current != null && 'close_type' in current
+    if (hasCol) update.close_type = closeType
+    else if (closeType !== 'charged')
+      return NextResponse.json({ error: 'סגירה ללא חיוב / ביטול דורשים הרצת מיגרציה 114' }, { status: 400 })
+  }
+  // Cancelled: close without touching stock and without recording sales
+  if (status === 'archived' && closeType !== 'cancelled') {
 
     // Deduct inventory for all items with ref_id, and record per item how many units were
     // sold beyond what was in stock (no_stock_qty) — the office sorts those out later in

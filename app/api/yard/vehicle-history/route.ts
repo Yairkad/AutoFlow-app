@@ -15,12 +15,13 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('yard_sessions')
-    .select('id, closed_at, make, model, year, yard_session_items(name, unit_price, quantity, item_type, tire_position)')
+    .select('*, yard_session_items(name, unit_price, quantity, item_type, tire_position)')
     .eq('plate', plate)
     .eq('tenant_id', tenantId)
     .eq('status', 'archived')
     .order('closed_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data ?? [])
+  // Cancelled cards are not real visits
+  return NextResponse.json((data ?? []).filter((s: { close_type?: string | null }) => s.close_type !== 'cancelled'))
 }
