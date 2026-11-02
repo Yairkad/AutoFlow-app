@@ -70,7 +70,7 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
   }, [showToast])
 
   useEffect(() => { loadOpen() }, [loadOpen])
-  // Other devices' changes show up without a page refresh (realtime alone is unreliable on Netfree)
+  // Other devices' changes show up without a page refresh
   useLiveRefresh(loadOpen)
 
   useEffect(() => {

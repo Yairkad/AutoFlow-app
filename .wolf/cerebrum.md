@@ -5,6 +5,8 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+
+- [2026-11-02] There is NO Netfree in this business — never cite Netfree as a reason/explanation (user: 'אל תערבב דברים'). Old code comments mentioning Netfree are wrong context; lib/supabase/client.ts proxy (/api/store) still exists functionally.
 - [2026-11-02] **לענות למשתמש בעברית בלבד** — כולל סיכומים וכותרות. אנגלית רק בשמות קבצים/קוד.
 
 - [2026-11-01] Tire lists: English brand name primary, Hebrew name small underneath (not the reverse).
@@ -62,6 +64,7 @@
 - **Dictates requirements in a stream, expects them folded into the current task** (2026-07-06): during a single implementation pass on supplier-tracking payments, the user kept sending follow-up asks mid-edit (multi-debt payment picker → payment-method selector → quick-add-supplier → collapse-by-default accordion → color swap on charge/credit → per-line notes → retroactively link an already-issued check to a debt → Excel import → styled print). None were meant to interrupt or replace the current step — each was additive scope for the same feature. Pattern: finish the in-flight edit to a non-broken state first, then absorb the new ask into the same pass rather than asking "should I stop and redo?".
 
 ## Key Learnings
+- [2026-11-02] Most stock arrivals are scanned in the YARD receive screen (ReceiveClient → /api/yard/receive), not the supplier invoice "מה הגיע". Yard receive logs a tire_sales/product_sales movement_type=order with NO supplier and NO undo; only manual movements can be deleted in /stock-count. Design supplier-return/stock flows around the yard receive.
 - [2026-11-02] Scan fields: ALWAYS clear the input when a scan is handled (Enter, button, auto). useScanTyping judges the gap from the previous keystroke, so a leftover value makes the next scan look "typed by hand" and auto-search silently stops. Linking an unknown barcode → add_barcode (alt_barcodes), never overwrite sku.
 
 - [2026-11-01] Closing a yard session (PATCH status archived) deducts stock (decrement clamps at 0, short qty → no_stock_qty) and inserts tire_sales/product_sales with session_id. Reopening (archived → other) now restores quantity − no_stock_qty and deletes those movements; archived→archived is a no-op.
@@ -128,6 +131,8 @@
 - **Netfree-evasion proxy on every Supabase call (found 2026-07-14):** `lib/supabase/client.ts`'s `createClient()` passes a custom `proxyFetch` to `createBrowserClient()` — every request whose URL starts with the real Supabase URL gets rewritten to `${NEXT_PUBLIC_APP_URL}/api/store?p=<base64(path+query)>` instead (comment: "hides the real Supabase path... so Netfree never sees supabase.co"). This means the browser never talks to `*.supabase.co` directly for REST/session calls; it all funnels through the `/api/store` Next.js API route. Two consequences to remember: (1) `tests/fixtures/mock.ts`'s `mockSupabase()` only does `page.route(SB_URL...)` — it does **not** intercept `/api/store`, so its empty-table stubs may silently not apply to some/most client calls; if the Playwright suite's data-dependent tests are flaky in ways that don't correlate with any real code change, suspect this mismatch before assuming cold-dev-server-compile timing. (2) Synthetic/scripted auth (e.g., constructing a session via `supabase.auth.admin.generateLink()` + injecting the resulting hash tokens into `/auth/callback` from a standalone script, bypassing the real `/login` form) does **not** reliably reproduce a real logged-in session in this app — confirmed the page renders (proxy.ts's server-side gate passes) but `useProfile()`/data fetches come back empty client-side, most likely because the proxy/session-cookie plumbing this synthetic path skips doesn't get set up the same way a real `/login` flow does. For any future need to browser-verify authenticated behavior, drive the real `/login` form with valid credentials rather than trying to shortcut auth.
 
 ## Do-Not-Repeat
+
+- [2026-11-02] Do NOT use Supabase Realtime (supabase.channel / postgres_changes) — it consumed ~84% of DB time (realtime.list_changes) and exhausted the Disk IO budget → whole app 504/500. Use startLiveRefresh/useLiveRefresh polling only.
 
 - [2026-11-01] useConfirm() defaults to confirmLabel 'מחק' + danger variant — for non-delete actions always pass confirmLabel + variant:'primary'. User also wants to SEE and pick each item before bulk changes (checkbox per item), not a blanket confirm.
 
@@ -230,6 +235,8 @@
 - **Inspection checklist skeleton_only (2026-06-17):** skeleton_only flag stored in `findings` JSON as `{ skeleton_only: true, items: [...], notes: '' }`. No DB column needed. SKELETON_SYSTEM_INDICES = Set([16, 17]) — שלדת מרכב, מרכב (פחחות). Status 'na' added to ChecklistItem for non-skeleton systems. parseFindings() auto-applies 'na' when skeleton_only=true.
 
 ## Decision Log
+
+- [2026-11-02] Return to supplier (wrong delivery): a '↩ החזרה לספק' mode inside ReceiveClient (so yard AND office get it). Stock movement = movement_type 'order' with NEGATIVE qty + source 'return' (no schema change; received reports net it out; stock-summary last-receive date filters qty>0). Undo from /stock-count (✕ like manual). Supplier credit note stays MANUAL in the supplier ledger — user's explicit choice.
 - [2026-11-02] מעקב רחבה panels (loans, waiting customers) = bordered table blocks with column headers, pills/buttons from app tokens (--primary/--success/--warning/--danger soft), stacked on <860px. User wants "more rows and tables", not cards.
 - [2026-11-02] Yard close_type: charged (default/NULL) | free = stock out, revenue 0 | cancelled = no stock change, hidden from vehicle history. Loans section → design B (grouped by shop, table rows) in system tokens (IBM Plex, navy, 10px radius).
 

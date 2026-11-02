@@ -107,7 +107,7 @@ export default function SuppliersClient({ embedded = false }: { embedded?: boole
   }, [supabase, resolveTenant, showToast, profile, profileLoading])
 
   useEffect(() => { loadAll() }, [loadAll])
-  // Other devices' changes show up without a page refresh (realtime alone is unreliable on Netfree)
+  // Other devices' changes show up without a page refresh
   useLiveRefresh(loadAll)
 
   // Parse ?tab=details|tracking&open=<id> once
@@ -120,19 +120,6 @@ export default function SuppliersClient({ embedded = false }: { embedded?: boole
     const openParam = params.get('open')
     if (openParam) setOpenId(openParam)
   }, [])
-
-  // ── Realtime ───────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    const ch = supabase.channel('suppliers-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_debts' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'scheduled_payments' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_debt_payments' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_items' }, loadAll)
-      .subscribe()
-    return () => { supabase.removeChannel(ch) }
-  }, [supabase, loadAll])
 
   const openTracking = (supplierId: string) => {
     setOpenId(supplierId)

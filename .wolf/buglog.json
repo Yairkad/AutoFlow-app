@@ -1658,5 +1658,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-02T09:01:55.344993+00:00"
+  },
+  {
+    "id": "bug-090",
+    "timestamp": "2026-11-02T10:21:54.241852Z",
+    "error_message": "Whole app down: /api/store 504, /api/yard/sessions 500; Supabase 'about to deplete Disk IO Budget'",
+    "file": "components/* (11 screens with supabase.channel postgres_changes)",
+    "root_cause": "Supabase Realtime postgres_changes subscriptions: realtime.list_changes = ~84% of all DB time (~5.4M calls). Every open screen held a channel; app's own queries were negligible. All screens already had polling fallback (realtime unreliable on Netfree).",
+    "fix": "Removed all postgres_changes channels; rely on startLiveRefresh/useLiveRefresh polling. OfficeClient bell for newly pending_office cards now detected in fetchSessions by diffing pending ids.",
+    "tags": [
+      "supabase",
+      "realtime",
+      "disk-io",
+      "performance",
+      "outage"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-02T10:21:54.241852Z"
   }
 ]

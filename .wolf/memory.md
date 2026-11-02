@@ -2951,3 +2951,30 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 10:10 | Receive: field clears per scan (auto-search works again), unknown barcode → link to existing tire in one-by-one mode, linked codes saved as alt_barcodes (not overwrite sku) | ReceiveClient.tsx, api/yard/receive | tsc clean, pushed | ~10000 |
+
+## Session: 2026-11-02 09:28
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:35 | Q&A: return tires to supplier — answered (delete arrival line / credit + manual stock out); offered 'מה הוחזר?' on credit rows | — | answered, no code change | ~3000 |
+
+## Session: 2026-11-02 09:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:50 | Q&A: yard receive (api/yard/receive) has no supplier link and no undo; asked user where returns should happen + auto pending credit | — | awaiting answer | ~2000 |
+| 09:47 | Created app/api/yard/return/route.ts | — | ~556 |
+| 10:05 | Return-to-supplier mode in receive screen (yard+office) + /api/yard/return + stock screen label/undo; stock-summary ignores returns | ReceiveClient.tsx, api/yard/return, StockClient.tsx, stock-summary | tsc clean, pushed | ~25000 |
+
+## Session: 2026-11-02 10:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-02 10:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:20 | User reports 504 /api/store + 500 /api/yard/sessions — Supabase not responding (unrelated to branch); asked user to check Supabase dashboard/status | — | awaiting user | ~2000 |
+| 10:40 | Outage fix: removed all Supabase realtime channels (84% of DB time) — polling only; office bell via pending-id diff | 11 components | tsc clean, pushed | ~30000 |
+| 10:50 | User: no Netfree — removed Netfree mentions from comments, noted in cerebrum | comments only | pushed | ~2000 |

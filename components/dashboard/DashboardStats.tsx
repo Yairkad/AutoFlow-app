@@ -155,7 +155,6 @@ function CarsCard({ inInventory, reserved, href }: { inInventory: number; reserv
 export default function DashboardStats() {
   const cached = _cache && (Date.now() - _cache.ts < CACHE_TTL) ? _cache : null
   const { profile } = useProfile()
-  const supabase = useRef(createClient()).current
 
   const [stats, setStats]     = useState<Stats>(cached?.stats ?? EMPTY)
   const [loading, setLoading] = useState(!cached)
@@ -263,18 +262,9 @@ export default function DashboardStats() {
 
     fetchStats(admin, mods)
 
-    const tables = ['expenses', 'income', 'customer_debts', 'supplier_debts',
-      'customer_ledger_debts', 'customer_ledger_payments',
-      'employees', 'products', 'tires', 'cars',
-      'car_inspections']
-    let ch = supabase.channel('dashboard-stats')
-    for (const table of tables) {
-      ch = ch.on('postgres_changes', { event: '*', schema: 'public', table }, () => fetchStats(admin, mods))
-    }
-    const channel = ch.subscribe()
-    // Realtime alone is unreliable on Netfree — also refresh on focus / every 60s
+    // Refresh on focus / every 60s (no Supabase realtime — it ate the DB's disk IO)
     const stopLive = startLiveRefresh(() => fetchStats(admin, mods), 60_000)
-    return () => { stopLive(); supabase.removeChannel(channel) }
+    return () => { stopLive() }
   }, [profile]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return (

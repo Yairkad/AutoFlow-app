@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState, useEffect, useRef } from 'react'
 import type { YardSession, YardSessionItem, YardService } from '@/lib/yard/types'
 import { sessionTotal, minutesSince, formatPlate } from '@/lib/yard/types'
 import VehicleHistoryModal from '@/components/yard/VehicleHistoryModal'
@@ -51,7 +50,6 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
   const [saveStatus,     setSaveStatus]     = useState<'idle' | 'ok' | 'err'>('idle')
   const [newSvc,         setNewSvc]         = useState({ name: '', price: '', sku: '' })
   const [addingNew,    setAddingNew]    = useState(false)
-  const supabase = createClient()
 
   // Timer tick for elapsed-time display
   useEffect(() => {
@@ -65,6 +63,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
 
   // Direct-fetch polling — updates state silently without page re-render
   // Won't interrupt user interaction (text selection, copying, etc.)
+  const seenPendingRef = useRef(new Set(initialPending.map(s => s.id)))
   async function fetchSessions() {
     try {
       const [ar, pr] = await Promise.all([
@@ -72,7 +71,14 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
         fetch('/api/yard/sessions?status=pending_office'),
       ])
       if (ar.ok) setActive(await ar.json())
-      if (pr.ok) setPending(await pr.json())
+      if (pr.ok) {
+        const list: { id: string }[] = await pr.json()
+        // A card that newly reached the office → bell + tab badge (was done by realtime)
+        const fresh = list.filter(s => !seenPendingRef.current.has(s.id)).length
+        seenPendingRef.current = new Set(list.map(s => s.id))
+        if (fresh > 0) { playBell(); setUnread(c => c + fresh) }
+        setPending(list as typeof initialPending)
+      }
     } catch {} // network hiccup — skip tick
   }
 
@@ -95,31 +101,6 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     } catch {}
   }
 
-  // Realtime subscription for instant updates. Bursts of events (e.g. one per item
-  // when a price is applied to several tires) are collapsed into one refetch.
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined
-    const refetchSoon = () => { clearTimeout(timer); timer = setTimeout(fetchSessions, 400) }
-    const ch = supabase
-      .channel('office-yard')
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'yard_sessions' },
-        (payload) => {
-          const n = payload.new as { status: string }
-          const o = payload.old as { status?: string }
-          if (n.status === 'pending_office' && o.status !== 'pending_office') {
-            playBell()
-            setUnread(c => c + 1)
-          }
-          refetchSoon()
-        }
-      )
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'yard_sessions' }, refetchSoon)
-      .on('postgres_changes', { event: '*',    schema: 'public', table: 'yard_session_items' }, refetchSoon)
-      .subscribe()
-    return () => { clearTimeout(timer); supabase.removeChannel(ch) }
-  }, []) // eslint-disable-line
-
   // Tab title badge — clears when user switches to pending tab
   useEffect(() => {
     if (tab === 'pending') setUnread(0)
@@ -131,7 +112,7 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     return () => { document.title = base }
   }, [unread])
 
-  // Fallback for realtime (unreliable on Netfree): refresh on focus and every 20s
+  // Refresh on focus and every 20s (no Supabase realtime — it ate the DB's disk IO)
   useEffect(() => startLiveRefresh(fetchSessions, 20_000), []) // eslint-disable-line
 
   const DEFAULT_SERVICES = [

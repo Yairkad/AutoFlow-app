@@ -174,15 +174,9 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
 
   useEffect(() => {
     load()
-    const channel = supabase
-      .channel('alerts-panel')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'scheduled_payments' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'salaries' }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_debts' }, () => load())
-      .subscribe()
-    // Realtime alone is unreliable on Netfree — also refresh on focus / every 30s
+    // Refresh on focus / every 30s (no Supabase realtime — it ate the DB's disk IO)
     const stopLive = startLiveRefresh(() => load(), 30_000)
-    return () => { stopLive(); supabase.removeChannel(channel) }
+    return () => { stopLive() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const visiblePayments  = payments.filter(p => !dismissed.has(p.id))

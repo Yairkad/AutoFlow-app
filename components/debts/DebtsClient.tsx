@@ -143,7 +143,7 @@ export default function DebtsClient() {
   }, [supabase, resolveTenant, profile, profileLoading])
 
   useEffect(() => { loadAll() }, [loadAll])
-  // Other devices' changes show up without a page refresh (realtime alone is unreliable on Netfree)
+  // Other devices' changes show up without a page refresh
   useLiveRefresh(loadAll)
 
   // Reset filter on tab change
@@ -170,17 +170,6 @@ export default function DebtsClient() {
     const clear = setTimeout(() => setFocusId(null), 4000)
     return () => { clearTimeout(t); clearTimeout(clear) }
   }, [loading])
-
-  // ── Realtime ──────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    const ch = supabase.channel('debts-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_debts' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_debt_calls' }, loadAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_debt_payments' }, loadAll)
-      .subscribe()
-    return () => { supabase.removeChannel(ch) }
-  }, [supabase, loadAll])
 
   // ── Customer CRUD ─────────────────────────────────────────────────────────
 

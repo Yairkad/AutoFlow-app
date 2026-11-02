@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-02T08:20:50.626Z
-> Files: 183 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-02T09:47:19.925Z
+> Files: 184 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -312,6 +312,10 @@
 
 ## app/api/yard/receive/
 
+
+## app/api/yard/return/
+
+- `route.ts` — POST /api/yard/return {type,id,qty,supplier}: return to supplier — stock down, movement logged as order with NEGATIVE qty, source='return', note 'הוחזר לספק: X' (~556 tok)
 
 ## app/api/yard/search/
 
@@ -641,7 +645,7 @@
 
 ## components/yard/
 
-- `ReceiveClient.tsx` — office: opened from the management app (/tires/receive) instead of the yard terminal (~9794 tok)
+- `ReceiveClient.tsx` — receive screen (yard + office /tires/receive): one-by-one, quick scan, and '↩ החזרה לספק' mode (supplier field, scan or search by size, red confirm → /api/yard/return) (~11000 tok)
 - `SearchSheet.tsx` — 'numeric' opens the phone's number pad (tire sizes); 'search' the normal keyboard (~1753 tok)
 - `SessionItemsEditor.tsx` — SessionItemsEditor — renders table (~2336 tok)
 - `TireLookupClient.tsx` — normalizeTireSize (~1660 tok)
