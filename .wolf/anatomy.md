@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-02T08:14:08.634Z
-> Files: 182 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-02T08:20:50.626Z
+> Files: 183 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -92,6 +92,7 @@
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/ec738802-4884-583f-a4a0-e2755f311fa4/scratchpad/
 
+- `loans-B2.html` — השאלות — עיצוב B (~2277 tok)
 - `loans-mock.html` — השאלות — 2 עיצובים (~2411 tok)
 
 ## ./

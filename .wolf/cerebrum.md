@@ -5,6 +5,7 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+- [2026-11-02] **לענות למשתמש בעברית בלבד** — כולל סיכומים וכותרות. אנגלית רק בשמות קבצים/קוד.
 
 - [2026-11-01] Tire lists: English brand name primary, Hebrew name small underneath (not the reverse).
 - [2026-11-01] 'הכרטיס שפתוח במשרד' = YardDrawer (left-edge yard drawer in the main app), not /yard-office.
@@ -227,6 +228,7 @@
 - **Inspection checklist skeleton_only (2026-06-17):** skeleton_only flag stored in `findings` JSON as `{ skeleton_only: true, items: [...], notes: '' }`. No DB column needed. SKELETON_SYSTEM_INDICES = Set([16, 17]) — שלדת מרכב, מרכב (פחחות). Status 'na' added to ChecklistItem for non-skeleton systems. parseFindings() auto-applies 'na' when skeleton_only=true.
 
 ## Decision Log
+- [2026-11-02] Yard close_type: charged (default/NULL) | free = stock out, revenue 0 | cancelled = no stock change, hidden from vehicle history. Loans section → design B (grouped by shop, table rows) in system tokens (IBM Plex, navy, 10px radius).
 
 - [2026-11-01] Supplier ledger: a post-dated check (single or series) lowers the supplier balance on the day it was HANDED (scheduled_payments.handed_date, default today), not its due date — user: 'the day I gave the series I paid it all'. Transfers still by due_date. Helper paymentLedgerDate() in lib/debts/supplierLedger.ts.
 

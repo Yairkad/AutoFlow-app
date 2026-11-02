@@ -2936,3 +2936,5 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 08:14 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/ec738802-4884-583f-a4a0-e2755f311fa4/scratchpad/loans-mock.html | — | ~2411 |
 | 08:40 | Yard tracking inner cards → shared HubCard/Badge (wrapping rows, no overlap); getYardUser prefers office login unless referer is /yard (leftover PIN cookie stamped office rows as terminal employee); loans redesign mockups A/B sent | components/yard-hub/*, lib/auth/yard-token.ts | tsc clean, pushed | ~20000 |
+| 08:20 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/ec738802-4884-583f-a4a0-e2755f311fa4/scratchpad/loans-B2.html | — | ~2277 |
+| 09:10 | Yard cards close types (charged/free/cancelled, migration 114 + run-once-113-114.sql); office can close active cards; loans mockup B2 in system style (awaiting approval) | api/yard/sessions/[id], reports, vehicle-history, YardDrawer, OfficeClient | tsc clean, pushed | ~25000 |
