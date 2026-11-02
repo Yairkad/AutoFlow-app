@@ -2957,3 +2957,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:35 | Q&A: return tires to supplier — answered (delete arrival line / credit + manual stock out); offered 'מה הוחזר?' on credit rows | — | answered, no code change | ~3000 |
+
+## Session: 2026-11-02 09:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:50 | Q&A: yard receive (api/yard/receive) has no supplier link and no undo; asked user where returns should happen + auto pending credit | — | awaiting answer | ~2000 |
