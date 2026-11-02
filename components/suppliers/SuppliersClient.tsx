@@ -107,7 +107,7 @@ export default function SuppliersClient({ embedded = false }: { embedded?: boole
   }, [supabase, resolveTenant, showToast, profile, profileLoading])
 
   useEffect(() => { loadAll() }, [loadAll])
-  // Other devices' changes show up without a page refresh (realtime alone is unreliable on Netfree)
+  // Other devices' changes show up without a page refresh
   useLiveRefresh(loadAll)
 
   // Parse ?tab=details|tracking&open=<id> once

@@ -2977,3 +2977,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 10:20 | User reports 504 /api/store + 500 /api/yard/sessions — Supabase not responding (unrelated to branch); asked user to check Supabase dashboard/status | — | awaiting user | ~2000 |
 | 10:40 | Outage fix: removed all Supabase realtime channels (84% of DB time) — polling only; office bell via pending-id diff | 11 components | tsc clean, pushed | ~30000 |
+| 10:50 | User: no Netfree — removed Netfree mentions from comments, noted in cerebrum | comments only | pushed | ~2000 |

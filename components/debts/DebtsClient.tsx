@@ -143,7 +143,7 @@ export default function DebtsClient() {
   }, [supabase, resolveTenant, profile, profileLoading])
 
   useEffect(() => { loadAll() }, [loadAll])
-  // Other devices' changes show up without a page refresh (realtime alone is unreliable on Netfree)
+  // Other devices' changes show up without a page refresh
   useLiveRefresh(loadAll)
 
   // Reset filter on tab change

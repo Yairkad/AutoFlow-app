@@ -3,9 +3,8 @@
 import { useEffect, useRef } from 'react'
 
 /**
- * Keeps a screen's data fresh with changes made on other devices, without relying on
- * Supabase realtime (a websocket straight to supabase.co that Netfree / mobile data
- * often block). Calls `reload` when the tab/app comes back into view, when the network
+ * Keeps a screen's data fresh with changes made on other devices, without Supabase
+ * realtime (removed 2026-11-02 — it exhausted the DB's disk IO). Calls `reload` when the tab/app comes back into view, when the network
  * returns, and every `intervalMs` while visible. Returns a cleanup function.
  */
 export function startLiveRefresh(reload: () => unknown, intervalMs = 20_000): () => void {

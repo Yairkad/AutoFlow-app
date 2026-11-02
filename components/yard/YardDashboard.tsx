@@ -20,7 +20,7 @@ export default function YardDashboard({ initialSessions }: Props) {
     return () => clearInterval(id)
   }, [router])
 
-  // Also refresh the moment the screen comes back into view (realtime is unreliable on Netfree)
+  // Also refresh the moment the screen comes back into view.
   useLiveRefresh(() => router.refresh(), 30_000)
 
   function timerState(openedAt: string): 'ok' | 'warn' | 'critical' {

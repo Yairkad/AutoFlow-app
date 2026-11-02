@@ -91,7 +91,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   // POST saves them, and the temp rows are swapped for the rows the server returns.
   // Edits made before that answer (price / qty / delete) are queued and replayed on
   // the real rows — so nothing waits on realtime, which often never arrives
-  // (websocket straight to supabase.co, blocked/flaky on Netfree and mobile data).
+  // (no Supabase realtime in this app).
   const tempSeq = useRef(0)
   const queuedRef = useRef(new Map<string, { unit_price?: number; quantity?: number; deleted?: boolean }>())
 
@@ -211,7 +211,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
     })
   }, [initialSession])
 
-  // Changes from the office / another device show up without a refresh (realtime is unreliable on Netfree).
+  // Changes from the office / another device show up without a refresh.
   // Skipped while something is still saving — the safety net below handles that case.
   useLiveRefresh(() => { if (!items.some(i => isTemp(i.id))) router.refresh() }, 20_000)
 

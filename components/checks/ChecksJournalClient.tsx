@@ -130,7 +130,7 @@ export default function ChecksJournalClient() {
   }, [supabase, tenantId])
 
   useEffect(() => { load() }, [load])
-  // Other devices' changes show up without a page refresh (realtime alone is unreliable on Netfree)
+  // Other devices' changes show up without a page refresh
   useLiveRefresh(load, 60_000)
 
   // Deep-link: ?supplier=<id>

@@ -5,6 +5,8 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+
+- [2026-11-02] There is NO Netfree in this business — never cite Netfree as a reason/explanation (user: 'אל תערבב דברים'). Old code comments mentioning Netfree are wrong context; lib/supabase/client.ts proxy (/api/store) still exists functionally.
 - [2026-11-02] **לענות למשתמש בעברית בלבד** — כולל סיכומים וכותרות. אנגלית רק בשמות קבצים/קוד.
 
 - [2026-11-01] Tire lists: English brand name primary, Hebrew name small underneath (not the reverse).
