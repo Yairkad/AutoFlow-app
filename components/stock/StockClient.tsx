@@ -34,6 +34,7 @@ interface Move {
 // sales from closed yard cards, and anything else is a manual correction (e.g. once a month).
 const SOURCE_LABEL = (m: Move) =>
   m.source === 'manual' ? 'עדכון ידני'
+    : m.source === 'return' ? 'החזרה לספק'
     : m.type === 'sale' ? 'מכירה בכרטיס רחבה'
     : m.source === 'invoice' ? 'חשבונית ספק' : 'קליטת סחורה'
 
@@ -154,7 +155,9 @@ export default function StockClient() {
   }
 
   async function removeManual(m: Move) {
-    if (!confirm(`למחוק את העדכון הידני של "${m.name}" ולהחזיר את הכמות?`)) return
+    if (!confirm(m.source === 'return'
+      ? `לבטל את ההחזרה לספק של "${m.name}"? ${Math.abs(m.qty)} יח׳ יחזרו למלאי.`
+      : `למחוק את העדכון הידני של "${m.name}" ולהחזיר את הכמות?`)) return
     const { error } = await sb.from(m.kind === 'tire' ? 'tire_sales' : 'product_sales').delete().eq('id', m.id)
     const err = error ?? await applyQty(m.kind, m.ref_id, m.type === 'sale' ? m.qty : -m.qty)
     if (err) { showToast(`שגיאה: ${err.message}`, 'error'); return }
@@ -226,12 +229,13 @@ export default function StockClient() {
                       {m.note && <div style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 12 }}>{m.note}</div>}
                     </td>
                     <td style={{ ...td, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{SOURCE_LABEL(m)}</td>
-                    <td style={{ ...td, fontWeight: 700, whiteSpace: 'nowrap', color: m.type === 'sale' ? 'var(--danger)' : 'var(--success)' }} className="num">
-                      {m.type === 'sale' ? `−${m.qty}` : `+${m.qty}`}
-                    </td>
+                    {(() => { const out = m.type === 'sale' || m.qty < 0; return (
+                    <td style={{ ...td, fontWeight: 700, whiteSpace: 'nowrap', color: out ? 'var(--danger)' : 'var(--success)' }} className="num">
+                      {out ? `−${Math.abs(m.qty)}` : `+${m.qty}`}
+                    </td>) })()}
                     <td style={{ ...td, textAlign: 'left', width: 40 }}>
-                      {m.source === 'manual' && (
-                        <button type="button" onClick={() => removeManual(m)} aria-label={`מחק עדכון ידני — ${m.name}`}
+                      {(m.source === 'manual' || m.source === 'return') && (
+                        <button type="button" onClick={() => removeManual(m)} aria-label={`${m.source === 'return' ? 'בטל החזרה לספק' : 'מחק עדכון ידני'} — ${m.name}`}
                           style={{ background: 'none', border: 0, cursor: 'pointer', color: 'var(--text-muted)', fontSize: 15 }}>✕</button>
                       )}
                     </td>

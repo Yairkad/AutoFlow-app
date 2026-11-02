@@ -16,7 +16,7 @@ export async function GET() {
   const [tiresRes, lastInRes, lastCountRes] = await Promise.all([
     selectAll<{ qty: number; cost_price: number | null; sell_price: number | null }>((a, b) =>
       sb.from('tires').select('qty, cost_price, sell_price').eq('tenant_id', tid).gt('qty', 0).order('id').range(a, b)),
-    sb.from('tire_sales').select('sold_date, created_at').eq('tenant_id', tid).eq('movement_type', 'order')
+    sb.from('tire_sales').select('sold_date, created_at').eq('tenant_id', tid).eq('movement_type', 'order').gt('qty', 0)
       .order('sold_date', { ascending: false }).order('created_at', { ascending: false }).limit(1),
     sb.from('tire_inventory_count_sessions').select('counted_at, zone').eq('tenant_id', tid)
       .order('counted_at', { ascending: false }).limit(10),

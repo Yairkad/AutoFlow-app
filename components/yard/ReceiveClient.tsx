@@ -55,6 +55,18 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
   // Tire just received → suggest a shelf, saved once the worker confirms where it went
   const [place, setPlace] = useState<Placement | null>(null)
 
+  // ── Return to supplier (wrong delivery) — stock goes down, credit note is entered by hand ──
+  const [returnMode, setReturnMode] = useState(false)
+  const [supplier,   setSupplier]   = useState('')
+  const [suppliers,  setSuppliers]  = useState<string[]>([])
+  const [retSearch,  setRetSearch]  = useState(false)
+
+  function startReturn() {
+    setReturnMode(true); setFound(null); setStage('scan')
+    if (!suppliers.length) fetch('/api/yard/suppliers').then(r => r.ok ? r.json() : []).then(d => setSuppliers(Array.isArray(d) ? d : [])).catch(() => {})
+  }
+  function endReturn() { setReturnMode(false); setFound(null); setStage('scan'); refocus() }
+
   function addWaiting(list: WaitingCustomer[] | undefined) {
     if (!list?.length) return
     setWaiting(prev => [...prev, ...list.filter(w => !prev.some(p => p.id === w.id))])
@@ -106,6 +118,8 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
     const data: SearchResult | null = await res.json()
     if (data) {
       setFound(data); setQty(1); setStage('found')
+    } else if (returnMode) {
+      showToast('ברקוד לא נמצא — חפש לפי מידה / מותג'); setRetSearch(true)
     } else {
       setTireForm({ ...emptyTireForm }); setProdForm({ ...emptyProdForm })
       setQty(1); setNewType('tire'); setStage('notfound')
@@ -125,6 +139,20 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
       setLinkedCode(null)
       addWaiting(w)
       if (found.type === 'tire') setPlace({ id: found.id, name: found.name, suggest: suggest ?? null })
+      setFound(null); setStage('scan')
+    } else { showToast('שגיאה — נסה שוב'); setStage('found') }
+  }
+
+  async function confirmReturn() {
+    if (!found || !supplier.trim()) return
+    setStage('saving')
+    const res = await fetch('/api/yard/return', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: found.type, id: found.id, qty, supplier: supplier.trim() }),
+    })
+    if (res.ok) {
+      const { qty: newQty } = await res.json()
+      showToast(`↩ ${found.name} — ${qty} יח׳ הוחזרו ל${supplier.trim()} · מלאי ${newQty}`)
       setFound(null); setStage('scan')
     } else { showToast('שגיאה — נסה שוב'); setStage('found') }
   }
@@ -275,6 +303,25 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
         />
       )}
 
+      {retSearch && (
+        <SearchSheet<SearchResult>
+          title="↩ איזה צמיג מוחזר?"
+          placeholder="מותג או מקט..."
+          sizeMode="toggle"
+          minChars={2}
+          search={async (q, kind) => {
+            const params = kind === 'size' ? tireSizeSearchParams(q) : `q=${encodeURIComponent(q)}`
+            const res = await fetch(`/api/yard/search?${params}&type=tire&include_empty=1`)
+            return res.ok ? res.json() : []
+          }}
+          getKey={r => r.id}
+          renderItem={r => <ResultRow r={r} />}
+          emptyText={() => 'לא נמצאו צמיגים'}
+          onPick={r => { setRetSearch(false); setFound(r); setQty(1); setStage('found') }}
+          onClose={() => { setRetSearch(false); refocus() }}
+        />
+      )}
+
       {/* Toast */}
       {toast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-700 text-white font-bold rounded-xl shadow-xl"
@@ -368,11 +415,11 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
       )}
 
       {/* Header */}
-      <div className="bg-slate-800 text-white flex items-center justify-between flex-shrink-0" style={{ padding: '14px 18px' }}>
-        <h2 className="text-xl font-bold">📦 {quickMode ? 'סריקה מהירה' : 'קבלת סחורה'}</h2>
-        <button onClick={() => quickMode ? cancelQuick() : office ? router.push('/tires') : router.back()}
+      <div className={`${returnMode ? 'bg-red-800' : 'bg-slate-800'} text-white flex items-center justify-between flex-shrink-0`} style={{ padding: '14px 18px' }}>
+        <h2 className="text-xl font-bold">{returnMode ? '↩ החזרה לספק' : `📦 ${quickMode ? 'סריקה מהירה' : 'קבלת סחורה'}`}</h2>
+        <button onClick={() => quickMode ? cancelQuick() : returnMode ? endReturn() : office ? router.push('/tires') : router.back()}
           className="bg-white/10 rounded-lg font-semibold text-sm active:bg-white/20" style={{ padding: '6px 14px' }}>
-          ← {quickMode ? 'ביטול' : 'חזור'}
+          ← {quickMode || returnMode ? 'ביטול' : 'חזור'}
         </button>
       </div>
 
@@ -444,10 +491,23 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
         {/* ── NORMAL MODE ── */}
         {!quickMode && <>
 
+          {returnMode && stage !== 'saving' && (
+            <div style={{ maxWidth: 480, margin: '0 auto 12px' }}>
+              <div className="bg-red-50 border-2 border-red-300 rounded-2xl" style={{ padding: '12px 14px' }}>
+                  <label htmlFor="ret-supplier" className="block text-sm font-bold text-red-800 mb-2">לאיזה ספק מחזירים?</label>
+                  <input id="ret-supplier" list="ret-suppliers" value={supplier} onChange={e => setSupplier(e.target.value)}
+                    placeholder="שם הספק..." className="w-full border-2 border-red-200 rounded-xl bg-white outline-none focus:border-red-500"
+                    style={{ padding: '10px 12px', fontSize: '16px' }} />
+                  <datalist id="ret-suppliers">{suppliers.map(n => <option key={n} value={n} />)}</datalist>
+                  <p className="text-red-700 text-xs mt-2">המלאי יורד מיד. את תעודת הזיכוי מהספק מזינים בכרטסת הספק.</p>
+                </div>
+            </div>
+          )}
+
           {/* STAGE: scan */}
           {stage === 'scan' && (
             <div className="flex flex-col gap-4" style={{ maxWidth: 480, margin: '0 auto', paddingTop: '16px' }}>
-              {/* Mode toggle */}
+              {!returnMode && (
               <div className="flex rounded-2xl overflow-hidden border-2 border-slate-200 bg-white">
                 <button className="flex-1 font-bold transition-colors"
                   style={{ padding: '13px', background: '#1B2448', color: '#fff', fontSize: '14px' }}>
@@ -458,6 +518,7 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
                   ⚡ סריקה מהירה
                 </button>
               </div>
+              )}
 
               <input
                 ref={scanRef}
@@ -475,6 +536,17 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
                 🔍 חפש
               </button>
               <p className="text-slate-400 text-sm text-center">הסורק מחפש אוטומטית · הקלדה ידנית: Enter או ״חפש״ · בכמות: Enter מאשר</p>
+              {returnMode ? (
+                <button onClick={() => setRetSearch(true)}
+                  className="w-full bg-white border-2 border-red-300 text-red-700 font-bold rounded-2xl active:bg-red-50" style={{ padding: '12px', fontSize: '15px' }}>
+                  🔍 אין ברקוד — חפש לפי מידה / מותג
+                </button>
+              ) : (
+                <button onClick={startReturn}
+                  className="w-full bg-white border-2 border-slate-200 text-red-700 font-bold rounded-2xl active:bg-red-50" style={{ padding: '12px', fontSize: '15px' }}>
+                  ↩ החזרה לספק (הגיע בטעות)
+                </button>
+              )}
             </div>
           )}
 
@@ -508,14 +580,14 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
               </div>
 
               <div className="bg-white rounded-2xl shadow" style={{ padding: '20px' }}>
-                <p className="font-bold text-slate-700 mb-3">כמה יחידות התקבלו?</p>
+                <p className="font-bold text-slate-700 mb-3">{returnMode ? 'כמה יחידות מוחזרות?' : 'כמה יחידות התקבלו?'}</p>
                 <div className="flex items-center gap-3">
                   <button onClick={() => setQty(q => Math.max(1, q - 1))}
                     className="bg-slate-100 rounded-xl font-black text-slate-600 active:bg-slate-200 transition-colors"
                     style={{ width: '52px', height: '52px', fontSize: '24px' }}>−</button>
                   <input ref={qtyRef} type="number" min="1" value={qty}
                     onChange={e => setQty(Math.max(1, Number(e.target.value) || 1))}
-                    onKeyDown={e => { if (e.key === 'Enter') confirmReceive() }}
+                    onKeyDown={e => { if (e.key === 'Enter') { if (returnMode) confirmReturn(); else confirmReceive() } }}
                     className="flex-1 border-2 border-blue-400 rounded-xl text-center font-black text-slate-900 outline-none"
                     style={{ height: '52px', fontSize: '28px' }} />
                   <button onClick={() => setQty(q => q + 1)}
@@ -524,11 +596,22 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
                 </div>
               </div>
 
+              {returnMode ? (<>
+                {qty > (found.stock ?? 0) && (
+                  <p role="alert" className="text-amber-700 text-sm font-semibold text-center">⚠ במלאי רשומות רק {found.stock ?? 0} יח׳ — המלאי ירד ל-0</p>
+                )}
+                <button onClick={confirmReturn} disabled={!supplier.trim()}
+                  className="w-full bg-red-700 text-white font-bold rounded-2xl disabled:opacity-40 active:scale-[.98] transition-all"
+                  style={{ padding: '18px', fontSize: '18px' }}>
+                  {supplier.trim() ? `↩ אשר החזרת ${qty} יח׳ ל${supplier.trim()}` : 'בחר ספק למעלה'}
+                </button>
+              </>) : (
               <button onClick={confirmReceive}
                 className="w-full bg-green-700 text-white font-bold rounded-2xl active:scale-[.98] transition-all"
                 style={{ padding: '18px', fontSize: '18px' }}>
                 ✓ אשר קליטת {qty} יח׳
               </button>
+              )}
               <button onClick={() => { setLinkedCode(null); setStage('scan') }}
                 className="w-full bg-white border-2 border-slate-200 text-slate-500 font-semibold rounded-2xl active:bg-slate-50"
                 style={{ padding: '14px', fontSize: '15px' }}>
