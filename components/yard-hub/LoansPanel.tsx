@@ -7,10 +7,43 @@ import {
   LOAN_DIRECTION_LABEL, LOAN_STATUS_LABEL, LOAN_STALE_DAYS, daysSince,
   type LoanDirection, type TireLoan,
 } from '@/lib/yard/hub'
-import { AddButton, Badge, Chips, Empty, Field, HubCard, HubFrame, IconBtn, cardGrid, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle, todayISO } from './ui'
+import { AddButton, Chips, Empty, Field, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle, todayISO } from './ui'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
+import RowActionsMenu from '@/components/ui/RowActionsMenu'
 
-type View = 'borrowed' | 'lent' | 'closed'
+type View = 'open' | 'closed'
+
+const fmtPhone = (p: string) => { const d = p.replace(/\D/g, ''); return d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3)}` : p }
+
+// Grouped-by-shop table (design B): one block per shop, a row per loan. Uses the app tokens.
+const CSS = `
+.lp-sum{display:flex;gap:8px;flex-wrap:wrap}
+.lp-pill{font-size:12px;font-weight:600;border-radius:99px;padding:1px 9px;white-space:nowrap;display:inline-flex;gap:4px;align-items:center}
+.lp-pri{background:var(--primary-soft);color:var(--primary)}.lp-warn{background:var(--warning-soft);color:var(--warning)}
+.lp-dan{background:var(--danger-soft);color:var(--danger)}.lp-ok{background:var(--success-soft);color:var(--success)}
+.lp-shop{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg-card)}
+.lp-shop.late{border-color:color-mix(in srgb,var(--danger) 45%,var(--border))}
+.lp-sh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:var(--bg-soft);border-bottom:1px solid var(--border)}
+.lp-sh b{font-size:15px;font-weight:700;overflow-wrap:anywhere}
+.lp-tel{color:var(--primary);font-weight:600;font-size:13px;text-decoration:none;direction:ltr}
+.lp-cols,.lp-row{display:grid;grid-template-columns:minmax(140px,1.3fr) 44px minmax(110px,1fr) 128px 90px 190px;gap:12px;align-items:center;padding:0 14px}
+.lp-cols{font-size:11.5px;color:var(--text-muted);font-weight:600;padding-top:7px;padding-bottom:7px;border-bottom:1px solid var(--border)}
+.lp-row{padding-top:9px;padding-bottom:9px;border-bottom:1px solid #EEF0F5;font-size:14px}
+.lp-row:last-child{border-bottom:0}.lp-row.late{background:#FDF6F5}
+.lp-size{font-weight:600;font-size:14.5px;direction:ltr;text-align:right;overflow-wrap:anywhere}
+.lp-sub{font-size:12px;color:var(--text-muted);overflow-wrap:anywhere}
+.lp-cell{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0}
+.lp-acts{display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.lp-b{border-radius:8px;padding:5px 10px;font-weight:600;font-size:13px;white-space:nowrap;cursor:pointer;font-family:inherit}
+.lp-ret{background:var(--primary-soft);color:var(--primary);border:1px solid color-mix(in srgb,var(--primary) 20%,transparent)}
+.lp-pay{background:var(--success);color:#fff;border:1px solid var(--success)}
+.lp-re{background:var(--bg-card);color:var(--text);border:1px solid var(--border)}
+@media(max-width:760px){
+  .lp-cols{display:none}
+  .lp-row{grid-template-columns:1fr auto;gap:6px 10px}
+  .lp-row .lp-wide{grid-column:1/-1}
+  .lp-row .lp-acts{grid-column:1/-1;justify-content:flex-start}
+}`
 
 const emptyForm = {
   direction: 'borrowed' as LoanDirection, shop_name: '', shop_phone: '', loan_date: '',
@@ -20,7 +53,7 @@ const emptyForm = {
 export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
-  const [view, setView]       = useState<View>('borrowed')
+  const [view, setView]       = useState<View>('open')
   const [open, setOpen]       = useState<TireLoan[]>([])
   const [closed, setClosed]   = useState<TireLoan[] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -52,12 +85,25 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
     return m
   }, [open, closed])
 
-  const list = view === 'closed' ? (closed ?? []) : open.filter(l => l.direction === view)
-  const countOf = (d: LoanDirection) => open.filter(l => l.direction === d).length
+  const unitsOf = (d: LoanDirection) => open.filter(l => l.direction === d).reduce((n, l) => n + l.qty, 0)
+  const staleCount = open.filter(l => daysSince(l.loan_date) >= LOAN_STALE_DAYS).length
+
+  // One block per shop; the shop waiting longest comes first
+  const groups = useMemo(() => {
+    const list = view === 'closed' ? (closed ?? []) : open
+    const m = new Map<string, TireLoan[]>()
+    for (const l of list) { const g = m.get(l.shop_name); if (g) g.push(l); else m.set(l.shop_name, [l]) }
+    const arr = [...m.entries()].map(([shop, items]) => ({
+      shop, items: [...items].sort((a, b) => a.loan_date.localeCompare(b.loan_date)),
+      phone: items.find(i => i.shop_phone)?.shop_phone ?? null,
+      oldest: Math.max(...items.map(i => daysSince(i.loan_date))),
+    }))
+    return view === 'closed' ? arr : arr.sort((a, b) => b.oldest - a.oldest)
+  }, [open, closed, view])
 
   function startNew() {
     setEditId(null)
-    setForm({ ...emptyForm, direction: view === 'lent' ? 'lent' : 'borrowed', loan_date: todayISO() })
+    setForm({ ...emptyForm, loan_date: todayISO() })
   }
 
   function startEdit(l: TireLoan) {
@@ -81,7 +127,7 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
       } else {
         const row = await api<TireLoan>('/api/yard/loans', 'POST', form)
         setOpen(p => [...p, row])
-        setView(row.direction)
+        setView('open')
       }
       showToast('נשמר ✓', 'success')
       setForm(null)
@@ -124,69 +170,84 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
     <HubFrame variant={variant} title="🔁 השאלות בין פנצ׳ריות"
       subtitle="צמיגים שלקחנו מפנצ׳ריה אחרת או נתנו לה — פתוח עד שמחזירים או משלמים"
       action={<AddButton onClick={startNew}>+ השאלה חדשה</AddButton>}>
-      <Chips value={view} onChange={setView} options={[
-        { value: 'borrowed', label: '📥 לקחנו מהם', count: countOf('borrowed') },
-        { value: 'lent',     label: '📤 נתנו להם', count: countOf('lent') },
-        { value: 'closed',   label: '✓ סגורים' },
-      ]} />
+      <style>{CSS}</style>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <Chips value={view} onChange={setView} options={[
+          { value: 'open',   label: 'פתוחים', count: open.length },
+          { value: 'closed', label: '✓ סגורים' },
+        ]} />
+        {view === 'open' && open.length > 0 && (
+          <div className="lp-sum">
+            <span className="lp-pill lp-pri">📥 קיבלנו מהם · <b>{unitsOf('borrowed')}</b> צמיגים</span>
+            <span className="lp-pill lp-pri">📤 נתנו להם · <b>{unitsOf('lent')}</b> צמיגים</span>
+            {staleCount > 0 && <span className="lp-pill lp-dan">⚠ מעל {LOAN_STALE_DAYS} ימים · <b>{staleCount}</b></span>}
+          </div>
+        )}
+      </div>
 
-      {loading ? <Empty icon="⏳" text="טוען..." /> : list.length === 0 ? (
+      {loading || (view === 'closed' && !closed) ? <Empty icon="⏳" text="טוען..." /> : groups.length === 0 ? (
         view === 'closed' ? <Empty icon="🗂" text="אין רישומים סגורים" /> : (
-          <Empty icon="✅" text={view === 'borrowed' ? 'אין צמיגים שאנחנו חייבים' : 'אין צמיגים שחייבים לנו'}
+          <Empty icon="✅" text="אין השאלות פתוחות"
+            hint="צמיג שלקחנו מפנצ׳ריה אחרת או נתנו לה — רושמים כאן עד שמחזירים או משלמים"
             action={<AddButton onClick={startNew}>+ השאלה חדשה</AddButton>} />
         )
-      ) : (
-        <div style={cardGrid}>
-          {list.map(l => {
-            const days = daysSince(l.loan_date)
-            const stale = l.status === 'open' && days >= LOAN_STALE_DAYS
-            return (
-              <HubCard key={l.id} accent={stale ? '#ef4444' : undefined}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-black text-slate-900" style={{ fontSize: '17px', overflowWrap: 'anywhere' }}>{l.shop_name}</div>
-                    <div className="text-xs text-slate-500">{LOAN_DIRECTION_LABEL[l.direction]} · {fmtDate(l.loan_date)}</div>
+      ) : groups.map(g => {
+        const late = view === 'open' && g.oldest >= LOAN_STALE_DAYS
+        const borrowed = g.items.filter(l => l.direction === 'borrowed').reduce((n, l) => n + l.qty, 0)
+        const lent = g.items.filter(l => l.direction === 'lent').reduce((n, l) => n + l.qty, 0)
+        return (
+          <div key={g.shop} className={`lp-shop${late ? ' late' : ''}`}>
+            <div className="lp-sh">
+              <b>{g.shop}</b>
+              {g.phone && <a className="lp-tel num" href={`tel:${g.phone}`}>{fmtPhone(g.phone)}</a>}
+              <span style={{ flex: 1 }} />
+              {borrowed > 0 && <span className="lp-pill lp-pri">📥 קיבלנו {borrowed}</span>}
+              {lent > 0 && <span className="lp-pill lp-pri">📤 נתנו {lent}</span>}
+              {late && <span className="lp-pill lp-dan">{g.oldest} ימים</span>}
+            </div>
+            <div className="lp-cols"><span>צמיג</span><span>כמות</span><span>רכב / לקוח</span><span>תאריך</span><span>נרשם ע״י</span><span /></div>
+            {g.items.map(l => {
+              const days = daysSince(l.loan_date)
+              const stale = l.status === 'open' && days >= LOAN_STALE_DAYS
+              const we = l.direction === 'borrowed'
+              return (
+                <div key={l.id} className={`lp-row${stale ? ' late' : ''}`}>
+                  <div className="min-w-0">
+                    <div className="lp-size num">{l.item_desc}</div>
+                    <div className="lp-sub">{we ? '📥' : '📤'} {LOAN_DIRECTION_LABEL[l.direction]}{l.notes ? ` · 📝 ${l.notes}` : ''}</div>
                   </div>
-                  {l.status === 'open' ? (
-                    <Badge className={stale ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800'}>
-                      {days === 0 ? 'היום' : `${days} ימים`}
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-green-100 text-green-800">
-                      {LOAN_STATUS_LABEL[l.status]}{l.status === 'paid' && l.amount ? ` ₪${l.amount}` : ''}
-                    </Badge>
-                  )}
-                </div>
-                <div className="bg-slate-50 rounded-xl font-bold text-slate-800" style={{ padding: '8px 10px', direction: 'ltr', textAlign: 'right', fontSize: '15px', overflowWrap: 'anywhere' }}>
-                  {l.item_desc}{l.qty > 1 ? ` × ${l.qty}` : ''}
-                </div>
-                {(l.customer_name || l.plate) && (
-                  <div className="text-sm text-slate-600">🚗 {[l.customer_name, l.plate].filter(Boolean).join(' · ')}</div>
-                )}
-                {l.notes && <div className="text-sm text-slate-500" style={{ whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>📝 {l.notes}</div>}
-                {l.created_by_name && <div className="text-xs text-slate-400">נרשם ע״י {l.created_by_name}</div>}
-
-                <div className="flex flex-col gap-2 mt-auto" style={{ paddingTop: 6 }}>
-                  {l.status === 'open' ? (
-                    <div className="flex gap-2">
-                      <button onClick={() => setStatus(l, 'returned')} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold" style={{ padding: '9px 8px', fontSize: 14 }}>↩ הוחזר</button>
-                      <button onClick={() => { setPayFor(l); setPayAmount('') }} className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold" style={{ padding: '9px 8px', fontSize: 14 }}>₪ שולם</button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setStatus(l, 'open')} className="w-full bg-slate-100 text-slate-700 rounded-xl font-bold" style={{ padding: '9px 8px', fontSize: 14 }}>פתח מחדש</button>
-                  )}
-                  <div className="flex gap-1.5">
-                    {l.shop_phone && <IconBtn title="חיוג לפנצ׳ריה" href={`tel:${l.shop_phone}`}>📞</IconBtn>}
-                    <IconBtn title="עריכה" onClick={() => startEdit(l)}>✏️</IconBtn>
-                    <span className="flex-1" />
-                    {variant === 'office' && <IconBtn tone="danger" title="מחיקה" onClick={() => remove(l)}>🗑</IconBtn>}
+                  <div className="num">×{l.qty}</div>
+                  <div className="lp-cell lp-wide">
+                    {l.plate && <span className="plate-chip" style={{ fontSize: 12 }}>{l.plate}</span>}
+                    {l.customer_name && <span className="lp-sub">{l.customer_name}</span>}
+                    {!l.plate && !l.customer_name && <span className="lp-sub">—</span>}
+                  </div>
+                  <div className="lp-cell lp-wide">
+                    <span className="num">{fmtDate(l.loan_date)}</span>
+                    {l.status === 'open'
+                      ? <span className={`lp-pill ${stale ? 'lp-dan' : 'lp-warn'}`}>{days === 0 ? 'היום' : days === 1 ? 'יום 1' : `${days} ימים`}</span>
+                      : <span className="lp-pill lp-ok">{LOAN_STATUS_LABEL[l.status]}{l.status === 'paid' && l.amount ? ` ₪${l.amount}` : ''}</span>}
+                  </div>
+                  <div className="lp-sub">{l.created_by_name ?? '—'}</div>
+                  <div className="lp-acts">
+                    {l.status === 'open' ? (<>
+                      <button className="lp-b lp-ret" onClick={() => setStatus(l, 'returned')}>↩ {we ? 'החזרנו' : 'הוחזר'}</button>
+                      <button className="lp-b lp-pay" onClick={() => { setPayFor(l); setPayAmount('') }}>₪ {we ? 'שילמנו' : 'שולם'}</button>
+                    </>) : (
+                      <button className="lp-b lp-re" onClick={() => setStatus(l, 'open')}>פתח מחדש</button>
+                    )}
+                    <RowActionsMenu align="end" actions={[
+                      ...(l.shop_phone ? [{ key: 'tel', icon: '📞', label: 'חיוג לפנצ׳ריה', onClick: () => { window.location.href = `tel:${l.shop_phone}` } }] : []),
+                      { key: 'edit', icon: '✏️', label: 'עריכה', onClick: () => startEdit(l) },
+                      ...(variant === 'office' ? [{ key: 'del', icon: '🗑', label: 'מחיקה', danger: true, onClick: () => remove(l) }] : []),
+                    ]} />
                   </div>
                 </div>
-              </HubCard>
-            )
-          })}
-        </div>
-      )}
+              )
+            })}
+          </div>
+        )
+      })}
 
       {form && (
         <Sheet title={editId ? 'עריכת השאלה' : 'השאלה חדשה'} onClose={() => setForm(null)}>
