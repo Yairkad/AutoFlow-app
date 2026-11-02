@@ -2970,3 +2970,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-02 10:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:20 | User reports 504 /api/store + 500 /api/yard/sessions — Supabase not responding (unrelated to branch); asked user to check Supabase dashboard/status | — | awaiting user | ~2000 |
