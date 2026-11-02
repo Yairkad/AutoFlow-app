@@ -2965,3 +2965,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 09:50 | Q&A: yard receive (api/yard/receive) has no supplier link and no undo; asked user where returns should happen + auto pending credit | — | awaiting answer | ~2000 |
 | 09:47 | Created app/api/yard/return/route.ts | — | ~556 |
 | 10:05 | Return-to-supplier mode in receive screen (yard+office) + /api/yard/return + stock screen label/undo; stock-summary ignores returns | ReceiveClient.tsx, api/yard/return, StockClient.tsx, stock-summary | tsc clean, pushed | ~25000 |
+
+## Session: 2026-11-02 10:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
