@@ -1641,5 +1641,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-02T08:14:21.087355Z"
+  },
+  {
+    "id": "bug-089",
+    "timestamp": "2026-11-02T09:01:55.344993+00:00",
+    "error_message": "קליטת מלאי: שדה הסריקה לא מתנקה אחרי סריקה וצריך ללחוץ חפש אחרי כל סריקה",
+    "file": "components/yard/ReceiveClient.tsx",
+    "root_cause": "one-by-one mode handleScan (Enter / חפש) never cleared scanBuf; next scan appended to the old code, so useScanTyping saw a slow gap and skipped auto-search",
+    "fix": "handleScan clears scanBuf first; Enter in qty field confirms",
+    "tags": [
+      "yard",
+      "receive",
+      "scan",
+      "barcode"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-02T09:01:55.344993+00:00"
   }
 ]

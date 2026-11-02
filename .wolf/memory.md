@@ -2945,3 +2945,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 09:30 | Loans panel rebuilt as design B (grouped by shop, table rows, system tokens) | components/yard-hub/LoansPanel.tsx | tsc+eslint clean, pushed | ~8000 |
 | 09:50 | Requests panel rebuilt as table rows (rq-* CSS with app tokens); HubCard/Badge/cardGrid removed | components/yard-hub/RequestsPanel.tsx, ui.tsx | tsc+eslint clean, pushed | ~9000 |
+
+## Session: 2026-11-02 08:56
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:10 | Receive: field clears per scan (auto-search works again), unknown barcode → link to existing tire in one-by-one mode, linked codes saved as alt_barcodes (not overwrite sku) | ReceiveClient.tsx, api/yard/receive | tsc clean, pushed | ~10000 |

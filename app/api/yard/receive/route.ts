@@ -28,15 +28,16 @@ async function waitingFor(sb: Sb, tenantId: string, t: { width: number | null; p
 }
 
 // POST /api/yard/receive
-// { type: 'tire'|'product', id: string, qty_add: number, set_sku?: string }
-// Increments stock and returns new qty. set_sku: an unknown barcode the user linked to this item
-// and chose to keep as its SKU.
+// { type: 'tire'|'product', id: string, qty_add: number, add_barcode?: string, set_sku?: string }
+// Increments stock and returns new qty. add_barcode: an unknown barcode the user linked to this
+// item — kept as an extra barcode (alt_barcodes) so the next scan finds it; the item's own sku stays.
+// set_sku (legacy): replace the sku instead.
 export async function POST(req: NextRequest) {
   const tenantId = getYardTenantId()
   if (!tenantId) return new Response('Unauthorized', { status: 401 })
 
   const body = await req.json()
-  const { type, id, qty_add, set_sku } = body as { type: 'tire' | 'product'; id: string; qty_add: number; set_sku?: string }
+  const { type, id, qty_add, set_sku, add_barcode } = body as { type: 'tire' | 'product'; id: string; qty_add: number; set_sku?: string; add_barcode?: string }
 
   if (!type || !id || !qty_add || qty_add <= 0) {
     return new Response('Bad Request', { status: 400 })
@@ -56,9 +57,15 @@ export async function POST(req: NextRequest) {
 
   const newQty = (current.qty ?? 0) + qty_add
 
+  // Linked barcode → extra barcode on the item (unless it already is its sku / one of its barcodes)
+  const code = typeof add_barcode === 'string' ? add_barcode.trim() : ''
+  const alts: string[] = Array.isArray(current.alt_barcodes) ? current.alt_barcodes : []
+  const extraBarcode = code && 'alt_barcodes' in current && code !== current.sku && code !== current.barcode && !alts.includes(code)
+    ? { alt_barcodes: [...alts, code] } : {}
+
   const { error } = await sb
     .from(tbl)
-    .update({ qty: newQty, ...(typeof set_sku === 'string' && set_sku.trim() ? { sku: set_sku.trim() } : {}) })
+    .update({ qty: newQty, ...(typeof set_sku === 'string' && set_sku.trim() ? { sku: set_sku.trim() } : {}), ...extraBarcode })
     .eq('id', id)
     .eq('tenant_id', tenantId)
 

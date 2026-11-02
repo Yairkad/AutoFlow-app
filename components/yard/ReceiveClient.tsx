@@ -39,8 +39,10 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
   const quickMapRef = useRef<Record<string, QuickEntry>>({})
   // Unknown barcode that is really an existing tire (misread / second barcode) → link it
   const [linkCode,    setLinkCode]    = useState<string | null>(null)
-  const [linkSaveSku, setLinkSaveSku] = useState(false)
-  const quickSkuRef = useRef<Record<string, string>>({})   // item id → barcode to store as its SKU
+  const [linkSaveSku, setLinkSaveSku] = useState(true)
+  const quickSkuRef = useRef<Record<string, string>>({})   // item id → linked barcode to keep as an extra barcode
+  // One-by-one mode: the unknown barcode was linked to this existing item → saved on it at confirm
+  const [linkedCode, setLinkedCode] = useState<string | null>(null)
   const [quickEntries,    setQuickEntries]    = useState<QuickEntry[]>([])
   const [unknownQuick,    setUnknownQuick]    = useState<Record<string, number>>({})
   const [lastQuick,       setLastQuick]       = useState<string | null>(null)
@@ -97,7 +99,9 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
 
   // ── Normal scan ───────────────────────────────────────────────────────────
   async function handleScan(code: string) {
-    setLastCode(code)
+    // Clear the field right away so the next scan starts clean (and is recognised as a scan)
+    setScanBuf('')
+    setLastCode(code); setLinkedCode(null)
     const res  = await fetch(`/api/yard/barcode?code=${encodeURIComponent(code)}`)
     const data: SearchResult | null = await res.json()
     if (data) {
@@ -113,11 +117,12 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
     setStage('saving')
     const res = await fetch('/api/yard/receive', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: found.type, id: found.id, qty_add: qty }),
+      body: JSON.stringify({ type: found.type, id: found.id, qty_add: qty, ...(linkedCode ? { add_barcode: linkedCode } : {}) }),
     })
     if (res.ok) {
       const { qty: newQty, waiting: w, suggest } = await res.json()
-      showToast(`✓ ${found.name} — מלאי עודכן ל-${newQty}`)
+      showToast(`✓ ${found.name} — מלאי עודכן ל-${newQty}${linkedCode ? ' · הברקוד נשמר לצמיג' : ''}`)
+      setLinkedCode(null)
       addWaiting(w)
       if (found.type === 'tire') setPlace({ id: found.id, name: found.name, suggest: suggest ?? null })
       setFound(null); setStage('scan')
@@ -168,11 +173,17 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
   }
 
   function openLink(code: string) {
-    setLinkCode(code); setLinkSaveSku(false)
+    setLinkCode(code); setLinkSaveSku(true)
   }
 
   function linkTo(item: SearchResult) {
     if (!linkCode) return
+    // One-by-one mode: go straight to "how many arrived?" for the picked item
+    if (!quickMode) {
+      setLinkedCode(linkSaveSku ? linkCode : null)
+      setFound(item); setQty(1); setStage('found'); setLinkCode(null)
+      return
+    }
     const count = unknownQuick[linkCode] ?? 0
     const prev  = quickMapRef.current[item.id]
     quickMapRef.current[item.id] = { item, count: (prev?.count ?? 0) + count }
@@ -205,7 +216,7 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
     for (const e of entries) {
       const res = await fetch('/api/yard/receive', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: e.item.type, id: e.item.id, qty_add: e.count, set_sku: quickSkuRef.current[e.item.id] }),
+        body: JSON.stringify({ type: e.item.type, id: e.item.id, qty_add: e.count, add_barcode: quickSkuRef.current[e.item.id] }),
       })
       if (!res.ok) failed++
       else addWaiting((await res.json()).waiting)
@@ -241,11 +252,11 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
       {/* Link an unknown barcode to an existing tire */}
       {linkCode && (
         <SearchSheet<SearchResult>
-          title={`🔗 שייך לצמיג קיים — ${linkCode} (+${unknownQuick[linkCode] ?? 0})`}
+          title={quickMode ? `🔗 שייך לצמיג קיים — ${linkCode} (+${unknownQuick[linkCode] ?? 0})` : `🔗 שייך לצמיג קיים — ${linkCode}`}
           extra={
             <label className="flex items-start text-sm text-slate-700" style={{ gap: 6, lineHeight: 1.4 }}>
               <input type="checkbox" checked={linkSaveSku} onChange={e => setLinkSaveSku(e.target.checked)} style={{ marginTop: 3 }} />
-              <span>שמור את הברקוד הזה כמקט של הצמיג <span className="text-slate-400">(רק אם זה הברקוד האמיתי שלו)</span></span>
+              <span>שמור את הברקוד הזה לצמיג — בסריקה הבאה הוא יזוהה אוטומטית <span className="text-slate-400">(המקט הקיים של הצמיג נשאר)</span></span>
             </label>
           }
           placeholder="מותג או מקט..."
@@ -463,7 +474,7 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
                 className="self-center bg-blue-600 text-white rounded-xl font-bold disabled:opacity-40" style={{ padding: '8px 18px', fontSize: 15 }}>
                 🔍 חפש
               </button>
-              <p className="text-slate-400 text-sm text-center">הסורק מזהה אוטומטית · הקלדה ידנית: Enter או ״חפש״</p>
+              <p className="text-slate-400 text-sm text-center">הסורק מחפש אוטומטית · הקלדה ידנית: Enter או ״חפש״ · בכמות: Enter מאשר</p>
             </div>
           )}
 
@@ -484,6 +495,11 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
                   <span className="text-slate-500 text-sm">מלאי נוכחי:</span>
                   <span className="font-bold text-slate-700">{found.stock ?? 0} יח׳</span>
                 </div>
+                {linkedCode && (
+                  <div className="mt-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm font-semibold" style={{ padding: '8px 12px' }}>
+                    🔗 הברקוד <span className="font-mono">{linkedCode}</span> יישמר לצמיג הזה
+                  </div>
+                )}
                 {(found.dup_count ?? 0) > 1 && (
                   <div role="alert" className="mt-3 bg-amber-50 border border-amber-300 text-amber-800 rounded-lg text-sm font-semibold" style={{ padding: '8px 12px' }}>
                     ⚠ לברקוד הזה יש {found.dup_count} רשומות כפולות — נבחרה זו עם המחיר. כדאי למזג דרך כפתור 🔁 כפילויות.
@@ -499,6 +515,7 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
                     style={{ width: '52px', height: '52px', fontSize: '24px' }}>−</button>
                   <input ref={qtyRef} type="number" min="1" value={qty}
                     onChange={e => setQty(Math.max(1, Number(e.target.value) || 1))}
+                    onKeyDown={e => { if (e.key === 'Enter') confirmReceive() }}
                     className="flex-1 border-2 border-blue-400 rounded-xl text-center font-black text-slate-900 outline-none"
                     style={{ height: '52px', fontSize: '28px' }} />
                   <button onClick={() => setQty(q => q + 1)}
@@ -512,7 +529,7 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
                 style={{ padding: '18px', fontSize: '18px' }}>
                 ✓ אשר קליטת {qty} יח׳
               </button>
-              <button onClick={() => setStage('scan')}
+              <button onClick={() => { setLinkedCode(null); setStage('scan') }}
                 className="w-full bg-white border-2 border-slate-200 text-slate-500 font-semibold rounded-2xl active:bg-slate-50"
                 style={{ padding: '14px', fontSize: '15px' }}>
                 ← סרוק שוב
@@ -527,6 +544,14 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
                 <p className="font-bold text-amber-800">ברקוד לא נמצא במערכת</p>
                 <p className="font-mono text-amber-700 text-sm mt-1">{lastCode}</p>
               </div>
+
+              {/* The tire may already exist under another barcode — link instead of creating a duplicate */}
+              <button onClick={() => openLink(lastCode)}
+                className="w-full bg-white border-2 border-blue-500 text-blue-700 font-bold rounded-2xl active:bg-blue-50"
+                style={{ padding: '14px', fontSize: '16px' }}>
+                🔗 יש צמיג כזה במלאי — שייך אליו
+              </button>
+              <p className="text-center text-slate-400 text-sm" style={{ marginTop: -6 }}>או צור פריט חדש:</p>
 
               <div className="flex rounded-xl overflow-hidden border-2 border-slate-200">
                 {(['tire', 'product'] as const).map(t => (
@@ -589,7 +614,7 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
                 style={{ padding: '18px', fontSize: '18px' }}>
                 + צור וקלוט {qty} יח׳
               </button>
-              <button onClick={() => setStage('scan')}
+              <button onClick={() => { setLinkedCode(null); setStage('scan') }}
                 className="w-full bg-white border-2 border-slate-200 text-slate-500 font-semibold rounded-2xl active:bg-slate-50"
                 style={{ padding: '14px', fontSize: '15px' }}>
                 ← סרוק שוב
