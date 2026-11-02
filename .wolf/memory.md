@@ -2944,3 +2944,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:30 | Loans panel rebuilt as design B (grouped by shop, table rows, system tokens) | components/yard-hub/LoansPanel.tsx | tsc+eslint clean, pushed | ~8000 |
+| 09:50 | Requests panel rebuilt as table rows (rq-* CSS with app tokens); HubCard/Badge/cardGrid removed | components/yard-hub/RequestsPanel.tsx, ui.tsx | tsc+eslint clean, pushed | ~9000 |
