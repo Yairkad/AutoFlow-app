@@ -6,6 +6,8 @@
 
 ## User Preferences
 
+- [2026-11-02] User got lost in a long multi-option answer ('נהיה לי בלאגן'). Explain changes as: מה קיים / הבעיה / מה נשנה / איך זה פותר, with ONE concrete example, and ask ONE question at a time.
+
 - [2026-11-02] There is NO Netfree in this business — never cite Netfree as a reason/explanation (user: 'אל תערבב דברים'). Old code comments mentioning Netfree are wrong context; lib/supabase/client.ts proxy (/api/store) still exists functionally.
 - [2026-11-02] **לענות למשתמש בעברית בלבד** — כולל סיכומים וכותרות. אנגלית רק בשמות קבצים/קוד.
 

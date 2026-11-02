@@ -2994,3 +2994,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-02 11:56
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:20 | Discussed no-stock flow; proposed negative stock + 'שייך לצמיג' for unlinked charges; awaiting answer on existing rows | — | discussion | ~3000 |
