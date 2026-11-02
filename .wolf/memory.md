@@ -2951,3 +2951,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 10:10 | Receive: field clears per scan (auto-search works again), unknown barcode → link to existing tire in one-by-one mode, linked codes saved as alt_barcodes (not overwrite sku) | ReceiveClient.tsx, api/yard/receive | tsc clean, pushed | ~10000 |
+
+## Session: 2026-11-02 09:28
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:35 | Q&A: return tires to supplier — answered (delete arrival line / credit + manual stock out); offered 'מה הוחזר?' on credit rows | — | answered, no code change | ~3000 |
