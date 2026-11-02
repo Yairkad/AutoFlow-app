@@ -115,9 +115,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // Cancelled: close without touching stock and without recording sales
   if (status === 'archived' && closeType !== 'cancelled') {
 
-    // Deduct inventory for all items with ref_id, and record per item how many units were
-    // sold beyond what was in stock (no_stock_qty) — the office sorts those out later in
-    // "מעקב רחבה → נמכר ללא מלאי". Items with no ref_id (charged freely) are all "no stock".
+    // Deduct inventory for every item linked to a tire/product — the full quantity, even below
+    // zero (a tire installed before it was received shows as e.g. −2 until the receive puts it
+    // right). Items with no ref_id (charged freely / unknown barcode) are "no stock": the office
+    // links them to a tire in "נמכר ללא מלאי".
     const { data: session } = await supabase
       .from('yard_sessions')
       .select('yard_session_items(id, item_type, ref_id, quantity)')
@@ -127,32 +128,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     type Item = { id: string; item_type: string; ref_id: string | null; quantity: number }
     const items = ((session?.yard_session_items ?? []) as Item[]).filter(i => i.item_type === 'tire' || i.item_type === 'product')
-    const tireIds = [...new Set(items.filter(i => i.item_type === 'tire' && i.ref_id).map(i => i.ref_id!))]
-    const prodIds = [...new Set(items.filter(i => i.item_type === 'product' && i.ref_id).map(i => i.ref_id!))]
-    const [tq, pq] = await Promise.all([
-      tireIds.length ? supabase.from('tires').select('id, qty').in('id', tireIds) : Promise.resolve({ data: [] as { id: string; qty: number }[] }),
-      prodIds.length ? supabase.from('products').select('id, qty').in('id', prodIds) : Promise.resolve({ data: [] as { id: string; qty: number }[] }),
-    ])
-    const left = new Map<string, number>()
-    for (const r of [...(tq.data ?? []), ...(pq.data ?? [])]) left.set(r.id, Math.max(0, Number(r.qty) || 0))
-
     for (const item of items) {
-      let short = item.quantity
       if (item.ref_id) {
-        const have = left.get(item.ref_id) ?? 0
-        short = Math.max(0, item.quantity - have)
-        left.set(item.ref_id, Math.max(0, have - item.quantity))
-        const fn = item.item_type === 'tire' ? 'decrement_tire_qty' : 'decrement_product_qty'
-        const { error: decErr } = await supabase.rpc(fn, { p_id: item.ref_id, p_qty: item.quantity })
-        if (decErr) console.error(`${fn} failed`, item.ref_id, decErr.message)
+        const table = item.item_type === 'tire' ? 'tires' : 'products'
+        const { data: row } = await supabase.from(table).select('qty').eq('id', item.ref_id).eq('tenant_id', profile.tenant_id).maybeSingle()
+        if (row) {
+          const { error: decErr } = await supabase.from(table).update({ qty: (Number(row.qty) || 0) - item.quantity })
+            .eq('id', item.ref_id).eq('tenant_id', profile.tenant_id)
+          if (decErr) console.error('stock decrement failed', item.ref_id, decErr.message)
+        }
         // Record the sale as a stock movement (shown on the stock screen next to arrivals)
-        const [table, refCol] = item.item_type === 'tire' ? ['tire_sales', 'tire_id'] : ['product_sales', 'product_id']
-        const row = { tenant_id: profile.tenant_id, [refCol]: item.ref_id, qty: item.quantity, movement_type: 'sale' }
-        let { error: mvErr } = await supabase.from(table).insert({ ...row, source: 'yard', session_id: id })
+        const [mvTable, refCol] = item.item_type === 'tire' ? ['tire_sales', 'tire_id'] : ['product_sales', 'product_id']
+        const mv = { tenant_id: profile.tenant_id, [refCol]: item.ref_id, qty: item.quantity, movement_type: 'sale' }
+        let { error: mvErr } = await supabase.from(mvTable).insert({ ...mv, source: 'yard', session_id: id })
         // Before migration 109 the source columns don't exist yet — still record the sale
-        if (mvErr && /source|session_id|column/i.test(mvErr.message)) ({ error: mvErr } = await supabase.from(table).insert(row))
+        if (mvErr && /source|session_id|column/i.test(mvErr.message)) ({ error: mvErr } = await supabase.from(mvTable).insert(mv))
         if (mvErr) console.error('sale movement insert failed', item.ref_id, mvErr.message)
       }
+      const short = item.ref_id ? 0 : item.quantity
       const { error: nsErr } = await supabase.from('yard_session_items')
         .update({ no_stock_qty: short > 0 ? short : null }).eq('id', item.id)
       if (nsErr) console.error('no_stock_qty update failed', item.id, nsErr.message)

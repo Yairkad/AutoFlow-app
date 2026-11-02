@@ -6,6 +6,8 @@
 
 ## User Preferences
 
+- [2026-11-02] User got lost in a long multi-option answer ('נהיה לי בלאגן'). Explain changes as: מה קיים / הבעיה / מה נשנה / איך זה פותר, with ONE concrete example, and ask ONE question at a time.
+
 - [2026-11-02] There is NO Netfree in this business — never cite Netfree as a reason/explanation (user: 'אל תערבב דברים'). Old code comments mentioning Netfree are wrong context; lib/supabase/client.ts proxy (/api/store) still exists functionally.
 - [2026-11-02] **לענות למשתמש בעברית בלבד** — כולל סיכומים וכותרות. אנגלית רק בשמות קבצים/קוד.
 
@@ -235,6 +237,8 @@
 - **Inspection checklist skeleton_only (2026-06-17):** skeleton_only flag stored in `findings` JSON as `{ skeleton_only: true, items: [...], notes: '' }`. No DB column needed. SKELETON_SYSTEM_INDICES = Set([16, 17]) — שלדת מרכב, מרכב (פחחות). Status 'na' added to ChecklistItem for non-skeleton systems. parseFindings() auto-applies 'na' when skeleton_only=true.
 
 ## Decision Log
+
+- [2026-11-02] NEGATIVE STOCK allowed everywhere. Closing a yard card deducts the FULL qty of linked items (tires/products) even below 0 (no more decrement_*_qty RPC, which clamped at 0); no_stock_qty is now only set for UNLINKED items (free charge / unknown barcode). 'נמכר ללא מלאי' (NoStockPanel) = unlinked lines with '🔗 שייך' (pick tire/product or create new tire → deduct, set ref_id, resolve; unknown barcode saved as alt_barcode). One-off '⬇ הורד מהמלאי' (POST action apply_linked) handles old linked lines that stopped at 0 — user chose to convert existing rows too. Reopen logic unchanged (back = quantity − no_stock_qty).
 
 - [2026-11-02] Return to supplier (wrong delivery): a '↩ החזרה לספק' mode inside ReceiveClient (so yard AND office get it). Stock movement = movement_type 'order' with NEGATIVE qty + source 'return' (no schema change; received reports net it out; stock-summary last-receive date filters qty>0). Undo from /stock-count (✕ like manual). Supplier credit note stays MANUAL in the supplier ledger — user's explicit choice.
 - [2026-11-02] מעקב רחבה panels (loans, waiting customers) = bordered table blocks with column headers, pills/buttons from app tokens (--primary/--success/--warning/--danger soft), stacked on <860px. User wants "more rows and tables", not cards.
