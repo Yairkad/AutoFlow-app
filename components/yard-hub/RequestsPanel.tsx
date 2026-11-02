@@ -9,7 +9,7 @@ import {
   type CustomerRequest, type PaymentStatus, type RequestKind, type RequestStatus,
 } from '@/lib/yard/hub'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
-import { AddButton, Chips, Empty, Field, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle } from './ui'
+import { AddButton, Badge, Chips, Empty, Field, HubCard, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle } from './ui'
 
 type View = 'order' | 'inquiry' | 'closed'
 
@@ -43,7 +43,7 @@ const PAY_COLOR: Record<PaymentStatus, string> = {
 }
 
 // Compact grid: more cards per row than the shared 320px grid
-const requestGrid: React.CSSProperties = { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 240px), 1fr))' }
+const requestGrid: React.CSSProperties = { display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))' }
 
 const STATUS_COLOR: Record<RequestStatus, string> = {
   new:       'bg-slate-200 text-slate-800',
@@ -278,13 +278,15 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
               ? `שולם ₪${r.paid_amount}${left != null ? ` · נשאר ₪${left}` : ''}`
               : PAYMENT_LABEL[pay]
             return (
-              <div key={r.id} className={`bg-white rounded-xl border-2 flex flex-col ${r.status === 'arrived' ? 'border-green-500' : 'border-slate-200'}`} style={{ padding: '10px 12px', gap: 6 }}>
-                {/* Fixed rows, same order on every card: name+date / phone+status / item / price+payment / … / meta / button */}
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 min-w-0 font-black text-slate-900 truncate" style={{ fontSize: 16 }}>{r.customer_name}</div>
-                  <span className="text-slate-400 flex-shrink-0" style={{ fontSize: 11.5, whiteSpace: 'nowrap' }}>
-                    {fmtDate(r.created_at)}{isOpen && days > 0 ? ` · ${days} ימים` : ''}
-                  </span>
+              <HubCard key={r.id} accent={r.status === 'arrived' ? '#16a34a' : (isOpen && (r.no_answer_count ?? 0) > 0 ? '#ef4444' : undefined)}>
+                {/* Header: name (wraps, never clipped) + menu; date line underneath */}
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-black text-slate-900" style={{ fontSize: 16, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{r.customer_name}</div>
+                    <div className="text-slate-400" style={{ fontSize: 12, marginTop: 1 }}>
+                      {fmtDate(r.created_at)}{isOpen && days > 0 ? ` · ${days} ימים` : ''}{r.created_by_name ? ` · ${r.created_by_name}` : ''}
+                    </div>
+                  </div>
                   <RowActionsMenu align="end" actions={[
                     ...(r.phone ? [{ key: 'wa', icon: '💬', label: 'שליחת וואטסאפ', onClick: () => window.open(whatsappLink(r.phone!, r.status === 'arrived' ? `שלום ${r.customer_name}, הצמיג שהזמנת (${r.item_desc}) הגיע אלינו 🙂` : undefined), '_blank') }] : []),
                     ...(isOpen ? [{ key: 'noans', icon: '📵', label: 'חייגנו — לא ענה', onClick: () => patch(r, { no_answer_count: (r.no_answer_count ?? 0) + 1, no_answer_at: new Date().toISOString() }) }] : []),
@@ -296,59 +298,59 @@ export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' 
                   ]} />
                 </div>
 
-                <div className="flex items-center gap-2" style={{ marginTop: -4 }}>
-                  <div className="flex-1 min-w-0">
-                    {r.phone
-                      ? <a href={`tel:${r.phone}`} className="font-bold" style={{ fontSize: 14, color: '#1E2B66', direction: 'ltr', whiteSpace: 'nowrap', display: 'inline-block' }}>📞 {fmtPhone(r.phone)}</a>
-                      : <span className="text-slate-300" style={{ fontSize: 13 }}>אין טלפון</span>}
-                  </div>
+                {/* Badges wrap onto a new line instead of covering each other */}
+                <div className="flex flex-wrap items-center" style={{ gap: 6 }}>
+                  <Badge className={STATUS_COLOR[r.status]}>{REQUEST_STATUS_LABEL[r.status]}</Badge>
                   {isOpen && (r.no_answer_count ?? 0) > 0 && (
-                    <span title={r.no_answer_at ? `ניסיון אחרון: ${fmtDate(r.no_answer_at)}` : undefined}
-                      className="rounded-full font-bold text-xs flex-shrink-0 bg-red-50 text-red-700 border border-red-200" style={{ padding: '2px 8px', whiteSpace: 'nowrap' }}>
+                    <Badge className="bg-red-50 text-red-700 border border-red-200" title={r.no_answer_at ? `ניסיון אחרון: ${fmtDate(r.no_answer_at)}` : undefined}>
                       📵 לא ענה{(r.no_answer_count ?? 0) > 1 ? ` ×${r.no_answer_count}` : ''}{r.no_answer_at ? ` · ${fmtDate(r.no_answer_at)}` : ''}
-                    </span>
+                    </Badge>
                   )}
-                  <span className={`rounded-full font-bold text-xs flex-shrink-0 ${STATUS_COLOR[r.status]}`} style={{ padding: '3px 9px', whiteSpace: 'nowrap' }}>
-                    {REQUEST_STATUS_LABEL[r.status]}
-                  </span>
+                  <Badge className={`border ${PAY_COLOR[pay]}`} onClick={() => openPayment(r)}>{payText}</Badge>
                 </div>
 
-                <div className="font-bold text-slate-800" style={{ direction: 'ltr', textAlign: 'right', fontSize: 15 }}>
-                  {r.item_desc}{r.qty > 1 ? ` × ${r.qty}` : ''}
+                {/* Item + price block */}
+                <div className="bg-slate-50 rounded-xl" style={{ padding: '8px 10px' }}>
+                  <div className="font-bold text-slate-800" style={{ direction: 'ltr', textAlign: 'right', fontSize: 15, overflowWrap: 'anywhere' }}>
+                    {r.item_desc}{r.qty > 1 ? ` × ${r.qty}` : ''}
+                  </div>
+                  <div style={{ fontSize: 13, marginTop: 2 }}>
+                    {r.quoted_price != null
+                      ? <span className="font-bold text-slate-700">₪{r.quoted_price}{r.qty > 1 && <span className="text-slate-400 font-normal" style={{ fontSize: 12 }}> (₪{round2(r.quoted_price / r.qty)} ליח&apos;)</span>}</span>
+                      : <span className="text-slate-400">אין מחיר</span>}
+                  </div>
                 </div>
 
-                <div className="flex items-center flex-wrap gap-x-2 gap-y-1" style={{ fontSize: 13 }}>
-                  {r.quoted_price != null
-                    ? <span className="font-bold text-slate-800" style={{ fontSize: 14 }}>₪{r.quoted_price}{r.qty > 1 && <span className="text-slate-400 font-normal" style={{ fontSize: 12 }}> (₪{round2(r.quoted_price / r.qty)} ליח&apos;)</span>}</span>
-                    : <span className="text-slate-300">אין מחיר</span>}
-                  <button onClick={() => openPayment(r)} className={`rounded-full border font-bold ${PAY_COLOR[pay]}`} style={{ padding: '1px 8px', fontSize: 12 }}>
-                    {payText}
-                  </button>
+                {/* Contact + details: each on its own line, wrapping */}
+                <div className="flex flex-col text-slate-600" style={{ fontSize: 13, gap: 3 }}>
+                  {r.phone
+                    ? <a href={`tel:${r.phone}`} className="font-bold self-start" style={{ fontSize: 14, color: '#1E2B66' }}>📞 <span dir="ltr">{fmtPhone(r.phone)}</span></a>
+                    : <span className="text-slate-400">אין טלפון</span>}
+                  {(r.plate || r.supplier_name) && (
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                      {r.plate && <span>🚗 {r.plate}</span>}
+                      {r.supplier_name && <span>ספק: {r.supplier_name}</span>}
+                    </div>
+                  )}
+                  {r.install_at && (
+                    <button onClick={() => openCall(r)} className="self-start bg-blue-50 text-blue-800 border border-blue-200 rounded-lg font-bold" style={{ padding: '2px 8px', fontSize: 13 }}>
+                      🗓 התקנה: {fmtInstall(r.install_at)}
+                    </button>
+                  )}
+                  {r.notes && <span className="text-slate-500" style={{ whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>📝 {r.notes}</span>}
                 </div>
 
-                {r.install_at && (
-                  <button onClick={() => openCall(r)} className="self-start bg-blue-50 text-blue-800 border border-blue-200 rounded-lg font-bold" style={{ padding: '2px 8px', fontSize: 13 }}>
-                    🗓 התקנה: {fmtInstall(r.install_at)}
-                  </button>
-                )}
-
-                {/* Small details sit right above the button, pinned to the bottom */}
-                <div className="text-slate-500 flex flex-wrap gap-x-2" style={{ fontSize: 12, marginTop: 'auto' }}>
-                  {r.supplier_name && <span>ספק: {r.supplier_name}</span>}
-                  {r.plate && <span>🚗 {r.plate}</span>}
-                  {r.notes && <span style={{ whiteSpace: 'pre-line' }}>📝 {r.notes}</span>}
-                  {r.created_by_name && <span className="text-slate-400">· {r.created_by_name}</span>}
+                <div style={{ marginTop: 'auto' }}>
+                  {next && (
+                    <button onClick={() => advance(r, next)} className={`w-full ${r.kind === 'inquiry' ? 'bg-violet-600 hover:bg-violet-700' : NEXT_COLOR[r.status]} text-white rounded-xl font-bold`} style={{ padding: '9px', fontSize: 14 }}>
+                      {r.kind === 'inquiry' && r.status === 'new' ? '✓ בירור בוצע' : NEXT_LABEL[r.status]}
+                    </button>
+                  )}
+                  {!isOpen && (
+                    <button onClick={() => setStatus(r, 'new')} className="w-full bg-slate-100 text-slate-700 rounded-xl font-bold" style={{ padding: '9px', fontSize: 14 }}>פתח מחדש</button>
+                  )}
                 </div>
-
-                {next && (
-                  <button onClick={() => advance(r, next)} className={`w-full ${r.kind === 'inquiry' ? 'bg-violet-600 hover:bg-violet-700' : NEXT_COLOR[r.status]} text-white rounded-lg font-bold`} style={{ padding: '8px', fontSize: 14 }}>
-                    {r.kind === 'inquiry' && r.status === 'new' ? '✓ בירור בוצע' : NEXT_LABEL[r.status]}
-                  </button>
-                )}
-                {!isOpen && (
-                  <button onClick={() => setStatus(r, 'new')} className="w-full bg-slate-100 text-slate-700 rounded-lg font-bold" style={{ padding: '8px', fontSize: 14 }}>פתח מחדש</button>
-                )}
-              </div>
+              </HubCard>
             )
           })}
         </div>

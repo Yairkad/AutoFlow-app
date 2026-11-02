@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { canYard, canYardMoney, DEFAULT_YARD_MODULES, type YardKey } from '@/lib/yard/access'
@@ -67,9 +67,22 @@ async function getOfficeYardUser(): Promise<YardUser | null> {
   }
 }
 
-/** Who is calling a yard route: the terminal employee first, else the office user. */
+/** True when the request was sent from the yard terminal pages (/yard, /yard/...). */
+async function fromYardTerminal(): Promise<boolean> {
+  const ref = (await headers()).get('referer')
+  if (!ref) return false
+  try {
+    const path = new URL(ref).pathname
+    return path === '/yard' || path.startsWith('/yard/')
+  } catch { return false }
+}
+
+/** Who is calling a yard route. From the terminal pages: the PIN employee first. From office pages
+ *  (e.g. /yard-tracking): the office login first — a PIN cookie left over in the same browser must
+ *  not stamp office actions with the terminal employee's name. */
 export async function getYardUser(): Promise<YardUser | null> {
-  return (await getYardEmployee()) ?? (await getOfficeYardUser())
+  if (await fromYardTerminal()) return (await getYardEmployee()) ?? (await getOfficeYardUser())
+  return (await getOfficeYardUser()) ?? (await getYardEmployee())
 }
 
 /** API guard for the worker-hub routes: signed in + allowed for this section. */

@@ -7,7 +7,7 @@ import {
   LOAN_DIRECTION_LABEL, LOAN_STATUS_LABEL, LOAN_STALE_DAYS, daysSince,
   type LoanDirection, type TireLoan,
 } from '@/lib/yard/hub'
-import { AddButton, Chips, Empty, Field, HubFrame, IconBtn, cardGrid, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle, todayISO } from './ui'
+import { AddButton, Badge, Chips, Empty, Field, HubCard, HubFrame, IconBtn, cardGrid, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle, todayISO } from './ui'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 
 type View = 'borrowed' | 'lent' | 'closed'
@@ -141,39 +141,39 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
             const days = daysSince(l.loan_date)
             const stale = l.status === 'open' && days >= LOAN_STALE_DAYS
             return (
-              <div key={l.id} className={`bg-white rounded-2xl border-2 flex flex-col gap-1.5 ${stale ? 'border-red-500' : 'border-slate-200'}`} style={{ padding: '14px' }}>
+              <HubCard key={l.id} accent={stale ? '#ef4444' : undefined}>
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="font-black text-slate-900" style={{ fontSize: '18px' }}>{l.shop_name}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-black text-slate-900" style={{ fontSize: '17px', overflowWrap: 'anywhere' }}>{l.shop_name}</div>
                     <div className="text-xs text-slate-500">{LOAN_DIRECTION_LABEL[l.direction]} · {fmtDate(l.loan_date)}</div>
                   </div>
                   {l.status === 'open' ? (
-                    <span className={`rounded-full font-bold text-xs ${stale ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800'}`} style={{ padding: '4px 10px', whiteSpace: 'nowrap' }}>
+                    <Badge className={stale ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800'}>
                       {days === 0 ? 'היום' : `${days} ימים`}
-                    </span>
+                    </Badge>
                   ) : (
-                    <span className="rounded-full font-bold text-xs bg-green-100 text-green-800" style={{ padding: '4px 10px' }}>
+                    <Badge className="bg-green-100 text-green-800">
                       {LOAN_STATUS_LABEL[l.status]}{l.status === 'paid' && l.amount ? ` ₪${l.amount}` : ''}
-                    </span>
+                    </Badge>
                   )}
                 </div>
-                <div className="font-bold text-slate-800" style={{ direction: 'ltr', textAlign: 'right', fontSize: '17px' }}>
+                <div className="bg-slate-50 rounded-xl font-bold text-slate-800" style={{ padding: '8px 10px', direction: 'ltr', textAlign: 'right', fontSize: '15px', overflowWrap: 'anywhere' }}>
                   {l.item_desc}{l.qty > 1 ? ` × ${l.qty}` : ''}
                 </div>
                 {(l.customer_name || l.plate) && (
                   <div className="text-sm text-slate-600">🚗 {[l.customer_name, l.plate].filter(Boolean).join(' · ')}</div>
                 )}
-                {l.notes && <div className="text-sm text-slate-500">📝 {l.notes}</div>}
+                {l.notes && <div className="text-sm text-slate-500" style={{ whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>📝 {l.notes}</div>}
                 {l.created_by_name && <div className="text-xs text-slate-400">נרשם ע״י {l.created_by_name}</div>}
 
                 <div className="flex flex-col gap-2 mt-auto" style={{ paddingTop: 6 }}>
                   {l.status === 'open' ? (
                     <div className="flex gap-2">
-                      <button onClick={() => setStatus(l, 'returned')} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold" style={{ padding: '10px 8px', fontSize: 15 }}>↩ הוחזר</button>
-                      <button onClick={() => { setPayFor(l); setPayAmount('') }} className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold" style={{ padding: '10px 8px', fontSize: 15 }}>₪ שולם</button>
+                      <button onClick={() => setStatus(l, 'returned')} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold" style={{ padding: '9px 8px', fontSize: 14 }}>↩ הוחזר</button>
+                      <button onClick={() => { setPayFor(l); setPayAmount('') }} className="flex-1 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold" style={{ padding: '9px 8px', fontSize: 14 }}>₪ שולם</button>
                     </div>
                   ) : (
-                    <button onClick={() => setStatus(l, 'open')} className="w-full bg-slate-100 text-slate-700 rounded-lg font-bold" style={{ padding: '10px 8px' }}>פתח מחדש</button>
+                    <button onClick={() => setStatus(l, 'open')} className="w-full bg-slate-100 text-slate-700 rounded-xl font-bold" style={{ padding: '9px 8px', fontSize: 14 }}>פתח מחדש</button>
                   )}
                   <div className="flex gap-1.5">
                     {l.shop_phone && <IconBtn title="חיוג לפנצ׳ריה" href={`tel:${l.shop_phone}`}>📞</IconBtn>}
@@ -182,7 +182,7 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
                     {variant === 'office' && <IconBtn tone="danger" title="מחיקה" onClick={() => remove(l)}>🗑</IconBtn>}
                   </div>
                 </div>
-              </div>
+              </HubCard>
             )
           })}
         </div>

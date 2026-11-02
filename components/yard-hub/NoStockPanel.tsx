@@ -74,9 +74,9 @@ export default function NoStockPanel({ variant }: { variant: 'yard' | 'office' }
       ) : (
         <div className="flex flex-col gap-3">
           {groups.map(g => (
-            <div key={g.key} className="bg-white rounded-xl border-2 border-slate-200" style={{ padding: '10px 12px' }}>
+            <div key={g.key} className="bg-white rounded-2xl border border-slate-200 shadow-sm min-w-0" style={{ padding: '12px 14px' }}>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-black text-slate-900" style={{ fontSize: 16, direction: 'ltr' }}>{g.key}</span>
+                <span className="font-black text-slate-900" style={{ fontSize: 16, direction: 'ltr', overflowWrap: 'anywhere', minWidth: 0 }}>{g.key}</span>
                 {g.units > 0 && (
                   <span className="bg-orange-100 text-orange-800 rounded-full font-bold" style={{ fontSize: 12, padding: '2px 9px' }}>
                     נמכרו {g.units} ללא מלאי
@@ -97,7 +97,7 @@ export default function NoStockPanel({ variant }: { variant: 'yard' | 'office' }
                   <div key={r.id} className="flex items-center flex-wrap gap-x-2 gap-y-0.5 border-t border-slate-100" style={{ padding: '6px 0', fontSize: 13, opacity: r.stock_resolved_at ? 0.5 : 1 }}>
                     <span className="text-slate-500" style={{ width: 70 }}>{fmtDate(r.yard_sessions.closed_at ?? r.created_at)}</span>
                     <span className="font-bold text-slate-700" style={{ direction: 'ltr' }}>{r.yard_sessions.plate}</span>
-                    <span className="text-slate-600 flex-1" style={{ minWidth: 140 }}>{r.name}{r.sku ? ` · ${r.sku}` : ''}</span>
+                    <span className="text-slate-600 flex-1" style={{ minWidth: 140, overflowWrap: 'anywhere' }}>{r.name}{r.sku ? ` · ${r.sku}` : ''}</span>
                     <span className="font-bold text-orange-700">×{r.no_stock_qty}</span>
                     <span className="text-slate-500">₪{Number(r.unit_price).toLocaleString()}</span>
                     {r.stock_resolved_at ? (
