@@ -11,7 +11,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
           <p className="font-black text-slate-800" style={{ fontSize: '19px' }}>{title}</p>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700" style={{ fontSize: '22px' }} aria-label="סגור">✕</button>
         </div>
-        <div className="overflow-y-auto flex flex-col gap-3" style={{ padding: '16px 18px' }}>{children}</div>
+        <div className="overflow-y-auto flex flex-col gap-3 scroll-col" style={{ padding: '16px 18px' }}>{children}</div>
       </div>
     </div>
   )

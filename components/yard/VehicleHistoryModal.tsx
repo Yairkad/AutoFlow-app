@@ -87,7 +87,7 @@ export default function VehicleHistoryModal({ plate, onClose }: Props) {
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto flex-1" style={{ padding: '12px 16px', gap: '12px', display: 'flex', flexDirection: 'column' }}>
+        <div className="overflow-y-auto flex-1 scroll-col" style={{ padding: '12px 16px', gap: '12px', display: 'flex', flexDirection: 'column' }}>
           {!sessions && !error && (
             <p className="text-center text-slate-400 py-8">טוען...</p>
           )}

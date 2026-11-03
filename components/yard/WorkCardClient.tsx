@@ -495,7 +495,7 @@ export default function WorkCardClient({ session: initialSession, services }: Pr
   return (
     // The yard frame is overflow:hidden, so this screen scrolls itself — on a portrait phone the
     // actions + cart are taller than the screen and the finish button was cut off.
-    <div className="flex flex-col h-full" style={{ background: '#f0f4f8', overflowY: 'auto' }}>
+    <div className="flex flex-col h-full scroll-col" style={{ background: '#f0f4f8', overflowY: 'auto' }}>
 
       {showHistory && (
         <VehicleHistoryModal plate={session.plate} onClose={() => setShowHistory(false)} />

@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { Assistant } from 'next/font/google'
+import '@fontsource-variable/assistant/index.css'
 import { getIntakeTenant } from '@/lib/og/intakeTenant'
 import IntakeFormClient from '@/components/inspections/IntakeFormClient'
 
 export const dynamic = 'force-dynamic'
 
-const assistant = Assistant({ subsets: ['hebrew', 'latin'], weight: ['400', '600', '700', '800'] })
+const assistant = { className: 'font-assistant' }   // self-hosted (@fontsource), see app/layout.tsx
 
 function logoVersion(logo: string) {
   let h = 0

@@ -1,30 +1,24 @@
 import type { Metadata, Viewport } from 'next'
-import { Heebo, IBM_Plex_Sans_Hebrew, IBM_Plex_Mono } from 'next/font/google'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import { createServiceClient } from '@/lib/supabase/service'
 import RouteProgress from '@/components/ui/RouteProgress'
+import '@fontsource-variable/heebo/index.css'
+import '@fontsource/ibm-plex-sans-hebrew/hebrew-400.css'
+import '@fontsource/ibm-plex-sans-hebrew/hebrew-500.css'
+import '@fontsource/ibm-plex-sans-hebrew/hebrew-600.css'
+import '@fontsource/ibm-plex-sans-hebrew/hebrew-700.css'
+import '@fontsource/ibm-plex-sans-hebrew/latin-400.css'
+import '@fontsource/ibm-plex-sans-hebrew/latin-500.css'
+import '@fontsource/ibm-plex-sans-hebrew/latin-600.css'
+import '@fontsource/ibm-plex-sans-hebrew/latin-700.css'
+import '@fontsource/ibm-plex-mono/latin-500.css'
+import '@fontsource/ibm-plex-mono/latin-600.css'
 import './globals.css'
 
-const heebo = Heebo({
-  subsets: ['hebrew', 'latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
-  variable: '--font-heebo',
-})
-
-// App UI typeface (redesign 2026-10): Plex Hebrew for text, Plex Mono for numbers / sizes / plates.
-// Heebo stays loaded for the public site (landing CSS uses --font-heebo).
-const plex = IBM_Plex_Sans_Hebrew({
-  subsets: ['hebrew', 'latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-ui',
-})
-const plexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['500', '600'],
-  variable: '--font-num',
-})
-
+// Fonts are self-hosted (@fontsource) — next/font/google fetches them from Google on every build,
+// and Turbopack (Next 16.1) breaks when Google answers with /l/font?kit=…&skey=… URLs (random build failures).
+// The CSS variables --font-heebo / --font-ui / --font-num are defined in globals.css.
 export async function generateMetadata(): Promise<Metadata> {
   try {
     // Service-role client: no session needed — works for social bots & crawlers too
@@ -73,7 +67,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="he" dir="rtl" className={`${heebo.variable} ${plex.variable} ${plexMono.variable}`}>
+    <html lang="he" dir="rtl">
       <body>
         <RouteProgress />
         <ToastProvider>

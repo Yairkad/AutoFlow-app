@@ -1730,5 +1730,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-03T12:00:00Z"
+  },
+  {
+    "id": "bug-094",
+    "timestamp": "2026-11-03T12:10:00Z",
+    "error_message": "Vercel build: Turbopack 'next/font/google queries have exactly one entry' / Can't resolve '@vercel/turbopack-next/internal/font/google/font' (heebo)",
+    "file": "app/layout.tsx",
+    "root_cause": "Google Fonts sometimes returns /l/font?kit=…&skey=… URLs; Next 16.1 Turbopack doesn't escape the & (vercel/next.js#99114, fixed in 16.4.3+). Random build failures.",
+    "fix": "Self-host fonts via @fontsource (heebo, ibm-plex-sans-hebrew, ibm-plex-mono, assistant); --font-* vars in globals.css; no next/font/google left",
+    "tags": [
+      "build",
+      "vercel",
+      "turbopack",
+      "next-font",
+      "google-fonts"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-03T12:10:00Z"
   }
 ]

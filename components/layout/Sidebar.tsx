@@ -226,7 +226,7 @@ export default function Sidebar({
 
   return (
     <>
-      <aside
+      <aside className="scroll-col"
         data-mobile-open={String(mobileOpen)}
         style={{
           position: 'fixed',

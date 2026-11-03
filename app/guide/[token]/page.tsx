@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { Assistant } from 'next/font/google'
+import '@fontsource-variable/assistant/index.css'
 import { loadGuide, guideMetadata } from '@/lib/guide/server'
 import GuideView from '@/components/guide/GuideView'
 
@@ -9,7 +9,7 @@ import GuideView from '@/components/guide/GuideView'
 
 export const dynamic = 'force-dynamic'
 
-const assistant = Assistant({ subsets: ['hebrew', 'latin'], weight: ['400', '600', '700', '800'] })
+const assistant = { className: 'font-assistant' }   // self-hosted (@fontsource), see app/layout.tsx
 
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
   const { token } = await params

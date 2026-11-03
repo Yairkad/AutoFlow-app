@@ -132,7 +132,7 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
   return (
     <div className="flex h-full w-full" style={{ minHeight: 0 }}>
       {/* Rail — tablets and desktop */}
-      <div className="hidden md:flex flex-col bg-slate-900 flex-shrink-0 overflow-y-auto" style={{ width: '96px' }}>
+      <div className="hidden md:flex flex-col bg-slate-900 flex-shrink-0 overflow-y-auto scroll-col" style={{ width: '96px' }}>
         <div style={{ padding: '8px 8px 0' }}>{userButton(false)}</div>
         {rail}
       </div>
@@ -140,7 +140,7 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
       {/* Drawer — phones */}
       {open && (
         <div className="md:hidden fixed inset-0 z-50 flex" onClick={() => setOpen(false)} style={{ background: 'rgba(0,0,0,.5)' }}>
-          <div className="bg-slate-900 h-full overflow-y-auto flex flex-col shadow-2xl" style={{ width: '270px', maxWidth: '85vw' }} onClick={e => e.stopPropagation()}>
+          <div className="bg-slate-900 h-full overflow-y-auto flex flex-col shadow-2xl scroll-col" style={{ width: '270px', maxWidth: '85vw' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-slate-700" style={{ padding: '12px 14px' }}>
               <span className="text-white font-black" style={{ fontSize: '18px' }}>תפריט</span>
               <button onClick={() => setOpen(false)} className="text-slate-300 font-black" style={{ fontSize: '24px', width: 44, height: 44 }} aria-label="סגור">✕</button>

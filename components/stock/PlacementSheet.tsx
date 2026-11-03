@@ -35,7 +35,7 @@ export default function PlacementSheet({ p, onDone }: { p: Placement; onDone: (m
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)', padding: 12 }}>
-      <div className="bg-white rounded-2xl shadow-2xl flex flex-col gap-3" style={{ width: 520, maxWidth: '96vw', maxHeight: '92dvh', overflowY: 'auto', padding: 18, direction: 'rtl' }}>
+      <div className="bg-white rounded-2xl shadow-2xl flex flex-col gap-3 scroll-col" style={{ width: 520, maxWidth: '96vw', maxHeight: '92dvh', overflowY: 'auto', padding: 18, direction: 'rtl' }}>
         <div>
           <p className="font-black text-slate-800" style={{ fontSize: 20 }}>לאן לשים?</p>
           <p className="text-slate-500" style={{ fontSize: 14 }}>{p.name}</p>
