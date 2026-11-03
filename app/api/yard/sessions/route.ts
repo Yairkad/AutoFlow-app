@@ -57,7 +57,15 @@ export async function POST(req: NextRequest) {
     .order('opened_at', { ascending: false })
     .limit(1)
     .maybeSingle()
-  if (existing) return NextResponse.json({ ...existing, existing: true }, { status: 200 })
+  if (existing) {
+    // Car came back to the yard while waiting for the office — put it back in work (no stock side effects)
+    if (existing.status === 'pending_office') {
+      const { data: reopened } = await supabase.from('yard_sessions').update({ status: 'active' })
+        .eq('id', existing.id).eq('tenant_id', profile.tenant_id).select().single()
+      if (reopened) return NextResponse.json({ ...reopened, existing: true }, { status: 200 })
+    }
+    return NextResponse.json({ ...existing, existing: true }, { status: 200 })
+  }
 
   const { data, error } = await supabase
     .from('yard_sessions')
