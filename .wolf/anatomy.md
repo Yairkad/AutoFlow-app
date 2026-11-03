@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T09:26:34.199Z
-> Files: 191 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T10:55:11.014Z
+> Files: 196 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -46,6 +46,12 @@
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
 
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/724cc5bc-e9ef-5b18-af2f-2df4fa5c99dd/scratchpad/drawer/project/
+
+- `canvas.json` (~113 tok)
+- `Main.dc.html` — בקרת רחבה — ממתינים (~3117 tok)
+- `Rail.dc.html` — בקרת רחבה — סגורה (~664 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/724cc5bc-e9ef-5b18-af2f-2df4fa5c99dd/scratchpad/insp/project/
 
@@ -719,6 +725,10 @@
 ## lib/inspections/
 
 
+## lib/inspections/ (2026-11-03)
+
+- `feePrice.ts` — groupsOf(name) parses license-group ranges from price_list names ("1-3", "4,5", "7+"); priceForGroup(rows, group); isInspectionCategory (~350 tok)
+
 ## lib/landing/
 
 - `business.ts` — Business details shared by the public pages (home + /for-sale). (~499 tok)
@@ -811,6 +821,10 @@
 - `094_car_sale_contracts.sql` — ════════════════════════════════════════════ (~671 tok)
 - `099_poa_form_settings.sql` — poa_form_settings (tenant PK): layout JSONB (calibration), proxies/owners JSONB quick-fill lists, RLS by tenant (~350 tok)
 
+## supabase/migrations/ (2026-11-03)
+
+- `115_inspection_fee_group.sql` — car_inspections.fee_group smallint (קבוצת רישוי) (~80 tok)
+
 ## tests/
 
 
@@ -829,11 +843,3 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-
-## lib/inspections/ (2026-11-03)
-
-- `feePrice.ts` — groupsOf(name) parses license-group ranges from price_list names ("1-3", "4,5", "7+"); priceForGroup(rows, group); isInspectionCategory (~350 tok)
-
-## supabase/migrations/ (2026-11-03)
-
-- `115_inspection_fee_group.sql` — car_inspections.fee_group smallint (קבוצת רישוי) (~80 tok)

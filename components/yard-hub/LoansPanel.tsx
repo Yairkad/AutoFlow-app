@@ -7,7 +7,8 @@ import {
   LOAN_DIRECTION_LABEL, LOAN_STATUS_LABEL, LOAN_STALE_DAYS, daysSince,
   type LoanDirection, type TireLoan,
 } from '@/lib/yard/hub'
-import { AddButton, Chips, Empty, Field, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle, todayISO } from './ui'
+import { AddButton, Chips, Empty, Field, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle, todayISO, type HubVariant } from './ui'
+import type { SearchResult } from '@/lib/yard/types'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 
@@ -38,7 +39,7 @@ const CSS = `
 .lp-ret{background:var(--primary-soft);color:var(--primary);border:1px solid color-mix(in srgb,var(--primary) 20%,transparent)}
 .lp-pay{background:var(--success);color:#fff;border:1px solid var(--success)}
 .lp-re{background:var(--bg-card);color:var(--text);border:1px solid var(--border)}
-@media(max-width:760px){
+@container hub (max-width:760px){
   .lp-cols{display:none}
   .lp-row{grid-template-columns:1fr auto;gap:6px 10px}
   .lp-row .lp-wide{grid-column:1/-1}
@@ -50,7 +51,7 @@ const emptyForm = {
   item_desc: '', qty: 1, customer_name: '', plate: '', notes: '',
 }
 
-export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) {
+export default function LoansPanel({ variant }: { variant: HubVariant }) {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [view, setView]       = useState<View>('open')
@@ -62,6 +63,25 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
   const [saving, setSaving]   = useState(false)
   const [payFor, setPayFor]   = useState<TireLoan | null>(null)
   const [payAmount, setPayAmount] = useState('')
+  const [scanCode, setScanCode] = useState('')
+  const [scanMsg, setScanMsg]   = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function lookupBarcode() {
+    const code = scanCode.trim()
+    if (!code) return
+    setScanMsg(null)
+    try {
+      const r = await fetch(`/api/yard/barcode?code=${encodeURIComponent(code)}`)
+      const item: SearchResult | null = r.ok ? await r.json() : null
+      if (!item) { setScanMsg({ ok: false, text: 'הברקוד לא נמצא במערכת — אפשר למלא ידנית' }); return }
+      const desc = item.type === 'tire'
+        ? [item.size && item.size !== 'ללא מידה' ? item.size : '', item.brand_en ?? item.brand ?? ''].filter(Boolean).join(' ')
+        : item.name
+      setForm(p => p ? { ...p, item_desc: desc || item.name } : p)
+      setScanMsg({ ok: true, text: `✓ ${item.name}` })
+      setScanCode('')
+    } catch { setScanMsg({ ok: false, text: 'שגיאה בחיפוש — נסה שוב' }) }
+  }
 
   const loadOpen = useCallback(async () => {
     try { setOpen(await api<TireLoan[]>('/api/yard/loans?status=open')) }
@@ -102,11 +122,13 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
   }, [open, closed, view])
 
   function startNew() {
+    setScanCode(''); setScanMsg(null)
     setEditId(null)
     setForm({ ...emptyForm, loan_date: todayISO() })
   }
 
   function startEdit(l: TireLoan) {
+    setScanCode(''); setScanMsg(null)
     setEditId(l.id)
     setForm({
       direction: l.direction, shop_name: l.shop_name, shop_phone: l.shop_phone ?? '', loan_date: l.loan_date,
@@ -239,7 +261,7 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
                     <RowActionsMenu align="end" actions={[
                       ...(l.shop_phone ? [{ key: 'tel', icon: '📞', label: 'חיוג לפנצ׳ריה', onClick: () => { window.location.href = `tel:${l.shop_phone}` } }] : []),
                       { key: 'edit', icon: '✏️', label: 'עריכה', onClick: () => startEdit(l) },
-                      ...(variant === 'office' ? [{ key: 'del', icon: '🗑', label: 'מחיקה', danger: true, onClick: () => remove(l) }] : []),
+                      ...(variant !== 'yard' ? [{ key: 'del', icon: '🗑', label: 'מחיקה', danger: true, onClick: () => remove(l) }] : []),
                     ]} />
                   </div>
                 </div>
@@ -260,6 +282,13 @@ export default function LoansPanel({ variant }: { variant: 'yard' | 'office' }) 
               onChange={e => { f('shop_name', e.target.value); const ph = shops.get(e.target.value); if (ph && !form.shop_phone) f('shop_phone', ph) }}
               className={inputCls} style={inputStyle} />
             <datalist id="loan-shops">{[...shops.keys()].map(s => <option key={s} value={s} />)}</datalist>
+          </Field>
+          {/* Scan the tire's barcode — fills size + brand from the catalogue (works with a USB/BT scanner: it types + Enter) */}
+          <Field label="סריקת ברקוד (לא חובה)">
+            <input value={scanCode} onChange={e => setScanCode(e.target.value)} inputMode="numeric" placeholder="סרוק או הקלד ברקוד ולחץ Enter"
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); lookupBarcode() } }}
+              className={inputCls} style={{ ...inputStyle, direction: 'ltr', textAlign: 'right' }} />
+            {scanMsg && <span className="text-sm" style={{ color: scanMsg.ok ? 'var(--success)' : 'var(--warning)' }}>{scanMsg.text}</span>}
           </Field>
           <Field label="מידה / דגם *">
             <input value={form.item_desc} onChange={e => f('item_desc', e.target.value)} placeholder="205/55R16 מישלן"

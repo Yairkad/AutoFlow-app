@@ -407,12 +407,11 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
         <div class="car-cell"><b>מס׳ מנוע:</b> ${inspection.engine_cc || ''}</div>
         <div class="car-cell"><b>מס׳ שלדה:</b> ${inspection.chassis || ''}</div>
         <div class="car-cell"><b>ק"מ:</b> ${inspection.km || ''}</div>
-        <div class="car-cell"><b>סוג רכב:</b> ${inspection.ownership_type || ''}</div>
       </div>
     </div>
   </div>
   ${tableHead}<tbody>${rows1}</tbody></table>
-  <div class="pagenum">עמוד 1 מתוך 2 &nbsp;|&nbsp; מס׳ רכב: ${inspection.plate}${inspection.inspection_number ? ` &nbsp;|&nbsp; מס׳ בדיקה: ${inspection.inspection_number}` : ''}</div>
+  <div class="pagenum">עמוד 1 מתוך 2 &nbsp;|&nbsp; מס׳ רכב: ${inspection.plate}${[inspection.make, inspection.model].filter(Boolean).length ? ` (${[inspection.make, inspection.model].filter(Boolean).join(' ')})` : ''}${inspection.inspection_number ? ` &nbsp;|&nbsp; מס׳ בדיקה: ${inspection.inspection_number}` : ''}</div>
 </div>
 
 <!-- ══ עמוד 2 ══ -->
@@ -439,7 +438,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
     <div>תאריך: <span class="sig-line">${date}</span></div>
     <div>חתימת המזמין: <span class="sig-line"></span></div>
   </div>
-  <div class="pagenum">עמוד 2 מתוך 2 &nbsp;|&nbsp; מס׳ רכב: ${inspection.plate}${inspection.inspection_number ? ` &nbsp;|&nbsp; מס׳ בדיקה: ${inspection.inspection_number}` : ''}</div>
+  <div class="pagenum">עמוד 2 מתוך 2 &nbsp;|&nbsp; מס׳ רכב: ${inspection.plate}${[inspection.make, inspection.model].filter(Boolean).length ? ` (${[inspection.make, inspection.model].filter(Boolean).join(' ')})` : ''}${inspection.inspection_number ? ` &nbsp;|&nbsp; מס׳ בדיקה: ${inspection.inspection_number}` : ''}</div>
 </div>
 
 <script>window.onload=function(){window.print()}<\/script>

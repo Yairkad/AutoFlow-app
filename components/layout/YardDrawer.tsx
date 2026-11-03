@@ -6,8 +6,12 @@ import { sessionTotal, minutesSince, formatPlate, CLOSE_TYPE_LABEL } from '@/lib
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import SessionItemsEditor from '@/components/yard/SessionItemsEditor'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
+import RequestsPanel from '@/components/yard-hub/RequestsPanel'
+import LoansPanel from '@/components/yard-hub/LoansPanel'
 
 const OPEN_KEY = 'yard-drawer-open'
+const TAB_KEY  = 'yard-drawer-tab'
+type DrawerTab = 'yard' | 'requests' | 'loans'
 const POLL_MS  = 20_000
 
 // Yard control on every desktop screen (redesign): a thin tab on the left edge; opened, it takes the
@@ -24,6 +28,9 @@ export default function YardDrawer() {
   const [showClosed, setShowClosed] = useState(false)
   const [closed, setClosed]     = useState<YardSession[]>([])
   const [closedDays, setClosedDays] = useState(3)
+  // Yard tracking (waiting customers, loans) lives here too — tabs; counts feed the tabs and the closed rail
+  const [tab, setTab] = useState<DrawerTab>(() => { try { const t = localStorage.getItem(TAB_KEY); return t === 'requests' || t === 'loans' ? t : 'yard' } catch { return 'yard' } })
+  const [counts, setCounts] = useState<Record<string, number>>({})
   const { confirm } = useConfirm()
 
   const load = useCallback(async () => {
@@ -35,6 +42,8 @@ export default function YardDrawer() {
       const pending: YardSession[] = a.ok ? await a.json() : []
       const active: YardSession[]  = p.ok ? await p.json() : []
       setCards([...pending, ...active])
+      const c = await fetch('/api/yard/counts')
+      if (c.ok) setCounts(await c.json())
     } catch { /* network hiccup — keep the last list */ }
   }, [])
 
@@ -78,6 +87,11 @@ export default function YardDrawer() {
     return () => { document.documentElement.style.removeProperty('--drawer-w') }
   }, [open])
 
+  function pickTab(t: DrawerTab) {
+    setTab(t)
+    try { localStorage.setItem(TAB_KEY, t) } catch {}
+  }
+
   function toggle(next: boolean) {
     setOpen(next)
     try { localStorage.setItem(OPEN_KEY, next ? '1' : '0') } catch {}
@@ -114,6 +128,17 @@ export default function YardDrawer() {
           {cards.length > 0 && <span className="yd-vt">רחבה</span>}
           {cards.length > 0 && <span className="yd-n num">{cards.length}</span>}
           {waiting > 0 && <span className="yd-alert">{waiting} לסגירה</span>}
+          {(counts.yard_requests ?? 0) > 0 && <>
+            <span className="yd-sep" />
+            <span className="yd-vt">ממתינים</span>
+            <span className="yd-n num warn">{counts.yard_requests}</span>
+            {(counts.yard_requests_arrived ?? 0) > 0 && <span className="yd-alert ok">{counts.yard_requests_arrived} הגיע</span>}
+          </>}
+          {(counts.yard_loans ?? 0) > 0 && <>
+            <span className="yd-sep" />
+            <span className="yd-vt">השאלות</span>
+            <span className={`yd-n num${(counts.yard_loans_stale ?? 0) > 0 ? ' dan' : ''}`}>{counts.yard_loans}</span>
+          </>}
         </button>
       </aside>
     )
@@ -124,11 +149,25 @@ export default function YardDrawer() {
       <div className="yd-head">
         <CarIcon size={18} />
         <h2>בקרת רחבה</h2>
-        <span className="yd-pill">{cards.length} רכבים</span>
         <button type="button" onClick={() => toggle(false)} aria-label="סגור את בקרת הרחבה" className="yd-x">✕</button>
       </div>
 
-      <div className="yd-body">
+      <div className="yd-tabs" role="tablist">
+        {([
+          { key: 'yard', label: 'רכבים ברחבה', n: cards.length, tone: '' },
+          { key: 'requests', label: 'ממתינים', n: counts.yard_requests ?? 0, tone: (counts.yard_requests_arrived ?? 0) > 0 ? 'ok' : 'warn' },
+          { key: 'loans', label: 'השאלות', n: counts.yard_loans ?? 0, tone: (counts.yard_loans_stale ?? 0) > 0 ? 'dan' : '' },
+        ] as const).map(t => (
+          <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'on' : ''} onClick={() => pickTab(t.key)}>
+            {t.label}{t.n > 0 && <span className={`yd-tn ${t.tone}`}>{t.n}</span>}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'requests' && <RequestsPanel variant="drawer" />}
+      {tab === 'loans' && <LoansPanel variant="drawer" />}
+
+      {tab === 'yard' && <div className="yd-body">
         {cards.length === 0 && (
           <div className="yd-empty"><CarIcon size={34} /><b>אין רכבים ברחבה</b><span>כשרכב ייקלט ברחבה הוא יופיע כאן.</span></div>
         )}
@@ -226,7 +265,7 @@ export default function YardDrawer() {
             </div>
           )}
         </div>
-      </div>
+      </div>}
     </aside>
   )
 }
