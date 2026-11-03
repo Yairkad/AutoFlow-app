@@ -1,3 +1,4 @@
+import { isInspectionCategory } from '@/lib/inspections/feePrice'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
@@ -27,8 +28,26 @@ async function loadTenantByPublicToken(token: string) {
 
 async function loadBusiness(tenantId: string) {
   const sb = createServiceClient()
-  const { data: tenant } = await sb.from('tenants').select('name, phone, logo_base64').eq('id', tenantId).maybeSingle()
-  return { name: tenant?.name ?? '', phone: tenant?.phone ?? null, logo: tenant?.logo_base64 ?? null }
+  const [{ data: tenant }, { data: prices }] = await Promise.all([
+    sb.from('tenants').select('name, phone, logo_base64').eq('id', tenantId).maybeSingle(),
+    // Inspection price per license group — shown to the customer once their plate is found
+    sb.from('price_list').select('category, service_name, price, price_note').eq('tenant_id', tenantId).eq('is_active', true).order('sort_order'),
+  ])
+  return {
+    name: tenant?.name ?? '', phone: tenant?.phone ?? null, logo: tenant?.logo_base64 ?? null,
+    prices: (prices ?? []).filter(p => isInspectionCategory(p.category)).map(({ service_name, price, price_note }) => ({ service_name, price, price_note })),
+  }
+}
+
+/** Save, retrying without fee_group when migration 115 hasn't run yet */
+async function saveDetails(op: (d: Record<string, unknown>) => PromiseLike<{ error: { message?: string } | null }>, details: Record<string, unknown>) {
+  let { error } = await op(details)
+  if (error && 'fee_group' in details && /fee_group/.test(error.message ?? '')) {
+    const { fee_group: _omit, ...rest } = details
+    void _omit
+    ;({ error } = await op(rest))
+  }
+  return { error }
 }
 
 async function loadRow(token: string) {
@@ -161,6 +180,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     year:          vehicle?.year    ?? null,
     color:         vehicle?.color   ?? null,
     chassis:       vehicle?.chassis ?? null,
+    ...(vehicle?.fee_group ? { fee_group: vehicle.fee_group } : {}),
     intake_status: 'submitted',
     intake_submitted_at: new Date().toISOString(),
     intake_consent_at:   new Date().toISOString(),
@@ -168,7 +188,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
 
   // ── Personal link: update its inspection ──
   if (row) {
-    const { error } = await sb.from('car_inspections').update(details).eq('id', row.id)
+    const { error } = await saveDetails(d => sb.from('car_inspections').update(d).eq('id', row.id), details)
     if (error) {
       console.error('intake submit failed:', error)
       return NextResponse.json({ error: 'שגיאה בשמירה — נסה שוב' }, { status: 500 })
@@ -184,7 +204,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     .eq('owner_phone', phone).eq('plate', plate)
     .limit(1).maybeSingle()
   if (existing?.intake_token) {
-    const { error } = await sb.from('car_inspections').update(details).eq('id', existing.id)
+    const { error } = await saveDetails(d => sb.from('car_inspections').update(d).eq('id', existing.id), details)
     if (error) return NextResponse.json({ error: 'שגיאה בשמירה — נסה שוב' }, { status: 500 })
     return NextResponse.json({ ok: true, token: existing.intake_token })
   }
@@ -198,7 +218,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   }
 
   const personal = newIntakeToken()
-  const { error } = await sb.from('car_inspections').insert({
+  const { error } = await saveDetails(d => sb.from('car_inspections').insert(d), {
     ...details, tenant_id: tenantId, status: 'draft', intake_source: 'qr', intake_token: personal,
   })
   if (error) {

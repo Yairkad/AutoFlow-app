@@ -31,6 +31,7 @@ interface Inspection {
   engine_cc: string | null
   chassis: string | null
   seats: number | null
+  fee_group: number | null   // קבוצת רישוי (migration 115)
   test_date: string | null
   km: string | null
   ownership_type: string | null
@@ -71,7 +72,7 @@ interface BusinessInfo {
 
 const emptyForm = {
   plate: '',
-  make: '', model: '', year: '', km: '', engine_cc: '', chassis: '',
+  make: '', model: '', year: '', km: '', engine_cc: '', chassis: '', fee_group: '',
   color: '', ownership_type: '',
   owner_name: '', owner_id: '', owner_phone: '', owner_address: '',
   car_code: '', inspector: 'שרון מועלם',
@@ -215,6 +216,7 @@ body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #fff
       <div class="pp-info-row"><span>ק"מ:</span><div class="pp-line">${ins.km || ''}</div></div>
       <div class="pp-info-row"><span>מס׳ מנוע:</span><div class="pp-line">${ins.engine_cc || ''}</div></div>
       <div class="pp-info-row"><span>מס׳ שילדה:</span><div class="pp-line">${ins.chassis || ''}</div></div>
+      <div class="pp-info-row"><span>קבוצת רישוי:</span><div class="pp-line">${ins.fee_group ?? ''}</div></div>
     </div>
   </div>
   <div class="pp-legal">
@@ -422,6 +424,7 @@ export default function InspectionsClient() {
         model:   data.model   ?? f.model,
         year:    data.year    ? String(data.year) : f.year,
         chassis: data.chassis ?? f.chassis,
+        fee_group: data.fee_group ? String(data.fee_group) : f.fee_group,
         color:   data.color   ?? f.color,
       }))
       showToast('פרטי רכב נטענו מהמאגר הממשלתי', 'success')
@@ -454,6 +457,7 @@ export default function InspectionsClient() {
       km:             ins.km             ?? '',
       engine_cc:      ins.engine_cc      ? String(ins.engine_cc) : '',
       chassis:        ins.chassis        ?? '',
+      fee_group:      ins.fee_group != null ? String(ins.fee_group) : '',
       color:          ins.color          ?? '',
       ownership_type: ins.ownership_type ?? '',
       owner_name:     ins.owner_name,
@@ -497,6 +501,8 @@ export default function InspectionsClient() {
       km:           form.km.trim()        || null,
       engine_cc:    form.engine_cc.trim()  || null,
       chassis:        form.chassis.trim()        || null,
+      // Only sent when there is something to store — saving keeps working before migration 115 runs
+      ...(form.fee_group.trim() || editingInspection?.fee_group != null ? { fee_group: parseInt(form.fee_group, 10) || null } : {}),
       color:          form.color.trim()          || null,
       ownership_type: form.ownership_type.trim() || null,
       owner_name:     form.owner_name.trim(),
@@ -564,6 +570,8 @@ export default function InspectionsClient() {
       km:           form.km.trim()        || null,
       engine_cc:    form.engine_cc.trim()  || null,
       chassis:        form.chassis.trim()        || null,
+      // Only sent when there is something to store — saving keeps working before migration 115 runs
+      ...(form.fee_group.trim() || editingInspection?.fee_group != null ? { fee_group: parseInt(form.fee_group, 10) || null } : {}),
       color:          form.color.trim()          || null,
       ownership_type: form.ownership_type.trim() || null,
       owner_name:     form.owner_name.trim(),
@@ -822,6 +830,7 @@ export default function InspectionsClient() {
                   { key: 'engine_cc', label: 'מספר מנוע',   placeholder: '' },
                   { key: 'chassis',   label: 'מספר שלדה',   placeholder: '' },
                   { key: 'car_code',  label: 'קוד רכב',     placeholder: '' },
+                  { key: 'fee_group', label: 'קבוצת רישוי', placeholder: '1-7' },
                 ].map(({ key, label, placeholder }) => (
                   <div key={key}>
                     <FL>{label}</FL>
@@ -973,7 +982,9 @@ export default function InspectionsClient() {
                     <Field label="טלפון" value={ins.owner_phone} num ltr />
                     <Field label="ת.ז." value={ins.owner_id} num />
                     <Field label="קילומטראז׳" value={ins.km ? Number(ins.km).toLocaleString() : null} copyValue={ins.km} num />
+                    <Field label="מספר מנוע" value={ins.engine_cc} num ltr />
                     <Field label="מספר שלדה" value={ins.chassis} num ltr wide />
+                    <Field label="קבוצת רישוי" value={ins.fee_group} num />
                     <Field label="בודק" value={ins.inspector} />
                     <Field label="כתובת" value={ins.owner_address} />
                   </div>
@@ -1149,6 +1160,7 @@ export default function InspectionsClient() {
                       { key: 'engine_cc', label: 'מספר מנוע',  placeholder: '' },
                       { key: 'chassis',   label: 'מספר שלדה',  placeholder: '' },
                       { key: 'car_code',  label: 'קוד רכב',    placeholder: '' },
+                      { key: 'fee_group', label: 'קבוצת רישוי', placeholder: '1-7' },
                     ].map(({ key, label, placeholder }) => (
                       <div key={key}>
                         <FL>{label}</FL>
