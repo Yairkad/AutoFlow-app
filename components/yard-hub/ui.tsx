@@ -114,7 +114,7 @@ export function HubFrame({ variant, title, subtitle, action, children }: {
     )
   }
   return (
-    <div className="flex flex-col h-full" style={{ background: '#f0f4f8' }}>
+    <div className="flex flex-col h-full" style={{ background: '#f0f4f8', minHeight: 0 }}>
       <div className="bg-slate-800 text-white flex items-center justify-between flex-shrink-0 gap-3" style={{ padding: '12px 18px' }}>
         <div style={{ minWidth: 0 }}>
           <h1 className="text-xl font-bold">{title}</h1>
@@ -122,7 +122,8 @@ export function HubFrame({ variant, title, subtitle, action, children }: {
         </div>
         {action}
       </div>
-      <div className="flex-1 overflow-y-auto flex flex-col gap-3" style={{ padding: '14px', minHeight: 0 }}>
+      {/* hub-scroll: children never shrink (a list with overflow:hidden would squeeze to fit and nothing scrolls) */}
+      <div className="hub-scroll flex-1 overflow-y-auto flex flex-col gap-3" style={{ padding: '14px', minHeight: 0 }}>
         {children}
       </div>
     </div>

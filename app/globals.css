@@ -1004,3 +1004,6 @@ button:not(:disabled):active {
 @media (max-width: 700px) {
   .ih-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Yard hub screens (ממתינים / בירור / השאלות): scrolling column whose children keep their height */
+.hub-scroll > * { flex-shrink: 0; }
