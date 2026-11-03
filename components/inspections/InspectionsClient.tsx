@@ -78,7 +78,6 @@ const emptyForm = {
   car_code: '', inspector: 'שרון מועלם',
 }
 
-const VEHICLE_TYPES = ['מרכב אחיד', 'מרכב על שלדה', 'קבינה', 'מיני-בוס', 'אחר']
 
 function todayStr() {
   const d = new Date()
@@ -187,7 +186,7 @@ body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #fff
 .pp-info-bar-lbl { padding:5px 10px; border-left:1px solid #000; background:#eee; -webkit-print-color-adjust:exact; print-color-adjust:exact; font-weight:700; white-space:nowrap; }
 .pp-info-bar-val { padding:5px 10px; border-left:2px solid #000; font-weight:900; font-size:13px; }
 .pp-info-bar-val-flex { padding:5px 10px; border-left:2px solid #000; font-weight:700; flex:1; }
-.pp-info-bar-val-phone { padding:5px 10px; border-left:2px solid #000; flex:1; }
+.pp-info-bar-val-phone { padding:5px 10px; border-left:2px solid #000; white-space:nowrap; }
 .pp-info-bar-code { padding:5px 10px; min-width:50px; }
 @media screen { body{background:#e5e5e5} .pp{background:#fff;margin:10mm auto;box-shadow:0 2px 10px rgba(0,0,0,.15)} }
 </style>
@@ -253,13 +252,14 @@ body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #fff
   <h1 style="text-align:center;text-decoration:underline;font-size:22px;margin:0 0 4mm;font-weight:900">טופס ממצאי בדיקה</h1>
   <div class="pp-info-bar">
     <div class="pp-info-bar-lbl">מס׳ רכב</div><div class="pp-info-bar-val">${ins.plate}</div>
+    <div class="pp-info-bar-lbl">רכב</div><div class="pp-info-bar-val-flex">${[makeModel, ins.year].filter(Boolean).join(' ')}</div>
     <div class="pp-info-bar-lbl">שם לקוח</div><div class="pp-info-bar-val-flex">${ins.owner_name}</div>
     <div class="pp-info-bar-lbl">טלפון</div><div class="pp-info-bar-val-phone">${ins.owner_phone || ''}</div>
     <div class="pp-info-bar-lbl" style="border-left:none">קוד</div><div class="pp-info-bar-code">${ins.car_code || ''}</div>
   </div>
   <div class="pp-findings-title">פירוט ליקויים והערות:</div>
   ${emptyLines}
-  <div class="pp-pagenum">עמוד 2 מתוך 2 &nbsp;|&nbsp; מס׳ רכב: ${ins.plate}${ins.inspection_number ? ` &nbsp;|&nbsp; מס׳ בדיקה: ${ins.inspection_number}` : ''}</div>
+  <div class="pp-pagenum">עמוד 2 מתוך 2 &nbsp;|&nbsp; מס׳ רכב: ${ins.plate}${makeModel ? ` (${makeModel})` : ''}${ins.inspection_number ? ` &nbsp;|&nbsp; מס׳ בדיקה: ${ins.inspection_number}` : ''}</div>
 </div>
 
 </body></html>`
@@ -842,17 +842,6 @@ export default function InspectionsClient() {
                     />
                   </div>
                 ))}
-                <div>
-                  <FL>סוג רכב</FL>
-                  <select
-                    value={form.ownership_type}
-                    onChange={e => onChange('ownership_type', e.target.value)}
-                    className="form-input"
-                  >
-                    <option value="">— בחר —</option>
-                    {VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
               </div>
             </Section>
           </div>
@@ -1172,17 +1161,6 @@ export default function InspectionsClient() {
                         />
                       </div>
                     ))}
-                    <div>
-                      <FL>סוג רכב</FL>
-                      <select
-                        value={form.ownership_type}
-                        onChange={e => onChange('ownership_type', e.target.value)}
-                        className="form-input"
-                      >
-                        <option value="">— בחר —</option>
-                        {VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </div>
                   </div>
                 </Section>
               </div>

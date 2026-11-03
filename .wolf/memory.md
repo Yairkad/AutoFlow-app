@@ -3055,3 +3055,14 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | -- | Build fix: replaced next/font/google with @fontsource self-hosted fonts (layout + guide/intake pages) | app/layout.tsx, globals.css, 3 pages, package.json | next build compiles | ~15k |
+
+## Session: 2026-11-03 10:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-03 10:37
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| -- | Inspections: removed 'סוג רכב' select (form+edit+checklist print); car make/model on findings form page 2 bar + page footers | InspectionsClient, InspectionChecklistModal | tsc ok | ~6k |
