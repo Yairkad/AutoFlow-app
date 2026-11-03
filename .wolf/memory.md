@@ -3001,3 +3001,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 11:20 | Discussed no-stock flow; proposed negative stock + 'שייך לצמיג' for unlinked charges; awaiting answer on existing rows | — | discussion | ~3000 |
 | 11:45 | Negative stock on card close + 'שייך' in no-stock list + one-off apply for old rows; removed qty>=0 clamps (stock screen, invoice line delete, return) | sessions/[id], no-stock route, NoStockPanel, StockClient, invoice-items, return | tsc+eslint clean | ~20000 |
+
+## Session: 2026-11-03 07:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| -- | Fix yard drawer: cards shrank (flex-shrink) + overflow hidden → footer/close button clipped, no scroll. Added flex-shrink:0 to .yd-card, min-height:0 to .yd-body | app/globals.css | fixed | ~2k |
