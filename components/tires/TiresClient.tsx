@@ -22,6 +22,8 @@ import { fuzzyIncludes } from '@/lib/search/fuzzy'
 import DuplicatesModal from '@/components/stock/DuplicatesModal'
 import { findTireDuplicates, pickKeeper } from '@/lib/stock/duplicates'
 import { printHtml } from '@/lib/print/printHtml'
+import AutocompleteInput from '@/components/ui/AutocompleteInput'
+import { brandSuggestions } from '@/lib/tires/brandSuggestions'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -221,6 +223,7 @@ export default function TiresClient() {
 
   const dupGroups = findTireDuplicates(tires)
   const brands = brandMap(brandRows)
+  const brandOpts = brandSuggestions(tires.map(t => t.brand), brandRows)
 
   async function mergeGroup(targetId: string, sourceIds: string[]): Promise<boolean> {
     const res = await fetch('/api/stock/merge', {
@@ -784,7 +787,7 @@ export default function TiresClient() {
                         <td style={{ padding: '10px 12px', fontWeight: 700, minWidth: isEditing ? '130px' : undefined }}>
                           {isEditing ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <input style={cellInp} value={String(e.brand ?? '')} onChange={ev => setCell(t.id, 'brand', ev.target.value)} list="brand-list-inline" />
+                              <AutocompleteInput style={cellInp} value={String(e.brand ?? '')} onChange={v => setCell(t.id, 'brand', v)} options={brandOpts} />
                               <button
                                 onClick={() => setCell(t.id, 'condition', (e.condition ?? t.condition) === 'used' ? 'new' : 'used')}
                                 style={{
@@ -958,10 +961,6 @@ export default function TiresClient() {
                   })}
                 </tbody>
               </table>
-              {/* Datalists for inline edit */}
-              <datalist id="brand-list-inline">
-                {[...new Set(tires.map(t => t.brand).filter(Boolean) as string[])].sort().map(b => <option key={b} value={b} />)}
-              </datalist>
             </div>
           </div>
         </>
@@ -1060,13 +1059,10 @@ export default function TiresClient() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
               <div>
                 <label className="form-label">מותג</label>
-                <input id="f-brand" className="form-input" value={form.brand} placeholder="Michelin, Bridgestone..."
-                  list="brand-list-modal"
-                  onChange={e => setF('brand', e.target.value)}
+                <AutocompleteInput id="f-brand" className="form-input" value={form.brand} placeholder="Michelin, Bridgestone..."
+                  options={brandOpts}
+                  onChange={v => setF('brand', v)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); (document.getElementById('f-load') as HTMLSelectElement)?.focus() } }} />
-                <datalist id="brand-list-modal">
-                  {[...new Set(tires.map(t => t.brand).filter(Boolean) as string[])].sort().map(b => <option key={b} value={b} />)}
-                </datalist>
               </div>
               <div>
                 <label className="form-label">אינדקס עומס</label>
@@ -1292,8 +1288,8 @@ export default function TiresClient() {
                     🆕 צמיג חדש{size ? ` · מידה ${size.width}/${size.profile}R${size.rim}` : ' · בלי מידה'} — יישמר וישאר ברשימת &quot;חסרי נתונים&quot; עד להשלמה
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <input className="form-input" style={{ flex: 1, minWidth: 0 }} placeholder="מותג (אופציונלי)" list="brand-list-inline"
-                      value={item.brand} onChange={e => setR('brand', e.target.value)} />
+                    <AutocompleteInput className="form-input" style={{ flex: 1, minWidth: 0 }} placeholder="מותג (אופציונלי)" options={brandOpts}
+                      value={item.brand} onChange={v => setR('brand', v)} />
                     <input className="form-input" style={{ flex: 1, minWidth: 0, fontFamily: 'monospace' }} placeholder="מקט / ברקוד (אופציונלי)"
                       value={item.sku} onChange={e => setR('sku', e.target.value)} />
                   </div>

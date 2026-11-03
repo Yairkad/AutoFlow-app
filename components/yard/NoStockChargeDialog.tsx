@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { Field, Sheet, Toggle, inputCls, inputStyle } from '@/components/yard-hub/ui'
 import TireSizeInput, { parseTireSizeText, type TireSize } from '@/components/yard/TireSizeInput'
 import { tireSizeSearchParams } from '@/lib/tires/size'
+import AutocompleteInput from '@/components/ui/AutocompleteInput'
+import { useTireBrandSuggestions } from '@/lib/hooks/useTireBrandSuggestions'
 
 export interface NoStockCharge {
   type:  'tire' | 'product'
@@ -26,6 +28,7 @@ export default function NoStockChargeDialog({ kind, initialText = '', barcode = 
   const [type, setType]   = useState<'tire' | 'product'>(kind === 'product' ? 'product' : 'tire')
   const [size, setSize]   = useState<TireSize>(() => parseTireSizeText(kind === 'tire' ? initialText : ''))
   const [brand, setBrand] = useState('')
+  const brandOpts = useTireBrandSuggestions()
   const [name, setName]   = useState(kind === 'product' ? initialText : '')
   const [price, setPrice] = useState('')
   const [hint, setHint]   = useState<string | null>(null)
@@ -75,7 +78,7 @@ export default function NoStockChargeDialog({ kind, initialText = '', barcode = 
           </div>
         </Field>
         <Field label="מותג / דגם (לא חובה)">
-          <input value={brand} onChange={e => setBrand(e.target.value)} className={inputCls} style={inputStyle} />
+          <AutocompleteInput options={brandOpts} value={brand} onChange={setBrand} className={inputCls} style={inputStyle} />
         </Field>
       </>) : (
         <Field label="שם הפריט *">

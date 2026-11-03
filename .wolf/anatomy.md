@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-02T09:47:19.925Z
-> Files: 184 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T08:39:39.791Z
+> Files: 185 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -623,6 +623,7 @@
 
 ## components/ui/
 
+- `AutocompleteInput.tsx` — free-text input with suggestions (fuzzy, any part of word, matches hint e.g. Hebrew brand name); list portaled to body, arrows/Enter/Tab (~1300 tok)
 - `FilterBar.tsx` — Remembers whether the filters panel was open (per screen) (~1229 tok)
 - `MoreMenu.tsx` — Excel export / import as menu items (replaces a separate ExcelMenu button) (~1002 tok)
 - `SearchSelect.tsx` — Label of the empty choice (value ''), e.g. "— ללא ספק ספציפי —" (~1099 tok)
@@ -703,6 +704,8 @@
 
 ## lib/hooks/
 
+- `useTireBrandSuggestions.ts` — existing tire brands as AutocompleteInput options, fetched once from /api/yard/tire-brands (~250 tok)
+
 
 ## lib/inspections/
 
@@ -743,6 +746,8 @@
 
 
 ## lib/tires/
+
+- `brandSuggestions.ts` — brandSuggestions(brands, heRows): one option per brand (most common spelling, most used first) + Hebrew hint (~400 tok)
 
 - `size.ts` — null-safe tire size helpers: tireSizeText, hasTireSize, isTireMissingDetails/Price, parseTireSize (~350 tok)
 
@@ -816,3 +821,7 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
+
+## app/api/yard/tire-brands/
+
+- `route.ts` — GET all tires.brand values + tire_brands (he names) for brand autocomplete (~250 tok)
