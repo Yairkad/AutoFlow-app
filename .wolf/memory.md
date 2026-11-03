@@ -3007,3 +3007,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | -- | Fix yard drawer: cards shrank (flex-shrink) + overflow hidden → footer/close button clipped, no scroll. Added flex-shrink:0 to .yd-card, min-height:0 to .yd-body | app/globals.css | fixed | ~2k |
+| -- | Yard POST /sessions: reuse open card (active/pending_office) for same plate instead of duplicating | app/api/yard/sessions/route.ts | done | ~2k |
