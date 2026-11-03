@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T10:42:49.382Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T10:53:09.398Z
 > Files: 196 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
@@ -50,8 +50,8 @@
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/724cc5bc-e9ef-5b18-af2f-2df4fa5c99dd/scratchpad/drawer/project/
 
 - `canvas.json` (~113 tok)
-- `Main.dc.html` — בקרת רחבה — ממתינים (~2784 tok)
-- `Rail.dc.html` — בקרת רחבה — סגורה (~580 tok)
+- `Main.dc.html` — בקרת רחבה — ממתינים (~3019 tok)
+- `Rail.dc.html` — בקרת רחבה — סגורה (~626 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/724cc5bc-e9ef-5b18-af2f-2df4fa5c99dd/scratchpad/insp/project/
 
