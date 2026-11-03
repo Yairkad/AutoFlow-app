@@ -45,11 +45,33 @@ export async function POST(req: NextRequest) {
   if (!plate) return NextResponse.json({ error: 'plate required' }, { status: 400 })
 
   const supabase = createServiceClient()
+  const cleanPlate = String(plate).replace(/[-\s]/g, '').toUpperCase()
+
+  // Same car already has an open card (typed twice by mistake) — reuse it instead of opening a duplicate
+  const { data: existing } = await supabase
+    .from('yard_sessions')
+    .select()
+    .eq('tenant_id', profile.tenant_id)
+    .eq('plate', cleanPlate)
+    .in('status', ['active', 'pending_office'])
+    .order('opened_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (existing) {
+    // Car came back to the yard while waiting for the office — put it back in work (no stock side effects)
+    if (existing.status === 'pending_office') {
+      const { data: reopened } = await supabase.from('yard_sessions').update({ status: 'active' })
+        .eq('id', existing.id).eq('tenant_id', profile.tenant_id).select().single()
+      if (reopened) return NextResponse.json({ ...reopened, existing: true }, { status: 200 })
+    }
+    return NextResponse.json({ ...existing, existing: true }, { status: 200 })
+  }
+
   const { data, error } = await supabase
     .from('yard_sessions')
     .insert({
       tenant_id: profile.tenant_id,
-      plate: plate.replace(/[-\s]/g, '').toUpperCase(),
+      plate: cleanPlate,
       make:  make  ?? null,
       model: model ?? null,
       year:  year  ?? null,
