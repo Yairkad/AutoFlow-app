@@ -1016,3 +1016,19 @@ button:not(:disabled):active {
 
 /* Public guide / intake pages (self-hosted Assistant) */
 .font-assistant { font-family: 'Assistant Variable', 'Assistant', Arial, sans-serif; }
+/* Yard hub lists respond to their own width (office page, yard terminal, or the narrow drawer tab) */
+.hub-cq { container: hub / inline-size; }
+/* Yard drawer tabs (רכבים ברחבה / ממתינים / השאלות) */
+.yd-tabs { display: flex; gap: 2px; padding: 4px 10px 0; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.yd-tabs button { height: 38px; padding: 0 10px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 500; color: var(--text-muted);
+  cursor: pointer; border-bottom: 2px solid transparent; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.yd-tabs button.on { color: var(--text); font-weight: 700; border-bottom-color: var(--primary); }
+.yd-tn { font-size: 11.5px; font-weight: 700; border-radius: 99px; padding: 0 7px; background: var(--primary-soft); color: var(--primary); }
+.yd-tn.warn, .yd-n.warn { background: var(--warning-soft); color: var(--warning); }
+.yd-tn.ok { background: var(--success); color: #fff; }
+.yd-tn.dan, .yd-n.dan { background: var(--danger-soft); color: var(--danger); }
+.yd-alert.ok { background: var(--success); color: #fff; }
+.yd-sep { width: 26px; height: 1px; background: var(--border); margin: 2px 0; flex-shrink: 0; }
+.yd-full { display: block; text-align: center; font-size: 13px; font-weight: 600; padding: 8px; border-top: 1px solid var(--border); flex-shrink: 0; }
+/* Sidebar link shown only where the yard drawer is hidden (phones) */
+@media (min-width: 901px) { .nav-mobile-only { display: none !important; } }

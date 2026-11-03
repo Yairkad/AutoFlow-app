@@ -90,15 +90,27 @@ export function QtyStepper({ value, onChange }: { value: number; onChange: (n: n
   )
 }
 
+export type HubVariant = 'yard' | 'office' | 'drawer'
+
 /** Section frame. Yard: dark top bar. Office: a card with the title, a one-line explanation and the
- *  main action on the same header row. */
+ *  main action on the same header row. Drawer: a tab inside the office yard drawer — no title (the tab
+ *  names it), the main action on top. Lists inside are container-queried (hub-cq), so a narrow frame
+ *  gets the stacked card layout whatever the screen width. */
 export function HubFrame({ variant, title, subtitle, action, children }: {
-  variant: 'yard' | 'office'
+  variant: HubVariant
   title: string
   subtitle?: string
   action?: React.ReactNode
   children: React.ReactNode
 }) {
+  if (variant === 'drawer') {
+    return (
+      <div className="hub-scroll hub-cq flex-1 overflow-y-auto flex flex-col gap-3" style={{ padding: 12, minHeight: 0, background: 'var(--bg-soft)' }}>
+        {action && <div className="flex justify-end">{action}</div>}
+        {children}
+      </div>
+    )
+  }
   if (variant === 'office') {
     return (
       <div className="bg-white rounded-2xl border border-slate-200 flex flex-col">
@@ -109,7 +121,7 @@ export function HubFrame({ variant, title, subtitle, action, children }: {
           </div>
           {action}
         </div>
-        <div className="flex flex-col gap-3" style={{ padding: '14px 18px 18px' }}>{children}</div>
+        <div className="hub-cq flex flex-col gap-3" style={{ padding: '14px 18px 18px' }}>{children}</div>
       </div>
     )
   }
@@ -123,7 +135,7 @@ export function HubFrame({ variant, title, subtitle, action, children }: {
         {action}
       </div>
       {/* hub-scroll: children never shrink (a list with overflow:hidden would squeeze to fit and nothing scrolls) */}
-      <div className="hub-scroll flex-1 overflow-y-auto flex flex-col gap-3" style={{ padding: '14px', minHeight: 0 }}>
+      <div className="hub-scroll hub-cq flex-1 overflow-y-auto flex flex-col gap-3" style={{ padding: '14px', minHeight: 0 }}>
         {children}
       </div>
     </div>

@@ -9,7 +9,7 @@ import {
   type CustomerRequest, type PaymentStatus, type RequestKind, type RequestStatus,
 } from '@/lib/yard/hub'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
-import { AddButton, Chips, Empty, Field, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle } from './ui'
+import { AddButton, Chips, Empty, Field, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle, type HubVariant } from './ui'
 
 type View = 'order' | 'inquiry' | 'closed'
 
@@ -69,7 +69,7 @@ button.rq-pill{cursor:pointer}
 .rq-n-warn{background:var(--warning)}.rq-n-ok{background:var(--success)}.rq-n-pri{background:var(--primary)}.rq-n-dark{background:#3A4360}
 .rq-n-re{background:var(--bg-card);color:var(--text);border:1px solid var(--border)}
 .rq-lbl{display:none}
-@media(max-width:860px){
+@container hub (max-width:860px){
   .rq-cols{display:none}
   .rq-row{grid-template-columns:1fr auto;gap:8px 10px}
   .rq-row .rq-wide{grid-column:1/-1}
@@ -84,7 +84,7 @@ const NEXT_LABEL: Partial<Record<RequestStatus, string>> = {
   notified: '✔ סגור',
 }
 
-export default function RequestsPanel({ variant }: { variant: 'yard' | 'office' }) {
+export default function RequestsPanel({ variant }: { variant: HubVariant }) {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [view, setView]       = useState<View>('order')

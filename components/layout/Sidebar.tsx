@@ -102,9 +102,10 @@ type NavItem = typeof NAV_ITEMS[0]
 // ─── NavItem (מחוץ לקומפוננטה — קריטי! מניעת unmount בכל render של Sidebar) ───
 function NavItem({
   item, pathname, pressed, pendingHref,
-  onDown, onUp, onLeave,
+  onDown, onUp, onLeave, mobileOnly,
 }: {
   item: NavItem
+  mobileOnly?: boolean
   pathname: string
   pressed: string | null
   pendingHref: string | null
@@ -125,7 +126,7 @@ function NavItem({
       onMouseDown={() => onDown(item.href)}
       onMouseUp={onUp}
       onMouseLeave={onLeave}
-      className="nav-tile"
+      className={`nav-tile${mobileOnly ? ' nav-mobile-only' : ''}`}
       data-active={isHighlighted ? 'true' : undefined}
       style={{ opacity: isPending ? 0.8 : 1, transform: pressed === item.href ? 'scale(0.98)' : undefined }}
     >
@@ -301,6 +302,9 @@ export default function Sidebar({
                     <NavItem
                       key={item.href}
                       item={item}
+                      // Admins track the yard (waiting customers, loans) in the yard drawer on desktop;
+                      // the drawer is hidden on phones, so the link stays there
+                      mobileOnly={isAdmin && item.href === '/yard-tracking'}
                       pathname={pathname}
                       pressed={pressed}
                       pendingHref={pendingHref}
