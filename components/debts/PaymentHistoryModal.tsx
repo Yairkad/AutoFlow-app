@@ -224,7 +224,7 @@ export default function PaymentHistoryModal({ open, onClose, debt, payments, ten
         {payments.length > 0 && (
           <div>
             <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>היסטוריה ({payments.length})</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '260px', overflowY: 'auto' }}>
+            <div className="scroll-col" style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '260px', overflowY: 'auto' }}>
               {sorted.map(p => (
                 <div key={p.id} style={{ padding: '8px 10px', background: editingId === p.id ? 'var(--success-soft)' : 'var(--bg)', borderRadius: '8px', fontSize: '12px', border: editingId === p.id ? '1px solid var(--primary)' : '1px solid transparent' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>

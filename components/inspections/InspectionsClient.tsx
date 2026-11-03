@@ -1045,7 +1045,7 @@ export default function InspectionsClient() {
           }} />
 
           {/* Drawer panel */}
-          <div style={{
+          <div className="scroll-col" style={{
             position: 'fixed', top: 0, right: 0, bottom: 0,
             width: '100%', maxWidth: 720,
             zIndex: 500, background: 'var(--bg)',

@@ -844,7 +844,7 @@ export default function TestTransferClient() {
             position: 'fixed', inset: 0, zIndex: 499,
             background: 'rgba(0,0,0,0.45)',
           }} />
-          <div style={{
+          <div className="scroll-col" style={{
             position: 'fixed', top: 0, right: 0, bottom: 0,
             width: '100%', maxWidth: 760,
             zIndex: 500, background: 'var(--bg)',

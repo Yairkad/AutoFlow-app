@@ -46,7 +46,7 @@ export default function TirePickerModal<T extends PickableTire>({ tires, title, 
         <input className="form-input" autoFocus placeholder="חיפוש לפי מידה (205/55R16), מותג או מקט..." value={q}
           onChange={e => setQ(e.target.value)} style={{ margin: '12px 0 8px' }} />
         {children}
-        <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 80 }}>
+        <div className="scroll-col" style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 80 }}>
           {matches.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>לא נמצאו צמיגים</div>}
           {matches.map(t => (
             <button key={t.id} type="button" onClick={() => onPick(t)} style={{

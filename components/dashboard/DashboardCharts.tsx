@@ -195,7 +195,7 @@ export default function DashboardCharts() {
   )
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
+    <div className="scroll-col" style={{ display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
 
       {/* Row 1: Income vs Expenses bar chart */}
       {canFinance && <ChartCard title="הכנסות מול הוצאות – 6 חודשים אחרונים">

@@ -186,7 +186,7 @@ function CategorySelect({
           <button onClick={() => setAdding(false)} style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: '#f8fafc', cursor: 'pointer', fontSize: '13px', color: 'var(--text-muted)' }}>✕</button>
         </div>
       ) : managing ? (
-        <div style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '8px', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '180px', overflowY: 'auto' }}>
+        <div className="scroll-col" style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '8px', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '180px', overflowY: 'auto' }}>
           {cats.map(c => (
             <div key={c} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', borderRadius: '6px', background: '#fff', border: '1px solid var(--border)' }}>
               <span style={{ fontSize: '13px' }}>{c}</span>

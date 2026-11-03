@@ -1005,5 +1005,7 @@ button:not(:disabled):active {
   .ih-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* Yard hub screens (ממתינים / בירור / השאלות): scrolling column whose children keep their height */
-.hub-scroll > * { flex-shrink: 0; }
+/* Scrolling flex columns: children keep their height. Without this a child with overflow:hidden
+   (rounded cards, tables) shrinks to fit the box instead of overflowing — content gets clipped and
+   nothing scrolls. Add .scroll-col to ANY element that is both flex-direction:column and overflow-y:auto. */
+.hub-scroll > *, .scroll-col > *, .yd-body > *, .supplier-detail-panel > *, .ct-card > * { flex-shrink: 0; }

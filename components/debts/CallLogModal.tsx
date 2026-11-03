@@ -88,7 +88,7 @@ export default function CallLogModal({ open, onClose, debtId, debtName, calls, t
         {calls.length > 0 && (
           <div>
             <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px' }}>היסטוריית שיחות ({calls.length})</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
+            <div className="scroll-col" style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }}>
               {[...calls].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(c => (
                 <div key={c.id} style={{ padding: '8px 10px', background: 'var(--bg)', borderRadius: '8px', fontSize: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
