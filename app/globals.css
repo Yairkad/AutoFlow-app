@@ -1029,6 +1029,5 @@ button:not(:disabled):active {
 .yd-tn.dan, .yd-n.dan { background: var(--danger-soft); color: var(--danger); }
 .yd-alert.ok { background: var(--success); color: #fff; }
 .yd-sep { width: 26px; height: 1px; background: var(--border); margin: 2px 0; flex-shrink: 0; }
-.yd-full { display: block; text-align: center; font-size: 13px; font-weight: 600; padding: 8px; border-top: 1px solid var(--border); flex-shrink: 0; }
 /* Sidebar link shown only where the yard drawer is hidden (phones) */
 @media (min-width: 901px) { .nav-mobile-only { display: none !important; } }

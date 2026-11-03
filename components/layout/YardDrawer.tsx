@@ -166,7 +166,6 @@ export default function YardDrawer() {
 
       {tab === 'requests' && <RequestsPanel variant="drawer" />}
       {tab === 'loans' && <LoansPanel variant="drawer" />}
-      {tab !== 'yard' && <a className="yd-full" href="/yard-tracking">למסך המעקב המלא ←</a>}
 
       {tab === 'yard' && <div className="yd-body">
         {cards.length === 0 && (
