@@ -18,6 +18,7 @@ const FIELD_LABELS: Record<keyof VehicleData, string> = {
   seats:     'מושבים',
   test_date: 'טסט אחרון',
   ownership: 'בעלות',
+  fee_group: 'קבוצת רישוי',
 }
 
 interface Props {

@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T08:39:39.791Z
-> Files: 185 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T09:26:34.199Z
+> Files: 191 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -46,6 +46,12 @@
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1f5518b3-afe9-58fc-807e-f4fc20f70cf0/scratchpad/
 
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/724cc5bc-e9ef-5b18-af2f-2df4fa5c99dd/scratchpad/insp/project/
+
+- `canvas.json` (~101 tok)
+- `Current.dc.html` — היסטוריית בדיקות — נוכחי (~1083 tok)
+- `Main.dc.html` — היסטוריית בדיקות — מוצע (~1943 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/7d2ed277-0c3f-5a42-81e9-6e2e0120c4e6/scratchpad/
 
@@ -337,6 +343,10 @@
 
 ## app/api/yard/sessions/[id]/items/[itemId]/
 
+
+## app/api/yard/tire-brands/
+
+- `route.ts` — GET all tires.brand values + tire_brands (he names) for brand autocomplete (~250 tok)
 
 ## app/api/yard/vehicle-history/
 
@@ -706,7 +716,6 @@
 
 - `useTireBrandSuggestions.ts` — existing tire brands as AutocompleteInput options, fetched once from /api/yard/tire-brands (~250 tok)
 
-
 ## lib/inspections/
 
 
@@ -748,7 +757,6 @@
 ## lib/tires/
 
 - `brandSuggestions.ts` — brandSuggestions(brands, heRows): one option per brand (most common spelling, most used first) + Hebrew hint (~400 tok)
-
 - `size.ts` — null-safe tire size helpers: tireSizeText, hasTireSize, isTireMissingDetails/Price, parseTireSize (~350 tok)
 
 ## lib/tires/brands.ts
@@ -822,6 +830,10 @@
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
 
-## app/api/yard/tire-brands/
+## lib/inspections/ (2026-11-03)
 
-- `route.ts` — GET all tires.brand values + tire_brands (he names) for brand autocomplete (~250 tok)
+- `feePrice.ts` — groupsOf(name) parses license-group ranges from price_list names ("1-3", "4,5", "7+"); priceForGroup(rows, group); isInspectionCategory (~350 tok)
+
+## supabase/migrations/ (2026-11-03)
+
+- `115_inspection_fee_group.sql` — car_inspections.fee_group smallint (קבוצת רישוי) (~80 tok)

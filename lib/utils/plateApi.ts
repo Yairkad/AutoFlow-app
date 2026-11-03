@@ -12,13 +12,14 @@ export interface VehicleData {
   seats?: number       // מספר מושבים
   test_date?: string   // תאריך טסט אחרון
   ownership?: string   // בעלות (פרטי/ליסינג/...)
+  fee_group?: number   // קבוצת רישוי / אגרה (from the models registry, local vehicles only)
 }
 
 // Which fields each module needs
 export type PlateField = keyof VehicleData
 
 export const MODULE_FIELDS: Record<string, PlateField[]> = {
-  inspection: ['make', 'model', 'year', 'color', 'fuel', 'engine', 'chassis', 'seats'],
+  inspection: ['make', 'model', 'year', 'color', 'fuel', 'engine', 'chassis', 'seats', 'fee_group'],
   cars:       ['make', 'model', 'year', 'color', 'fuel', 'ownership', 'plate'],
   alignment:  ['make', 'model', 'year'],
   quotes:     ['make', 'model', 'year'],
@@ -51,13 +52,34 @@ const RESOURCE_IMPORTED = '03adc637-b6fe-402b-9937-7c3d3afc9140' // רכבים �
 // Sprinter shuttle) never show up in the two passenger-vehicle datasets above.
 const RESOURCE_HEAVY    = 'cd3acc5c-03c3-4c89-9c54-d40f93c0d790'
 
-async function queryResource(resourceId: string, plate: string): Promise<VehicleData | null> {
+// דגמי רכב (WLTP) — one row per make code + model code + year; holds kvuzat_agra_cd (license fee group)
+const RESOURCE_MODELS   = '142afde2-6228-49f9-8a29-9b6c3a0cbe40'
+
+type Found = VehicleData & { _codes?: { tozeret_cd: unknown; degem_cd: unknown; shnat_yitzur: unknown } }
+
+async function queryResource(resourceId: string, plate: string): Promise<Found | null> {
   const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=${resourceId}&filters={"mispar_rechev":"${plate}"}&limit=1`
   const res = await fetch(url, { next: { revalidate: 3600 } })
   const json = await res.json()
   const records = json?.result?.records
   if (!records?.length) return null
-  return mapResponse(records[0])
+  const r = records[0]
+  return { ...mapResponse(r), _codes: r.degem_cd != null ? { tozeret_cd: r.tozeret_cd, degem_cd: r.degem_cd, shnat_yitzur: r.shnat_yitzur } : undefined }
+}
+
+/** License fee group (+ engine volume) of a model, joined by make code + model code + year. */
+async function queryModel(codes: NonNullable<Found['_codes']>): Promise<{ fee_group?: number; engine?: number }> {
+  try {
+    const filters = encodeURIComponent(JSON.stringify(codes))
+    const url = `https://data.gov.il/api/3/action/datastore_search?resource_id=${RESOURCE_MODELS}&filters=${filters}&fields=kvuzat_agra_cd,nefah_manoa&limit=1`
+    const res = await fetch(url, { next: { revalidate: 86400 } })
+    const r = (await res.json())?.result?.records?.[0]
+    if (!r) return {}
+    return {
+      fee_group: Number(r.kvuzat_agra_cd) > 0 ? Number(r.kvuzat_agra_cd) : undefined,
+      engine:    Number(r.nefah_manoa) > 0 ? Number(r.nefah_manoa) : undefined,
+    }
+  } catch { return {} }
 }
 
 export async function fetchVehicleByPlate(plate: string): Promise<VehicleData | null> {
@@ -72,7 +94,16 @@ export async function fetchVehicleByPlate(plate: string): Promise<VehicleData | 
       queryResource(RESOURCE_IMPORTED, clean),
       queryResource(RESOURCE_HEAVY, clean),
     ])
-    return local ?? imported ?? heavy ?? null
+    const found = local ?? imported ?? heavy
+    if (!found) return null
+    const { _codes, ...vehicle } = found
+    // Imported (personal import) and heavy vehicles have no model code — no fee group for them
+    if (_codes) {
+      const m = await queryModel(_codes)
+      if (m.fee_group) vehicle.fee_group = m.fee_group
+      if (!vehicle.engine && m.engine) vehicle.engine = m.engine
+    }
+    return vehicle
   } catch {
     return null
   }

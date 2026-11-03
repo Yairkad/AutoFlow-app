@@ -366,3 +366,9 @@
 
 - 2026-11-03 (User Preference): AskUserQuestion questions/options must be in Hebrew (user replied "עברית" to an English question).
 - 2026-11-03 (Key Learning): Use components/ui/AutocompleteInput for free-text fields that should reuse existing values (tire brand). Not native <datalist> — user chose the custom component (consistent on phone/tablet, substring + Hebrew-name match).
+- 2026-11-03 (Key Learning): data.gov.il is blocked in the cloud sandbox (proxy 403, WebFetch DNS fail) — can't verify vehicle-registry field names from here; ask the user to allow the domain.
+- 2026-11-03 (User Preference): Inspections — engine volume (engine_cc) is not relevant to the user; no input for it. Dropped from history card.
+- 2026-11-03 (Key Learning): car_inspections.engine_cc is the ENGINE NUMBER (labelled "מספר מנוע" in form + print), not engine volume — don't drop it.
+- 2026-11-03 (Key Learning): License fee group = data.gov.il models registry 142afde2-6228-49f9-8a29-9b6c3a0cbe40 field kvuzat_agra_cd (also nefah_manoa), joined by tozeret_cd + degem_cd + shnat_yitzur from the plate record (053cea08…). Personal-import registry has no degem_cd → no group. Stored in car_inspections.fee_group (migration 115). Inspection price = price_list rows of category /בדיק/, one row per group range parsed from service_name (lib/inspections/feePrice).
+- 2026-11-03 (Key Learning): Node 22 fetch ignores HTTPS_PROXY in the sandbox — run scripts with NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt.
+- 2026-11-03 (Do-Not-Repeat): A scrolling flex column (overflow-y:auto + flex-direction:column) whose child has overflow:hidden → the child shrinks to fit and NOTHING scrolls. Always give such children flex-shrink:0 (yard drawer .yd-card, yard hub .hub-scroll > *). Hit twice in one day.

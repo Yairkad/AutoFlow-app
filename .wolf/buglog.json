@@ -1712,5 +1712,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-03T10:00:00Z"
+  },
+  {
+    "id": "bug-093",
+    "timestamp": "2026-11-03T12:00:00Z",
+    "error_message": "Yard tablet: 'ממתינים' / 'לברר וחזור' lists don't scroll",
+    "file": "components/yard-hub/ui.tsx",
+    "root_cause": "HubFrame yard scroll column is a flex column; .rq-tbl has overflow:hidden so its min-height is 0 and flex-shrink squeezed it to fit — content clipped, nothing overflowed (same as bug in yard drawer)",
+    "fix": "hub-scroll class: .hub-scroll > * { flex-shrink: 0 } + minHeight:0 on frame",
+    "tags": [
+      "css",
+      "flex",
+      "scroll",
+      "yard",
+      "tablet"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-03T12:00:00Z"
   }
 ]

@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { fetchVehicleByPlate, type VehicleData } from '@/lib/utils/plateApi'
+import { priceForGroup, type InspectionPrice } from '@/lib/inspections/feePrice'
 import { INTAKE_FILE_KINDS, INTAKE_MAX_FILE_BYTES, type IntakeFileKind } from '@/lib/inspections/intake'
 
 // Public pre-fill form for a purchase inspection — opened by the customer from the personal
 // link the office sent. Details are posted first, then each document in its own request.
 
-interface Business { name: string; phone: string | null; logo: string | null }
+interface Business { name: string; phone: string | null; logo: string | null; prices?: InspectionPrice[] }
 
 const emptyData = {
   first_name: '', last_name: '', owner_id: '', owner_phone: '', owner_address: '',
@@ -44,6 +45,29 @@ const C = {
 }
 
 const STEPS = ['פרטים אישיים', 'הרכב', 'מסמכים'] as const
+
+const shekel = (p: InspectionPrice) => p.price != null ? `${p.price_note ? p.price_note + ' ' : ''}${Number(p.price).toLocaleString()} ₪` : (p.price_note ?? '')
+
+/** License group + inspection price for the car that was found (the price is per group) */
+function InspectionPriceBox({ group, prices }: { group?: number; prices: InspectionPrice[] }) {
+  const row = priceForGroup(prices, group)
+  if (!group && !prices.length) return null
+  return (
+    <div className="flex flex-col gap-1.5 rounded-xl px-3.5! py-3! mt-2!" style={{ background: '#fff', border: `1px solid ${C.card}` }}>
+      {group != null && <div className="text-base" style={{ color: C.muted }}>קבוצת רישוי: <b style={{ color: C.text }}>{group}</b></div>}
+      {row ? (
+        <div className="text-[17px] font-extrabold" style={{ color: C.accentDark }}>מחיר הבדיקה: {shekel(row)}</div>
+      ) : prices.length > 0 && (<>
+        <div className="text-base font-semibold" style={{ color: C.text }}>מחיר הבדיקה לפי קבוצת הרישוי שברישיון הרכב:</div>
+        <ul className="flex flex-col gap-0.5 text-base" style={{ color: C.text, listStyle: 'none', margin: 0, padding: 0 }}>
+          {prices.map(p => (
+            <li key={p.service_name} className="flex justify-between gap-3"><span>{p.service_name}</span><b>{shekel(p)}</b></li>
+          ))}
+        </ul>
+      </>)}
+    </div>
+  )
+}
 
 function Field({ id, label, required, optional, error, children }: {
   id: string; label: string; required?: boolean; optional?: boolean; error?: string; children: React.ReactNode
@@ -364,6 +388,7 @@ export default function IntakeFormClient({ token }: { token: string }) {
                 </div>
               )}
               {plateMsg && <div className="text-base font-semibold" style={{ color: '#8a4b00' }}>{plateMsg}</div>}
+              {vehicle && <InspectionPriceBox group={vehicle.fee_group} prices={business?.prices ?? []} />}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field id="f-km" label="קילומטראז׳">

@@ -3032,3 +3032,19 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-03 09:24
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:25 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/724cc5bc-e9ef-5b18-af2f-2df4fa5c99dd/scratchpad/insp/project/canvas.json | — | ~101 |
+| 09:26 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/724cc5bc-e9ef-5b18-af2f-2df4fa5c99dd/scratchpad/insp/project/Main.dc.html | — | ~1943 |
+| 09:26 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/724cc5bc-e9ef-5b18-af2f-2df4fa5c99dd/scratchpad/insp/project/Current.dc.html | — | ~1083 |
+
+## Session: 2026-11-03 09:37
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| -- | Inspections history tab redesign: labelled 4-col grid, compact header, click-to-copy fields, actions in footer/menu (ih-* CSS) | components/inspections/InspectionsClient.tsx, app/globals.css | tsc+eslint ok | ~20k |
+| -- | License fee group: plateApi joins models registry; car_inspections.fee_group (mig 115); entry/edit field, card, print; intake link shows group + inspection price from price_list ranges; restored engine number on card | plateApi, InspectionsClient, IntakeFormClient, intake route, feePrice | tsc+eslint ok, live API test ok | ~40k |
+| -- | Fix yard hub (requests/inquiry/loans) not scrolling on tablet: .hub-scroll > * flex-shrink:0 | components/yard-hub/ui.tsx, globals.css | verified with playwright repro | ~5k |
