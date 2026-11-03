@@ -1693,5 +1693,24 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-03T00:00:00Z"
+  },
+  {
+    "id": "bug-092",
+    "timestamp": "2026-11-03T10:00:00Z",
+    "error_message": "Vercel build: Failed to build /customers ... took more than 60 seconds (all static pages incl. /_not-found)",
+    "file": "app/layout.tsx",
+    "root_cause": "Root generateMetadata queries Supabase (service client) with no timeout during static generation of every page; slow/unreachable DB hangs each page past Next's 60s limit",
+    "fix": "Added .abortSignal(AbortSignal.timeout(5000)) so it falls back to default metadata",
+    "tags": [
+      "build",
+      "vercel",
+      "prerender",
+      "timeout",
+      "supabase",
+      "metadata"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-03T10:00:00Z"
   }
 ]

@@ -361,3 +361,5 @@
 - **[2026-10-20] /debts PaymentHistoryModal supports split payments** (add mode only): extra lines (amount+method+reference) are inserted sequentially as separate `customer_debt_payments` rows via `insertCustomerDebtPayment` — no schema change. Receipt fields are shared across the split.
 - **[2026-10-20] User preference:** reply in Hebrew.
 - **[2026-10-20] Clicking a failed `api/store` link in the console opens it without headers → "No API key found"** — not the real error. Ask for DevTools Network → Response of the original request. Live DB has schema drift vs migration files (e.g. scheduled_payments.category was missing) — give idempotent `ADD COLUMN IF NOT EXISTS` SQL.
+
+- 2026-11-03: Root app/layout.tsx generateMetadata hits Supabase at build for every static page — any DB call there MUST have a timeout (abortSignal), or a slow DB fails the Vercel build with "took more than 60 seconds".
