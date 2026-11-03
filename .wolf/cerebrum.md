@@ -366,3 +366,5 @@
 
 - 2026-11-03 (User Preference): AskUserQuestion questions/options must be in Hebrew (user replied "עברית" to an English question).
 - 2026-11-03 (Key Learning): Use components/ui/AutocompleteInput for free-text fields that should reuse existing values (tire brand). Not native <datalist> — user chose the custom component (consistent on phone/tablet, substring + Hebrew-name match).
+- 2026-11-03 (Key Learning): data.gov.il is blocked in the cloud sandbox (proxy 403, WebFetch DNS fail) — can't verify vehicle-registry field names from here; ask the user to allow the domain.
+- 2026-11-03 (User Preference): Inspections — engine volume (engine_cc) is not relevant to the user; no input for it. Dropped from history card.

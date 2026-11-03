@@ -3045,3 +3045,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| -- | Inspections history tab redesign: labelled 4-col grid, compact header, click-to-copy fields, actions in footer/menu (ih-* CSS) | components/inspections/InspectionsClient.tsx, app/globals.css | tsc+eslint ok | ~20k |

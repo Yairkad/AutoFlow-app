@@ -11,7 +11,8 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
-import InspectionChecklistModal, { ChecklistBadge, parseFindings, printChecklist } from './InspectionChecklistModal'
+import InspectionChecklistModal, { parseFindings, printChecklist } from './InspectionChecklistModal'
+import { formatPlate } from '@/lib/yard/types'
 import IntakeTab from './IntakeTab'
 import IntakeFilesModal from './IntakeFilesModal'
 import { intakeMissing, type IntakeFile, type IntakeStatus } from '@/lib/inspections/intake'
@@ -264,36 +265,58 @@ body { font-family: 'Heebo', Arial, sans-serif; direction: rtl; background: #fff
   printHtml(html)
 }
 
-// ── Copy cell helper ──────────────────────────────────────────────────────────
+// ── History card helpers ──────────────────────────────────────────────────────
 
-function CopyCell({ value }: { value: string | number | null | undefined }) {
+/** Click-to-copy wrapper: the whole value is the button, "הועתק" shows for a moment */
+function CopyChip({ value, label, className, children }: { value: string | number | null | undefined; label: string; className?: string; children?: React.ReactNode }) {
   const [copied, setCopied] = useState(false)
-  const text = value != null ? String(value) : ''
-  const copy = () => {
-    if (!text) return
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1200)
-  }
+  const text = value != null ? String(value).trim() : ''
+  if (!text) return <span className="ih-empty">—</span>
   return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <span>{text || '—'}</span>
-      {text && (
-        <button
-          onClick={copy}
-          title="העתק"
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: '1px 3px', borderRadius: 4, fontSize: 11,
-            color: copied ? 'var(--primary)' : 'var(--text-muted)',
-            opacity: 0.6, flexShrink: 0, lineHeight: 1,
-          }}
-        >
-          {copied ? '✓' : '⧉'}
-        </button>
-      )}
-    </span>
+    <button type="button" className={`ih-copy ${className ?? ''}`} title="לחץ להעתקה" aria-label={`העתק ${label}`}
+      onClick={e => {
+        e.stopPropagation()
+        navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1200) }).catch(() => {})
+      }}>
+      {children ?? text}
+      {copied && <span className="ih-copied">הועתק ✓</span>}
+    </button>
   )
+}
+
+/** Labelled field in the history card grid — label above, click the value to copy */
+function Field({ label, value, copyValue, num, ltr, strong, wide }: {
+  label: string; value: string | number | null | undefined; copyValue?: string | number | null
+  num?: boolean; ltr?: boolean; strong?: boolean; wide?: boolean
+}) {
+  return (
+    <div className={`ih-f${wide ? ' wide' : ''}`}>
+      <div className="ih-lbl">{label}</div>
+      <div className={`ih-val${num ? ' num' : ''}${strong ? ' strong' : ''}`} dir={ltr ? 'ltr' : undefined}>
+        <CopyChip value={copyValue ?? value} label={label}>{value != null && String(value).trim() ? value : undefined}</CopyChip>
+      </div>
+    </div>
+  )
+}
+
+/** Findings summary for the card badge */
+function findingsState(raw: string | null): { kind: 'fail' | 'ok' | 'none'; label: string } {
+  try {
+    const parsed = raw ? JSON.parse(raw) : null
+    const items: { status?: string }[] = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.items) ? parsed.items : []
+    const fail = items.filter(i => i.status === 'fail').length
+    if (fail) return { kind: 'fail', label: `✗ ${fail} ליקויים` }
+    if (items.some(i => i.status === 'ok')) return { kind: 'ok', label: '✓ תקין' }
+  } catch { /* not JSON */ }
+  return { kind: 'none', label: 'טרם מולאו ממצאים' }
+}
+
+/** dd/mm/yyyy hh:mm of an inspection */
+function fmtInsDate(ins: Pick<Inspection, 'date' | 'time' | 'created_at'>): string {
+  const d = ins.date || ins.created_at?.slice(0, 10) || ''
+  const [y, m, day] = d.split('-')
+  const date = y && m && day ? `${day}/${m}/${y}` : d
+  return [date, ins.time?.slice(0, 5)].filter(Boolean).join(' ')
 }
 
 // ── Row action button ──────────────────────────────────────────────────────────
@@ -334,7 +357,6 @@ export default function InspectionsClient() {
   const [scanningInsId,  setScanningInsId]  = useState<string | null>(null)
   const [editModalOpen,  setEditModalOpen]  = useState(false)
   const [checklistIns,   setChecklistIns]  = useState<Inspection | null>(null)
-  const [findingsMenuId, setFindingsMenuId] = useState<string | null>(null)
   const [skeletonOnly,   setSkeletonOnly]   = useState(false)
   const [editingInspection, setEditingInspection] = useState<Inspection | null>(null)
   const [filesIns,       setFilesIns]       = useState<Inspection | null>(null)
@@ -900,29 +922,16 @@ export default function InspectionsClient() {
       {/* ── TAB: היסטוריה ── */}
       {tab === 'history' && (
         <div>
-          {/* History header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 16, fontWeight: 900, color: 'var(--text)' }}>מאגר בדיקות</span>
-              <span style={{ fontSize: 18 }}>📋</span>
+          {/* Header: title + count + search + export in one row */}
+          <div className="ih-top">
+            <h2 className="ih-title">מאגר בדיקות</h2>
+            <span className="ih-count">{filtered.length} בדיקות</span>
+            <div className="ih-search">
+              <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input value={search} onChange={e => setSearch(e.target.value)} aria-label="חיפוש בדיקות"
+                placeholder="שם, מספר רכב, טלפון, שלדה..." />
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Button variant="primary" size="sm">
-                ייצוא לאקסל
-              </Button>
-            </div>
-          </div>
-
-          {/* Search */}
-          <div style={{ marginBottom: 16, position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="var(--text-muted)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', right: 12, pointerEvents: 'none', flexShrink: 0 }}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="search-input-global"
-              placeholder="חיפוש לפי שם, מספר רכב, טלפון, שלדה..."
-              style={{ paddingRight: 34 }}
-            />
+            <Button variant="secondary" size="sm">ייצוא לאקסל</Button>
           </div>
 
           {/* Cards */}
@@ -934,137 +943,64 @@ export default function InspectionsClient() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {filtered.map(ins => (
-                <div key={ins.id} onDoubleClick={() => openEdit(ins)} style={{
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)', padding: '12px 16px',
-                  display: 'flex', flexDirection: 'column', gap: 8,
-                  cursor: 'pointer', transition: 'background .15s',
-                }}>
-                  {/* Header: plate + date */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{
-                      background: 'var(--primary-light,#e8f7f0)', color: 'var(--primary)',
-                      fontWeight: 800, fontFamily: 'monospace', padding: '3px 10px',
-                      borderRadius: 6, fontSize: 14, display: 'inline-flex', alignItems: 'center', gap: 4,
-                    }}>
-                      🚗 <CopyCell value={ins.plate} />
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                        {ins.date || ins.created_at?.slice(0, 10) || ''}
-                      </span>
-                      <RowActionsMenu actions={[
-                        { key: 'edit', label: 'ערוך', icon: '✏️', onClick: () => openEdit(ins) },
-                        { key: 'print', label: 'הדפס', icon: '🖨️', onClick: () => handlePrint(ins) },
-                        { key: 'docs', label: `מסמכי לקוח${ins.intake_files?.length ? ` (${ins.intake_files.length})` : ''} / סריקה`, icon: '📎', onClick: () => setFilesIns(ins) },
-                        { key: 'delete', label: 'מחק', icon: '🗑', danger: true, onClick: () => handleDelete(ins.id) },
-                      ]} />
-                    </div>
+              {filtered.map(ins => {
+                const st = findingsState(ins.findings)
+                const canDrive = isAdmin && driveConnected && !ins.drive_file_id
+                const docs = ins.intake_files?.length ?? 0
+                return (
+                <article key={ins.id} className="ih-card" onDoubleClick={() => openEdit(ins)}>
+                  <div className="ih-head">
+                    <CopyChip value={ins.plate} className="plate-chip ih-plate" label="מספר רכב">{formatPlate(ins.plate)}</CopyChip>
+                    <b className="ih-car">{[ins.make, ins.model].filter(Boolean).join(' ') || 'רכב'}</b>
+                    {ins.year && <span className="ih-muted">{ins.year}</span>}
+                    <span style={{ flex: 1 }} />
+                    <span className={`ih-badge ${st.kind}`}>{st.label}</span>
+                    <span className="ih-date">{fmtInsDate(ins)}</span>
+                    {ins.inspection_number != null && <span className="ih-muted">#{ins.inspection_number}</span>}
+                    <RowActionsMenu align="end" actions={[
+                      { key: 'edit', label: 'עריכת פרטים', icon: '✏️', onClick: () => openEdit(ins) },
+                      { key: 'print', label: 'הדפסת דוח', icon: '🖨️', onClick: () => handlePrint(ins) },
+                      ...(canDrive ? [
+                        { key: 'upload', label: 'העלאה לדרייב', icon: '📤', onClick: () => document.getElementById(`drive-upload-${ins.id}`)?.click() },
+                        { key: 'scan', label: 'סריקת מסמך לדרייב', icon: '📷', onClick: () => setScanningInsId(ins.id) },
+                      ] : []),
+                      { key: 'delete', label: 'מחיקה', icon: '🗑', danger: true, onClick: () => handleDelete(ins.id) },
+                    ]} />
                   </div>
 
-                  {/* Owner name + phone */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>
-                      <CopyCell value={ins.owner_name} />
-                    </span>
-                    {ins.owner_phone && (
-                      <span style={{ fontSize: 13, color: 'var(--text-muted)', direction: 'ltr', flexShrink: 0 }}>
-                        <CopyCell value={ins.owner_phone} />
-                      </span>
+                  <div className="ih-grid">
+                    <Field label="בעלים" value={ins.owner_name} strong />
+                    <Field label="טלפון" value={ins.owner_phone} num ltr />
+                    <Field label="ת.ז." value={ins.owner_id} num />
+                    <Field label="קילומטראז׳" value={ins.km ? Number(ins.km).toLocaleString() : null} copyValue={ins.km} num />
+                    <Field label="מספר שלדה" value={ins.chassis} num ltr wide />
+                    <Field label="בודק" value={ins.inspector} />
+                    <Field label="כתובת" value={ins.owner_address} />
+                  </div>
+
+                  <div className="ih-foot">
+                    <button type="button" className="ih-btn primary" onClick={() => setChecklistIns(ins)}>ממצאי בדיקה</button>
+                    {st.kind !== 'none' && <button type="button" className="ih-btn" onClick={() => printChecklistFromList(ins)}>הדפסת ממצאים</button>}
+                    <button type="button" className="ih-btn" onClick={() => setFilesIns(ins)}>מסמכי לקוח{docs ? ` · ${docs}` : ''}</button>
+                    {ins.drive_file_id && (
+                      <a className="ih-btn" href={`https://drive.google.com/file/d/${ins.drive_file_id}/view`} target="_blank" rel="noreferrer">קובץ בדרייב</a>
                     )}
+                    {uploadingId === ins.id && <span className="ih-muted">מעלה לדרייב...</span>}
                   </div>
 
-                  {/* Vehicle info */}
-                  {(ins.make || ins.year || ins.km) && (
-                    <div style={{ fontSize: 13, color: 'var(--text-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                      {ins.make && <span>{ins.make}</span>}
-                      {ins.year && <span>{ins.year}</span>}
-                      {ins.km && <span>{Number(ins.km).toLocaleString()} ק&quot;מ</span>}
-                    </div>
+                  {canDrive && (
+                    <input type="file" accept="image/*,application/pdf" style={{ display: 'none' }} id={`drive-upload-${ins.id}`}
+                      onChange={e => { const f = e.target.files?.[0]; if (f) uploadInspectionFile(ins, f); e.target.value = '' }} />
                   )}
-
-                  {/* Extra: owner_id / address / engine / chassis */}
-                  {(ins.owner_id || ins.owner_address || ins.engine_cc || ins.chassis) && (
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                      {ins.owner_id    && <span>ת.ז: <CopyCell value={ins.owner_id} /></span>}
-                      {ins.engine_cc   && <span>מנוע: <CopyCell value={ins.engine_cc} /></span>}
-                      {ins.chassis     && <span>שלדה: {ins.chassis}</span>}
-                      {ins.owner_address && <span>{ins.owner_address}</span>}
-                    </div>
+                  {scanningInsId === ins.id && (
+                    <DocumentScannerModal
+                      onComplete={file => { setScanningInsId(null); uploadInspectionFile(ins, file) }}
+                      onClose={() => setScanningInsId(null)}
+                    />
                   )}
-
-                  {/* Checklist badge + action menu */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <ChecklistBadge findings={ins.findings} />
-                    {findingsMenuId === ins.id ? (
-                      <>
-                        <button onClick={() => { setChecklistIns(ins); setFindingsMenuId(null) }}
-                          style={{ padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1.5px solid var(--primary)', background: 'var(--primary)', color: '#fff', cursor: 'pointer' }}>
-                          ערוך
-                        </button>
-                        <button onClick={() => { printChecklistFromList(ins); setFindingsMenuId(null) }}
-                          style={{ padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', cursor: 'pointer' }}>
-                          הדפס
-                        </button>
-                        <button onClick={() => setFindingsMenuId(null)}
-                          style={{ padding: '4px 8px', borderRadius: 8, fontSize: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                          ✕
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => setFindingsMenuId(ins.id)}
-                        style={{ padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', cursor: 'pointer' }}>
-                        ממצאי בדיקה
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Footer: drive + actions */}
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
-                    {ins.drive_file_id ? (
-                      <a
-                        href={`https://drive.google.com/file/d/${ins.drive_file_id}/view`}
-                        target="_blank" rel="noreferrer"
-                        title="פתח בדרייב"
-                        style={{ fontSize: 18, textDecoration: 'none' }}
-                      >📄</a>
-                    ) : isAdmin && driveConnected ? (
-                      <>
-                        <input
-                          type="file" accept="image/*,application/pdf"
-                          style={{ display: 'none' }}
-                          id={`drive-upload-${ins.id}`}
-                          onChange={e => { const f = e.target.files?.[0]; if (f) uploadInspectionFile(ins, f); e.target.value = '' }}
-                        />
-                        <label
-                          htmlFor={`drive-upload-${ins.id}`}
-                          title="העלה קובץ לדרייב"
-                          style={{ cursor: uploadingId === ins.id ? 'default' : 'pointer', fontSize: 18 }}
-                        >
-                          {uploadingId === ins.id ? '⏳' : '📤'}
-                        </label>
-                        <button
-                          onClick={() => setScanningInsId(ins.id)}
-                          title="סרוק מסמך"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: 0 }}
-                        >📷</button>
-                        {scanningInsId === ins.id && (
-                          <DocumentScannerModal
-                            onComplete={file => { setScanningInsId(null); uploadInspectionFile(ins, file) }}
-                            onClose={() => setScanningInsId(null)}
-                          />
-                        )}
-                      </>
-                    ) : null}
-
-                    <div style={{ flex: 1 }} />
-
-                  </div>
-                </div>
-              ))}
+                </article>
+                )
+              })}
             </div>
           )}
         </div>
