@@ -33,6 +33,8 @@ export async function generateMetadata(): Promise<Metadata> {
       .from('tenants')
       .select('name, public_info')
       .limit(1)
+      // Runs at build time for every static page — never let a slow/unreachable DB hang the build
+      .abortSignal(AbortSignal.timeout(5000))
       .single()
 
     if (tenant) {
