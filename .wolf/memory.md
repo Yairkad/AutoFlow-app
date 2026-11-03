@@ -3049,3 +3049,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | -- | License fee group: plateApi joins models registry; car_inspections.fee_group (mig 115); entry/edit field, card, print; intake link shows group + inspection price from price_list ranges; restored engine number on card | plateApi, InspectionsClient, IntakeFormClient, intake route, feePrice | tsc+eslint ok, live API test ok | ~40k |
 | -- | Fix yard hub (requests/inquiry/loans) not scrolling on tablet: .hub-scroll > * flex-shrink:0 | components/yard-hub/ui.tsx, globals.css | verified with playwright repro | ~5k |
 | -- | Audit: added scroll-col to all 18 flex-column scroll containers (side panels, modals, sidebar, yard screens, capped lists) + CSS for yd-body/supplier-detail-panel/ct-card | 16 files + globals.css | tsc ok | ~10k |
+
+## Session: 2026-11-03 10:11
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| -- | Build fix: replaced next/font/google with @fontsource self-hosted fonts (layout + guide/intake pages) | app/layout.tsx, globals.css, 3 pages, package.json | next build compiles | ~15k |

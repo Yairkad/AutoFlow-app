@@ -1,6 +1,10 @@
 @import "tailwindcss";
 
 :root {
+  /* Self-hosted fonts (@fontsource, imported in app/layout.tsx) */
+  --font-heebo: 'Heebo Variable', 'Heebo';
+  --font-ui:    'IBM Plex Sans Hebrew';
+  --font-num:   'IBM Plex Mono';
   /* Redesign 2026-10: navy brand, cool neutrals; green / red only for approve-cancel and status */
   --primary:    #26357A;
   --primary-hover: #1E2B66;
@@ -1009,3 +1013,6 @@ button:not(:disabled):active {
    (rounded cards, tables) shrinks to fit the box instead of overflowing — content gets clipped and
    nothing scrolls. Add .scroll-col to ANY element that is both flex-direction:column and overflow-y:auto. */
 .hub-scroll > *, .scroll-col > *, .yd-body > *, .supplier-detail-panel > *, .ct-card > * { flex-shrink: 0; }
+
+/* Public guide / intake pages (self-hosted Assistant) */
+.font-assistant { font-family: 'Assistant Variable', 'Assistant', Arial, sans-serif; }
