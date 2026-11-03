@@ -8,6 +8,8 @@ import { tireSizeSearchParams } from '@/lib/tires/size'
 import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
 import PlacementSheet, { type Placement } from '@/components/stock/PlacementSheet'
 import { useScanTyping } from '@/lib/hooks/useScanTyping'
+import AutocompleteInput from '@/components/ui/AutocompleteInput'
+import { useTireBrandSuggestions } from '@/lib/hooks/useTireBrandSuggestions'
 
 interface WaitingCustomer { id: string; customer_name: string; phone: string | null; item_desc: string; qty: number }
 
@@ -32,6 +34,7 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
   const [qty,      setQty]      = useState(1)
   const [newType,  setNewType]  = useState<'tire' | 'product'>('tire')
   const [tireForm, setTireForm] = useState(emptyTireForm)
+  const brandOpts = useTireBrandSuggestions()
   const [prodForm, setProdForm] = useState(emptyProdForm)
 
   // ── Quick mode ────────────────────────────────────────────────────────────
@@ -648,8 +651,8 @@ export default function ReceiveClient({ office = false }: { office?: boolean }) 
               {newType === 'tire' ? (
                 <div className="bg-white rounded-2xl shadow flex flex-col gap-3" style={{ padding: '16px' }}>
                   <div><label className="text-xs font-bold text-slate-500 mb-1 block">מותג</label>
-                    <input className="w-full border-2 border-slate-200 rounded-xl outline-none focus:border-blue-400"
-                      value={tireForm.brand} onChange={e => tf('brand', e.target.value)} placeholder="Bridgestone..." style={{ padding: '10px 12px' }} /></div>
+                    <AutocompleteInput className="w-full border-2 border-slate-200 rounded-xl outline-none focus:border-blue-400"
+                      options={brandOpts} value={tireForm.brand} onChange={v => tf('brand', v)} placeholder="Bridgestone..." style={{ padding: '10px 12px' }} /></div>
                   <div className="grid grid-cols-3 gap-2">
                     {(['width','profile','rim'] as const).map(f => (
                       <div key={f}><label className="text-xs font-bold text-slate-500 mb-1 block">{f === 'width' ? 'רוחב' : f === 'profile' ? 'פרופיל' : 'אינץ׳'}</label>

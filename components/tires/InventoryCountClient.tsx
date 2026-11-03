@@ -10,6 +10,8 @@ import { tireSizeText, parseTireSize } from '@/lib/tires/size'
 import TirePickerModal from '@/components/tires/TirePickerModal'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
 import { itemCodes } from '@/lib/stock/barcodes'
+import AutocompleteInput from '@/components/ui/AutocompleteInput'
+import { useTireBrandSuggestions } from '@/lib/hooks/useTireBrandSuggestions'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -85,6 +87,7 @@ export default function InventoryCountClient() {
   const [linkSaveSku, setLinkSaveSku] = useState(false)
   const [newTireOpen, setNewTireOpen] = useState(false)
   const [newTireForm, setNewTireForm] = useState({ size: '', brand: '', qty: '1' })
+  const brandOpts = useTireBrandSuggestions()
 
   const [scanMode,   setScanMode]   = useState(false)
   const [scanBuffer, setScanBuffer] = useState('')
@@ -641,7 +644,7 @@ export default function InventoryCountClient() {
             <label className="form-label">מידה</label>
             <input className="form-input" autoFocus placeholder="205/55R16" value={newTireForm.size} onChange={e => setNewTireForm(f => ({ ...f, size: e.target.value }))} />
             <label className="form-label" style={{ marginTop: 8 }}>מותג (אופציונלי)</label>
-            <input className="form-input" value={newTireForm.brand} onChange={e => setNewTireForm(f => ({ ...f, brand: e.target.value }))} />
+            <AutocompleteInput className="form-input" options={brandOpts} value={newTireForm.brand} onChange={v => setNewTireForm(f => ({ ...f, brand: v }))} />
             <label className="form-label" style={{ marginTop: 8 }}>כמות</label>
             <input className="form-input" type="number" min={1} value={newTireForm.qty} onChange={e => setNewTireForm(f => ({ ...f, qty: e.target.value }))}
               onKeyDown={e => { if (e.key === 'Enter') addNewTire() }} />

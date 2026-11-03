@@ -363,3 +363,6 @@
 - **[2026-10-20] Clicking a failed `api/store` link in the console opens it without headers → "No API key found"** — not the real error. Ask for DevTools Network → Response of the original request. Live DB has schema drift vs migration files (e.g. scheduled_payments.category was missing) — give idempotent `ADD COLUMN IF NOT EXISTS` SQL.
 
 - 2026-11-03: Root app/layout.tsx generateMetadata hits Supabase at build for every static page — any DB call there MUST have a timeout (abortSignal), or a slow DB fails the Vercel build with "took more than 60 seconds".
+
+- 2026-11-03 (User Preference): AskUserQuestion questions/options must be in Hebrew (user replied "עברית" to an English question).
+- 2026-11-03 (Key Learning): Use components/ui/AutocompleteInput for free-text fields that should reuse existing values (tire brand). Not native <datalist> — user chose the custom component (consistent on phone/tablet, substring + Hebrew-name match).
