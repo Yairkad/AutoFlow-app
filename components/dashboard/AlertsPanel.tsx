@@ -174,8 +174,8 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
 
   useEffect(() => {
     load()
-    // Refresh on focus / every 30s (no Supabase realtime — it ate the DB's disk IO)
-    const stopLive = startLiveRefresh(() => load(), 30_000)
+    // Refresh on focus / every 2 min (no Supabase realtime — it ate the DB's disk IO)
+    const stopLive = startLiveRefresh(() => load(), 120_000)
     return () => { stopLive() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -112,8 +112,8 @@ export default function OfficeClient({ initialActive, initialPending }: Props) {
     return () => { document.title = base }
   }, [unread])
 
-  // Refresh on focus and every 20s (no Supabase realtime — it ate the DB's disk IO)
-  useEffect(() => startLiveRefresh(fetchSessions, 20_000), []) // eslint-disable-line
+  // Refresh on focus and every 30s (no Supabase realtime). Often left on a second monitor → poll when blurred too.
+  useEffect(() => startLiveRefresh(fetchSessions, 30_000, { whenBlurred: true }), []) // eslint-disable-line
 
   const DEFAULT_SERVICES = [
     'תיקון תקר',

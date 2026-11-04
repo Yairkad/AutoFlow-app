@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 import type { YardSession } from '@/lib/yard/types'
 import { sessionTotal, minutesSince, formatPlate, CLOSE_TYPE_LABEL } from '@/lib/yard/types'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
@@ -12,7 +13,8 @@ import LoansPanel from '@/components/yard-hub/LoansPanel'
 const OPEN_KEY = 'yard-drawer-open'
 const TAB_KEY  = 'yard-drawer-tab'
 type DrawerTab = 'yard' | 'requests' | 'loans'
-const POLL_MS  = 20_000
+const POLL_OPEN_MS   = 45_000    // drawer open: cards + counts
+const POLL_CLOSED_MS = 180_000   // closed: only the badge counts on the rail
 
 // Yard control on every desktop screen (redesign): a thin tab on the left edge; opened, it takes the
 // left third and pushes the page narrower (AppShell's main uses --drawer-w) instead of covering it.
@@ -75,11 +77,17 @@ export default function YardDrawer() {
     await Promise.all([load(), loadClosed(closedDays)])
   }
 
+  // Mounted on every admin page in every tab — so: no polling in hidden/unfocused windows
+  // (startLiveRefresh), and while closed only the counts (one call instead of three).
+  const loadCounts = useCallback(async () => {
+    try { const c = await fetch('/api/yard/counts'); if (c.ok) setCounts(await c.json()) } catch { /* keep last */ }
+  }, [])
   useEffect(() => {
-    const first = setTimeout(load, 0)
-    const id = setInterval(load, POLL_MS)
-    return () => { clearTimeout(first); clearInterval(id) }
-  }, [load])
+    const tick = open ? load : loadCounts
+    const first = setTimeout(tick, 0)
+    const stop = startLiveRefresh(tick, open ? POLL_OPEN_MS : POLL_CLOSED_MS)
+    return () => { clearTimeout(first); stop() }
+  }, [load, loadCounts, open])
 
   // Push the page: main's left margin follows the drawer width
   useEffect(() => {

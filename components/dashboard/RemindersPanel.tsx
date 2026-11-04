@@ -77,8 +77,8 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
 
     fetch()
 
-    // Refresh on focus / every 30s (no Supabase realtime — it ate the DB's disk IO)
-    const stopLive = startLiveRefresh(fetch, 30_000)
+    // Refresh on focus / every 2 min (no Supabase realtime — it ate the DB's disk IO)
+    const stopLive = startLiveRefresh(fetch, 120_000)
 
     return () => { stopLive() }
   }, [])

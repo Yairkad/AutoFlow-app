@@ -42,7 +42,7 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
     const soon = () => { clearTimeout(timer); timer = setTimeout(() => setCountsTick(t => t + 1), 500) }
-    const stopLive = startLiveRefresh(soon, 30_000)   // focus + every 30s (no Supabase realtime — it ate the DB's disk IO)
+    const stopLive = startLiveRefresh(soon, 30_000, { whenBlurred: true })   // focus + every 30s (no Supabase realtime — it ate the DB's disk IO)
     return () => { clearTimeout(timer); stopLive() }
   }, [])
 
@@ -51,7 +51,7 @@ export default function YardShell({ isAdmin, modules, userName, children }: Prop
   useEffect(() => {
     const renew = () => { fetch('/api/yard-auth/renew', { method: 'POST' }).catch(() => {}) }
     renew()
-    return startLiveRefresh(renew, 6 * 60 * 60 * 1000)
+    return startLiveRefresh(renew, 6 * 60 * 60 * 1000, { whenBlurred: true })
   }, [])
 
   const userButton = (compact: boolean) => (
