@@ -3092,3 +3092,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-04 07:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 07:50 | Investigated Vercel Fluid CPU/memory 75% warning: polling (replaced realtime 11-02) × /api/store proxy = function call per query; YardDrawer polls when hidden, YardDashboard double-refresh | proxy.ts, lib/supabase/client.ts, lib/hooks/useLiveRefresh.ts | answered, no code change yet | ~6k |
