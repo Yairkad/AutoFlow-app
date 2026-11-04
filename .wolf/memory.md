@@ -3100,3 +3100,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 07:50 | Investigated Vercel Fluid CPU/memory 75% warning: polling (replaced realtime 11-02) × /api/store proxy = function call per query; YardDrawer polls when hidden, YardDashboard double-refresh | proxy.ts, lib/supabase/client.ts, lib/hooks/useLiveRefresh.ts | answered, no code change yet | ~6k |
 | 08:10 | Cut polling load: focus-only interval polls in startLiveRefresh, dashboard widgets 2–3 min, YardDrawer counts-only when closed + visibility-aware, YardDashboard single timer | lib/hooks/useLiveRefresh.ts, components/layout/YardDrawer.tsx, components/dashboard/*, components/yard/* | tsc ok, no new lint errors | ~15k |
 | 08:25 | Disabled Vercel preview deployments for claude/** and ccr-* (Function Storage 100%) | vercel.json | done | ~3k |
+
+## Session: 2026-11-04 08:09
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:40 | Branch deletion blocked (403, session can push only its branch) — user to delete in GitHub UI; Google OAuth inactive-client email explained; opening PR to main | - | done | ~2k |
