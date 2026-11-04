@@ -262,8 +262,8 @@ export default function DashboardStats() {
 
     fetchStats(admin, mods)
 
-    // Refresh on focus / every 60s (no Supabase realtime — it ate the DB's disk IO)
-    const stopLive = startLiveRefresh(() => fetchStats(admin, mods), 60_000)
+    // Refresh on focus / every 3 min (11 queries via /api/store each time — keep it rare)
+    const stopLive = startLiveRefresh(() => fetchStats(admin, mods), 180_000)
     return () => { stopLive() }
   }, [profile]) // eslint-disable-line react-hooks/exhaustive-deps
 

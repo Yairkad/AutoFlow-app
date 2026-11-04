@@ -1,5 +1,11 @@
 {
   "crons": [
     { "path": "/api/cron/backup", "schedule": "30 0 * * *" }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "claude/**": false,
+      "ccr-*": false
+    }
+  }
 }

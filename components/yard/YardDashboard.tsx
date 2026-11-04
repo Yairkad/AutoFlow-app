@@ -14,14 +14,14 @@ export default function YardDashboard({ initialSessions }: Props) {
   const [, setTick] = useState(0)
   const [newCarLoading, setNewCarLoading] = useState(false)
 
+  // Elapsed-time display only — data refresh is the single useLiveRefresh below
   useEffect(() => {
-    // Also refetch: a PIN-login terminal has no Supabase session, so realtime below gets nothing there
-    const id = setInterval(() => { setTick(t => t + 1); router.refresh() }, 30_000)
+    const id = setInterval(() => setTick(t => t + 1), 30_000)
     return () => clearInterval(id)
-  }, [router])
+  }, [])
 
-  // Also refresh the moment the screen comes back into view.
-  useLiveRefresh(() => router.refresh(), 30_000)
+  // Refresh on focus and every 30s; a yard terminal is nobody's focused window, so poll when blurred too.
+  useLiveRefresh(() => router.refresh(), 30_000, { whenBlurred: true })
 
   function timerState(openedAt: string): 'ok' | 'warn' | 'critical' {
     const m = minutesSince(openedAt)
