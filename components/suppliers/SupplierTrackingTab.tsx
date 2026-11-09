@@ -949,7 +949,7 @@ export default function SupplierTrackingTab({
                 const m = monthSummaries(ev)[mk]
                 const charges = m?.charges ?? 0, credits = m?.credits ?? 0, payments = m?.payments ?? 0
                 return { sid, name: suppliers.find(x => x.id === sid)?.name ?? 'ללא ספק', opening, charges, credits, payments,
-                  own: charges - credits - payments, closing: opening + charges - credits - payments }
+                  own: charges - credits, closing: opening + charges - credits - payments }
               }).filter(r => Math.abs(r.opening) > 0.005 || r.charges || r.credits || r.payments)
                 .sort((a, b) => b.closing - a.closing)
               const tot = rows.reduce((t, r) => ({ opening: t.opening + r.opening, charges: t.charges + r.charges, credits: t.credits + r.credits, payments: t.payments + r.payments, own: t.own + r.own, closing: t.closing + r.closing }),
@@ -977,7 +977,7 @@ export default function SupplierTrackingTab({
                               <td style={td}>{r.charges ? `+${fmt(r.charges)}` : '—'}</td>
                               <td style={td}>{r.credits ? `−${fmt(r.credits)}` : '—'}</td>
                               <td style={td}>{r.payments ? `−${fmt(r.payments)}` : '—'}</td>
-                              <td style={{ ...td, fontWeight: 600, color: red(r.own) }}>{fmt(r.own)}</td>
+                              <td style={{ ...td, fontWeight: 600 }}>{fmt(r.own)}</td>
                               <td style={{ ...td, fontWeight: 700, color: red(r.closing) }}>{fmt(r.closing)}</td>
                             </tr>
                           ))}
@@ -985,7 +985,7 @@ export default function SupplierTrackingTab({
                         <tfoot><tr style={{ background: '#f8fafc', fontWeight: 700 }}>
                           <td style={td}>סה&quot;כ</td><td style={td}>{fmt(tot.opening)}</td><td style={td}>+{fmt(tot.charges)}</td>
                           <td style={td}>−{fmt(tot.credits)}</td><td style={td}>−{fmt(tot.payments)}</td>
-                          <td style={{ ...td, color: red(tot.own) }}>{fmt(tot.own)}</td>
+                          <td style={td}>{fmt(tot.own)}</td>
                           <td style={{ ...td, color: red(tot.closing) }}>{fmt(tot.closing)}</td>
                         </tr></tfoot>
                       </table>
@@ -1140,7 +1140,7 @@ export default function SupplierTrackingTab({
                       const monthNetTotal    = monthChargeTotal - monthCreditTotal
                       const monthDirect      = group.directPays.filter(g => monthOf(g.date) === mk)
                       const monthBalance     = sum.closing   // running balance at the end of this month
-                      const monthOwn         = sum.charges - sum.credits - sum.payments   // this month alone
+                      const monthOwn         = sum.charges - sum.credits   // this month's invoices − credits (payments only affect the overall balance)
                       const monthCollapsed   = !monthFilter && !expandedMonthKeys.has(monthKeyFor(group.sid, mk))
 
                       return (
@@ -1152,10 +1152,10 @@ export default function SupplierTrackingTab({
                           >
                             <span style={{ display: 'inline-block', transition: 'transform .15s', transform: monthCollapsed ? 'rotate(0deg)' : 'rotate(90deg)', color: 'var(--text-muted)', fontSize: '12px' }}>›</span>
                             <span style={{ fontWeight: 700, fontSize: '14px', color: '#1d4ed8' }}>{fmtMonth(mk)}</span>
-                            {monthOwn <= 0.005
+                            {monthBalance <= 0.005
                               ? <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>סגור ✓</span>
                               : <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>פתוח</span>}
-                            <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700, color: monthOwn > 0.005 ? 'var(--danger)' : 'var(--success)' }}>
+                            <span style={{ marginRight: 'auto', fontSize: '13px', fontWeight: 700 }}>
                               לחודש זה: {fmt(monthOwn)}
                             </span>
                             <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>
@@ -1262,7 +1262,7 @@ export default function SupplierTrackingTab({
                                     {monthCreditTotal > 0 && <span>סה&quot;כ זיכוי: <strong style={{ color: 'var(--danger)' }}>{fmt(monthCreditTotal)}</strong></span>}
                                     <span>נטו: <strong style={{ color: 'var(--text)' }}>{fmt(monthNetTotal)}</strong></span>
                                     {sum.payments > 0 && <span>שולם בחודש: <strong style={{ color: 'var(--success)' }}>{fmt(sum.payments)}</strong></span>}
-                                    <span>סיכום לחודש זה: <strong style={{ color: monthOwn > 0.005 ? 'var(--danger)' : 'var(--success)' }}>{fmt(monthOwn)}</strong></span>
+                                    <span>סיכום לחודש זה: <strong style={{ color: 'var(--text)' }}>{fmt(monthOwn)}</strong></span>
                                     <span>יתרה כללית: <strong style={{ color: monthBalance > 0.005 ? 'var(--danger)' : 'var(--success)' }}>{fmt(monthBalance)}</strong></span>
                                   </div>
                                 </td>
