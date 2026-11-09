@@ -3114,3 +3114,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 20:28 | Investigated supplier check/month-summary/deleted-payment issues; asked user to confirm before coding | SupplierTrackingTab, ScheduledPaymentsModal, ExpensesClient | awaiting answer | ~15k |
 | 20:36 | Created lib/debts/supplierDirectPayments.ts | — | ~1578 |
 | 20:40 | Suppliers: removed invoice/month allocation from checks & pay modal; payment delete via expense; month block 'לחודש זה'+'יתרה כללית'; all-suppliers monthly window; ArrivalsModal inline suggestions + size detection; dashboards use running balance | SupplierTrackingTab, ScheduledPaymentsModal, ExpensesClient, ArrivalsModal, supplierDirectPayments, Dashboard* | tsc ok | ~60k |
+
+## Session: 2026-11-09 20:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:50 | Bank-sync: reviewed import/reconcile flow, proposed simplification plan, awaiting user confirmation | components/bank-sync/* | pending | ~8k |
