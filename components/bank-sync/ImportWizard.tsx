@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/Toast'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import {
-  readRawRows, applyMapping, guessMapping,
+  readRawRows, applyMapping, guessMapping, headerSignature,
   ColumnMapping, AmountMode, AmountSign, ParsedLine,
 } from '@/lib/bank-sync/parseStatementFile'
 import { BankSource } from './types'
@@ -77,20 +77,41 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
     if (!file) return
     e.target.value = ''
     setFileName(file.name)
-    const rows = await readRawRows(file)
+    let rows: unknown[][]
+    try { rows = await readRawRows(file) } catch { showToast('לא הצלחתי לקרוא את הקובץ', 'error'); return }
     setRawRows(rows)
     const guess = guessMapping(rows)
-    applyMappingObj(guess)
-    setSourceId('')
-    setSourceName('')
-    setStep('map')
+    // Same export as before (same header row) → use the saved source and its mapping as-is
+    const known = guess.signature ? sources.find(s => s.column_mapping?.signature === guess.signature) : undefined
+    const mapping = known?.column_mapping ?? guess
+    applyMappingObj(mapping)
+    setSourceId(known?.id ?? '')
+    setSourceName(known?.name ?? file.name.replace(/\.[^.]+$/, ''))
+    const lines = applyMapping(rows, mapping)
+    if (!lines.length) {
+      showToast('לא זוהו שורות — סמן את העמודות ידנית', 'error')
+      setStep('map')
+      return
+    }
+    await showParsed(lines, known?.id ?? '')
   }
 
-  function pickSource(id: string) {
-    setSourceId(id)
-    if (!id) { setSourceName(''); applyMappingObj(guessMapping(rawRows)); return }
-    const src = sources.find(s => s.id === id)
-    if (src) { setSourceName(src.name); applyMappingObj(src.column_mapping) }
+  // Duplicate check against earlier imports of the same source, then the review list
+  async function showParsed(lines: ParsedLine[], srcId: string) {
+    setParsed(lines)
+    if (srcId && lines.length > 0) {
+      const dates = lines.map(l => l.date).sort()
+      const { data: existing } = await supabase.from('bank_statement_lines')
+        .select('date, amount')
+        .eq('tenant_id', tenantId).eq('source_id', srcId)
+        .gte('date', dates[0]).lte('date', dates[dates.length - 1])
+      const keys = new Set((existing ?? []).map((r: { date: string; amount: number }) => `${r.date}|${Number(r.amount)}`))
+      setDupKeys(keys)
+      setSkipDup(new Set(lines.filter(l => keys.has(`${l.date}|${l.amount}`)).map(l => l.rowIndex)))
+    } else {
+      setDupKeys(new Set()); setSkipDup(new Set())
+    }
+    setStep('confirm')
   }
 
   function buildMapping(): ColumnMapping | null {
@@ -134,49 +155,33 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
     }
   }
 
-  async function saveMappingAndParse() {
+  async function parseWithMapping() {
     const mapping = buildMapping()
     if (!mapping) { showToast('נא לסמן עמודות תאריך, תיאור וסכום', 'error'); return }
-    if (!sourceName.trim()) { showToast('נא לתת שם למקור (לדוגמה: בנק הפועלים עו״ש)', 'error'); return }
-
-    setBusy(true)
-    const { data: src, error } = await supabase.from('bank_statement_sources')
-      .upsert({ tenant_id: tenantId, name: sourceName.trim(), column_mapping: mapping }, { onConflict: 'tenant_id,name' })
-      .select('*').single()
-    setBusy(false)
-    if (error || !src) { showToast('שגיאה בשמירת המקור: ' + (error?.message ?? ''), 'error'); return }
-
-    setSourceId(src.id)
-    onSourcesChange()
-
     const lines = applyMapping(rawRows, mapping)
-    setParsed(lines)
-
-    // Duplicate detection against prior imports from the same source
-    if (lines.length > 0) {
-      const dates = lines.map(l => l.date).sort()
-      const { data: existing } = await supabase.from('bank_statement_lines')
-        .select('date, amount')
-        .eq('tenant_id', tenantId).eq('source_id', src.id)
-        .gte('date', dates[0]).lte('date', dates[dates.length - 1])
-      const keys = new Set((existing ?? []).map((r: any) => `${r.date}|${Number(r.amount)}`))
-      setDupKeys(keys)
-      setSkipDup(new Set(lines.filter(l => keys.has(`${l.date}|${l.amount}`)).map(l => l.rowIndex)))
-    } else {
-      setDupKeys(new Set())
-      setSkipDup(new Set())
-    }
-
-    setStep('confirm')
+    if (!lines.length) { showToast('לא נמצאו שורות עם תאריך וסכום — בדוק את העמודות', 'error'); return }
+    await showParsed(lines, sourceId)
   }
 
   async function confirmImport() {
     const toInsert = parsed.filter(l => !skipDup.has(l.rowIndex))
     if (toInsert.length === 0) { showToast('אין שורות לייבוא', 'error'); return }
+    const mapping = buildMapping()
+    if (!mapping) { setStep('map'); return }
+    const name = sourceName.trim() || fileName.replace(/\.[^.]+$/, '') || 'דף בנק'
 
     setBusy(true)
+    const prev = sources.find(s => s.id === sourceId)
+    const { data: src, error: srcErr } = await supabase.from('bank_statement_sources')
+      .upsert({ tenant_id: tenantId, name, column_mapping: {
+        ...mapping, signature: headerSignature(rawRows, mapping.headerRowIndex), rules: prev?.column_mapping?.rules ?? {},
+      } }, { onConflict: 'tenant_id,name' })
+      .select('id').single()
+    if (srcErr || !src) { setBusy(false); showToast('שגיאה בשמירת המקור: ' + (srcErr?.message ?? ''), 'error'); return }
+    const sourceId_ = src.id
+    onSourcesChange()
     const { data: imp, error: impErr } = await supabase.from('bank_statement_imports').insert({
-      tenant_id: tenantId, source_id: sourceId, file_name: fileName,
+      tenant_id: tenantId, source_id: sourceId_, file_name: fileName,
       row_count: rawRows.length, imported_count: toInsert.length, imported_by: userId,
     }).select('id').single()
 
@@ -184,7 +189,7 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
 
     const { error: linesErr } = await supabase.from('bank_statement_lines').insert(
       toInsert.map(l => ({
-        tenant_id: tenantId, import_id: imp.id, source_id: sourceId,
+        tenant_id: tenantId, import_id: imp.id, source_id: sourceId_,
         row_index: l.rowIndex, date: l.date, description: l.description,
         direction: l.direction, amount: l.amount, balance_after: l.balanceAfter,
         charge_date: l.chargeDate, card_number: l.cardNumber,
@@ -225,14 +230,6 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>מקור</label>
-              <select value={sourceId} onChange={e => pickSource(e.target.value)} style={{ ...SEL, minWidth: 200 }}>
-                <option value="">+ מקור חדש</option>
-                {sources.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-            <Input label="שם המקור" placeholder="לדוגמה: בנק הפועלים עו״ש" value={sourceName} onChange={e => setSourceName(e.target.value)} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>שורת הכותרות (0 = הראשונה)</label>
               <input type="number" min={0} value={headerRowIndex} onChange={e => setHeaderRowIndex(Math.max(0, parseInt(e.target.value, 10) || 0))} style={{ ...SEL, width: 90 }} />
             </div>
@@ -255,7 +252,7 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
           </div>
 
           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            לכל עמודה בטבלה למטה בחר תפקיד (תאריך / תיאור / סכום / התעלם וכו׳) — תצוגה מקדימה של {previewRows.length} השורות הראשונות מהקובץ.
+            תיקון עמודות: מעל כל עמודה בחר מה היא (תאריך / תיאור / סכום…). השורה הצהובה היא שורת הכותרות. המיפוי נשמר ובפעם הבאה קובץ מאותו מקור ייקלט אוטומטית.
           </div>
 
           <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '10px' }}>
@@ -292,16 +289,32 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
           </div>
 
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={() => setStep('upload')}>← חזרה</Button>
-            <Button onClick={saveMappingAndParse} loading={busy}>שמור מיפוי והמשך</Button>
+            <Button variant="secondary" onClick={() => parsed.length ? setStep('confirm') : setStep('upload')}>← חזרה</Button>
+            <Button onClick={parseWithMapping} loading={busy}>הצג שורות ←</Button>
           </div>
         </div>
       )}
 
       {step === 'confirm' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <Input label="מקור (בנק / כרטיס)" value={sourceName} onChange={e => setSourceName(e.target.value)} />
+            {sources.length > 0 && (
+              <select value={sourceId} aria-label="מקור קיים" onChange={e => {
+                const src = sources.find(x => x.id === e.target.value)
+                setSourceId(e.target.value)
+                if (src) { setSourceName(src.name); applyMappingObj(src.column_mapping) }
+              }} style={SEL}>
+                <option value="">מקור חדש</option>
+                {sources.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+              </select>
+            )}
+            <button type="button" onClick={() => setStep('map')} style={{ marginInlineStart: 'auto', border: 'none', background: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
+              🔧 משהו לא נכון? תיקון עמודות
+            </button>
+          </div>
           <div style={{ fontSize: '13px' }}>
-            נמצאו <b>{parsed.length}</b> שורות תקינות בקובץ.
+            נמצאו <b>{parsed.length}</b> שורות בקובץ.
             {dupKeys.size > 0 && <span style={{ color: 'var(--warning)' }}> {skipDup.size} מסומנות כספק כפילות (מיובא כבר ממקור זה) — לא יסומנו יבוטלו מהייבוא.</span>}
           </div>
           <div style={{ maxHeight: 360, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '10px' }}>
@@ -345,7 +358,7 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
             </table>
           </div>
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-            <Button variant="secondary" onClick={() => setStep('map')}>← חזרה למיפוי</Button>
+            <Button variant="secondary" onClick={() => { setStep('upload'); setRawRows([]); setParsed([]) }}>ביטול</Button>
             <Button onClick={confirmImport} loading={busy}>✓ ייבוא {parsed.length - skipDup.size} שורות</Button>
           </div>
         </div>

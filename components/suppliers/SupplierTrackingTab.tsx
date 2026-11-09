@@ -15,7 +15,7 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
 import { reverseSupplierPayment } from '@/lib/debts/reverseSupplierPayment'
 import { recordSupplierPayment, deleteDirectAllocations, paymentMethodLabel, type DirectMethodHe } from '@/lib/debts/supplierDirectPayments'
-import { supplierEvents, balanceAfter, monthSummaries, monthOf, paymentLedgerDate } from '@/lib/debts/supplierLedger'
+import { supplierEvents, balanceAfter, monthSummaries, monthOf, paymentLedgerDate, invoiceCoverage } from '@/lib/debts/supplierLedger'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
@@ -765,22 +765,9 @@ export default function SupplierTrackingTab({
     showToast('נמחק ✓', 'success'); reload()
   }
 
-  // Display-only status of each invoice: the supplier's credits / payments cover the oldest
-  // invoices first. Nothing is stored — it's just "how much of this invoice the balance covers".
-  const coverageOf = (sid: string | null) => {
-    const ev = ledgerOf(sid)
-    let pool = ev.filter(e => e.kind !== 'charge' && e.kind !== 'writeoff').reduce((s, e) => s + e.amount, 0)
-    const out = new Map<string, number>()
-    for (const e of ev) {
-      if (e.kind !== 'charge' || !e.debtId) continue
-      const d = supplierDebts.find(x => x.id === e.debtId)
-      const owed = d?.is_closed ? Number(d.paid) : e.amount   // manual write-off covers the rest
-      const take = Math.max(0, Math.min(owed, pool))
-      out.set(e.debtId, d?.is_closed ? e.amount : take)
-      pool -= take
-    }
-    return out
-  }
+  // Display-only status of each invoice (see invoiceCoverage)
+  const coverageOf = (sid: string | null) =>
+    invoiceCoverage(supplierDebts.filter(d => d.supplier_id === sid), ledgerOf(sid))
 
   const toggleClose = async (id: string, current: boolean) => {
     if (!current) {

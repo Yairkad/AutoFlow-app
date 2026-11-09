@@ -1,5 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js'
-import { bal as supplierBal } from '@/components/suppliers/shared'
+import { supplierEvents, invoiceCoverage } from '@/lib/debts/supplierLedger'
 import { netAmount as customerLedgerNet, balanceOf as customerLedgerBalanceOf } from '@/lib/debts/ledger'
 
 export interface MonthlyReportRow {
@@ -9,7 +9,7 @@ export interface MonthlyReportRow {
   profitActual: number
   customerLedgerRecognized: number   // Σ netAmount of customer_ledger_debts dated this month (accrual revenue, regardless of collection)
   occasionalCustomerOpen: number     // Σ open balance of customer_debts (ad-hoc debtors) dated this month, still unpaid today
-  supplierOpen: number               // Σ open balance of supplier_debts dated this month, still unpaid today
+  supplierOpen: number               // Σ part of supplier invoices dated this month not yet covered by the supplier's credits/payments (oldest first)
   scheduledUnpaid: number            // Σ scheduled_payments (checks/transfers) due this month, still unpaid today
   adjustedProfit: number             // profitActual + customerLedgerRecognized + occasionalCustomerOpen − supplierOpen − scheduledUnpaid
 }
@@ -56,7 +56,7 @@ export async function buildUnifiedReport(
   const [incomeRes, expensesRes, supplierDebtsRes, custLedgerDebtsRes, custLedgerPaymentsRes, occasionalDebtsRes, scheduledRes, chargeDatesRes] = await Promise.all([
     supabase.from('income').select('id, date, amount').eq('tenant_id', tenantId).gte('date', earliestDate),
     supabase.from('expenses').select('id, date, amount').eq('tenant_id', tenantId).gte('date', earliestDate),
-    supabase.from('supplier_debts').select('date, amount, paid, direction, is_closed').eq('tenant_id', tenantId).gte('date', earliestDate),
+    supabase.from('supplier_debts').select('id, supplier_id, date, amount, paid, direction, is_closed').eq('tenant_id', tenantId),
     supabase.from('customer_ledger_debts').select('date, amount, direction').eq('tenant_id', tenantId).gte('date', earliestDate),
     supabase.from('customer_ledger_payments').select('amount').eq('tenant_id', tenantId),
     supabase.from('customer_debts').select('date, amount, paid, is_closed').eq('tenant_id', tenantId).gte('date', earliestDate),
@@ -67,6 +67,20 @@ export async function buildUnifiedReport(
   const income = incomeRes.data ?? []
   const expenses = expensesRes.data ?? []
   const supplierDebts = supplierDebtsRes.data ?? []
+
+  // Supplier "open" = the part of each invoice that the supplier's running balance doesn't
+  // cover yet (credits + payments cover the oldest invoices first) — same as the supplier screen.
+  const [suppAllocRes, suppPayRes] = await Promise.all([
+    supabase.from('supplier_debt_payments').select('supplier_debt_id, scheduled_payment_id, amount, created_at').eq('tenant_id', tenantId),
+    supabase.from('scheduled_payments').select('id, supplier_id, amount, due_date, is_paid, allocation_ignored, payment_method, handed_date').eq('tenant_id', tenantId).not('supplier_id', 'is', null),
+  ])
+  const todayISO = today.toISOString().slice(0, 10)
+  const supplierUncovered = new Map<string, number>()   // debtId → still-open amount
+  for (const sid of new Set(supplierDebts.map(d => d.supplier_id))) {
+    const ds = supplierDebts.filter(d => d.supplier_id === sid)
+    const cov = invoiceCoverage(ds, supplierEvents(ds, suppAllocRes.data ?? [], (suppPayRes.data ?? []).filter(p => p.supplier_id === sid), todayISO))
+    for (const d of ds) if (d.direction !== 'credit') supplierUncovered.set(d.id, Math.max(0, Number(d.amount) - (cov.get(d.id) ?? 0)))
+  }
   const custLedgerDebts = custLedgerDebtsRes.data ?? []
   const occasionalDebts = occasionalDebtsRes.data ?? []
   const scheduled = scheduledRes.data ?? []
@@ -93,7 +107,7 @@ export async function buildUnifiedReport(
     const customerLedgerRecognized = custLedgerDebts.filter(r => monthKeyOf(r.date) === month).reduce((s, r) => s + customerLedgerNet(r), 0)
     const occasionalCustomerOpen = occasionalDebts.filter(r => monthKeyOf(r.date) === month)
       .reduce((s, r) => s + (r.is_closed ? 0 : Math.max(0, Number(r.amount) - Number(r.paid))), 0)
-    const supplierOpen = supplierDebts.filter(r => monthKeyOf(r.date) === month).reduce((s, r) => s + supplierBal(r), 0)
+    const supplierOpen = supplierDebts.filter(r => monthKeyOf(r.date) === month).reduce((s, r) => s + (supplierUncovered.get(r.id) ?? 0), 0)
     const scheduledUnpaid = scheduled.filter(r => monthKeyOf(r.due_date) === month).reduce((s, r) => s + Number(r.amount), 0)
     const profitActual = incomeActual - expenseActual
     const adjustedProfit = profitActual + customerLedgerRecognized + occasionalCustomerOpen - supplierOpen - scheduledUnpaid

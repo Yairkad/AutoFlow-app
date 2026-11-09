@@ -79,3 +79,28 @@ export function monthSummaries(events: SupplierLedgerEvent[], opening = 0): Reco
   }
   return out
 }
+
+/**
+ * Display-only: how much of each invoice the supplier's credits + payments cover, oldest invoice
+ * first (payments aren't tied to invoices any more). A manually-closed invoice counts as fully
+ * covered (its write-off covers the rest). Returns debtId → covered amount.
+ */
+export function invoiceCoverage(debts: DebtIn[], events: SupplierLedgerEvent[]): Map<string, number> {
+  let pool = events.filter(e => e.kind === 'credit' || e.kind === 'payment').reduce((s, e) => s + e.amount, 0)
+  const byId = new Map(debts.map(d => [d.id, d]))
+  const out = new Map<string, number>()
+  for (const e of events) {
+    if (e.kind !== 'charge' || !e.debtId) continue
+    const d = byId.get(e.debtId)
+    if (d?.is_closed) {
+      const take = Math.max(0, Math.min(Number(d.paid), pool))
+      pool -= take
+      out.set(e.debtId, e.amount)
+      continue
+    }
+    const take = Math.max(0, Math.min(e.amount, pool))
+    out.set(e.debtId, take)
+    pool -= take
+  }
+  return out
+}

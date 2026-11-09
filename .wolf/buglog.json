@@ -1802,5 +1802,24 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-09T22:40:00Z"
+  },
+  {
+    "id": "bug-098",
+    "timestamp": "2026-11-09T23:30:00Z",
+    "error_message": "התאמת בנק: מזהה גיבריש, לא מזהה עמודות",
+    "file": "lib/bank-sync/parseStatementFile.ts",
+    "root_cause": "CSV/HTML-as-xls bank exports are Windows-1255 but were decoded as UTF-8 (File.text()); old .xls needs SheetJS cptable which the browser build (xlsx.mjs) doesn't load; string-mode SheetJS parsed DD/MM dates as US M/D; column guess used cell contents only",
+    "fix": "readRawRows sniffs zip/OLE, else decodeText (UTF-8 fatal → windows-1255) + XLSX.read type string raw:true; set_cptable(cpexcel.full.mjs) lazily for OLE; parseCellDate handles DD/MM/YY, ISO, local Date; guessMapping detects the header row by Hebrew header names (HEADER_RULES) + header signature to auto-recognize the saved source",
+    "tags": [
+      "bank-sync",
+      "encoding",
+      "windows-1255",
+      "xlsx",
+      "csv",
+      "dates"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-09T23:30:00Z"
   }
 ]

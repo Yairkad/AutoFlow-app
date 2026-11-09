@@ -23,6 +23,9 @@ const STATUS_LABELS: Record<LineStatus, string> = {
 }
 const IGNORE_REASONS = ['העברה פנימית', 'משיכת מזומן', 'אחר']
 
+/** Description without numbers / extra spaces — "עמלת פעולה 1234" and "עמלת פעולה 5678" are the same rule */
+const ruleKey = (desc: string) => desc.replace(/[\d.,/:#*-]+/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase()
+
 interface Props {
   tenantId: string
   userId: string | null
@@ -50,6 +53,24 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
   const [pickedCandidate, setPickedCandidate] = useState<Record<string, string>>({})
   const [busyLine, setBusyLine] = useState<string | null>(null)
   const [bulkBusy, setBulkBusy] = useState(false)
+  // Categories typed here that aren't in the fixed lists yet (saved on first use)
+  const [extraExp, setExtraExp] = useState<string[]>([])
+  const [extraInc, setExtraInc] = useState<string[]>([])
+  const expCats = useMemo(() => [...new Set([...expenseCats, ...extraExp])], [expenseCats, extraExp])
+  const incCats = useMemo(() => [...new Set([...incomeCats, ...extraInc])], [incomeCats, extraInc])
+  // Learned "description → category" per source (kept in the source's column_mapping.rules)
+  const [rules, setRules] = useState<Record<string, Record<string, string>>>(() =>
+    Object.fromEntries(sources.map(s => [s.id, s.column_mapping?.rules ?? {}])))
+  useEffect(() => {
+    setRules(prev => ({ ...Object.fromEntries(sources.map(s => [s.id, s.column_mapping?.rules ?? {}])), ...prev }))
+  }, [sources])
+  const ruleFor = useCallback((line: BankLine) => {
+    const k = ruleKey(line.description)
+    if (!k) return undefined
+    if (line.source_id && rules[line.source_id]?.[k]) return rules[line.source_id][k]
+    for (const r of Object.values(rules)) if (r[k]) return r[k]   // learned on another source
+    return undefined
+  }, [rules])
 
   const toleranceBySource = useMemo(() => {
     const m = new Map<string, number>()
@@ -128,25 +149,63 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
   }
 
   function qcFor(line: BankLine) {
-    return qc[line.id] ?? {
-      category: (line.direction === 'debit' ? expenseCats : incomeCats)[0] ?? 'אחר',
-      description: line.description,
-    }
+    return qc[line.id] ?? { category: ruleFor(line) ?? '', description: line.description }
+  }
+
+  // New category → add it to the tenant's expense/income categories
+  async function ensureCategory(direction: 'debit' | 'credit', name: string) {
+    const list = direction === 'debit' ? expCats : incCats
+    if (list.includes(name)) return
+    await supabase.from(direction === 'debit' ? 'expense_categories' : 'income_categories').insert({ tenant_id: tenantId, name })
+    if (direction === 'debit') setExtraExp(x => [...x, name]); else setExtraInc(x => [...x, name])
+  }
+
+  // Remember "this description → this category" on the line's source
+  async function learnRule(line: BankLine, category: string) {
+    const k = ruleKey(line.description)
+    if (!k || !line.source_id) return
+    const src = sources.find(s => s.id === line.source_id)
+    if (!src) return
+    const next = { ...(rules[line.source_id] ?? {}), [k]: category }
+    setRules(r => ({ ...r, [line.source_id!]: next }))
+    await supabase.from('bank_statement_sources').update({ column_mapping: { ...src.column_mapping, rules: next } }).eq('id', src.id)
   }
 
   async function doCreate(line: BankLine) {
     const state = qcFor(line)
-    if (!state.category) { showToast('נא לבחור קטגוריה', 'error'); return }
+    const category = state.category.trim()
+    if (!category) { showToast('נא לבחור או להקליד קטגוריה', 'error'); return }
     setBusyLine(line.id)
+    await ensureCategory(line.direction, category)
     const src = sources.find(s => s.id === line.source_id)
     const { error } = await createFromLine(
       supabase, tenantId, line.id, line.direction, line.date, line.amount,
-      state.category, state.description.trim() || line.description,
+      category, state.description.trim() || line.description,
       src?.default_payment_method ?? 'אשראי', userId,
     )
     setBusyLine(null)
     if (error) { showToast('שגיאה: ' + error, 'error'); return }
+    await learnRule(line, category)
     showToast('נוצרה רשומה חדשה ✓', 'success')
+    load()
+  }
+
+  // Lines with no matching expense whose category is already known from an earlier line
+  const ruleReady = useMemo(() =>
+    filtered.filter(l => l.status === 'unmatched' && (suggestions.get(l.id)?.length ?? 0) === 0 && !!ruleFor(l)),
+    [filtered, suggestions, ruleFor])
+
+  async function doBulkCreate() {
+    setBulkBusy(true)
+    let n = 0
+    for (const l of ruleReady) {
+      const src = sources.find(s => s.id === l.source_id)
+      const { error } = await createFromLine(supabase, tenantId, l.id, l.direction, l.date, l.amount,
+        ruleFor(l)!, l.description, src?.default_payment_method ?? 'אשראי', userId)
+      if (!error) n++
+    }
+    setBulkBusy(false)
+    showToast(`נוצרו ${n} רשומות לפי קטגוריות שמורות ✓`, 'success')
     load()
   }
 
@@ -170,6 +229,8 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <datalist id="cats-debit">{expCats.map(c => <option key={c} value={c} />)}</datalist>
+      <datalist id="cats-credit">{incCats.map(c => <option key={c} value={c} />)}</datalist>
       {/* Filters */}
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
         <select value={fImport} onChange={e => setFImport(e.target.value)} style={SEL}>
@@ -193,6 +254,9 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
         </div>
         {exactSingleMatches.length > 0 && (
           <Button size="sm" onClick={doBulkConfirm} loading={bulkBusy}>✓ אשר התאמות מדויקות ({exactSingleMatches.length})</Button>
+        )}
+        {ruleReady.length > 0 && (
+          <Button size="sm" onClick={doBulkCreate} loading={bulkBusy}>✓ צור לפי קטגוריות שמורות ({ruleReady.length})</Button>
         )}
       </div>
 
@@ -227,11 +291,13 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
                   {line.charge_date && line.charge_date !== line.date && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }} title="תאריך חיוב">חיוב {fmtDMY(line.charge_date)}</span>}
                   <span style={{ fontWeight: 700 }}>{fmt(line.amount)}</span>
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{STATUS_LABELS[line.status]}</span>
-                  {line.status !== 'unmatched' && (
+                  {line.status !== 'unmatched' ? (
                     <RowActionsMenu actions={[
                       { key: 'raw', label: 'צפה בשורה גולמית', icon: '🔍', onClick: () => showToast(JSON.stringify(line.raw_row), 'info') },
                       { key: 'undo', label: 'בטל התאמה', icon: '↩', onClick: () => doUndo(line), danger: true },
                     ]} />
+                  ) : (
+                    <RowActionsMenu actions={IGNORE_REASONS.map(r => ({ key: r, label: `התעלם — ${r}`, icon: '🚫', onClick: () => doIgnore(line, r) }))} />
                   )}
                 </div>
 
@@ -257,20 +323,13 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
                     )}
                     {candidates.length === 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        <select value={state.category} onChange={e => setQc(prev => ({ ...prev, [line.id]: { ...state, category: e.target.value } }))} style={SEL}>
-                          {(line.direction === 'debit' ? expenseCats : incomeCats).map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                        <input list={`cats-${line.direction}`} value={state.category} placeholder="קטגוריה (בחר או הקלד חדשה)" aria-label="קטגוריה"
+                          onChange={e => setQc(prev => ({ ...prev, [line.id]: { ...state, category: e.target.value } }))} style={{ ...SEL, minWidth: 170 }} />
                         <input value={state.description} onChange={e => setQc(prev => ({ ...prev, [line.id]: { ...state, description: e.target.value } }))} style={{ ...SEL, minWidth: 160 }} />
                         <Button size="sm" onClick={() => doCreate(line)} loading={busyLine === line.id}>✓ צור {line.direction === 'debit' ? 'הוצאה' : 'הכנסה'}</Button>
                       </div>
                     )}
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      {IGNORE_REASONS.map(r => (
-                        <button key={r} onClick={() => doIgnore(line, r)} title="התעלם" style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                          🚫 {r}
-                        </button>
-                      ))}
-                    </div>
+
                   </div>
                 )}
               </div>
