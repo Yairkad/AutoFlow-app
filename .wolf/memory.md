@@ -3138,3 +3138,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 21:55 | Month summary 'לחודש זה' = charges − credits only (user correction) | SupplierTrackingTab.tsx | ok | ~2k |
 | 21:58 | Removed paid/partial status chips from supplier invoice rows (type only) | SupplierTrackingTab.tsx | ok | ~2k |
+
+## Session: 2026-11-09 22:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
