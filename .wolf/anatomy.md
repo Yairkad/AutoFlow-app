@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T10:55:11.014Z
-> Files: 196 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-09T20:36:23.387Z
+> Files: 197 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -691,7 +691,7 @@
 
 ## lib/bank-sync/
 
-- `parseStatementFile.ts` — Exports AmountMode, AmountSign, ColumnMapping, ParsedLine + 4 more (~1756 tok)
+- `parseStatementFile.ts` — readRawRows (zip/OLE binary, else UTF-8→windows-1255 text; cptable for old xls), parseCellDate (DD/MM/YY), parseCellAmount, guessMapping by Hebrew header names + headerSignature, applyMapping (~3200 tok)
 
 ## lib/cars/
 
@@ -703,8 +703,10 @@
 
 ## lib/debts/
 
+- `supplierDirectPayments.ts` — scheduled_payments.payment_method values of direct (non-check) payments. They are kept (~1578 tok)
 - `supplierLedger.ts` — supplier running account: events (charge/credit/payment/writeoff), balanceAfter, monthSummaries (~800 tok)
 - `supplierLedger.ts` — Events of one supplier. A payment counts when it was allocated to an invoice, marked paid, (~1136 tok)
+- `supplierDirectPayments.ts` — recordSupplierPayment (expense + paid scheduled_payments row), deleteDirectAllocations, removeSupplierPaymentOfExpense (on expense delete), fetchSupplierOpenTotals (dashboards), paymentMethodLabel (~1400 tok)
 
 ## lib/expenses/
 
@@ -843,3 +845,7 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
+
+## lib/types/
+
+- `cpexcel.d.ts` — module declaration for xlsx/dist/cpexcel.full.mjs (~30 tok)

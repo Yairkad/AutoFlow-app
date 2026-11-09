@@ -12,7 +12,16 @@ import { useProfile } from '@/lib/contexts/ProfileContext'
 
 // Size typed so far: "195/55" (no rim yet) already narrows the list
 const SIZE_RE = /(\d{3})\s*[/\s-]\s*(\d{2})(?:\s*(?:z?r|\/|\s|-)?\s*(\d{2}))?/i
-function partialSize(q: string) {
+// Digits only, as typed on a number pad: "17550" → 175/50, "1755014" → 175/50R14
+function digitsToSize(q: string) {
+  const t = q.trim()
+  if (!/^\d{5}(\d{2})?$/.test(t)) return q
+  return `${t.slice(0, 3)}/${t.slice(3, 5)}${t.length === 7 ? `/${t.slice(5)}` : ''}`
+}
+/** Text that looks like a tire size → it is a tire, whatever the toggle says */
+export const looksLikeTireSize = (q: string) => SIZE_RE.test(digitsToSize(q))
+function partialSize(raw: string) {
+  const q = digitsToSize(raw)
   const m = q.match(SIZE_RE)
   return m ? { width: +m[1], profile: +m[2], rim: m[3] ? +m[3] : null, rest: q.replace(m[0], '').trim() } : null
 }
@@ -38,10 +47,12 @@ export const emptyArrival = (): ArrivalDraft =>
 /** Draft lines → API payload (tire size / brand parsed from the free text) */
 export function toArrivalInputs(drafts: ArrivalDraft[]): ArrivalInput[] {
   return drafts.filter(d => d.text.trim() && Number(d.qty) > 0).map(d => {
-    const base = { item_type: d.item_type, ref_id: d.ref_id, description: d.text.trim(), qty: Math.round(Number(d.qty)), unit_cost: Number(d.unit_cost) || null }
-    if (d.item_type === 'product') return { ...base, name: d.text.trim() }
-    const size = parseTireSize(d.text)
-    const brand = size ? d.text.replace(/\d{3}\s*[/\s-]\s*\d{2}\s*(?:z?r|\/|\s|-)?\s*\d{2}/i, '').trim() : d.text.trim()
+    const text = digitsToSize(d.text.trim())
+    const type = !d.ref_id && looksLikeTireSize(text) ? 'tire' : d.item_type
+    const base = { item_type: type, ref_id: d.ref_id, description: text, qty: Math.round(Number(d.qty)), unit_cost: Number(d.unit_cost) || null }
+    if (type === 'product') return { ...base, name: text }
+    const size = parseTireSize(text)
+    const brand = size ? text.replace(/\d{3}\s*[/\s-]\s*\d{2}\s*(?:z?r|\/|\s|-)?\s*\d{2}/i, '').trim() : text
     return { ...base, brand: brand || null, width: size?.width ?? null, profile: size?.profile ?? null, rim: size?.rim ?? null }
   })
 }
@@ -101,7 +112,7 @@ export default function ArrivalsModal({ open, onClose, title, drafts, onDraftsCh
     const q = d.text.trim()
     if (q.length < 2) return { list: [], hidden: 0 }
     const showAll = wide.has(d.key)
-    if (d.item_type === 'product') {
+    if (d.item_type === 'product' && !looksLikeTireSize(q)) {
       const hits = prods.filter(p => fuzzyIncludes(`${p.name} ${p.sku ?? ''}`, q))
       const mine = supplierId ? hits.filter(p => p.supplier_id === supplierId) : hits
       const others = supplierId ? hits.filter(p => p.supplier_id !== supplierId) : []
@@ -203,20 +214,24 @@ export default function ArrivalsModal({ open, onClose, title, drafts, onDraftsCh
                       </button>
                     ))}
                   </div>
-                  <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 0 }}>
+                  <div style={{ flex: '1 1 260px', minWidth: 0 }}>
                     <input className="form-input" aria-label="פריט"
                       placeholder={d.item_type === 'tire' ? 'חברה ומידה — מישלן 205/55/16' : 'שם המוצר'}
                       value={d.text}
                       onFocus={() => setFocus(d.key)}
                       onBlur={() => setTimeout(() => setFocus(f => f === d.key ? null : f), 150)}
-                      onChange={e => set(d.key, { text: e.target.value, ref_id: null })}
+                      onChange={e => set(d.key, { text: e.target.value, ref_id: null, ...(looksLikeTireSize(e.target.value) ? { item_type: 'tire' as const } : {}) })}
                       style={{ width: '100%', borderColor: d.ref_id ? 'var(--success)' : undefined }} />
                     {d.ref_id && <span style={{ fontSize: '11px', color: 'var(--success)' }}>✓ פריט קיים</span>}
                     {!d.ref_id && d.text.trim().length >= 2 && focus !== d.key && (
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>לא נבחר פריט מהמלאי — <button type="button" onClick={() => openNew(d)} style={{ border: 0, background: 'none', padding: 0, color: 'var(--primary)', cursor: 'pointer', fontSize: '11px', fontWeight: 600 }}>הוסף כפריט חדש</button></span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        {d.item_type === 'tire' && !parseTireSize(digitsToSize(d.text))
+                          ? <b style={{ color: 'var(--warning)' }}>חסר קוטר (למשל 175/50/14) — </b>
+                          : 'יישמר כפי שהוקלד (פריט קיים באותה מידה וחברה יעודכן, אחרת ייפתח חדש) · '}
+                        <button type="button" onClick={() => openNew(d)} style={{ border: 0, background: 'none', padding: 0, color: 'var(--primary)', cursor: 'pointer', fontSize: '11px', fontWeight: 600 }}>פרטים מלאים לפריט חדש</button></span>
                     )}
                     {focus === d.key && !d.ref_id && d.text.trim().length >= 2 && (
-                      <ul style={{ position: 'absolute', top: '100%', right: 0, left: 0, zIndex: 20, margin: 0, padding: 0, listStyle: 'none', maxHeight: 300, overflowY: 'auto',
+                      <ul style={{ margin: '4px 0 0', padding: 0, listStyle: 'none', maxHeight: 280, overflowY: 'auto',
                         background: 'var(--bg-card, #fff)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,.12)' }}>
                         {sugg.map(s => (
                           <li key={s.id}>

@@ -3106,3 +3106,28 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 08:40 | Branch deletion blocked (403, session can push only its branch) — user to delete in GitHub UI; Google OAuth inactive-client email explained; opening PR to main | - | done | ~2k |
+
+## Session: 2026-11-09 20:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:28 | Investigated supplier check/month-summary/deleted-payment issues; asked user to confirm before coding | SupplierTrackingTab, ScheduledPaymentsModal, ExpensesClient | awaiting answer | ~15k |
+| 20:36 | Created lib/debts/supplierDirectPayments.ts | — | ~1578 |
+| 20:40 | Suppliers: removed invoice/month allocation from checks & pay modal; payment delete via expense; month block 'לחודש זה'+'יתרה כללית'; all-suppliers monthly window; ArrivalsModal inline suggestions + size detection; dashboards use running balance | SupplierTrackingTab, ScheduledPaymentsModal, ExpensesClient, ArrivalsModal, supplierDirectPayments, Dashboard* | tsc ok | ~60k |
+
+## Session: 2026-11-09 20:49
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:50 | Bank-sync: reviewed import/reconcile flow, proposed simplification plan, awaiting user confirmation | components/bank-sync/* | pending | ~8k |
+| 20:55 | Bank-sync: encoding fix (windows-1255/cptable/DD-MM), header-name column detection, auto source, simplified import, typeable categories + learned rules, bulk create; unified report supplierOpen via invoiceCoverage | lib/bank-sync/parseStatementFile.ts, components/bank-sync/*, lib/reports/buildUnifiedReport.ts, lib/debts/supplierLedger.ts | tsc ok, parser tested on 3 sample files | ~40k |
+
+## Session: 2026-11-09 21:04
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-09 21:19
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|

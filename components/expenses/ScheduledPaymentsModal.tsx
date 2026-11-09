@@ -7,9 +7,8 @@ import Input from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { SupabaseClient } from '@supabase/supabase-js'
-import { reconcileSupplierPayment, DebtAllocation } from '@/lib/debts/reconcileSupplierPayment'
+import { supplierEvents, balanceAfter } from '@/lib/debts/supplierLedger'
 import { reverseSupplierPayment } from '@/lib/debts/reverseSupplierPayment'
-import { netAllocation } from '@/lib/debts/netAllocation'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
 import { markScheduledPaymentPaid } from '@/lib/utils/markCheckPaid'
@@ -34,13 +33,6 @@ export interface ScheduledPayment {
   series_id: string | null
 }
 
-interface OpenSupplierDebt {
-  id: string
-  date: string
-  amount: number
-  paid: number
-}
-
 interface SeriesRow {
   tenant_id: string
   description: string
@@ -54,12 +46,6 @@ interface SeriesRow {
   series_id: string
 }
 
-function monthKeyOf(iso: string) { return iso.slice(0, 7) }
-function fmtMonthShort(ym: string) {
-  const [y, m] = ym.split('-')
-  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })
-}
-
 interface Props {
   open: boolean
   onClose: () => void
@@ -70,8 +56,6 @@ interface Props {
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void
   expenseCats: string[]
   initialSupplierId?: string
-  initialSelectedDebtIds?: string[]
-  initialDebtAllocAmounts?: Record<string, string>
   initialAmount?: number
   initialOpenAdd?: boolean
   initialEditItem?: ScheduledPayment | null
@@ -141,7 +125,7 @@ function toLocalISODate(d: Date): string {
 
 export default function ScheduledPaymentsModal({
   open, onClose, suppliers, tenantId, supabase, onRefresh, showToast, expenseCats, initialSupplierId,
-  initialSelectedDebtIds, initialDebtAllocAmounts, initialAmount, initialOpenAdd, initialEditItem,
+  initialAmount, initialOpenAdd, initialEditItem,
 }: Props) {
   const [rows,      setRows]      = useState<ScheduledPayment[]>([])
   const [loading,   setLoading]   = useState(false)
@@ -176,11 +160,9 @@ export default function ScheduledPaymentsModal({
   // Series preview — shown after "שמור" in series mode, before the rows are actually inserted
   const [seriesPreview, setSeriesPreview] = useState<SeriesRow[] | null>(null)
 
-  // Debt-month allocation (which open supplier debts this check/series settles)
-  const [openDebts,      setOpenDebts]      = useState<OpenSupplierDebt[]>([])
-  const [selectedDebtIds, setSelectedDebtIds] = useState<Set<string>>(new Set())
-  const [debtAllocAmounts, setDebtAllocAmounts] = useState<Record<string, string>>({})
-  const [openCredits, setOpenCredits] = useState<{ date: string; amount: number }[]>([])
+  // The supplier's running balance (invoices − credits − payments) — a check is never tied to
+  // specific invoices/months any more, it just lowers this balance.
+  const [suppBalance, setSuppBalance] = useState<number | null>(null)
 
   // Pay modal
   const [payOpen,   setPayOpen]   = useState(false)
@@ -200,6 +182,7 @@ export default function ScheduledPaymentsModal({
     const { data } = await supabase
       .from('scheduled_payments')
       .select('*')
+      .in('payment_method', ['check', 'transfer'])   // cash / card supplier payments are bookkeeping rows, not scheduled
       .order('due_date', { ascending: true })
     setRows(data ?? [])
     setLoading(false)
@@ -207,72 +190,22 @@ export default function ScheduledPaymentsModal({
 
   useEffect(() => { if (open) fetch() }, [open, fetch])
 
-  // ── Open debts for the selected supplier (for debt-month allocation) ───────
+  // ── Supplier balance (shown above the amount, one tap fills it) ───────────
 
-  // Carries a debt-selection made in a caller's own payment picker (e.g.
-  // SupplierTrackingClient's "☑ שלם הכל") across the redirect into this
-  // modal's auto-opened add form, consumed once fetchOpenDebtsAndSeed runs.
-  const pendingInitialAllocRef = useRef<{ supplierId: string; ids: string[]; amounts: Record<string, string> } | null>(null)
-
-  const fetchOpenDebtsAndSeed = useCallback(async (supplierId: string) => {
-    if (!supplierId) { setOpenDebts([]); setSelectedDebtIds(new Set()); setDebtAllocAmounts({}); setOpenCredits([]); return }
-    const [{ data }, { data: creditRows }] = await Promise.all([
-      supabase
-        .from('supplier_debts')
-        .select('id, date, amount, paid')
-        .eq('supplier_id', supplierId)
-        .eq('is_closed', false)
-        .order('date', { ascending: true }),
-      // Credits are always saved already-closed, so they never show up in the open-debts
-      // query above — but the check amount still needs to net them out (a credit can only
-      // offset debts dated on/after it) or the suggested per-debt amounts overstate what's
-      // actually owed.
-      supabase
-        .from('supplier_debts')
-        .select('date, amount')
-        .eq('supplier_id', supplierId)
-        .eq('direction', 'credit'),
+  const fetchBalance = useCallback(async (supplierId: string) => {
+    if (!supplierId) { setSuppBalance(null); return }
+    const [debts, allocs, pays] = await Promise.all([
+      supabase.from('supplier_debts').select('id, date, amount, paid, direction, is_closed').eq('supplier_id', supplierId),
+      supabase.from('supplier_debt_payments').select('supplier_debt_id, scheduled_payment_id, amount, created_at').eq('tenant_id', tenantId),
+      supabase.from('scheduled_payments').select('id, amount, due_date, is_paid, allocation_ignored, payment_method, handed_date').eq('supplier_id', supplierId),
     ])
-    const debts = data ?? []
-    setOpenDebts(debts)
-    const credits = (creditRows ?? []).map(r => ({ date: r.date, amount: Number(r.amount) }))
-    setOpenCredits(credits)
-    const netMap = netAllocation(debts, credits)
-
-    const pending = pendingInitialAllocRef.current
-    if (pending && pending.supplierId === supplierId) {
-      const validIds = pending.ids.filter(id => debts.some(d => d.id === id))
-      setSelectedDebtIds(new Set(validIds))
-      setDebtAllocAmounts(Object.fromEntries(validIds.map(id => {
-        return [id, pending.amounts[id] ?? String((netMap.get(id) ?? 0).toFixed(2))]
-      })))
-      pendingInitialAllocRef.current = null
-    } else {
-      setSelectedDebtIds(new Set())
-      setDebtAllocAmounts({})
-    }
-  }, [supabase])
+    const today = new Date().toISOString().slice(0, 10)
+    setSuppBalance(balanceAfter(supplierEvents(debts.data ?? [], allocs.data ?? [], pays.data ?? [], today)))
+  }, [supabase, tenantId])
 
   useEffect(() => {
-    if (formOpen) fetchOpenDebtsAndSeed(fSupplier)
-  }, [fSupplier, formOpen, fetchOpenDebtsAndSeed])
-
-  const toggleDebtSelected = (debt: OpenSupplierDebt) => {
-    setSelectedDebtIds(prev => {
-      const next = new Set(prev)
-      if (next.has(debt.id)) {
-        next.delete(debt.id)
-        setDebtAllocAmounts(a => { const c = { ...a }; delete c[debt.id]; return c })
-      } else {
-        next.add(debt.id)
-        const net = netAllocation(openDebts, openCredits).get(debt.id) ?? 0
-        setDebtAllocAmounts(a => ({ ...a, [debt.id]: a[debt.id] ?? String(net.toFixed(2)) }))
-      }
-      return next
-    })
-  }
-
-  const totalAllocated = Array.from(selectedDebtIds).reduce((s, id) => s + (parseFloat(debtAllocAmounts[id] ?? '0') || 0), 0)
+    if (formOpen) fetchBalance(fSupplier)
+  }, [fSupplier, formOpen, fetchBalance])
 
   // ── Form open ──────────────────────────────────────────────────────────────
 
@@ -310,9 +243,6 @@ export default function ScheduledPaymentsModal({
     directOpen.current = !!(initialEditItem || initialSupplierId || initialOpenAdd)
     if (initialEditItem) { openEdit(initialEditItem); return }
     if (initialSupplierId || initialOpenAdd) {
-      pendingInitialAllocRef.current = initialSupplierId && initialSelectedDebtIds && initialSelectedDebtIds.length > 0
-        ? { supplierId: initialSupplierId, ids: initialSelectedDebtIds, amounts: initialDebtAllocAmounts ?? {} }
-        : null
       openAdd()
       if (initialAmount && initialAmount > 0) setFAmount(String(initialAmount))
     }
@@ -320,11 +250,6 @@ export default function ScheduledPaymentsModal({
   }, [open])
 
   // ── Save ───────────────────────────────────────────────────────────────────
-
-  const buildAllocations = (): DebtAllocation[] =>
-    Array.from(selectedDebtIds)
-      .map(id => ({ supplier_debt_id: id, amount: parseFloat(debtAllocAmounts[id] ?? '0') || 0 }))
-      .filter(a => a.amount > 0)
 
   const buildSeriesRows = (n: number, amount: number): SeriesRow[] => {
     const baseCheckNum = fCheckNumber.trim() && /^\d+$/.test(fCheckNumber.trim()) ? parseInt(fCheckNumber.trim(), 10) : null
@@ -372,31 +297,6 @@ export default function ScheduledPaymentsModal({
     const insRes = await supabase.from('scheduled_payments').insert(seriesPreview).select('id')
     if (insRes.error) { setSaving(false); showToast('שגיאה: ' + insRes.error.message, 'error'); return }
 
-    const allocations = buildAllocations()
-    if (allocations.length > 0 && insRes.data && insRes.data.length > 0) {
-      // Spread the selected debt allocations across the series' checks in order (each check
-      // absorbs up to its own amount) — dumping everything onto the first check's id would
-      // leave every other check in the series unlinked, showing up as "not yet allocated".
-      const checkIds = insRes.data.map(r => r.id)
-      let checkIdx = 0
-      let checkRemaining = seriesPreview[0]?.amount ?? 0
-      let reconErr: string | null = null
-      for (const alloc of allocations) {
-        let left = alloc.amount
-        while (left > 0.004 && checkIdx < checkIds.length && !reconErr) {
-          if (checkRemaining <= 0.004) { checkIdx++; checkRemaining = seriesPreview[checkIdx]?.amount ?? 0; continue }
-          const take = Math.min(left, checkRemaining)
-          const { error } = await reconcileSupplierPayment(
-            supabase, tenantId, [{ supplier_debt_id: alloc.supplier_debt_id, amount: take }], checkIds[checkIdx],
-          )
-          if (error) { reconErr = error; break }
-          left -= take
-          checkRemaining -= take
-        }
-        if (reconErr) break
-      }
-      if (reconErr) showToast('הצ׳קים נשמרו, אך שיבוץ החוב נכשל: ' + reconErr, 'error')
-    }
 
     setSaving(false)
     showToast(`${seriesPreview.length} צ׳קים נוצרו ✓`, 'success')
@@ -452,11 +352,6 @@ export default function ScheduledPaymentsModal({
     const insRes = await supabase.from('scheduled_payments').insert(payload).select('id').single()
     if (insRes.error) { setSaving(false); showToast('שגיאה: ' + insRes.error.message, 'error'); return }
 
-    const allocations = buildAllocations()
-    if (allocations.length > 0) {
-      const { error: reconErr } = await reconcileSupplierPayment(supabase, tenantId, allocations, insRes.data.id)
-      if (reconErr) { showToast('התשלום נשמר, אך שיבוץ החוב נכשל: ' + reconErr, 'error') }
-    }
 
     setSaving(false)
     showToast('נוסף', 'success')
@@ -730,39 +625,6 @@ export default function ScheduledPaymentsModal({
   const paid    = rows.filter(r => r.is_paid)
   const totalUnpaid = unpaid.reduce((s, r) => s + Number(r.amount), 0)
 
-  const formAmount = parseFloat(fAmount) || 0
-  const debtsByMonth = (() => {
-    const map: Record<string, OpenSupplierDebt[]> = {}
-    openDebts.forEach(d => {
-      const mk = monthKeyOf(d.date)
-      if (!map[mk]) map[mk] = []
-      map[mk].push(d)
-    })
-    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]))
-  })()
-
-  // Select/deselect every open debt of one month at once (net-of-credit amounts, same as toggleDebtSelected).
-  const toggleMonthDebtSelected = (mk: string) => {
-    const monthDebts = debtsByMonth.find(([k]) => k === mk)?.[1] ?? []
-    const netMap = netAllocation(openDebts, openCredits)
-    const allSelected = monthDebts.length > 0 && monthDebts.every(d => selectedDebtIds.has(d.id))
-    setSelectedDebtIds(prev => {
-      const next = new Set(prev)
-      monthDebts.forEach(d => {
-        if (allSelected) next.delete(d.id)
-        else if ((netMap.get(d.id) ?? 0) > 0) next.add(d.id)
-      })
-      return next
-    })
-    setDebtAllocAmounts(prev => {
-      const next = { ...prev }
-      monthDebts.forEach(d => {
-        if (allSelected) delete next[d.id]
-        else { const net = netMap.get(d.id); if (net && net > 0) next[d.id] = net.toFixed(2) }
-      })
-      return next
-    })
-  }
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -968,11 +830,6 @@ export default function ScheduledPaymentsModal({
                 </div>
               ))}
             </div>
-            {selectedDebtIds.size > 0 && (
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                שיבוץ מול חובות פתוחים: {fmt(totalAllocated)} מתוך {fmt(formAmount)}
-              </div>
-            )}
           </div>
         ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -990,6 +847,18 @@ export default function ScheduledPaymentsModal({
           )}
 
           <Input label="תיאור" placeholder="לדוג׳: צ'ק לספק, העברת שכירות..." value={fDesc} onChange={e => setFDesc(e.target.value)} />
+          {!editItem && fSupplier && suppBalance != null && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13 }}>
+              <span>יתרה לספק (אחרי זיכויים ותשלומים):</span>
+              <b style={{ color: suppBalance > 0 ? 'var(--danger)' : 'var(--success)' }}>{fmt(suppBalance)}</b>
+              {suppBalance > 0 && (
+                <button type="button" onClick={() => setFAmount(suppBalance.toFixed(2))}
+                  style={{ marginInlineStart: 'auto', padding: '3px 10px', border: '1px solid var(--primary)', background: '#fff', color: 'var(--primary)', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  מלא סכום
+                </button>
+              )}
+            </div>
+          )}
           <Input label={fSeriesMode ? 'סכום כולל לסדרה' : 'סכום'} type="number" prefix="₪" placeholder="0.00" min="0" step="0.01" value={fAmount} onChange={e => setFAmount(e.target.value)} />
 
           {fSeriesMode ? (
@@ -1107,50 +976,6 @@ export default function ScheduledPaymentsModal({
             />
           </div>
 
-          {/* ── Debt-month allocation: which open debts does this check/series settle ── */}
-          {!editItem && fSupplier && openDebts.length > 0 && (
-            <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, background: '#fafafa', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>שיבוץ מול חובות פתוחים של הספק (אופציונלי)</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>סמן אילו חודשים התשלום הזה סוגר. חודש שלא תסמן לא ייגע כלל.</div>
-              {openCredits.length > 0 && (
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>לספק זה זיכוי פתוח בסך {fmt(openCredits.reduce((s, c) => s + c.amount, 0))} — מנוכה אוטומטית מהחשבוניות הישנות ביותר שתאריכן זהה או מאוחר לתאריך הזיכוי, בסכומים המוצעים למטה.</div>
-              )}
-              {debtsByMonth.map(([mk, debts]) => (
-                <div key={mk} style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8' }}>{fmtMonthShort(mk)}</span>
-                    <button type="button" onClick={() => toggleMonthDebtSelected(mk)} style={{ padding: '1px 8px', background: 'transparent', color: 'var(--primary)', border: '1px solid #bbf7d0', borderRadius: '10px', fontSize: '11px', cursor: 'pointer', fontWeight: 600 }}>
-                      {debts.every(d => selectedDebtIds.has(d.id)) ? 'בטל בחירת חודש' : 'בחר חודש'}
-                    </button>
-                  </div>
-                  {debts.map(d => {
-                    const balance = Number(d.amount) - Number(d.paid)
-                    const checked = selectedDebtIds.has(d.id)
-                    return (
-                      <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <input type="checkbox" checked={checked} onChange={() => toggleDebtSelected(d)} />
-                        <span style={{ fontSize: 12, flex: 1, color: 'var(--text-muted)' }}>יתרה פתוחה: {fmt(balance)}</span>
-                        {checked && (
-                          <input
-                            type="number" step="0.01"
-                            value={debtAllocAmounts[d.id] ?? ''}
-                            onChange={e => setDebtAllocAmounts(a => ({ ...a, [d.id]: e.target.value }))}
-                            style={{ width: 90, padding: '4px 8px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 6 }}
-                          />
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              ))}
-              {selectedDebtIds.size > 0 && (
-                <div style={{ fontSize: 12, fontWeight: 600, color: Math.abs(totalAllocated - formAmount) > 0.01 ? 'var(--warning)' : 'var(--text-muted)' }}>
-                  סה״כ משובץ: {fmt(totalAllocated)} מתוך {fmt(formAmount)}
-                  {Math.abs(totalAllocated - formAmount) > 0.01 && ' — שים לב לפער'}
-                </div>
-              )}
-            </div>
-          )}
         </div>
         )}
       </Modal>

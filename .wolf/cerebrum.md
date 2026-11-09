@@ -6,6 +6,9 @@
 
 ## User Preferences
 
+- [2026-11-09] Supplier payments are NEVER tied to invoices/months any more ("אין יותר שיוך — תמיד יתרה מול תשלום בפועל"). This supersedes the 2026-07-05 'manual money-matching' learning. Checks/cash/transfer just lower the running balance (lib/debts/supplierLedger.ts).
+- [2026-11-09] Supplier month block: show BOTH "לחודש זה" (that month's charges − credits − payments) and "יתרה כללית" (running balance). User rejected replacing it with an all-suppliers table ("ממש לא!!") — the all-suppliers monthly table is a SEPARATE window (⋯ → סיכום חודשי לכל הספקים).
+
 - [2026-11-02] User got lost in a long multi-option answer ('נהיה לי בלאגן'). Explain changes as: מה קיים / הבעיה / מה נשנה / איך זה פותר, with ONE concrete example, and ask ONE question at a time.
 
 - [2026-11-02] There is NO Netfree in this business — never cite Netfree as a reason/explanation (user: 'אל תערבב דברים'). Old code comments mentioning Netfree are wrong context; lib/supabase/client.ts proxy (/api/store) still exists functionally.
@@ -66,6 +69,11 @@
 - **Dictates requirements in a stream, expects them folded into the current task** (2026-07-06): during a single implementation pass on supplier-tracking payments, the user kept sending follow-up asks mid-edit (multi-debt payment picker → payment-method selector → quick-add-supplier → collapse-by-default accordion → color swap on charge/credit → per-line notes → retroactively link an already-issued check to a debt → Excel import → styled print). None were meant to interrupt or replace the current step — each was additive scope for the same feature. Pattern: finish the in-flight edit to a non-broken state first, then absorb the new ask into the same pass rather than asking "should I stop and redo?".
 
 ## Key Learnings
+
+- [2026-11-09] Bank-sync import: file → auto-detected mapping (header names) → straight to the line list; source auto-recognized by column_mapping.signature (header fingerprint); '🔧 תיקון עמודות' only on demand. Learned "description → category" rules live in bank_statement_sources.column_mapping.rules (jsonb, no migration), keyed by ruleKey (digits stripped). Categories are typeable; new ones are inserted into expense_categories/income_categories. Any client-side Hebrew text file decode: UTF-8 fatal → windows-1255 fallback.
+- [2026-11-09] buildUnifiedReport.supplierOpen now = uncovered part of invoices (invoiceCoverage in lib/debts/supplierLedger.ts, oldest-first FIFO of credits+payments) — the same helper drives the supplier screen status chips.
+
+- [2026-11-09] Direct supplier payments (pay modal cash/card/transfer) = expense row + is_paid scheduled_payments row with expense_id and payment_method 'cash'|'card'|'bank_transfer' (lib/debts/supplierDirectPayments.ts). ScheduledPaymentsModal lists only check/transfer; checks journal only check. Deleting an expense removes its supplier payment. Invoice paid/is_closed no longer move — status chips are derived from the ledger; dashboards use fetchSupplierOpenTotals. buildUnifiedReport.supplierOpen migrated to invoiceCoverage.
 - [2026-11-02] Most stock arrivals are scanned in the YARD receive screen (ReceiveClient → /api/yard/receive), not the supplier invoice "מה הגיע". Yard receive logs a tire_sales/product_sales movement_type=order with NO supplier and NO undo; only manual movements can be deleted in /stock-count. Design supplier-return/stock flows around the yard receive.
 - [2026-11-02] Scan fields: ALWAYS clear the input when a scan is handled (Enter, button, auto). useScanTyping judges the gap from the previous keystroke, so a leftover value makes the next scan look "typed by hand" and auto-search silently stops. Linking an unknown barcode → add_barcode (alt_barcodes), never overwrite sku.
 

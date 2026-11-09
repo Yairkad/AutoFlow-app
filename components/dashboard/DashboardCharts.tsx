@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { fetchSupplierOpenTotals } from '@/lib/debts/supplierDirectPayments'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import {
@@ -107,7 +108,7 @@ export default function DashboardCharts() {
       finance ? supabase.from('expenses').select('date, amount, category').gte('date', fromStr).lte('date', toStr) : Promise.resolve({ data: [] }),
       finance ? supabase.from('income').select('date, amount, category').gte('date', fromStr).lte('date', toStr)   : Promise.resolve({ data: [] }),
       debts   ? supabase.from('customer_debts').select('amount, paid').eq('is_closed', false)                      : Promise.resolve({ data: [] }),
-      debts   ? supabase.from('supplier_debts').select('amount, paid').eq('is_closed', false)                      : Promise.resolve({ data: [] }),
+      debts   ? fetchSupplierOpenTotals(supabase)                                                                : Promise.resolve({ total: 0, count: 0 }),
     ])
 
     // Build month map
@@ -171,7 +172,7 @@ export default function DashboardCharts() {
 
     // Debt breakdown
     const custBal = (custDebts.data ?? []).reduce((s, r) => s + Math.max(0, Number(r.amount) - Number(r.paid)), 0)
-    const suppBal = (suppDebts.data ?? []).reduce((s, r) => s + Math.max(0, Number(r.amount) - Number(r.paid)), 0)
+    const suppBal = suppDebts.total
     setDebtData([
       { name: 'חובות לקוחות', value: Math.round(custBal) },
       { name: 'חובות לספקים', value: Math.round(suppBal) },
