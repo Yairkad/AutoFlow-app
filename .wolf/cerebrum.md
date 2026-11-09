@@ -6,6 +6,8 @@
 
 ## User Preferences
 
+- [2026-11-09] Supplier invoice rows: NO paid/partial/closed status tags — only type (חיוב / זיכוי). Status was removed at user request; invoiceCoverage stays only for the unified report.
+
 - [2026-11-09] Supplier payments are NEVER tied to invoices/months any more ("אין יותר שיוך — תמיד יתרה מול תשלום בפועל"). This supersedes the 2026-07-05 'manual money-matching' learning. Checks/cash/transfer just lower the running balance (lib/debts/supplierLedger.ts).
 - [2026-11-09] Supplier month block: show BOTH "לחודש זה" (that month's charges − credits ONLY — payments never count in the month summary, only in the overall balance; user correction) and "יתרה כללית" (running balance). User rejected replacing it with an all-suppliers table ("ממש לא!!") — the all-suppliers monthly table is a SEPARATE window (⋯ → סיכום חודשי לכל הספקים).
 

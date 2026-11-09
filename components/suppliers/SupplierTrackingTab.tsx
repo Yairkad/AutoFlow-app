@@ -15,7 +15,7 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
 import { reverseSupplierPayment } from '@/lib/debts/reverseSupplierPayment'
 import { recordSupplierPayment, deleteDirectAllocations, paymentMethodLabel, type DirectMethodHe } from '@/lib/debts/supplierDirectPayments'
-import { supplierEvents, balanceAfter, monthSummaries, monthOf, paymentLedgerDate, invoiceCoverage } from '@/lib/debts/supplierLedger'
+import { supplierEvents, balanceAfter, monthSummaries, monthOf, paymentLedgerDate } from '@/lib/debts/supplierLedger'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
@@ -765,10 +765,6 @@ export default function SupplierTrackingTab({
     showToast('נמחק ✓', 'success'); reload()
   }
 
-  // Display-only status of each invoice (see invoiceCoverage)
-  const coverageOf = (sid: string | null) =>
-    invoiceCoverage(supplierDebts.filter(d => d.supplier_id === sid), ledgerOf(sid))
-
   const toggleClose = async (id: string, current: boolean) => {
     if (!current) {
       const d = supplierDebts.find(x => x.id === id)
@@ -801,20 +797,11 @@ export default function SupplierTrackingTab({
     }}>{label}</button>
   )
 
-  const StatusChip = ({ debt, covered }: { debt: SupplierDebt; covered: number }) => {
+  // Type only (חיוב / זיכוי) — no paid/partial status: payments aren't tied to invoices
+  const TypeChip = ({ debt }: { debt: SupplierDebt }) => {
     if (debt.direction === 'credit')
       return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>זיכוי</span>
-    if (debt.is_closed) {
-      const written = Number(debt.amount) - Number(debt.paid)
-      if (written > 0)
-        return <span title={`נסגר ידנית — ${fmt(written)} נמחקו מהיתרה`} style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fdf4ff', color: '#a21caf', fontWeight: 600 }}>סגור ידנית (−{fmt(written)})</span>
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>שולם ✓</span>
-    }
-    if (covered >= Number(debt.amount) - 0.005)
-      return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: 'var(--success-soft)', color: 'var(--success)', fontWeight: 600 }}>שולם ✓</span>
-    if (covered > 0)
-      return <span title={`מכוסה ${fmt(covered)} מתוך ${fmt(Number(debt.amount))}`} style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef3c7', color: 'var(--warning)', fontWeight: 600 }}>חלקי</span>
-    return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#fef2f2', color: 'var(--danger)', fontWeight: 600 }}>חיוב</span>
+    return <span style={{ padding: '2px 9px', borderRadius: '10px', fontSize: '11px', background: '#f1f5f9', color: 'var(--text)', fontWeight: 600 }}>חיוב</span>
   }
 
   const EmptyState = ({ icon, text }: { icon: string; text: string }) => (
@@ -1038,14 +1025,13 @@ export default function SupplierTrackingTab({
               const suppPayments = scheduledPayments.filter(p => p.supplier_id === sid)
               const countedPayIds = new Set(events.filter(e => e.paymentId).map(e => e.paymentId!))
 
-              const coverage = coverageOf(sid)
               const directPays = directPaymentGroups(sid)
 
-              return { sid, supp, totalBal, monthMap, months, suppPayments, coverage, directPays, summaries, countedPayIds }
+              return { sid, supp, totalBal, monthMap, months, suppPayments, directPays, summaries, countedPayIds }
             }).filter(Boolean) as {
               sid: string | null; supp: Supplier | undefined; totalBal: number
               monthMap: Record<string, SupplierDebt[]>; months: string[]
-              suppPayments: ScheduledPayment[]; coverage: Map<string, number>; directPays: ReturnType<typeof directPaymentGroups>
+              suppPayments: ScheduledPayment[]; directPays: ReturnType<typeof directPaymentGroups>
               summaries: ReturnType<typeof monthSummaries>; countedPayIds: Set<string>
             }[]
 
@@ -1203,7 +1189,7 @@ export default function SupplierTrackingTab({
                                   <tr
                                     key={`${d.id}-${idx}`}
                                     className="tr-hover"
-                                    style={{ background: d.is_closed && d.direction === 'charge' ? '#fafafa' : undefined }}
+                                    style={{}}
                                   >
                                     {bulkSelectMode && (
                                       <td style={{ ...tdSt, textAlign: 'center' }}>
@@ -1227,7 +1213,7 @@ export default function SupplierTrackingTab({
                                       {d.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>{d.description}</div>}
                                     </td>
                                     <td style={{ ...tdSt, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{d.date}</td>
-                                    <td style={tdSt}><StatusChip debt={d} covered={group.coverage.get(d.id) ?? 0} /></td>
+                                    <td style={tdSt}><TypeChip debt={d} /></td>
                                     <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? 'var(--success)' : 'var(--danger)' }}>
                                       {d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}
                                     </td>
