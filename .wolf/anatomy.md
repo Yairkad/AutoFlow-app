@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-03T10:55:11.014Z
-> Files: 196 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-09T20:36:23.387Z
+> Files: 197 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -703,8 +703,10 @@
 
 ## lib/debts/
 
+- `supplierDirectPayments.ts` — scheduled_payments.payment_method values of direct (non-check) payments. They are kept (~1578 tok)
 - `supplierLedger.ts` — supplier running account: events (charge/credit/payment/writeoff), balanceAfter, monthSummaries (~800 tok)
 - `supplierLedger.ts` — Events of one supplier. A payment counts when it was allocated to an invoice, marked paid, (~1136 tok)
+- `supplierDirectPayments.ts` — recordSupplierPayment (expense + paid scheduled_payments row), deleteDirectAllocations, removeSupplierPaymentOfExpense (on expense delete), fetchSupplierOpenTotals (dashboards), paymentMethodLabel (~1400 tok)
 
 ## lib/expenses/
 

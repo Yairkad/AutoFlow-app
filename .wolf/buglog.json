@@ -1748,5 +1748,59 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-03T12:10:00Z"
+  },
+  {
+    "id": "bug-095",
+    "timestamp": "2026-11-09T22:40:00Z",
+    "error_message": "מחקתי תשלום לספק ועדיין רשום כאילו יש זכות (ההוצאה נמחקה אבל היתרה לא חזרה)",
+    "file": "components/expenses/ExpensesClient.tsx",
+    "root_cause": "Cash payment from the supplier pay modal wrote an expense + supplier_debt_payments allocations with no link between them; deleting the expense in /expenses left the allocations, which the running ledger still counts as a payment",
+    "fix": "Pay modal now records an is_paid scheduled_payments row (method cash/card/bank_transfer) with expense_id; ExpensesClient.del calls removeSupplierPaymentOfExpense (by expense_id, legacy: same supplier ±3min & same sum). Legacy direct allocations shown in the month block as 'תשלום ישיר' with 🗑",
+    "tags": [
+      "suppliers",
+      "payments",
+      "ledger",
+      "expenses",
+      "delete"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-09T22:40:00Z"
+  },
+  {
+    "id": "bug-096",
+    "timestamp": "2026-11-09T22:40:00Z",
+    "error_message": "צ'ק/תשלום לספק לא מתחשב בזיכוי ומחייב בחירת חודש — לא ניתן לשלם את הסכום הנכון",
+    "file": "components/expenses/ScheduledPaymentsModal.tsx",
+    "root_cause": "Payments were allocated to specific invoices/months; credit netting in the suggested per-invoice amounts didn't match the running balance",
+    "fix": "Removed all invoice/month allocation (check form, pay modal, retroactive allocate, unlinked warning). Payments just lower the running balance; forms show the balance (net of credits) with 'מלא סכום'. Invoice status chip derived FIFO from the ledger (display only); dashboards use fetchSupplierOpenTotals",
+    "tags": [
+      "suppliers",
+      "checks",
+      "credits",
+      "allocation"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-09T22:40:00Z"
+  },
+  {
+    "id": "bug-097",
+    "timestamp": "2026-11-09T22:40:00Z",
+    "error_message": "מה הגיע בחשבונית: רק 2 שורות, חתוכות מתחת לבוקס; 175/50 לא מזוהה כצמיג",
+    "file": "components/suppliers/ArrivalsModal.tsx",
+    "root_cause": "Suggestion list was position:absolute inside the modal's overflow:auto body → clipped; size typed in product mode searched products; free text without rim created a tire with no size",
+    "fix": "Suggestions rendered inline (in-flow); a typed size (also digits-only 17550/1755014) switches the line to tire and searches tires; hint explains free text is saved as typed and warns when the rim is missing",
+    "tags": [
+      "arrivals",
+      "invoice",
+      "tires",
+      "dropdown",
+      "modal",
+      "overflow"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-09T22:40:00Z"
   }
 ]

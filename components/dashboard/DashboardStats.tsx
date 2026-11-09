@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { fetchSupplierOpenTotals } from '@/lib/debts/supplierDirectPayments'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { saveUiSettings } from '@/lib/uiSettings'
@@ -188,7 +189,7 @@ export default function DashboardStats() {
       canMod('expenses')                   ? supabase.from('expenses').select('amount').gte('date', from).lte('date', to)                                        : Promise.resolve({ data: [] }),
       canMod('income', 'expenses')         ? supabase.from('income').select('amount').gte('date', from).lte('date', to)                                          : Promise.resolve({ data: [] }),
       canMod('debts')                      ? supabase.from('customer_debts').select('amount,paid').eq('is_closed', false)                                         : Promise.resolve({ data: [] }),
-      canMod('debts')                      ? supabase.from('supplier_debts').select('amount,paid,direction').eq('is_closed', false)                               : Promise.resolve({ data: [] }),
+      canMod('debts')                      ? fetchSupplierOpenTotals(supabase)                                                                                    : Promise.resolve({ total: 0, count: 0 }),
       canMod('debts')                      ? supabase.from('customer_ledger_debts').select('customer_id,amount,direction')                                       : Promise.resolve({ data: [] }),
       canMod('debts')                      ? supabase.from('customer_ledger_payments').select('customer_id,amount')                                              : Promise.resolve({ data: [] }),
       canMod('employees')                  ? supabase.from('employees').select('id').eq('is_active', true)                                                        : Promise.resolve({ data: [] }),
@@ -229,9 +230,9 @@ export default function DashboardStats() {
       expensesMonth:    sum(expenses.data ?? []),
       incomeMonth:      sum(incomeRes.data ?? []),
       customerDebts:    occasionalBal + Math.max(0, ledgerBalTotal),
-      supplierDebts:    debtBal(suppDebts.data ?? []),
+      supplierDebts:    suppDebts.total,
       custDebtCount:    (custDebts.data ?? []).length + ledgerOpenCustomers,
-      suppDebtCount:    (suppDebts.data ?? []).length,
+      suppDebtCount:    suppDebts.count,
       activeEmployees:  (emps.data ?? []).length,
       inventoryItems:   invCount,
       carsInInventory:  (cars.data ?? []).filter((c: { status: string }) => c.status === 'available').length,

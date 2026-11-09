@@ -11,6 +11,7 @@ import MoreMenu from '@/components/ui/MoreMenu'
 import FilterBar from '@/components/ui/FilterBar'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
+import { removeSupplierPaymentOfExpense } from '@/lib/debts/supplierDirectPayments'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { RecurringExpense } from './RecurringTab'
@@ -643,6 +644,14 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   const del = async (id: string) => {
     const ok = await confirm({ msg: 'למחוק את הרשומה?', icon: '🗑️' })
     if (!ok) return
+    if (tab === 'expenses') {
+      // A supplier payment leaves the supplier's account too (bug-095)
+      const { data: exp } = await supabase.from('expenses').select('id, supplier_id, amount, created_at').eq('id', id).maybeSingle()
+      if (exp?.supplier_id) {
+        const { error } = await removeSupplierPaymentOfExpense(supabase, exp)
+        if (error) { showToast('שגיאה בביטול התשלום אצל הספק: ' + error, 'error'); return }
+      }
+    }
     await supabase.from(tab === 'expenses' ? 'expenses' : 'income').delete().eq('id', id)
     fetchData()
   }
