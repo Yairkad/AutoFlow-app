@@ -3155,3 +3155,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-10 10:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:23 | User ran migration 116; created expenses gone — asked user to upload pre-migration Drive backup JSON (app's Drive files not visible to Drive MCP) | - | waiting | ~3k |
