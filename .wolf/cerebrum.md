@@ -6,6 +6,8 @@
 
 ## User Preferences
 
+- [2026-11-10] Bank reconciliation goal: MAINLY find expenses that left the bank but are NOT recorded ("חשוב לי לדעת"), also mark checks cleared. Review screen defaults to "לא רשום במערכת" with a red total banner.
+
 - [2026-11-09] Supplier invoice rows: NO paid/partial/closed status tags — only type (חיוב / זיכוי). Status was removed at user request; invoiceCoverage stays only for the unified report.
 
 - [2026-11-09] Supplier payments are NEVER tied to invoices/months any more ("אין יותר שיוך — תמיד יתרה מול תשלום בפועל"). This supersedes the 2026-07-05 'manual money-matching' learning. Checks/cash/transfer just lower the running balance (lib/debts/supplierLedger.ts).
@@ -71,6 +73,8 @@
 - **Dictates requirements in a stream, expects them folded into the current task** (2026-07-06): during a single implementation pass on supplier-tracking payments, the user kept sending follow-up asks mid-edit (multi-debt payment picker → payment-method selector → quick-add-supplier → collapse-by-default accordion → color swap on charge/credit → per-line notes → retroactively link an already-issued check to a debt → Excel import → styled print). None were meant to interrupt or replace the current step — each was additive scope for the same feature. Pattern: finish the in-flight edit to a non-broken state first, then absorb the new ask into the same pass rather than asking "should I stop and redo?".
 
 ## Key Learnings
+
+- [2026-11-10] Bank Leumi xlsx export: header row ~9: סניף|חשבון|תאריך|תיאור תנועה|אסמכתא|בחובה|בזכות|יתרה בש"ח|תיאור מורחב|הערות. "תיאור תנועה" is generic (העברה דיגיטל/שיק); payee is in "תיאור מורחב" ("העברה אל: X 12-692-…"); אסמכתא of a "שיק" line = check number; "לאומי ויזה" = card settlement. Parser joins description+details; reference read from raw_row via source mapping (no DB column).
 
 - [2026-11-10] User's bank "דו\"ח תנועות בחשבון.xls" sample was an Excel "web page" FRAMESET shell (UTF-8 HTML, <frameset> → "<name>.files/sheet001.htm") with NO transaction data — the rows live in the sibling .files folder. Such a file can't be parsed alone; ask for sheet001.htm or a re-save as .xlsx. Bank-sync redesign pending (user: "נצטרך לחשוב טוב").
 

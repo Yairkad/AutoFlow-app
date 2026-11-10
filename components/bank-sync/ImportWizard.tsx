@@ -17,10 +17,10 @@ const SEL: React.CSSProperties = {
   background: '#f8fafc', color: 'var(--text)', fontFamily: 'inherit', outline: 'none',
 }
 
-type Role = 'date' | 'description' | 'amount' | 'debit' | 'credit' | 'balance' | 'chargeDate' | 'cardNumber' | 'ignore'
+type Role = 'date' | 'description' | 'details' | 'reference' | 'amount' | 'debit' | 'credit' | 'balance' | 'chargeDate' | 'cardNumber' | 'ignore'
 
 const ROLE_LABELS: Record<Role, string> = {
-  date: 'תאריך עסקה', description: 'תיאור', amount: 'סכום',
+  date: 'תאריך עסקה', description: 'תיאור', details: 'תיאור מורחב', reference: 'אסמכתא', amount: 'סכום',
   debit: 'חובה', credit: 'זכות', balance: 'יתרה',
   chargeDate: 'תאריך חיוב', cardNumber: 'מספר כרטיס', ignore: 'התעלם',
 }
@@ -69,6 +69,8 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
     if (mapping.columns.balance != null) roles[mapping.columns.balance] = 'balance'
     if (mapping.columns.chargeDate != null) roles[mapping.columns.chargeDate] = 'chargeDate'
     if (mapping.columns.cardNumber != null) roles[mapping.columns.cardNumber] = 'cardNumber'
+    if (mapping.columns.details != null) roles[mapping.columns.details] = 'details'
+    if (mapping.columns.reference != null) roles[mapping.columns.reference] = 'reference'
     setRoleByCol(roles)
   }
 
@@ -124,6 +126,8 @@ export default function ImportWizard({ tenantId, userId, sources, onSourcesChang
     const extra = {
       chargeDate: chargeDateCol != null ? Number(chargeDateCol) : undefined,
       cardNumber: cardNumberCol != null ? Number(cardNumberCol) : undefined,
+      details: (c => c != null ? Number(c) : undefined)(Object.entries(roleByCol).find(([, r]) => r === 'details')?.[0]),
+      reference: (c => c != null ? Number(c) : undefined)(Object.entries(roleByCol).find(([, r]) => r === 'reference')?.[0]),
     }
 
     if (amountMode === 'single') {

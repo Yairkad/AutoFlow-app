@@ -89,3 +89,17 @@ export async function undoLine(
   }).eq('id', lineId)
   return { error: error?.message ?? null }
 }
+
+/** A line whose expense/income was just recorded elsewhere (check marked paid, supplier payment) */
+export async function linkCreated(
+  supabase: SupabaseClient, lineId: string, direction: 'debit' | 'credit', recordId: string, reconciledBy: string | null,
+): Promise<{ error: string | null }> {
+  const { error } = await supabase.from('bank_statement_lines').update({
+    status: 'created',
+    matched_expense_id: direction === 'debit' ? recordId : null,
+    matched_income_id: direction === 'credit' ? recordId : null,
+    reconciled_by: reconciledBy,
+    reconciled_at: new Date().toISOString(),
+  }).eq('id', lineId)
+  return { error: error?.message ?? null }
+}

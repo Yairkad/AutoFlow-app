@@ -6,7 +6,10 @@ import { useToast } from '@/components/ui/Toast'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { suggestMatchesForLines, MatchCandidate } from '@/lib/bank-sync/matchSuggestions'
-import { confirmMatch, ignoreLine, undoLine, createFromLine } from '@/lib/bank-sync/reconcileLine'
+import { confirmMatch, ignoreLine, undoLine, createFromLine, linkCreated } from '@/lib/bank-sync/reconcileLine'
+import { classifyDebit, type Classified, type CheckRow, type SupplierRow } from '@/lib/bank-sync/classifyLine'
+import { markScheduledPaymentPaid } from '@/lib/utils/markCheckPaid'
+import { recordSupplierPayment } from '@/lib/debts/supplierDirectPayments'
 import { BankLine, BankSource, BankImport, LineStatus } from './types'
 
 const SEL: React.CSSProperties = {
@@ -46,13 +49,15 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
 
   const [fImport, setFImport] = useState<string>(initialImportId ?? '')
   const [fSource, setFSource] = useState<string>('')
-  const [fStatus, setFStatus] = useState<'unmatched' | 'all'>('unmatched')
+  const [fStatus, setFStatus] = useState<'missing' | 'unmatched' | 'all'>('missing')
 
   // Per-row transient UI state
   const [qc, setQc] = useState<Record<string, { category: string; description: string }>>({})
   const [pickedCandidate, setPickedCandidate] = useState<Record<string, string>>({})
   const [busyLine, setBusyLine] = useState<string | null>(null)
   const [bulkBusy, setBulkBusy] = useState(false)
+  const [checks, setChecks] = useState<CheckRow[]>([])
+  const [suppliers, setSuppliers] = useState<SupplierRow[]>([])
   // Categories typed here that aren't in the fixed lists yet (saved on first use)
   const [extraExp, setExtraExp] = useState<string[]>([])
   const [extraInc, setExtraInc] = useState<string[]>([])
@@ -81,12 +86,17 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
   const load = useCallback(async () => {
     if (!tenantId) return
     setLoading(true)
-    const [linesRes, impRes] = await Promise.all([
+    const [linesRes, impRes, checksRes, suppRes] = await Promise.all([
       supabase.from('bank_statement_lines').select('*').eq('tenant_id', tenantId).order('date', { ascending: true }),
       supabase.from('bank_statement_imports').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }),
+      supabase.from('scheduled_payments').select('id, check_number, amount, due_date, is_paid, expense_id, supplier_id, description, notes, payment_method')
+        .eq('tenant_id', tenantId).eq('payment_method', 'check'),
+      supabase.from('suppliers').select('id, name').eq('tenant_id', tenantId),
     ])
     setLines((linesRes.data ?? []) as BankLine[])
     setImports((impRes.data ?? []) as BankImport[])
+    setChecks((checksRes.data ?? []) as CheckRow[])
+    setSuppliers((suppRes.data ?? []) as SupplierRow[])
     setLoading(false)
   }, [supabase, tenantId])
 
@@ -96,7 +106,7 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
   const filtered = useMemo(() => lines.filter(l => {
     if (fImport && l.import_id !== fImport) return false
     if (fSource && l.source_id !== fSource) return false
-    if (fStatus === 'unmatched' && l.status !== 'unmatched') return false
+    if (fStatus !== 'all' && l.status !== 'unmatched') return false
     return true
   }), [lines, fImport, fSource, fStatus])
 
@@ -118,11 +128,48 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
     }
   }, [lines, fImport, fSource])
 
+  // Check number of a line = its "אסמכתא" cell (kept in raw_row, mapped on the source)
+  const referenceOf = useCallback((l: BankLine) => {
+    const col = sources.find(s => s.id === l.source_id)?.column_mapping?.columns?.reference
+    const row = Array.isArray(l.raw_row) ? l.raw_row : null
+    return col != null && row ? String(row[col] ?? '').trim() || null : null
+  }, [sources])
+
+  // What each unmatched debit line is (check / card charge / supplier / fee / other)
+  const classified = useMemo(() => {
+    const claimed = new Set<string>(lines.filter(l => l.matched_expense_id).map(l => `e:${l.matched_expense_id}`))
+    const out = new Map<string, Classified>()
+    for (const l of lines) {
+      if (l.status !== 'unmatched' || l.direction !== 'debit') continue
+      const c = classifyDebit({ description: l.description, amount: Number(l.amount), reference: referenceOf(l) }, checks, suppliers, claimed)
+      if (c.check) claimed.add(c.check.id)
+      out.set(l.id, c)
+    }
+    return out
+  }, [lines, checks, suppliers, referenceOf])
+
+  // Money that left the bank and isn't recorded anywhere: no matching expense, not a check from
+  // the journal, not the card's monthly charge (its purchases come from the card statement)
+  const isMissing = useCallback((l: BankLine) => {
+    if (l.status !== 'unmatched' || l.direction !== 'debit') return false
+    if ((suggestions.get(l.id)?.length ?? 0) > 0) return false
+    const k = classified.get(l.id)?.kind
+    return k !== 'card' && k !== 'check'
+  }, [suggestions, classified])
+
+  const missing = useMemo(() => lines.filter(l =>
+    (!fImport || l.import_id === fImport) && (!fSource || l.source_id === fSource) && isMissing(l)), [lines, fImport, fSource, isMissing])
+  const missingTotal = missing.reduce((s, l) => s + Number(l.amount), 0)
+
+  const shown = useMemo(() => fStatus === 'missing' ? filtered.filter(isMissing) : filtered, [filtered, fStatus, isMissing])
+
   const byDay = useMemo(() => {
     const map: Record<string, BankLine[]> = {}
-    filtered.forEach(l => { (map[l.date] ??= []).push(l) })
+    shown.forEach(l => { (map[l.date] ??= []).push(l) })
     return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]))
-  }, [filtered])
+  }, [shown])
+
+  const cardLines = useMemo(() => filtered.filter(l => classified.get(l.id)?.kind === 'card'), [filtered, classified])
 
   const exactSingleMatches = useMemo(() =>
     filtered.filter(l => l.status === 'unmatched' && (suggestions.get(l.id)?.length ?? 0) === 1 && suggestions.get(l.id)![0].dateDiffDays === 0),
@@ -149,7 +196,7 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
   }
 
   function qcFor(line: BankLine) {
-    return qc[line.id] ?? { category: ruleFor(line) ?? '', description: line.description }
+    return qc[line.id] ?? { category: ruleFor(line) ?? classified.get(line.id)?.category ?? '', description: line.description }
   }
 
   // New category → add it to the tenant's expense/income categories
@@ -209,6 +256,49 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
     load()
   }
 
+  // "שיק" line ↔ check in the journal: link to its expense (marking the check paid first if needed)
+  async function doCheck(line: BankLine, check: CheckRow) {
+    setBusyLine(line.id)
+    let expenseId = check.expense_id
+    if (!check.is_paid || !expenseId) {
+      const r = await markScheduledPaymentPaid(supabase, tenantId, check, {
+        paidDate: line.date, category: 'ספקים', description: check.description || `צ'ק ${check.check_number ?? ''}`,
+      })
+      if (r.error || !r.expenseId) { setBusyLine(null); showToast('שגיאה: ' + (r.error ?? ''), 'error'); return }
+      expenseId = r.expenseId
+    }
+    const { error } = await (check.is_paid && check.expense_id
+      ? confirmMatch(supabase, line.id, expenseId, 'debit', userId, 'exact')
+      : linkCreated(supabase, line.id, 'debit', expenseId, userId))
+    setBusyLine(null)
+    if (error) { showToast('שגיאה: ' + error, 'error'); return }
+    showToast(`צ'ק ${check.check_number ?? ''} סומן כנפרע ✓`, 'success')
+    load()
+  }
+
+  // "העברה אל: <supplier>" → a supplier payment (lowers the supplier's balance)
+  async function doSupplier(line: BankLine, supp: SupplierRow) {
+    setBusyLine(line.id)
+    const r = await recordSupplierPayment(supabase, {
+      tenantId, supplierId: supp.id, supplierName: supp.name, amount: Number(line.amount), date: line.date,
+      method: 'העברה', ref: referenceOf(line),
+    })
+    if (r.error || !r.expenseId) { setBusyLine(null); showToast('שגיאה: ' + (r.error ?? ''), 'error'); return }
+    const { error } = await linkCreated(supabase, line.id, 'debit', r.expenseId, userId)
+    setBusyLine(null)
+    if (error) { showToast('שגיאה: ' + error, 'error'); return }
+    showToast(`נרשם תשלום ל${supp.name} ✓`, 'success')
+    load()
+  }
+
+  async function doIgnoreCards() {
+    setBulkBusy(true)
+    for (const l of cardLines) await ignoreLine(supabase, l.id, 'חיוב כרטיס אשראי', userId)
+    setBulkBusy(false)
+    showToast(`${cardLines.length} חיובי כרטיס סומנו ✓`, 'success')
+    load()
+  }
+
   async function doIgnore(line: BankLine, reason: string) {
     setBusyLine(line.id)
     const { error } = await ignoreLine(supabase, line.id, reason, userId)
@@ -242,22 +332,36 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
           {sources.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
         <div style={{ display: 'flex', gap: '6px' }}>
-          {(['unmatched', 'all'] as const).map(f => (
+          {(['missing', 'unmatched', 'all'] as const).map(f => (
             <button key={f} onClick={() => setFStatus(f)} style={{
               padding: '7px 14px', border: '1px solid', borderRadius: '20px', fontSize: '12px', cursor: 'pointer',
               borderColor: fStatus === f ? 'var(--primary)' : 'var(--border)',
               background: fStatus === f ? 'var(--success-soft)' : 'transparent',
               color: fStatus === f ? 'var(--primary)' : 'var(--text-muted)',
               fontWeight: fStatus === f ? 600 : 400,
-            }}>{f === 'unmatched' ? 'ללא התאמה' : 'הצג הכל'}</button>
+            }}>{f === 'missing' ? `לא רשום במערכת (${missing.length})` : f === 'unmatched' ? 'כל הפתוחות' : 'הצג הכל'}</button>
           ))}
         </div>
         {exactSingleMatches.length > 0 && (
           <Button size="sm" onClick={doBulkConfirm} loading={bulkBusy}>✓ אשר התאמות מדויקות ({exactSingleMatches.length})</Button>
         )}
+        {cardLines.length > 0 && (
+          <Button size="sm" variant="secondary" onClick={doIgnoreCards} loading={bulkBusy}>💳 דלג על חיובי כרטיס ({cardLines.length})</Button>
+        )}
         {ruleReady.length > 0 && (
           <Button size="sm" onClick={doBulkCreate} loading={bulkBusy}>✓ צור לפי קטגוריות שמורות ({ruleReady.length})</Button>
         )}
+      </div>
+
+      {/* The point of the screen: what left the bank and isn't recorded */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 16px', borderRadius: 'var(--radius)',
+        background: missing.length ? '#fef2f2' : 'var(--success-soft)', border: `1px solid ${missing.length ? '#fecaca' : '#bbf7d0'}` }}>
+        <span style={{ fontSize: 22 }}>{missing.length ? '💸' : '✅'}</span>
+        <div style={{ fontSize: 14 }}>
+          {missing.length
+            ? <>יצאו מהבנק ולא רשומים במערכת: <b>{missing.length}</b> תנועות · <b style={{ color: 'var(--danger)' }}>{fmt(missingTotal)}</b></>
+            : <b>כל ההוצאות מהבנק רשומות במערכת</b>}
+        </div>
       </div>
 
       {/* Summary strip */}
@@ -269,7 +373,7 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
         <span style={{ color: 'var(--text-muted)' }}>הותעלמו <b>{counts.ignored}</b></span>
       </div>
 
-      {filtered.length === 0 ? (
+      {shown.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '14px' }}>אין שורות להצגה.</div>
       ) : byDay.map(([day, dayLines]) => (
         <div key={day} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
@@ -301,8 +405,35 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
                   )}
                 </div>
 
-                {line.status === 'unmatched' && (
+                {line.status === 'unmatched' && (() => {
+                  const cl = classified.get(line.id)
+                  const box: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', flexWrap: 'wrap' }
+                  if (cl?.kind === 'check' && cl.check) return (
+                    <div style={{ ...box, background: '#fef9c3', border: '1px solid #fde68a' }}>
+                      <span>📝 צ&apos;ק {cl.check.check_number ? `#${cl.check.check_number}` : ''} ביומן הצ&apos;קים · {fmt(cl.check.amount)} · {cl.check.description}</span>
+                      <Button size="sm" onClick={() => doCheck(line, cl.check!)} loading={busyLine === line.id}>✓ {cl.check.is_paid ? 'התאם' : 'סמן כנפרע'}</Button>
+                    </div>
+                  )
+                  if (cl?.kind === 'card' && candidates.length === 0) return (
+                    <div style={{ ...box, background: '#f1f5f9', border: '1px solid var(--border)' }}>
+                      <span>💳 חיוב חודשי של כרטיס אשראי — העסקאות עצמן נבדקות מדף האשראי</span>
+                      <Button size="sm" variant="secondary" onClick={() => doIgnore(line, 'חיוב כרטיס אשראי')} loading={busyLine === line.id}>דלג</Button>
+                    </div>
+                  )
+                  return null
+                })()}
+                {line.status === 'unmatched' && classified.get(line.id)?.kind !== 'check' && !(classified.get(line.id)?.kind === 'card' && candidates.length === 0) && (
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {candidates.length === 0 && classified.get(line.id)?.kind === 'supplier' && (() => {
+                      const supp = classified.get(line.id)!.supplier!
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '6px 10px', fontSize: '12px' }}>
+                          <span>🏭 {supp.name}</span>
+                          <Button size="sm" onClick={() => doSupplier(line, supp)} loading={busyLine === line.id}>✓ רשום תשלום לספק</Button>
+                          <span style={{ color: 'var(--text-muted)' }}>או:</span>
+                        </div>
+                      )
+                    })()}
                     {candidates.length === 1 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--success-soft)', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '6px 10px', fontSize: '12px' }}>
                         <span>הצעה: {fmtDMY(candidates[0].date)} · {candidates[0].category} · {candidates[0].description}</span>
