@@ -3143,3 +3143,28 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-10 09:41
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:43 | Created supabase/migrations/116_reset_bank_sync.sql | — | ~263 |
+| 09:43 | Migration 116 reset bank sync; analyzed user's sample .xls = Excel 'web page' frameset shell with no data (sheet001.htm missing) | supabase/migrations/116_reset_bank_sync.sql | written, not run | ~5k |
+
+## Session: 2026-11-10 10:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-10 10:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:23 | User ran migration 116; created expenses gone — asked user to upload pre-migration Drive backup JSON (app's Drive files not visible to Drive MCP) | - | waiting | ~3k |
+
+## Session: 2026-11-10 10:41
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:43 | Created lib/bank-sync/classifyLine.ts | — | ~1051 |
+| 10:45 | Bank reconcile redesign: details+reference columns, classifyDebit (check/card/supplier/fee), missing-expenses banner+filter, check→journal, supplier payment from line, skip card charges | lib/bank-sync/*, components/bank-sync/ReconciliationReview.tsx | tsc ok, tested on Leumi xlsx | ~25k |

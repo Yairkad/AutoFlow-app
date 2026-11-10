@@ -18,6 +18,8 @@ export interface ColumnMapping {
     balance?: number
     chargeDate?: number    // credit-card statements: when it actually posts to the bank account, informational only
     cardNumber?: number    // credit-card statements: which card, when a tenant has more than one, informational only
+    details?: number       // bank "תיאור מורחב": who the money went to — joined into the description
+    reference?: number     // "אסמכתא" — for a check line this is the check number
   }
 }
 
@@ -30,6 +32,7 @@ export interface ParsedLine {
   balanceAfter: number | null
   chargeDate: string | null
   cardNumber: string | null
+  reference: string | null
   raw: unknown[]
 }
 
@@ -121,7 +124,10 @@ export function applyMapping(rawRows: unknown[][], mapping: ColumnMapping): Pars
     const isoDate = parseCellDate(row[columns.date])
     if (!isoDate) continue
 
-    const description = String(row[columns.description] ?? '').trim()
+    // "העברה דיגיטל" alone says nothing — the extended description has the payee
+    const base = String(row[columns.description] ?? '').trim()
+    const details = columns.details != null ? String(row[columns.details] ?? '').trim() : ''
+    const description = details && details !== base ? (base ? `${base} — ${details}` : details) : base
 
     let amount: number
     let direction: 'debit' | 'credit'
@@ -147,7 +153,8 @@ export function applyMapping(rawRows: unknown[][], mapping: ColumnMapping): Pars
     const chargeDate = columns.chargeDate != null ? parseCellDate(row[columns.chargeDate]) : null
     const cardNumber = columns.cardNumber != null ? String(row[columns.cardNumber] ?? '').trim() || null : null
 
-    lines.push({ rowIndex: i, date: isoDate, description, direction, amount, balanceAfter, chargeDate, cardNumber, raw: row })
+    const reference = columns.reference != null ? String(row[columns.reference] ?? '').trim() || null : null
+    lines.push({ rowIndex: i, date: isoDate, description, direction, amount, balanceAfter, chargeDate, cardNumber, reference, raw: row })
   }
 
   return lines
@@ -162,6 +169,8 @@ const HEADER_RULES: { role: keyof ColumnMapping['columns'] | 'amount'; words: st
   { role: 'chargeDate',  words: ['תאריך חיוב', 'מועד חיוב'] },
   { role: 'date',        words: ['תאריך עסקה', 'תאריך רכישה', 'תאריך הפעולה', 'תאריך פעולה', 'תאריך', 'date'] },
   { role: 'cardNumber',  words: ['4 ספרות', 'ספרות אחרונות', 'מספר כרטיס', 'כרטיס'] },
+  { role: 'details',     words: ['תיאור מורחב', 'פרטים נוספים', 'פירוט נוסף'] },
+  { role: 'reference',   words: ['אסמכתא', 'אסמכתה', 'מספר שיק', 'reference'] },
   { role: 'balance',     words: ['יתרה', 'balance'] },
   { role: 'debit',       words: ['בחובה', 'חובה', 'debit'] },
   { role: 'credit',      words: ['בזכות', 'זכות', 'credit'] },
@@ -203,6 +212,7 @@ export function guessMapping(rawRows: unknown[][]): ColumnMapping {
     const { cols, headerRowIndex } = h
     const extra = {
       balance: cols.balance, chargeDate: cols.chargeDate, cardNumber: cols.cardNumber,
+      details: cols.details, reference: cols.reference,
     }
     // Description: the named column, else the widest text column
     let description = cols.description

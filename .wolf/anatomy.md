@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-09T20:36:23.387Z
-> Files: 197 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-10T10:43:14.371Z
+> Files: 202 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -691,6 +691,7 @@
 
 ## lib/bank-sync/
 
+- `classifyLine.ts` — Payee written after "העברה אל:" / "תשלום עבור:" in the extended description (~1051 tok)
 - `parseStatementFile.ts` — readRawRows (zip/OLE binary, else UTF-8→windows-1255 text; cptable for old xls), parseCellDate (DD/MM/YY), parseCellAmount, guessMapping by Hebrew header names + headerSignature, applyMapping (~3200 tok)
 
 ## lib/cars/
@@ -704,9 +705,9 @@
 ## lib/debts/
 
 - `supplierDirectPayments.ts` — scheduled_payments.payment_method values of direct (non-check) payments. They are kept (~1578 tok)
+- `supplierDirectPayments.ts` — recordSupplierPayment (expense + paid scheduled_payments row), deleteDirectAllocations, removeSupplierPaymentOfExpense (on expense delete), fetchSupplierOpenTotals (dashboards), paymentMethodLabel (~1400 tok)
 - `supplierLedger.ts` — supplier running account: events (charge/credit/payment/writeoff), balanceAfter, monthSummaries (~800 tok)
 - `supplierLedger.ts` — Events of one supplier. A payment counts when it was allocated to an invoice, marked paid, (~1136 tok)
-- `supplierDirectPayments.ts` — recordSupplierPayment (expense + paid scheduled_payments row), deleteDirectAllocations, removeSupplierPaymentOfExpense (on expense delete), fetchSupplierOpenTotals (dashboards), paymentMethodLabel (~1400 tok)
 
 ## lib/expenses/
 
@@ -774,6 +775,10 @@
 ## lib/tires/brands.ts
 
 
+## lib/types/
+
+- `cpexcel.d.ts` — module declaration for xlsx/dist/cpexcel.full.mjs (~30 tok)
+
 ## lib/ui/
 
 - `backdrop.ts` — guardedBackdrop(onClose): hand-built overlay closes on outside click only while untouched (~150 tok)
@@ -822,6 +827,7 @@
 - `093_yard_worker_hub.sql` — ════════════════════════════════════════════ (~1248 tok)
 - `094_car_sale_contracts.sql` — ════════════════════════════════════════════ (~671 tok)
 - `099_poa_form_settings.sql` — poa_form_settings (tenant PK): layout JSONB (calibration), proxies/owners JSONB quick-fill lists, RLS by tenant (~350 tok)
+- `116_reset_bank_sync.sql` — Reset bank / credit-card reconciliation: delete every import, its lines and saved sources, (~263 tok)
 
 ## supabase/migrations/ (2026-11-03)
 
@@ -836,6 +842,7 @@
 ## tools/scanner-agent/
 
 - `113_check_handed_date.sql` — scheduled_payments.handed_date (check handed to supplier; supplier balance drops then); backfill least(created_at, due_date) (~120 tok)
+- `116_reset_bank_sync.sql` — one-time reset: deletes bank imports/lines/sources + expenses/income CREATED from statement lines (matched ones kept) (~200 tok)
 - `intakeImage.tsx` — renderIntakeOgImage(name, logoBase64): branded 1200x630 link preview (logo card + inspection badge, colours from logo) via next/og ImageResponse (~1100 tok)
 - `intakeTenant.ts` — getIntakeTenant(token): tenant name+logo for personal/fixed intake link (~250 tok)
 - `lib/cars/contractPayments.ts` — expectedPayments() from contract data + receipts, loadExpectedPayments / setReceipt (~1300 tok)
@@ -845,7 +852,4 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-
-## lib/types/
-
-- `cpexcel.d.ts` — module declaration for xlsx/dist/cpexcel.full.mjs (~30 tok)
+- `classifyLine.ts` — classifyDebit: bank debit line → check (by אסמכתא = check_number) / card settlement / supplier (payee after 'העברה אל:') / fee / other; payeeOf (~900 tok)

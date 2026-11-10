@@ -19,7 +19,7 @@ export const paymentMethodLabel = (m: string | null | undefined) =>
 export async function recordSupplierPayment(
   supabase: SupabaseClient,
   p: { tenantId: string; supplierId: string; supplierName: string; amount: number; date: string; method: DirectMethodHe; ref?: string | null },
-): Promise<{ error: string | null }> {
+): Promise<{ error: string | null; expenseId?: string }> {
   const description = `תשלום לספק ${p.supplierName}`
   const exp = await supabase.from('expenses').insert({
     tenant_id: p.tenantId, date: p.date, category: 'ספקים', description, amount: p.amount,
@@ -36,7 +36,7 @@ export async function recordSupplierPayment(
     await supabase.from('expenses').delete().eq('id', exp.data.id)
     return { error: sp.error.message }
   }
-  return { error: null }
+  return { error: null, expenseId: exp.data.id }
 }
 
 /** Undo old-style direct allocations (supplier_debt_payments rows with no payment row behind
