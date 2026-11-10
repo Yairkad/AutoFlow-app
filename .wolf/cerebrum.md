@@ -72,6 +72,8 @@
 
 ## Key Learnings
 
+- [2026-11-10] User's bank "דו\"ח תנועות בחשבון.xls" sample was an Excel "web page" FRAMESET shell (UTF-8 HTML, <frameset> → "<name>.files/sheet001.htm") with NO transaction data — the rows live in the sibling .files folder. Such a file can't be parsed alone; ask for sheet001.htm or a re-save as .xlsx. Bank-sync redesign pending (user: "נצטרך לחשוב טוב").
+
 - [2026-11-09] Bank-sync import: file → auto-detected mapping (header names) → straight to the line list; source auto-recognized by column_mapping.signature (header fingerprint); '🔧 תיקון עמודות' only on demand. Learned "description → category" rules live in bank_statement_sources.column_mapping.rules (jsonb, no migration), keyed by ruleKey (digits stripped). Categories are typeable; new ones are inserted into expense_categories/income_categories. Any client-side Hebrew text file decode: UTF-8 fatal → windows-1255 fallback.
 - [2026-11-09] buildUnifiedReport.supplierOpen now = uncovered part of invoices (invoiceCoverage in lib/debts/supplierLedger.ts, oldest-first FIFO of credits+payments) — the same helper drives the supplier screen status chips.
 
