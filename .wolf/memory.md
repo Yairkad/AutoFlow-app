@@ -3143,3 +3143,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-11 08:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:50 | Investigated slow page navigation (store proxy, no region, proxy.ts getUser+profiles, no loading.tsx) | proxy.ts, lib/supabase/client.ts, app/api/store/route.ts | diagnosis only, awaiting user answers | ~6000 |
