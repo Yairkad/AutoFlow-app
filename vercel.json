@@ -1,6 +1,12 @@
 {
+  "regions": [
+    "dub1"
+  ],
   "crons": [
-    { "path": "/api/cron/backup", "schedule": "30 0 * * *" }
+    {
+      "path": "/api/cron/backup",
+      "schedule": "30 0 * * *"
+    }
   ],
   "git": {
     "deploymentEnabled": {

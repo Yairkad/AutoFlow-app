@@ -309,9 +309,6 @@
 
 - `route.ts` — POST merge duplicate tires/products into one: moves movements/refs, sums qty, fills missing fields, deletes sources (~1000 tok)
 
-## app/api/store/
-
-
 ## app/api/yard-auth/
 
 
@@ -849,3 +846,4 @@
 ## lib/types/
 
 - `cpexcel.d.ts` — module declaration for xlsx/dist/cpexcel.full.mjs (~30 tok)
+- `app/(app)/loading.tsx` — shimmer skeleton shown instantly during page navigation (~150 tok)

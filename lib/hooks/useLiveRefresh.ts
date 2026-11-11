@@ -4,8 +4,7 @@ import { useEffect, useRef } from 'react'
 
 export interface LiveRefreshOptions {
   /** Keep polling while the browser window is visible but not focused (another app on top, a
-   *  second monitor). Only for wall/terminal screens nobody clicks — elsewhere it burns Vercel
-   *  function time: every Supabase query goes through /api/store. */
+   *  second monitor). Only for wall/terminal screens nobody clicks — elsewhere it's needless load. */
   whenBlurred?: boolean
 }
 

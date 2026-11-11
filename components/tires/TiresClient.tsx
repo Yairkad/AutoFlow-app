@@ -389,7 +389,7 @@ export default function TiresClient() {
     }
 
     // Merge the saved row into local state instead of reloading the whole table —
-    // every request goes through the /api/store proxy, so a full reload doubled the wait.
+    // a full reload doubled the wait.
     setFormSaving(true)
     if (editId) {
       const { data, error } = await sb.from('tires').update(payload).eq('id', editId).select().single()
