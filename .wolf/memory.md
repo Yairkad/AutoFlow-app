@@ -3149,3 +3149,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 08:50 | Investigated slow page navigation (store proxy, no region, proxy.ts getUser+profiles, no loading.tsx) | proxy.ts, lib/supabase/client.ts, app/api/store/route.ts | diagnosis only, awaiting user answers | ~6000 |
+
+## Session: 2026-11-11 09:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:10 | Perf: removed /api/store proxy from browser client, vercel region dub1, getClaims in proxy.ts, (app)/loading.tsx | lib/supabase/client.ts, vercel.json, proxy.ts, app/(app)/loading.tsx | tsc clean | ~4000 |

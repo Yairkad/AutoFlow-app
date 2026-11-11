@@ -81,8 +81,8 @@ export async function proxy(request: NextRequest) {
         setAll: (cookies) => cookies.forEach(({ name, value, options }) => res.cookies.set(name, value, options)),
       },
     })
-    const { data: { user } } = await sb.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data } = await sb.auth.getClaims()
+    if (!data?.claims?.sub) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     return res
   }
 
@@ -117,10 +117,11 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // Verify JWT (doesn't hit DB)
-  const { data: { user } } = await supabase.auth.getUser()
+  // Verify the JWT locally (getClaims) — getUser() was a round-trip to Supabase Auth on every page
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const userId = claimsData?.claims?.sub
 
-  if (!user) {
+  if (!userId) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
@@ -135,7 +136,7 @@ export async function proxy(request: NextRequest) {
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, allowed_modules, is_active')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single()
 
   // No profile or deactivated → logout

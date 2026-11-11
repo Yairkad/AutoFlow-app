@@ -849,3 +849,4 @@
 ## lib/types/
 
 - `cpexcel.d.ts` — module declaration for xlsx/dist/cpexcel.full.mjs (~30 tok)
+- `app/(app)/loading.tsx` — shimmer skeleton shown instantly during page navigation (~150 tok)
