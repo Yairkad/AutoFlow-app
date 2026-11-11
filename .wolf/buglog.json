@@ -1821,5 +1821,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-09T23:30:00Z"
+  },
+  {
+    "id": "bug-099",
+    "timestamp": "2026-11-11T09:30:00Z",
+    "error_message": "Security: /api/store was a public open proxy (SSRF) — ?p=base64('@evil.com/...') made it fetch any host",
+    "file": "app/api/store/route.ts",
+    "root_cause": "target = SUPABASE_URL + user-supplied path; a path starting with '@' turns the Supabase host into userinfo, so fetch goes to an arbitrary host. Route was in PUBLIC_PREFIXES (no auth).",
+    "fix": "Browser client now talks to Supabase directly; deleted app/api/store and removed it from PUBLIC_PREFIXES in proxy.ts",
+    "tags": [
+      "security",
+      "ssrf",
+      "proxy",
+      "api-store"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-11T09:30:00Z"
   }
 ]

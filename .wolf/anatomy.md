@@ -309,9 +309,6 @@
 
 - `route.ts` — POST merge duplicate tires/products into one: moves movements/refs, sums qty, fills missing fields, deletes sources (~1000 tok)
 
-## app/api/store/
-
-
 ## app/api/yard-auth/
 
 

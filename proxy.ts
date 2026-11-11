@@ -22,7 +22,6 @@ const PUBLIC_PREFIXES = [
   '/api/auth',         // send-reset, register-employee
   '/api/yard-auth',    // yard terminal: employee picker + PIN login
   '/api/public',       // customer-search
-  '/api/store',        // Supabase proxy (RLS protects data)
   '/_next',
   '/favicon',
   '/icon',
