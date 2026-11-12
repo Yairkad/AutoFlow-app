@@ -228,6 +228,18 @@ export default function CarsClient() {
   const [contractEd, setContractEd] = useState<{ carId: string; id: string | null } | null>(null)
   const [flagFilter, setFlagFilter] = useState<'all' | 'deposited' | 'no_refund' | 'no_test' | 'expiring'>('all')
   const [search,     setSearch]     = useState('')
+
+  // Deep-link from the global search: ?open=<carId> → open that car's card once the list is loaded
+  const didOpenLink = useRef(false)
+  useEffect(() => {
+    if (loading || didOpenLink.current) return
+    didOpenLink.current = true
+    const id = new URLSearchParams(window.location.search).get('open')
+    const car = id ? cars.find(c => c.id === id) : null
+    if (!car) return
+    const t = setTimeout(() => { openCarView(car); window.history.replaceState(null, '', window.location.pathname) }, 0)
+    return () => clearTimeout(t)
+  }, [loading]) // eslint-disable-line react-hooks/exhaustive-deps
   const isMobile = useIsMobile()
 
   // Car form

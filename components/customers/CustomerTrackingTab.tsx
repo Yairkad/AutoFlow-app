@@ -50,6 +50,8 @@ interface CustomerTrackingTabProps {
   recurringItems: RecurringItem[]
   customerActions: CustomerAction[]
   openId: string | null
+  /** Search text to show instead of the name (an invoice number from the global search) */
+  openQuery?: string | null
   reload: () => void
   /** Customer card (contact details, recurring charges, quick actions) — from the ⋮ menu */
   onOpenCard?: (customerId: string) => void
@@ -94,7 +96,7 @@ const tdSt: React.CSSProperties = { padding: '8px 10px', verticalAlign: 'middle'
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function CustomerTrackingTab({
-  tenantId, tenantName, customers, customerDebts, customerPayments, recurringItems, customerActions, openId, reload, onOpenCard,
+  tenantId, tenantName, customers, customerDebts, customerPayments, recurringItems, customerActions, openId, openQuery, reload, onOpenCard,
 }: CustomerTrackingTabProps) {
   const supabase    = useRef(createClient()).current
   const { showToast } = useToast()
@@ -241,7 +243,7 @@ export default function CustomerTrackingTab({
     if (!openId) return
     const target = customers.find(c => c.id === openId)
     if (target) {
-      setSearch(target.name)
+      setSearch(openQuery || target.name)
       setOpenCustomerKeys(prev => new Set(prev).add(customerKeyOf(openId)))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchLink } from '@/lib/hooks/useSearchLink'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
@@ -95,6 +96,7 @@ export default function ProductsClient() {
 
   // Filters
   const [search, setSearch] = useState('')
+  useSearchLink(({ q }) => { if (q) setSearch(q) }) // deep-link from the global search: ?q=<sku/name>
   const [filterCat, setFilterCat] = useState('')
   const [filterStock, setFilterStock] = useState('')
 

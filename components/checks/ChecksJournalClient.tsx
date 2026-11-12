@@ -142,6 +142,24 @@ export default function ChecksJournalClient() {
     if (sid) setFSupplier(sid)
   }, [])
 
+  // Deep-link from the global search: ?open=<id> → narrow the list to that check and expand its month
+  const didOpenLink = useRef(false)
+  useEffect(() => {
+    if (loading || didOpenLink.current) return
+    didOpenLink.current = true
+    const id = new URLSearchParams(window.location.search).get('open')
+    const p = id ? rows.find(r => r.id === id) : null
+    if (!p) return
+    const t = setTimeout(() => {
+      setFStatus('all')
+      if (p.check_number && /^\d+$/.test(p.check_number)) { setFNumFrom(p.check_number); setFNumTo(p.check_number) }
+      else setFSearch(p.description ?? '')
+      setExpandedMonths(prev => new Set(prev).add(monthKeyOf(p.due_date)))
+      window.history.replaceState(null, '', window.location.pathname)
+    }, 0)
+    return () => clearTimeout(t)
+  }, [loading, rows])
+
   // ── Filtering & grouping ────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {

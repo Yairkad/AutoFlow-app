@@ -57,6 +57,8 @@ interface SupplierTrackingTabProps {
   recurringItems: RecurringItem[]
   expenseCats: string[]
   openId: string | null
+  /** Search text to show instead of the name (an invoice number from the global search) */
+  openQuery?: string | null
   reload: () => void
 }
 
@@ -99,7 +101,7 @@ const tdSt: React.CSSProperties = { padding: '8px 10px', verticalAlign: 'middle'
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SupplierTrackingTab({
-  tenantId, tenantName, tenant, suppliers, supplierDebts, scheduledPayments, debtPayments, recurringItems, expenseCats, openId, reload,
+  tenantId, tenantName, tenant, suppliers, supplierDebts, scheduledPayments, debtPayments, recurringItems, expenseCats, openId, openQuery, reload,
 }: SupplierTrackingTabProps) {
   const supabase    = useRef(createClient()).current
   const { showToast } = useToast()
@@ -268,7 +270,7 @@ export default function SupplierTrackingTab({
     if (!openId) return
     const target = suppliers.find(s => s.id === openId)
     if (target) {
-      setSearch(target.name)
+      setSearch(openQuery || target.name)
       setOpenSupplierKeys(prev => new Set(prev).add(supplierKeyOf(openId)))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

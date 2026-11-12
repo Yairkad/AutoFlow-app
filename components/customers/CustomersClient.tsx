@@ -25,6 +25,7 @@ export default function CustomersClient({ embedded = false }: { embedded?: boole
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('tracking')
   const [openId, setOpenId] = useState<string | null>(null)
+  const [openQuery, setOpenQuery] = useState<string | null>(null) // ?q= — e.g. an invoice number from the global search
   const [cardId, setCardId] = useState<string | null>(null)   // customer card over the accounts screen
 
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -89,9 +90,11 @@ export default function CustomersClient({ embedded = false }: { embedded?: boole
     if (t === 'details' || t === 'tracking') setTab(t)
     const openParam = params.get('open')
     if (openParam) setOpenId(openParam)
+    setOpenQuery(params.get('q'))
   }, [])
 
   const openTracking = (customerId: string) => {
+    setOpenQuery(null)
     setOpenId(customerId)
     setTab('tracking')
   }
@@ -112,6 +115,7 @@ export default function CustomersClient({ embedded = false }: { embedded?: boole
       recurringItems={recurringItems}
       customerActions={customerActions}
       openId={openId}
+      openQuery={openQuery}
       reload={loadAll}
       onOpenCard={embedded ? setCardId : undefined}
     />

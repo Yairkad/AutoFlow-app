@@ -3162,3 +3162,5 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:40 | Opened PR #81 (perf + remove /api/store) | - | done | ~500 |
+| 09:57 | Created lib/search/globalSearch.ts | — | ~3487 |
+| 10:30 | Global search rework: field/kind filter button, all modules, phone/amount matching, deep links to the record | lib/search/globalSearch.ts, lib/hooks/useSearchLink.ts, Header.tsx + 11 page clients | tsc+eslint clean; queries verified with stubbed fetch; not browser-tested | ~60000 |

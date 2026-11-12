@@ -163,13 +163,15 @@ export default function DebtsClient() {
     }
     if (!id) return
     const t = setTimeout(() => {
+      // A closed debt is hidden by the default "open" filter
+      if (customerDebts.find(d => d.id === id)?.is_closed) setFilter('all')
       setFocusId(id)
-      document.getElementById(`debt-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setTimeout(() => document.getElementById(`debt-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
       window.history.replaceState(null, '', window.location.pathname)
     }, 50)
     const clear = setTimeout(() => setFocusId(null), 4000)
     return () => { clearTimeout(t); clearTimeout(clear) }
-  }, [loading])
+  }, [loading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Customer CRUD ─────────────────────────────────────────────────────────
 

@@ -25,6 +25,7 @@ export default function SuppliersClient({ embedded = false }: { embedded?: boole
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('tracking')
   const [openId, setOpenId] = useState<string | null>(null)
+  const [openQuery, setOpenQuery] = useState<string | null>(null) // ?q= — e.g. an invoice number from the global search
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [supplierDebts, setSupplierDebts] = useState<SupplierDebt[]>([])
@@ -119,9 +120,11 @@ export default function SuppliersClient({ embedded = false }: { embedded?: boole
     if (t === 'details' || t === 'tracking') setTab(t)
     const openParam = params.get('open')
     if (openParam) setOpenId(openParam)
+    setOpenQuery(params.get('q'))
   }, [])
 
   const openTracking = (supplierId: string) => {
+    setOpenQuery(null)
     setOpenId(supplierId)
     setTab('tracking')
   }
@@ -144,6 +147,7 @@ export default function SuppliersClient({ embedded = false }: { embedded?: boole
       recurringItems={recurringItems}
       expenseCats={expenseCats}
       openId={openId}
+      openQuery={openQuery}
       reload={loadAll}
     />
   )

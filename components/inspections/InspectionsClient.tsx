@@ -1,6 +1,7 @@
 'use client'
 
 import { printHtml } from '@/lib/print/printHtml'
+import { useSearchLink } from '@/lib/hooks/useSearchLink'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/lib/contexts/ProfileContext'
@@ -352,6 +353,7 @@ export default function InspectionsClient() {
   const [saving, setSaving]           = useState(false)
   const [plateLoading, setPlateLoading] = useState(false)
   const [search, setSearch]           = useState('')
+  useSearchLink(({ q }) => { if (q) setSearch(q) }) // deep-link from the global search: ?q=<plate>
   const [fieldErrors, setFieldErrors] = useState<Set<string>>(new Set())
   const [driveConnected, setDriveConnected] = useState(false)
   const [isAdmin, setIsAdmin]         = useState(false)
