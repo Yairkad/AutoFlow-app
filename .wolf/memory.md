@@ -3167,3 +3167,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-12 09:47
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:00 | Investigated global search gaps (fields, ?open= only on contacts/customers/suppliers, invoices go to page) | components/layout/Header.tsx | diagnosis, awaiting user | ~5000 |
