@@ -193,6 +193,7 @@ export default function EmployeesClient() {
   const [editEmp, setEditEmp] = useState<Employee | null>(null)
   const [form, setForm] = useState({ ...EMPTY_FORM })
 
+
   // Adjustments modal (חוץ תלוש)
   const [adjModal, setAdjModal] = useState(false)
   const [adjEmpId, setAdjEmpId] = useState('')
@@ -381,6 +382,19 @@ export default function EmployeesClient() {
     })
     setEmpModal(true)
   }
+
+  // Deep-link from the global search: ?open=<employeeId> → admins get that employee's card
+  const didOpenLink = useRef(false)
+  useEffect(() => {
+    if (!roleReady || didOpenLink.current || employees.length === 0) return
+    didOpenLink.current = true
+    const id = new URLSearchParams(window.location.search).get('open')
+    const emp = id ? employees.find(e => e.id === id) : null
+    window.history.replaceState(null, '', window.location.pathname)
+    if (!emp || (myRole !== 'admin' && myRole !== 'super_admin')) return
+    const t = setTimeout(() => openEdit(emp), 0)
+    return () => clearTimeout(t)
+  }, [roleReady, employees]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function saveEmp() {
     if (!form.full_name.trim()) { showToast('נא להזין שם עובד', 'error'); return }

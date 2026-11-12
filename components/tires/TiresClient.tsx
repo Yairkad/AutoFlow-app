@@ -147,8 +147,8 @@ export default function TiresClient() {
   useEffect(() => {
     const q = new URLSearchParams(window.location.search).get('q')
     const m = q?.match(/(\d{3})\D+(\d{2})\D+(\d{2})/)
-    if (!m) return
-    setFilterWidth(m[1]); setFilterProf(m[2]); setFilterRim(m[3]) // eslint-disable-line react-hooks/set-state-in-effect
+    if (!m) { if (q) setSearch(q); return } // eslint-disable-line react-hooks/set-state-in-effect
+    setFilterWidth(m[1]); setFilterProf(m[2]); setFilterRim(m[3])
   }, [])
   const [filterStock,      setFilterStock]      = useState('')
   const [filterCondition,  setFilterCondition]  = useState('')

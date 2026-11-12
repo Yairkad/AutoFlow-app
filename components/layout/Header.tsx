@@ -1,12 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { tireSizeText } from '@/lib/tires/size'
-import { likePatterns } from '@/lib/search/fuzzy'
-import { brandsMatchingHe } from '@/lib/tires/brands'
+import { runGlobalSearch, FIELD_LABELS, KIND_LABELS, type SearchField, type SearchKind, type SearchResult } from '@/lib/search/globalSearch'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 
 // ── Hebrew numeral conversion ──────────────────────────────────────────────
@@ -43,14 +41,6 @@ function useClock() {
 
 // ── Search types ───────────────────────────────────────────────────────────
 
-interface SearchResult {
-  id: string
-  icon: string
-  primary: string
-  secondary?: string
-  href: string
-  category: string
-}
 
 // ── UserDropdown ───────────────────────────────────────────────────────────
 
@@ -169,26 +159,62 @@ function UserDropdown({ name, email, onClose }: { name: string; email: string; o
   )
 }
 
-// ── Search category filter chips ────────────────────────────────────────────
+// ── Search filter: small button at the edge of the search box + popover menu ─
 
-function CategoryChips({ categories, active, onSelect }: { categories: string[]; active: string | null; onSelect: (c: string | null) => void }) {
-  if (categories.length < 2) return null
-  const chipSt = (isActive: boolean): React.CSSProperties => ({
-    padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: isActive ? 700 : 500,
-    border: `1px solid ${isActive ? 'var(--primary)' : 'var(--border)'}`,
-    background: isActive ? 'var(--primary)' : 'transparent',
-    color: isActive ? '#fff' : 'var(--text-muted)',
-    cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-  })
+function SearchFilter({ field, kind, onField, onKind }: {
+  field: SearchField; kind: SearchKind; onField: (f: SearchField) => void; onKind: (k: SearchKind) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+
+  const active = field !== 'all' || kind !== 'all'
+  const keep = (e: React.MouseEvent) => e.preventDefault() // keep focus in the search input
+  const pill = (label: string, clear: () => void) => (
+    <button type="button" onMouseDown={keep} onClick={clear} title="בטל סינון" style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+      background: 'var(--primary-soft)', color: 'var(--primary)', fontSize: 11.5, fontWeight: 700,
+      borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap', flexShrink: 0,
+    }}>{label} <span aria-hidden>✕</span></button>
+  )
+  const item = (label: string, on: boolean, pick: () => void) => (
+    <button key={label} type="button" onMouseDown={keep} onClick={() => { pick(); setOpen(false) }} style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', border: 'none', cursor: 'pointer',
+      fontFamily: 'inherit', fontSize: 13, textAlign: 'right', padding: '6px 10px', borderRadius: 6,
+      background: on ? 'var(--primary-soft)' : 'transparent', color: on ? 'var(--primary)' : 'var(--text)', fontWeight: on ? 700 : 400,
+    }}>{label}{on && <span>✓</span>}</button>
+  )
+  const head = (t: string) => <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', padding: '6px 10px 3px' }}>{t}</div>
+
   return (
-    <div style={{
-      display: 'flex', gap: '6px', padding: '8px 10px', overflowX: 'auto',
-      borderBottom: '1px solid var(--border)', direction: 'rtl',
-    }}>
-      <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => onSelect(null)} style={chipSt(active === null)}>הכל</button>
-      {categories.map(c => (
-        <button key={c} type="button" onMouseDown={e => e.preventDefault()} onClick={() => onSelect(c)} style={chipSt(active === c)}>{c}</button>
-      ))}
+    <div ref={ref} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+      {field !== 'all' && pill(FIELD_LABELS[field], () => onField('all'))}
+      {kind !== 'all' && pill(KIND_LABELS[kind], () => onKind('all'))}
+      <button type="button" onMouseDown={keep} onClick={() => setOpen(v => !v)} aria-label="סינון חיפוש" aria-expanded={open} title="סינון חיפוש" style={{
+        width: 28, height: 28, borderRadius: 7, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        border: `1px solid ${active || open ? 'var(--primary)' : 'var(--border)'}`,
+        background: active || open ? 'var(--primary)' : 'var(--bg-card)', color: active || open ? '#fff' : 'var(--text-muted)',
+      }}>
+        <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>
+      </button>
+      {open && (
+        <div onMouseDown={keep} style={{
+          position: 'absolute', top: 'calc(100% + 8px)', left: 0, width: 220, zIndex: 600, direction: 'rtl',
+          background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
+          boxShadow: '0 10px 30px rgba(0,0,0,.18)', padding: 6, maxHeight: '70vh', overflowY: 'auto',
+        }}>
+          {head('חפש לפי')}
+          {(Object.keys(FIELD_LABELS) as SearchField[]).map(f => item(FIELD_LABELS[f], field === f, () => onField(f)))}
+          <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+          {head('הצג רק')}
+          {(Object.keys(KIND_LABELS) as SearchKind[]).map(k => item(KIND_LABELS[k], kind === k, () => onKind(k)))}
+        </div>
+      )}
     </div>
   )
 }
@@ -221,7 +247,13 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const [loading,  setLoading]  = useState(false)
   const [focused,  setFocused]  = useState(false)
   const [selected, setSelected] = useState(0)
-  const [catFilter, setCatFilter] = useState<string | null>(null)
+  const [field,    setField]    = useState<SearchField>('all')
+  const [kind,     setKind]     = useState<SearchKind>('all')
+  const searchSeq   = useRef(0)
+  // Width of the filter button (+ active-filter pills) sitting inside the left edge of the input
+  const filterBoxRef = useRef<HTMLDivElement>(null)
+  const [filterW, setFilterW] = useState(40)
+  useLayoutEffect(() => { setFilterW((filterBoxRef.current?.offsetWidth ?? 28) + 12) }, [field, kind])
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchRef   = useRef<HTMLDivElement>(null)
 
@@ -252,62 +284,27 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     const trimmed = q.trim()
-    setCatFilter(null)
     if (trimmed.length < 2) { setResults([]); setLoading(false); return }
     setLoading(true)
     debounceRef.current = setTimeout(() => runSearch(trimmed), 300)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [q]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [q, field, kind]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { setSelected(0) }, [results, catFilter])
+  useEffect(() => { setSelected(0) }, [results])
 
-  const categories = [...new Set(results.map(r => r.category))]
-  const filteredResults = catFilter ? results.filter(r => r.category === catFilter) : results
+  const filteredResults = results
 
   async function runSearch(term: string) {
-    const like = `%${term}%`
-    // A Hebrew brand name (tire_brands) finds that brand's tires too
-    const { data: brandRows } = await supabase.from('tire_brands').select('name_en, name_he')
-    const heBrands = brandsMatchingHe(brandRows, term)
-    const [debts, suppliers, employees, inspections, cars, expenses, products, tires, customers, custInvoices, suppInvoices] = await Promise.all([
-      supabase.from('customer_debts').select('id, name, phone, plate, amount').or(`name.ilike.${like},phone.ilike.${like},plate.ilike.${like}`).limit(4),
-      supabase.from('suppliers').select('id, name, phone, contact_name').or(`name.ilike.${like},phone.ilike.${like},contact_name.ilike.${like}`).limit(4),
-      supabase.from('employees').select('id, full_name, phone').or(`full_name.ilike.${like},phone.ilike.${like}`).limit(4),
-      supabase.from('car_inspections').select('id, plate, owner_name, owner_phone').or(`plate.ilike.${like},owner_name.ilike.${like},owner_phone.ilike.${like}`).limit(4),
-      supabase.from('cars').select('id, plate, make, model, owner_name, buyer_name').or(`plate.ilike.${like},make.ilike.${like},model.ilike.${like},owner_name.ilike.${like},buyer_name.ilike.${like}`).limit(4),
-      supabase.from('expenses').select('id, description, amount').ilike('description', like).limit(4),
-      likePatterns(term).reduce((q, w) => q.or(`name.ilike.${w},sku.ilike.${w},barcode.ilike.${w}`), supabase.from('products').select('id, name, sku')).limit(3),
-      supabase.from('tires').select('id, brand, width, profile, rim, sku').or([`brand.ilike.${like}`, `sku.ilike.${like}`, ...heBrands.map(b => `brand.ilike."${b.replace(/["\\]/g, '')}"`)].join(',')).limit(3),
-      supabase.from('customers').select('id, name, phone').or(`name.ilike.${like},phone.ilike.${like}`).limit(4),
-      supabase.from('customer_ledger_debts').select('customer_id, doc_number, amount, customers(name)').ilike('doc_number', like).limit(4),
-      supabase.from('supplier_debts').select('supplier_id, doc_number, amount, suppliers(name)').ilike('doc_number', like).limit(4),
-    ])
-
-    const all: SearchResult[] = []
-    debts.data?.forEach(r => all.push({ id: r.id, icon: '💳', category: 'חובות (מזדמנים)', primary: r.name, secondary: [r.phone, r.plate, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/debts' }))
-    suppliers.data?.forEach(r => all.push({ id: r.id, icon: '🏭', category: 'ספקים', primary: r.name, secondary: r.phone ?? undefined, href: '/contacts' }))
-    employees.data?.forEach(r => all.push({ id: r.id, icon: '👷', category: 'עובדים', primary: r.full_name, secondary: r.phone ?? undefined, href: '/employees' }))
-    customers.data?.forEach(r => all.push({ id: r.id, icon: '👤', category: 'לקוחות', primary: r.name, secondary: r.phone ?? undefined, href: '/contacts' }))
-    custInvoices.data?.forEach((r: any) => {
-      if (!r.customer_id) return
-      all.push({ id: r.customer_id, icon: '🧾', category: 'חשבוניות לקוחות', primary: r.customers?.name ?? '—', secondary: [r.doc_number ? `מס' ${r.doc_number}` : null, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/accounts?tab=customers' })
-    })
-    suppInvoices.data?.forEach((r: any) => {
-      if (!r.supplier_id) return
-      all.push({ id: r.supplier_id, icon: '🧾', category: 'חשבוניות ספקים', primary: r.suppliers?.name ?? '—', secondary: [r.doc_number ? `מס' ${r.doc_number}` : null, r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : null].filter(Boolean).join(' · '), href: '/accounts?tab=suppliers' })
-    })
-    inspections.data?.forEach(r => all.push({ id: r.id, icon: '📝', category: 'בדיקות', primary: r.plate, secondary: [r.owner_name, r.owner_phone].filter(Boolean).join(' · '), href: '/inspections' }))
-    cars.data?.forEach(r => all.push({ id: r.id, icon: '🚗', category: 'רכבים', primary: [r.make, r.model, r.plate].filter(Boolean).join(' '), secondary: (r.owner_name || r.buyer_name) ?? undefined, href: '/cars' }))
-    expenses.data?.forEach(r => all.push({ id: r.id, icon: '💰', category: 'הוצאות', primary: r.description ?? '—', secondary: r.amount ? `₪${Number(r.amount).toLocaleString('he-IL')}` : undefined, href: '/expenses' }))
-    products.data?.forEach(r => all.push({ id: r.id, icon: '📦', category: 'מוצרים', primary: r.name, secondary: r.sku ?? undefined, href: '/products' }))
-    tires.data?.forEach(r => all.push({ id: r.id, icon: '🏁', category: 'צמיגים', primary: `${r.brand ?? ''} ${tireSizeText(r) || 'ללא מידה'}`.trim(), secondary: r.sku ?? undefined, href: '/tires' }))
-
-    setResults(all)
+    const seq = ++searchSeq.current
+    let found: SearchResult[] = []
+    try { found = await runGlobalSearch(supabase, term, field, kind) } catch { /* show "no results" */ }
+    if (seq !== searchSeq.current) return // a newer search already started
+    setResults(found)
     setLoading(false)
   }
 
   function go(r: SearchResult) {
-    router.push(`${r.href}${r.href.includes('?') ? '&' : '?'}open=${r.id}`)
+    router.push(r.href)
     setQ('')
     setResults([])
     setFocused(false)
@@ -396,7 +393,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
               onKeyDown={onKey}
               autoComplete="off"
               spellCheck={false}
-              placeholder="חיפוש לקוח, רכב, עובד..."
+              placeholder="חיפוש לקוח, רכב, חשבונית..."
               style={{
                 width: '100%', height: '38px',
                 paddingRight: '12px', paddingLeft: '10px',
@@ -412,13 +409,12 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                 background: 'var(--bg-card)', border: '1px solid var(--primary)',
                 borderTop: 'none', maxHeight: '60vh', overflowY: 'auto', zIndex: 500,
               }}>
-                <CategoryChips categories={categories} active={catFilter} onSelect={setCatFilter} />
                 {filteredResults.length === 0 && !loading && (
                   <div style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>לא נמצאו תוצאות</div>
                 )}
                 {filteredResults.map((r, i) => (
                   <div
-                    key={`mob-${r.category}-${r.id}`}
+                    key={`mob-${r.key}`}
                     onMouseDown={() => go(r)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '10px',
@@ -439,6 +435,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
               </div>
             )}
           </div>
+          <SearchFilter field={field} kind={kind} onField={setField} onKind={setKind} />
         </div>
       )}
 
@@ -498,7 +495,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
               placeholder="חיפוש בכל המערכת — לקוח, רכב, חשבונית, צמיג"
               aria-label="חיפוש בכל המערכת"
               style={{
-                paddingRight: '34px', paddingLeft: q ? '10px' : '62px', height: '38px',
+                paddingRight: '34px', paddingLeft: `${filterW + (q || focused ? 0 : 54)}px`, height: '38px',
                 border: `1px solid ${focused ? 'var(--primary)' : 'var(--border)'}`,
                 borderRadius: showDropdownResults ? '8px 8px 0 0' : '8px',
                 background: 'var(--bg-card)', fontSize: '13.5px', width: 'min(420px, 34vw)',
@@ -506,9 +503,12 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                 transition: 'border-color .15s',
               }}
             />
+            <div ref={filterBoxRef} style={{ position: 'absolute', left: '5px', zIndex: 1 }}>
+              <SearchFilter field={field} kind={kind} onField={setField} onKind={setKind} />
+            </div>
             {!q && !focused && (
               <span style={{
-                position: 'absolute', left: '8px',
+                position: 'absolute', left: `${filterW}px`,
                 background: 'var(--border)', borderRadius: '4px',
                 padding: '2px 5px', fontSize: '10px', fontWeight: 700,
                 color: 'var(--text-muted)', fontFamily: 'monospace',
@@ -526,7 +526,6 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
               boxShadow: '0 8px 24px rgba(0,0,0,.15)',
               maxHeight: '420px', overflowY: 'auto', zIndex: 500,
             }}>
-              <CategoryChips categories={categories} active={catFilter} onSelect={setCatFilter} />
               {filteredResults.length === 0 && !loading && (
                 <div style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
                   לא נמצאו תוצאות
@@ -534,7 +533,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
               )}
               {filteredResults.map((r, i) => (
                 <div
-                  key={`${r.category}-${r.id}`}
+                  key={r.key}
                   onMouseDown={() => go(r)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '10px',

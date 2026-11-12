@@ -36,7 +36,7 @@ test.describe('חיפוש גלובלי', () => {
     await input.fill('ישראל')
     // Wait for debounce + response
     await expect(page.locator('header').locator('text=ישראל ישראלי')).toBeVisible({ timeout: 2000 })
-    await expect(page.locator('header').locator('text=חובות')).toBeVisible()
+    await expect(page.locator('header').locator('text=חוב מזדמן')).toBeVisible()
   })
 
   test('תוצאה – לחיצה מנווטת לדף הנכון', async ({ page }) => {
@@ -49,7 +49,7 @@ test.describe('חיפוש גלובלי', () => {
     const result = page.locator('header').locator('text=דוד לוי')
     await expect(result).toBeVisible({ timeout: 2000 })
     await result.click()
-    await expect(page).toHaveURL('/debts')
+    await expect(page).toHaveURL(/\/debts\?focus=1/)
   })
 
   test('Escape מנקה את השדה וסוגר dropdown', async ({ page }) => {

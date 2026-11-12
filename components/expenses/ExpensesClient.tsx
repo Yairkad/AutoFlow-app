@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { useSearchLink } from '@/lib/hooks/useSearchLink'
 import * as XLSX from 'xlsx'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
@@ -232,6 +233,11 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
 
   // Search / filter
   const [search,    setSearch]    = useState('')
+  // Deep-link from the global search: ?q=<description>&month=YYYY-MM
+  useSearchLink(({ q, month: m }) => {
+    if (m && /^\d{4}-\d{2}$/.test(m)) setMonth(m)
+    if (q) setSearch(q)
+  })
   const [filterCat, setFilterCat] = useState('')
   const [filterSup, setFilterSup] = useState('')
   // Amount (±1₪) and date range; a date range replaces the month view so it can span months

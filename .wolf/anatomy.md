@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-09T20:36:23.387Z
-> Files: 197 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-12T09:57:16.781Z
+> Files: 201 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -701,9 +701,9 @@
 ## lib/debts/
 
 - `supplierDirectPayments.ts` — scheduled_payments.payment_method values of direct (non-check) payments. They are kept (~1578 tok)
+- `supplierDirectPayments.ts` — recordSupplierPayment (expense + paid scheduled_payments row), deleteDirectAllocations, removeSupplierPaymentOfExpense (on expense delete), fetchSupplierOpenTotals (dashboards), paymentMethodLabel (~1400 tok)
 - `supplierLedger.ts` — supplier running account: events (charge/credit/payment/writeoff), balanceAfter, monthSummaries (~800 tok)
 - `supplierLedger.ts` — Events of one supplier. A payment counts when it was allocated to an invoice, marked paid, (~1136 tok)
-- `supplierDirectPayments.ts` — recordSupplierPayment (expense + paid scheduled_payments row), deleteDirectAllocations, removeSupplierPaymentOfExpense (on expense delete), fetchSupplierOpenTotals (dashboards), paymentMethodLabel (~1400 tok)
 
 ## lib/expenses/
 
@@ -718,6 +718,8 @@
 - `content.ts` — public tire guide types, DEFAULT_GUIDE (HE+EN), resolveGuide(saved), pick(L, lang) (~5500 tok)
 
 ## lib/hooks/
+
+- `useSearchLink.ts` — reads global-search deep link ?open/&q/&month once after mount, then strips q/month from the URL (~300 tok)
 
 - `useTireBrandSuggestions.ts` — existing tire brands as AutocompleteInput options, fetched once from /api/yard/tire-brands (~250 tok)
 
@@ -752,6 +754,7 @@
 
 - `fuzzy.ts` — Lowercase, drop quote/geresh marks, final letters → regular, doubled י/ו → single. (~434 tok)
 - `fuzzy.ts` — Hebrew spelling-tolerant search: normalizeSearch, fuzzyIncludes (client), likePatterns (DB ilike per word) (~500 tok)
+- `globalSearch.ts` — Header global search engine: runGlobalSearch(sb, term, field, kind) across all modules; field = all/name/phone (digits-only pattern)/invoice/amount (exact)/plate; each result has a deep link (?open/&q/&month) (~3500 tok)
 
 ## lib/stock/
 
@@ -770,6 +773,11 @@
 
 ## lib/tires/brands.ts
 
+
+## lib/types/
+
+- `app/(app)/loading.tsx` — shimmer skeleton shown instantly during page navigation (~150 tok)
+- `cpexcel.d.ts` — module declaration for xlsx/dist/cpexcel.full.mjs (~30 tok)
 
 ## lib/ui/
 
@@ -842,8 +850,3 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-
-## lib/types/
-
-- `cpexcel.d.ts` — module declaration for xlsx/dist/cpexcel.full.mjs (~30 tok)
-- `app/(app)/loading.tsx` — shimmer skeleton shown instantly during page navigation (~150 tok)
