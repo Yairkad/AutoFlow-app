@@ -3164,3 +3164,25 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 09:40 | Opened PR #81 (perf + remove /api/store) | - | done | ~500 |
 | 09:57 | Created lib/search/globalSearch.ts | — | ~3487 |
 | 10:30 | Global search rework: field/kind filter button, all modules, phone/amount matching, deep links to the record | lib/search/globalSearch.ts, lib/hooks/useSearchLink.ts, Header.tsx + 11 page clients | tsc+eslint clean; queries verified with stubbed fetch; not browser-tested | ~60000 |
+
+## Session: 2026-11-14 19:23
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-14 19:37
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-14 19:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 19:53 | Created ../../../root/.claude/plans/sleepy-dazzling-otter.md | — | ~594 |
+| 19:56 | Edited ../../../root/.claude/plans/sleepy-dazzling-otter.md | 2→5 lines | ~71 |
+| 19:56 | Edited ../../../root/.claude/plans/sleepy-dazzling-otter.md | inline fix | ~42 |
+| 19:56 | Edited ../../../root/.claude/plans/sleepy-dazzling-otter.md | 2→3 lines | ~51 |
+| 19:58 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/e3207e99-23ce-5121-b5fa-5df1346f3e72/scratchpad/contact-tool/index.html | — | ~6966 |
+| 19:59 | Created ../../../tmp/claude-0/-home-user-AutoFlow-app/e3207e99-23ce-5121-b5fa-5df1346f3e72/scratchpad/t.js | — | ~584 |
+| 20:10 | Built standalone contact tool (unrelated to AutoFlow) in scratchpad; not added to repo | scratchpad/contact-tool/index.html | Playwright-verified | ~30000 |

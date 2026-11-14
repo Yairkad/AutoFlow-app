@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-12T09:57:16.781Z
-> Files: 201 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-14T19:59:03.154Z
+> Files: 205 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -35,6 +35,7 @@
 ## ../../../root/.claude/plans/
 
 - `reactive-giggling-petal.md` — תיקון: ברקוד שמוקלד ידנית נחתך באמצע (~313 tok)
+- `sleepy-dazzling-otter.md` — כלי פנייה למועמדים: דף סטטי (GitHub Pages) (~642 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/1a6330e0-c7df-5fd1-9989-e62c909f1848/scratchpad/
 
@@ -101,6 +102,14 @@
 - `Main.dc.html` — טופס בדיקת קנייה – עיצוב א (~3369 tok)
 - `PreviewA.dc.html` — תמונת לינק א (~493 tok)
 - `PreviewB.dc.html` — תמונת לינק ב (~940 tok)
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/e3207e99-23ce-5121-b5fa-5df1346f3e72/scratchpad/
+
+- `t.js` — Declares b (~584 tok)
+
+## ../../../tmp/claude-0/-home-user-AutoFlow-app/e3207e99-23ce-5121-b5fa-5df1346f3e72/scratchpad/contact-tool/
+
+- `index.html` — פנייה למועמדים (~6966 tok)
 
 ## ../../../tmp/claude-0/-home-user-AutoFlow-app/ec738802-4884-583f-a4a0-e2755f311fa4/scratchpad/
 
@@ -720,7 +729,6 @@
 ## lib/hooks/
 
 - `useSearchLink.ts` — reads global-search deep link ?open/&q/&month once after mount, then strips q/month from the URL (~300 tok)
-
 - `useTireBrandSuggestions.ts` — existing tire brands as AutocompleteInput options, fetched once from /api/yard/tire-brands (~250 tok)
 
 ## lib/inspections/
