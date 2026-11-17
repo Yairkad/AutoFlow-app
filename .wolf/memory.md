@@ -3195,3 +3195,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:16 | Created lib/print/qz.ts | — | ~694 |
 | 10:18 | Created components/documents/LabelsPanel.tsx | — | ~6404 |
 | 10:25 | Built labels feature: Documents → מדבקות (LabelsPanel), lib/print/labels.ts, lib/print/qz.ts, deps jsbarcode + qz-tray, types/qz-tray.d.ts. Default key-tag window 45×25mm (common clear vehicle key fob insert ~25×45). | components/documents/LabelsPanel.tsx, DocumentsClient.tsx, lib/print/* | tsc+eslint clean; label rendering verified in headless Chromium; NOT tested with real printer/QZ | ~40000 |
+
+## Session: 2026-11-17 10:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
