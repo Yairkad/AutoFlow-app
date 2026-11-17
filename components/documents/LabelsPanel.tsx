@@ -327,7 +327,9 @@ export default function LabelsPanel() {
                 <ol>
                   <li>להתקין את הדרייבר של XPRINTER ולוודא שהמדפסת מופיעה ב-Windows</li>
                   <li>להתקין את <a href="https://qz.io/download/" target="_blank" rel="noreferrer">QZ Tray</a> ולהפעיל אותו (אייקון ליד השעון)</li>
-                  <li>בהדפסה הראשונה QZ Tray ישאל אם לאשר את האתר — לאשר</li>
+                  <li><b>כדי שלא יבקש אישור בכל הדפסה:</b> <a href="/api/qz/cert?download=1">להוריד את קובץ האישור (override.crt)</a> ולהעתיק אותו לתיקייה <code dir="ltr">C:\Program Files\QZ Tray</code></li>
+                  <li>לסגור את QZ Tray (קליק ימני על האייקון ← Exit) ולפתוח מחדש</li>
+                  <li>בהדפסה הבאה יופיע אישור אחד — לסמן ״Remember this decision״ וללחוץ Allow. מאז — בלי שאלות.</li>
                 </ol>
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
