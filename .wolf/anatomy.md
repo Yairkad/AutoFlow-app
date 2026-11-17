@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-12T09:57:16.781Z
-> Files: 201 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-17T10:18:16.607Z
+> Files: 205 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -534,6 +534,7 @@
 
 - `DriveFilesPanel.tsx` — DriveFilesPanel (~3374 tok)
 - `FreeDocEditor.tsx` — Opens a print window with the page laid out exactly as in the editor (~3613 tok)
+- `LabelsPanel.tsx` — Documents tab 'מדבקות': car key-tag / wide label (plate, make-model-year, cars.car_code = קוד קודן) and product price label (name, price, barcode); search cars/products, real-size preview, copies; prints via QZ Tray to the chosen printer (localStorage labels.printer), fallback printHtml. Prefs (tag size, logo, price size) in localStorage labels.prefs (~6400 tok)
 - `PowerOfAttorneyPanel.tsx` — Documents tab 'ייפוי כוח': official MoT PDF (pdfjs → PNG) as background, transparent fields on top; calibration mode (drag / arrows, per-field x,y,w,h,fs + printer offset mm) saved in poa_form_settings.layout; quick-fill lists for proxies + owners; print only (~5500 tok)
 
 ## components/employees/
@@ -720,7 +721,6 @@
 ## lib/hooks/
 
 - `useSearchLink.ts` — reads global-search deep link ?open/&q/&month once after mount, then strips q/month from the URL (~300 tok)
-
 - `useTireBrandSuggestions.ts` — existing tire brands as AutocompleteInput options, fetched once from /api/yard/tire-brands (~250 tok)
 
 ## lib/inspections/
@@ -741,6 +741,11 @@
 - `intakeTenant.ts` — getIntakeTenant(token): tenant name+logo for personal/fixed intake link (~250 tok)
 - `logoColors.ts` — logoPalette(buf): dominant dark colour → bg, bright saturated → accent (sharp) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
+
+## lib/print/
+
+- `labels.ts` — Default key-tag window: the common clear vehicle key fob takes a ~45×25mm paper insert. (~3090 tok)
+- `qz.ts` — Connect to the local QZ Tray. Resolves false when it isn't installed / running. (~694 tok)
 
 ## lib/reports/
 

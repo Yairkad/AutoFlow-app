@@ -3164,3 +3164,39 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 09:40 | Opened PR #81 (perf + remove /api/store) | - | done | ~500 |
 | 09:57 | Created lib/search/globalSearch.ts | — | ~3487 |
 | 10:30 | Global search rework: field/kind filter button, all modules, phone/amount matching, deep links to the record | lib/search/globalSearch.ts, lib/hooks/useSearchLink.ts, Header.tsx + 11 page clients | tsc+eslint clean; queries verified with stubbed fetch; not browser-tested | ~60000 |
+
+## Session: 2026-11-17 09:14
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-17 09:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-17 09:42
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:46 | Labels feature (XPRINTER XP-320N, 72mm continuous, USB, Win11): plan = Documents tile "מדבקות" (car: plate/make/model/kodan code=cars.car_code; product: name/price/barcode), canvas→image via QZ Tray to named printer, fallback printHtml. Mockup published https://claude.ai/artifact/VEK5vMn6wfz8ELP196nKej | (mockup only) | awaiting user approval | ~15000 |
+
+## Session: 2026-11-17 10:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:05 | Mockup v2: logo (B/W) + key-tag mode 30×40mm, 2 per row | artifact VEK5vMn6wfz8ELP196nKej | published | ~12000 |
+
+## Session: 2026-11-17 10:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:16 | Created lib/print/labels.ts | — | ~3090 |
+| 10:16 | Created lib/print/qz.ts | — | ~694 |
+| 10:18 | Created components/documents/LabelsPanel.tsx | — | ~6404 |
+| 10:25 | Built labels feature: Documents → מדבקות (LabelsPanel), lib/print/labels.ts, lib/print/qz.ts, deps jsbarcode + qz-tray, types/qz-tray.d.ts. Default key-tag window 45×25mm (common clear vehicle key fob insert ~25×45). | components/documents/LabelsPanel.tsx, DocumentsClient.tsx, lib/print/* | tsc+eslint clean; label rendering verified in headless Chromium; NOT tested with real printer/QZ | ~40000 |
+
+## Session: 2026-11-17 10:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
