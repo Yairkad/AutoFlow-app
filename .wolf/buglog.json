@@ -1838,5 +1838,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-11T09:30:00Z"
+  },
+  {
+    "id": "bug-100",
+    "timestamp": "2026-11-17T11:15:00Z",
+    "error_message": "Labels printed on XPRINTER are cut off and not the right size (photo: content overflows each die-cut sticker, right/left edge clipped)",
+    "file": "lib/print/labels.ts, lib/print/qz.ts",
+    "root_cause": "Roll is die-cut stickers with gaps, not a continuous roll as assumed; pages were sized to content (72mm × content height) and scaled by the driver, so content spills over the sticker and is clipped at the printable edge",
+    "fix": "PENDING: fixed sticker size setting (W×H mm), draw every label exactly at that size, print 1:1 (density 8 dpmm, no scaling) + offset calibration",
+    "tags": [
+      "labels",
+      "qz-tray",
+      "xprinter",
+      "thermal",
+      "print-size"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-17T11:15:00Z"
   }
 ]
