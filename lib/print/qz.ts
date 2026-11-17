@@ -10,7 +10,7 @@ type Qz = {
   configs: { create: (printer: string, opts?: Record<string, unknown>) => unknown }
   print: (cfg: unknown, data: unknown[]) => Promise<void>
   security: {
-    setCertificatePromise: (fn: (resolve: (v: string) => void, reject: (e: unknown) => void) => void) => void
+    setCertificatePromise: (fn: (resolve: (v: string | null) => void, reject: (e: unknown) => void) => void) => void
     setSignatureAlgorithm: (alg: string) => void
     setSignaturePromise: (fn: (toSign: string) => (resolve: (v: string) => void, reject: (e: unknown) => void) => void) => void
   }
@@ -21,13 +21,15 @@ const loadQz = () => (qzPromise ??= import('qz-tray').then(m => {
   const qz = ((m as { default?: Qz }).default ?? m) as Qz
   // Signed requests: once the business certificate is trusted on this PC (override.crt in the
   // QZ Tray folder), QZ Tray stops asking to allow the site on every print.
-  qz.security.setCertificatePromise((resolve, reject) => {
-    fetch('/api/qz/cert', { cache: 'no-store' }).then(r => r.ok ? r.text() : Promise.reject(new Error('cert ' + r.status))).then(resolve, reject)
+  // If the key isn't available (e.g. migration 116 not run yet) fall back to unsigned requests —
+  // printing still works, QZ Tray just keeps asking to allow the site.
+  qz.security.setCertificatePromise(resolve => {
+    fetch('/api/qz/cert', { cache: 'no-store' }).then(r => r.ok ? r.text() : null).catch(() => null).then(c => resolve(c || null))
   })
   qz.security.setSignatureAlgorithm('SHA512')
-  qz.security.setSignaturePromise(toSign => (resolve, reject) => {
+  qz.security.setSignaturePromise(toSign => resolve => {
     fetch('/api/qz/sign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ request: toSign }) })
-      .then(r => r.ok ? r.text() : Promise.reject(new Error('sign ' + r.status))).then(resolve, reject)
+      .then(r => r.ok ? r.text() : '').catch(() => '').then(resolve)
   })
   return qz
 }))

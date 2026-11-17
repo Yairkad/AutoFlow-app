@@ -3228,3 +3228,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 12:40 | Labels v2: own sidebar tab /labels (module documents), removed from Documents gallery; NumField (no per-keystroke clamp); product sizes l/m/s/half(2 per row); custom free-text label (lines size/bold, align, logo, frame, saved designs = documents type label_template). Preview artifact VD1SzB2UQEiDvL2scdxquV built from real component (esbuild + stubs) | LabelsPanel.tsx, labels.ts, app/(app)/labels/page.tsx, Sidebar.tsx, proxy.ts, DocumentsClient.tsx | tsc clean; no PR yet (user wants to review first) | ~30000 |
 | 12:50 | User: meant sub-tab in טפסים, but keep sidebar tab for now | - | noted | ~200 |
+| 12:55 | QZ signing falls back to unsigned (cert null / empty signature) when /api/qz/* fails — safe to merge before migration 116 | lib/print/qz.ts | tsc clean | ~2000 |
