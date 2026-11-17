@@ -3180,3 +3180,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:46 | Labels feature (XPRINTER XP-320N, 72mm continuous, USB, Win11): plan = Documents tile "מדבקות" (car: plate/make/model/kodan code=cars.car_code; product: name/price/barcode), canvas→image via QZ Tray to named printer, fallback printHtml. Mockup published https://claude.ai/artifact/VEK5vMn6wfz8ELP196nKej | (mockup only) | awaiting user approval | ~15000 |
+
+## Session: 2026-11-17 10:02
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:05 | Mockup v2: logo (B/W) + key-tag mode 30×40mm, 2 per row | artifact VEK5vMn6wfz8ELP196nKej | published | ~12000 |
