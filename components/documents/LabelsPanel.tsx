@@ -1,8 +1,9 @@
 'use client'
 
-// Documents → מדבקות: labels for the thermal label printer (XPRINTER, 72mm continuous roll).
+// מדבקות (own sidebar tab, /labels): labels for the thermal label printer (XPRINTER, 72mm continuous roll).
 // Car labels (plate / make-model-year / immobilizer code = cars.car_code) as a key-tag insert or a
-// full-width label; product price labels (name / price / barcode). Labels are drawn on canvas
+// full-width label; product price labels (name / price / barcode) in 4 sizes; free-text labels
+// (e.g. envelope addresses) with saved designs (documents.type 'label_template'). Labels are drawn on canvas
 // (lib/print/labels.ts) and sent by printer NAME through QZ Tray (lib/print/qz.ts) so the Windows
 // default printer is untouched; without QZ Tray it falls back to the browser print dialog.
 
@@ -14,16 +15,43 @@ import Button from '@/components/ui/Button'
 import { likePatterns } from '@/lib/search/fuzzy'
 import { printHtml } from '@/lib/print/printHtml'
 import {
-  DEFAULT_TAG, DPM, ROLL_MM, drawCarLabel, drawProductLabel, drawTagRow, labelsPrintHtml, loadBwLogo,
-  loadLabelFonts, wideCarHeight, type CarLabel, type PriceSize, type ProductLabel, type TagSize,
+  DEFAULT_TAG, DPM, ROLL_MM, drawCarLabel, drawCustomLabel, drawProductLabel, drawTagRow, labelsPrintHtml, loadBwLogo,
+  loadLabelFonts, wideCarHeight, type CarLabel, type CustomLabel, type CustomLine, type PriceSize, type ProductLabel,
+  type ProductSize, type TagSize, type TextSize,
 } from '@/lib/print/labels'
 import { getLabelPrinter, getPrintMethod, qzConnect, qzPrintLabels, qzPrinters, setLabelPrinter, setPrintMethod, type PrintMethod } from '@/lib/print/qz'
 
-type Mode = 'car' | 'product'
+type Mode = 'car' | 'product' | 'custom'
 type CarKind = 'tag' | 'wide'
-interface Prefs { tag: TagSize; carKind: CarKind; priceSize: PriceSize; logoCar: boolean; logoProduct: boolean }
+interface Prefs { tag: TagSize; carKind: CarKind; priceSize: PriceSize; productSize: ProductSize; logoCar: boolean; logoProduct: boolean }
 const PREFS_KEY = 'labels.prefs'
-const DEFAULT_PREFS: Prefs = { tag: DEFAULT_TAG, carKind: 'tag', priceSize: 'l', logoCar: true, logoProduct: true }
+const DEFAULT_PREFS: Prefs = { tag: DEFAULT_TAG, carKind: 'tag', priceSize: 'l', productSize: 'l', logoCar: true, logoProduct: true }
+const EMPTY_CUSTOM: CustomLabel = {
+  lines: [{ text: 'לכבוד', size: 'm', bold: false }, { text: '', size: 'l', bold: true }, { text: '', size: 'm', bold: false }],
+  align: 'right', logo: true, frame: false,
+}
+interface LabelTemplate { id: string; name: string; content: CustomLabel }
+
+/**
+ * Number input that keeps what is typed (no clamping per keystroke — that jumbled the digits);
+ * the value is committed whenever it's a valid number in range, and the box resets on blur.
+ */
+function NumField({ label, value, min, max, onCommit }: { label: string; value: number; min: number; max: number; onCommit: (v: number) => void }) {
+  const [text, setText] = useState<string | null>(null)
+  return (
+    <div>
+      <label className="form-label">{label}</label>
+      <input className="form-input" inputMode="decimal" dir="ltr" value={text ?? String(value)}
+        onChange={e => {
+          const t = e.target.value.replace(/[^\d.]/g, '')
+          setText(t)
+          const v = Number(t)
+          if (t && v >= min && v <= max) onCommit(v)
+        }}
+        onBlur={() => setText(null)} />
+    </div>
+  )
+}
 const EMPTY_CAR: CarLabel = { plate: '', make: '', model: '', year: '', code: '', note: '' }
 const EMPTY_PRODUCT: ProductLabel = { name: '', price: '', barcode: '', showBarcode: true }
 
@@ -47,6 +75,9 @@ export default function LabelsPanel() {
   const [prefs, setPrefsState] = useState<Prefs>(DEFAULT_PREFS)
   const [car, setCar] = useState<CarLabel>(EMPTY_CAR)
   const [product, setProduct] = useState<ProductLabel>(EMPTY_PRODUCT)
+  const [custom, setCustom] = useState<CustomLabel>(EMPTY_CUSTOM)
+  const [templates, setTemplates] = useState<LabelTemplate[]>([])
+  const [tplName, setTplName] = useState('')
   const [copies, setCopies] = useState(1)
   const [logo, setLogo] = useState<HTMLCanvasElement | null>(null)
   const [fontsReady, setFontsReady] = useState(false)
@@ -73,6 +104,32 @@ export default function LabelsPanel() {
     return () => { alive = false }
   }, [tenant?.logo_base64])
 
+  const loadTemplates = useCallback(async () => {
+    if (!tenantId) return
+    const { data } = await sb.from('documents').select('id,name,content').eq('tenant_id', tenantId).eq('type', 'label_template').order('name')
+    setTemplates((data ?? []) as LabelTemplate[])
+  }, [sb, tenantId])
+  useEffect(() => { const id = setTimeout(loadTemplates, 0); return () => clearTimeout(id) }, [loadTemplates])
+
+  async function saveTemplate() {
+    const name = tplName.trim()
+    if (!name || !tenantId) { showToast('תן שם לעיצוב', 'error'); return }
+    const existing = templates.find(t => t.name === name)
+    const { error } = existing
+      ? await sb.from('documents').update({ content: custom }).eq('id', existing.id)
+      : await sb.from('documents').insert({ tenant_id: tenantId, name, type: 'label_template', content: custom })
+    if (error) { showToast('שגיאה בשמירה: ' + error.message, 'error'); return }
+    showToast(existing ? 'העיצוב עודכן' : 'העיצוב נשמר', 'success')
+    loadTemplates()
+  }
+  async function deleteTemplate(t: LabelTemplate) {
+    const { error } = await sb.from('documents').delete().eq('id', t.id)
+    if (error) { showToast('שגיאה במחיקה: ' + error.message, 'error'); return }
+    loadTemplates()
+  }
+  const setLine = (i: number, patch: Partial<CustomLine>) =>
+    setCustom(c => ({ ...c, lines: c.lines.map((l, j) => j === i ? { ...l, ...patch } : l) }))
+
   const setPrefs = (p: Partial<Prefs>) => setPrefsState(prev => {
     const next = { ...prev, ...p }
     try { localStorage.setItem(PREFS_KEY, JSON.stringify(next)) } catch { /* ignore */ }
@@ -89,7 +146,7 @@ export default function LabelsPanel() {
 
   // ── Search cars / products ──
   useEffect(() => {
-    if (!tenantId || !showResults) return
+    if (!tenantId || !showResults || mode === 'custom') return
     const pats = likePatterns(query)
     const t = setTimeout(async () => {
       if (mode === 'car') {
@@ -125,9 +182,15 @@ export default function LabelsPanel() {
     if (!fontsReady) return []
     const out: Rendered[] = []
     const push = (c: HTMLCanvasElement) => out.push({ dataUrl: c.toDataURL('image/png'), hmm: c.height / DPM })
-    if (mode === 'product') {
-      const c = drawProductLabel(product, prefs.priceSize, logo, bizName, prefs.logoProduct)
+    if (mode === 'custom') {
+      const c = drawCustomLabel(custom, logo, bizName)
       for (let i = 0; i < n; i++) push(c)
+    } else if (mode === 'product') {
+      const c = drawProductLabel(product, prefs.priceSize, logo, bizName, prefs.logoProduct, prefs.productSize)
+      if (prefs.productSize === 'half') {
+        let left = n
+        while (left > 0) { const { canvas, perRow } = drawTagRow(c, left, false); push(canvas); left -= perRow }
+      } else for (let i = 0; i < n; i++) push(c)
     } else if (prefs.carKind === 'wide') {
       const c = drawCarLabel(car, ROLL_MM, wideCarHeight(car, prefs.logoCar), logo, bizName, prefs.logoCar)
       for (let i = 0; i < n; i++) push(c)
@@ -137,7 +200,7 @@ export default function LabelsPanel() {
       while (left > 0) { const { canvas, perRow } = drawTagRow(tag, left); push(canvas); left -= perRow }
     }
     return out
-  }, [fontsReady, mode, product, car, prefs, logo, bizName, n])
+  }, [fontsReady, mode, product, car, custom, prefs, logo, bizName, n])
 
   async function print() {
     if (!pages.length) return
@@ -200,7 +263,7 @@ export default function LabelsPanel() {
       <div className="lbl-grid">
         <div className="lbl-card">
           <div className="lbl-tabs">
-            {([['car', '🚗 פרטי רכב'], ['product', '📦 מחיר מוצר']] as [Mode, string][]).map(([m, l]) => (
+            {([['car', '🚗 פרטי רכב'], ['product', '📦 מחיר מוצר'], ['custom', '✏️ עיצוב אישי']] as [Mode, string][]).map(([m, l]) => (
               <button key={m} type="button" className={mode === m ? 'on' : ''} onClick={() => { setMode(m); setResults([]); setQuery('') }}>{l}</button>
             ))}
           </div>
@@ -210,13 +273,14 @@ export default function LabelsPanel() {
               {seg(prefs.carKind, [['tag', '🔑 מחזיק מפתחות'], ['wide', 'מדבקה רחבה (72 מ״מ)']], v => setPrefs({ carKind: v }))}
               {prefs.carKind === 'tag' && <>
                 <div className="lbl-row">
-                  {fld('רוחב החלון במחזיק (מ״מ)', String(prefs.tag.w), v => setPrefs({ tag: { ...prefs.tag, w: Math.max(15, Math.min(72, +v || 0)) } }), { type: 'number' })}
-                  {fld('גובה החלון במחזיק (מ״מ)', String(prefs.tag.h), v => setPrefs({ tag: { ...prefs.tag, h: Math.max(10, Math.min(120, +v || 0)) } }), { type: 'number' })}
+                  <NumField label="רוחב החלון במחזיק (מ״מ)" value={prefs.tag.w} min={15} max={72} onCommit={w => setPrefs({ tag: { ...prefs.tag, w } })} />
+                  <NumField label="גובה החלון במחזיק (מ״מ)" value={prefs.tag.h} min={10} max={120} onCommit={h => setPrefs({ tag: { ...prefs.tag, h } })} />
                 </div>
                 <div className="lbl-hint">מודפס עם מסגרת חיתוך מקווקוות; כמה מחזיקים בשורה כשנכנסים ברוחב הגליל. המידה נשמרת במחשב הזה.</div>
               </>}
             </>}
 
+            {mode !== 'custom' && <>
             <label className="form-label" style={{ marginTop: 14 }}>{mode === 'car' ? 'בחירת רכב מהמערכת' : 'בחירת מוצר מהמלאי'}</label>
             <div style={{ position: 'relative' }}>
               <input className="form-input" value={query} placeholder={mode === 'car' ? 'חיפוש לפי מספר רכב / יצרן / דגם…' : 'חיפוש לפי שם / ברקוד / מק״ט…'}
@@ -235,8 +299,46 @@ export default function LabelsPanel() {
               )}
             </div>
             <div className="lbl-hint">או מלא ידנית למטה</div>
+            </>}
 
-            <div className="lbl-sec">תוכן המדבקה</div>
+            {mode === 'custom' && <>
+              {templates.length > 0 && <>
+                <label className="form-label">עיצובים שמורים</label>
+                <div className="lbl-tpls">
+                  {templates.map(t => (
+                    <span key={t.id} className="lbl-tpl">
+                      <button type="button" onClick={() => { setCustom({ ...EMPTY_CUSTOM, ...t.content }); setTplName(t.name) }}>{t.name}</button>
+                      <button type="button" className="x" title="מחיקה" onClick={() => deleteTemplate(t)}>✕</button>
+                    </span>
+                  ))}
+                </div>
+              </>}
+              <div className="lbl-sec" style={{ marginTop: 6 }}>שורות</div>
+              {custom.lines.map((l, i) => (
+                <div key={i} className="lbl-line">
+                  <input className="form-input" value={l.text} placeholder={`שורה ${i + 1}`} onChange={e => setLine(i, { text: e.target.value })} />
+                  <select className="form-input" value={l.size} aria-label="גודל" onChange={e => setLine(i, { size: e.target.value as TextSize })}>
+                    <option value="s">קטן</option><option value="m">בינוני</option><option value="l">גדול</option><option value="xl">ענק</option>
+                  </select>
+                  <button type="button" className={`lbl-b ${l.bold ? 'on' : ''}`} title="מודגש" onClick={() => setLine(i, { bold: !l.bold })}>B</button>
+                  <button type="button" className="lbl-b" title="מחיקת שורה" disabled={custom.lines.length < 2}
+                    onClick={() => setCustom(c => ({ ...c, lines: c.lines.filter((_, j) => j !== i) }))}>✕</button>
+                </div>
+              ))}
+              <Button size="sm" variant="secondary" onClick={() => setCustom(c => ({ ...c, lines: [...c.lines, { text: '', size: 'm', bold: false }] }))}>+ שורה</Button>
+              <label className="form-label" style={{ marginTop: 12 }}>יישור</label>
+              {seg(custom.align, [['right', 'לימין'], ['center', 'למרכז']], v => setCustom(c => ({ ...c, align: v })))}
+              {check('לוגו העסק בראש המדבקה', custom.logo, v => setCustom(c => ({ ...c, logo: v })))}
+              {check('מסגרת', custom.frame, v => setCustom(c => ({ ...c, frame: v })))}
+              <div className="lbl-sec">שמירה לשימוש חוזר</div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <input className="form-input" value={tplName} placeholder="שם העיצוב (למשל: מעטפה לרו״ח)" onChange={e => setTplName(e.target.value)} />
+                <Button size="sm" onClick={saveTemplate}>💾 שמירה</Button>
+              </div>
+              <div className="lbl-hint">שמירה בשם קיים מעדכנת אותו.</div>
+            </>}
+
+            {mode !== 'custom' && <div className="lbl-sec">תוכן המדבקה</div>}
             {mode === 'car' ? <>
               <div className="lbl-row">
                 {fld('מספר רכב', car.plate, v => setCar({ ...car, plate: v }), { ltr: true })}
@@ -252,7 +354,9 @@ export default function LabelsPanel() {
               </div>
               {check('לוגו העסק בראש המדבקה', prefs.logoCar, v => setPrefs({ logoCar: v }))}
               <div className="lbl-hint">שורה ריקה (למשל אין קוד קודן) פשוט לא מודפסת.</div>
-            </> : <>
+            </> : mode === 'product' ? <>
+              <label className="form-label">גודל מדבקה</label>
+              {seg(prefs.productSize, [['l', 'גדול'], ['m', 'בינוני'], ['s', 'קטן'], ['half', 'חצי רוחב · 2 בשורה']], v => setPrefs({ productSize: v }))}
               {fld('שם מוצר', product.name, v => setProduct({ ...product, name: v }))}
               <div className="lbl-row">
                 {fld('מחיר (₪)', product.price, v => setProduct({ ...product, price: v }), { type: 'number' })}
@@ -262,7 +366,7 @@ export default function LabelsPanel() {
               {check('לוגו העסק בראש המדבקה', prefs.logoProduct, v => setPrefs({ logoProduct: v }))}
               <label className="form-label" style={{ marginTop: 12 }}>גודל המחיר</label>
               {seg(prefs.priceSize, [['m', 'רגיל'], ['l', 'גדול'], ['xl', 'ענק']], v => setPrefs({ priceSize: v }))}
-            </>}
+            </> : null}
             {!logo && <div className="lbl-hint" style={{ marginTop: 8 }}>אין לוגו בהגדרות העסק — יודפס שם העסק במקומו.</div>}
           </div>
         </div>
@@ -280,7 +384,7 @@ export default function LabelsPanel() {
             {pages.length > 3 && <div className="lbl-hint">+ עוד {pages.length - 3}</div>}
           </div>
           <div className="lbl-meta">
-            <span>{tagInfo ? `מחזיק ${prefs.tag.w}×${prefs.tag.h} מ״מ` : `${ROLL_MM} × ${Math.round(pages[0]?.hmm ?? 0)} מ״מ`}</span>
+            <span>{tagInfo ? `מחזיק ${prefs.tag.w}×${prefs.tag.h} מ״מ` : mode === 'product' && prefs.productSize === 'half' ? `34 × ${Math.round((pages[0]?.hmm ?? 2) - 2)} מ״מ · 2 בשורה` : `${ROLL_MM} × ${Math.round(pages[0]?.hmm ?? 0)} מ״מ`}</span>
             <span>שחור-לבן (הדפסה תרמית)</span>
           </div>
           <div className="lbl-foot">
@@ -327,7 +431,9 @@ export default function LabelsPanel() {
                 <ol>
                   <li>להתקין את הדרייבר של XPRINTER ולוודא שהמדפסת מופיעה ב-Windows</li>
                   <li>להתקין את <a href="https://qz.io/download/" target="_blank" rel="noreferrer">QZ Tray</a> ולהפעיל אותו (אייקון ליד השעון)</li>
-                  <li>בהדפסה הראשונה QZ Tray ישאל אם לאשר את האתר — לאשר</li>
+                  <li><b>כדי שלא יבקש אישור בכל הדפסה:</b> <a href="/api/qz/cert?download=1">להוריד את קובץ האישור (override.crt)</a> ולהעתיק אותו לתיקייה <code dir="ltr">C:\Program Files\QZ Tray</code></li>
+                  <li>לסגור את QZ Tray (קליק ימני על האייקון ← Exit) ולפתוח מחדש</li>
+                  <li>בהדפסה הבאה יופיע אישור אחד — לסמן ״Remember this decision״ וללחוץ Allow. מאז — בלי שאלות.</li>
                 </ol>
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
@@ -389,5 +495,14 @@ const CSS = `
 .lbl-plist button.on{border-color:var(--primary);background:var(--primary-soft);font-weight:700}
 .lbl-steps{background:var(--bg-soft);border-radius:8px;padding:10px 14px;margin-top:14px;font-size:13px;line-height:1.7}
 .lbl-steps ol{margin:4px 0 0;padding-inline-start:18px}
+.lbl-tpls{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.lbl-tpl{display:inline-flex;border:1px solid var(--border);border-radius:20px;overflow:hidden}
+.lbl-tpl button{border:0;background:var(--bg-card);font:inherit;font-size:13px;padding:5px 10px;cursor:pointer;color:var(--text)}
+.lbl-tpl button:hover{background:var(--primary-soft)}
+.lbl-tpl .x{color:var(--text-muted);padding:5px 8px;border-inline-start:1px solid var(--border)}
+.lbl-line{display:grid;grid-template-columns:1fr 92px 34px 34px;gap:6px;margin-top:8px}
+.lbl-b{border:1px solid var(--border);border-radius:8px;background:var(--bg-card);font-weight:800;cursor:pointer;color:var(--text)}
+.lbl-b.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.lbl-b:disabled{opacity:.4;cursor:default}
 .lbl-warn{background:var(--warning-soft);color:var(--warning);border-radius:8px;padding:10px 12px;margin-top:10px;font-size:13px}
 `

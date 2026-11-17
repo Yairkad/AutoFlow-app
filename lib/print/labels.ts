@@ -14,6 +14,11 @@ const MONO = '"IBM Plex Mono", Consolas, monospace'
 export interface CarLabel { plate: string; make: string; model: string; year: string; code: string; note: string }
 export interface ProductLabel { name: string; price: string; barcode: string; showBarcode: boolean }
 export type PriceSize = 'm' | 'l' | 'xl'
+/** Product label size: full width at 3 scales, or half width (two labels side by side). */
+export type ProductSize = 'l' | 'm' | 's' | 'half'
+export type TextSize = 's' | 'm' | 'l' | 'xl'
+export interface CustomLine { text: string; size: TextSize; bold: boolean }
+export interface CustomLabel { lines: CustomLine[]; align: 'center' | 'right'; logo: boolean; frame: boolean }
 export interface TagSize { w: number; h: number }      // mm, the paper window of the key tag
 
 /** Default key-tag window: the common clear vehicle key fob takes a ~45×25mm paper insert. */
@@ -145,7 +150,7 @@ export function wideCarHeight(car: CarLabel, showLogo: boolean) {
  * One row of key tags across the 72mm roll (as many as fit, side by side), each with a dashed
  * cut frame. Returns the row canvas and how many tags it holds.
  */
-export function drawTagRow(tag: HTMLCanvasElement, count: number) {
+export function drawTagRow(tag: HTMLCanvasElement, count: number, frame = true) {
   const gap = 3 * DPM
   const perRow = Math.max(1, Math.floor((ROLL_W + gap) / (tag.width + gap)))
   const n = Math.max(1, Math.min(perRow, count))
@@ -155,32 +160,73 @@ export function drawTagRow(tag: HTMLCanvasElement, count: number) {
   for (let i = 0; i < n; i++) {
     const x = x0 + i * (tag.width + gap)
     ctx.drawImage(tag, x, DPM)
-    ctx.setLineDash([10, 7]); ctx.lineWidth = 2; ctx.strokeRect(x - 1, DPM - 1, tag.width + 2, tag.height + 2); ctx.setLineDash([])
+    if (frame) { ctx.setLineDash([10, 7]); ctx.lineWidth = 2; ctx.strokeRect(x - 1, DPM - 1, tag.width + 2, tag.height + 2); ctx.setLineDash([]) }
   }
   return { canvas: c, perRow }
 }
 
-/** Product price label, full roll width; height follows the content. */
-export function drawProductLabel(p: ProductLabel, priceSize: PriceSize, logo: HTMLCanvasElement | null, bizName: string, showLogo: boolean) {
-  const W = ROLL_W, pad = 4 * DPM, iw = W - 2 * pad
+/**
+ * Product price label; height follows the content. 'l' | 'm' | 's' are full roll width at shrinking
+ * scale; 'half' is ~34mm wide so two fit side by side (compose rows with drawTagRow(..., false)).
+ */
+export function drawProductLabel(p: ProductLabel, priceSize: PriceSize, logo: HTMLCanvasElement | null, bizName: string, showLogo: boolean, size: ProductSize = 'l') {
+  const k = { l: 1, m: .78, s: .6, half: .55 }[size]
+  const W = size === 'half' ? 34 * DPM : ROLL_W
+  const pad = (size === 'half' ? 1.5 : 4 * k) * DPM, iw = W - 2 * pad
+  const nameFs = Math.round(40 * k), nameLh = Math.round(48 * k)
   const meas = blank(10, 10).ctx
-  meas.font = `700 40px ${FONT}`
-  const lines = wrap(meas, p.name.trim() || '—', iw).slice(0, 3)
-  const ps = { m: 64, l: 96, xl: 130 }[priceSize]
+  meas.font = `700 ${nameFs}px ${FONT}`
+  const lines = wrap(meas, p.name.trim() || '—', iw).slice(0, size === 'half' ? 2 : 3)
+  const ps = Math.round({ m: 64, l: 96, xl: 130 }[priceSize] * k)
   const code = p.barcode.trim()
-  const bc = p.showBarcode && code ? barcodeCanvas(code) : null
+  const bc = p.showBarcode && code ? barcodeCanvas(code, k, size === 'half') : null
   const hasLogo = showLogo && (logo || bizName)
-  const h = pad + (hasLogo ? 14 * DPM : 0) + lines.length * 48 + ps + 3 * DPM + (bc ? bc.height + 2 * DPM : 0) + 2 * DPM
+  const logoH = 11 * DPM * k
+  const h = pad + (hasLogo ? logoH + 3 * DPM * k : 0) + lines.length * nameLh + ps + 2 * DPM * k + (bc ? Math.min(bc.height, bc.height * iw / bc.width) + DPM : 0) + DPM
   const { c, ctx } = blank(W, h)
   ctx.direction = 'rtl'
   let y = pad
-  if (hasLogo) { drawLogo(ctx, logo, bizName, W / 2, y, W - 16 * DPM, 11 * DPM); y += 12 * DPM; ctx.fillRect(pad, y, iw, 2); y += 2 * DPM }
-  ctx.font = `700 40px ${FONT}`
-  for (const l of lines) { ctx.fillText(l, W / 2, y + 38); y += 48 }
+  if (hasLogo) { drawLogo(ctx, logo, bizName, W / 2, y, iw * .85, logoH); y += logoH + DPM * k; ctx.fillRect(pad, y, iw, 2); y += 2 * DPM * k }
+  ctx.font = `700 ${nameFs}px ${FONT}`
+  for (const l of lines) { ctx.fillText(l, W / 2, y + nameFs * .95); y += nameLh }
   const price = p.price.trim() ? '₪' + Number(p.price).toLocaleString('he-IL') : '—'
   const fs = fit(ctx, price, 800, ps, iw)
-  ctx.fillText(price, W / 2, y + fs * .92); y += ps + 3 * DPM
-  if (bc) ctx.drawImage(bc, (W - Math.min(bc.width, iw)) / 2, y, Math.min(bc.width, iw), bc.height)
+  ctx.fillText(price, W / 2, y + fs * .92); y += ps + 2 * DPM * k
+  if (bc) { const bw = Math.min(bc.width, iw), bh = bc.height * bw / bc.width; ctx.drawImage(bc, (W - bw) / 2, y, bw, bh) }
+  return c
+}
+
+const TEXT_PX: Record<TextSize, number> = { s: 30, m: 42, l: 62, xl: 92 }
+
+/** Free-text label (e.g. an envelope address): lines with their own size / weight, full roll width. */
+export function drawCustomLabel(lab: CustomLabel, logo: HTMLCanvasElement | null, bizName: string) {
+  const W = ROLL_W, pad = 4 * DPM, iw = W - 2 * pad - (lab.frame ? 2 * DPM : 0)
+  const meas = blank(10, 10).ctx
+  const rows: { text: string; px: number; bold: boolean }[] = []
+  for (const l of lab.lines) {
+    const px = TEXT_PX[l.size]
+    meas.font = `${l.bold ? 700 : 500} ${px}px ${FONT}`
+    const parts = l.text.trim() ? wrap(meas, l.text.trim(), iw) : ['']
+    for (const t of parts) rows.push({ text: t, px, bold: l.bold })
+  }
+  while (rows.length && !rows[rows.length - 1].text) rows.pop()
+  const hasLogo = lab.logo && (logo || bizName)
+  const logoH = 12 * DPM
+  const body = rows.reduce((a, r) => a + (r.text ? r.px * 1.25 : r.px * .6), 0)
+  const h = pad * 2 + (hasLogo ? logoH + 2 * DPM : 0) + Math.max(body, 8 * DPM) + (lab.frame ? 2 * DPM : 0)
+  const { c, ctx } = blank(W, h)
+  if (lab.frame) { ctx.lineWidth = 4; ctx.strokeRect(2 * DPM, 2 * DPM, W - 4 * DPM, h - 4 * DPM) }
+  let y = pad + (lab.frame ? DPM : 0)
+  if (hasLogo) { drawLogo(ctx, logo, bizName, W / 2, y, iw * .8, logoH); y += logoH + 2 * DPM }
+  ctx.direction = 'rtl'
+  ctx.textAlign = lab.align === 'right' ? 'right' : 'center'
+  const x = lab.align === 'right' ? W - pad - (lab.frame ? DPM : 0) : W / 2
+  for (const r of rows) {
+    if (!r.text) { y += r.px * .6; continue }
+    ctx.font = `${r.bold ? 700 : 500} ${r.px}px ${FONT}`
+    ctx.fillText(r.text, x, y + r.px * .98)
+    y += r.px * 1.25
+  }
   return c
 }
 
@@ -195,13 +241,14 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number) {
 }
 
 /** EAN-13 when the code is a valid EAN-13, otherwise Code 128. Null if it can't be encoded. */
-function barcodeCanvas(code: string): HTMLCanvasElement | null {
-  const opts = { height: 10 * DPM, fontSize: 26, margin: 0, font: 'IBM Plex Mono', background: '#ffffff', lineColor: '#000000' }
+function barcodeCanvas(code: string, k = 1, narrow = false): HTMLCanvasElement | null {
+  const opts = { height: Math.round(10 * DPM * k), fontSize: Math.max(16, Math.round(26 * k)), margin: 0, font: 'IBM Plex Mono', background: '#ffffff', lineColor: '#000000' }
   const tryOne = (format: string, width: number) => {
     const c = document.createElement('canvas')
     try { JsBarcode(c, code, { ...opts, format, width }); return c } catch { return null }
   }
-  return (/^\d{13}$/.test(code) ? tryOne('EAN13', 3) : null) ?? tryOne('CODE128', code.length > 14 ? 2 : 3) ?? tryOne('CODE128', 2)
+  const w = narrow ? 2 : 3
+  return (/^\d{13}$/.test(code) ? tryOne('EAN13', w) : null) ?? tryOne('CODE128', narrow || code.length > 14 ? 2 : 3) ?? tryOne('CODE128', 1)
 }
 
 /** Browser-print fallback: the label images stacked on a 72mm-wide page. */

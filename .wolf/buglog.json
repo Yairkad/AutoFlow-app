@@ -1845,7 +1845,7 @@
     "error_message": "Labels printed on XPRINTER are cut off and not the right size (photo: content overflows each die-cut sticker, right/left edge clipped)",
     "file": "lib/print/labels.ts, lib/print/qz.ts",
     "root_cause": "Driver scaled the label image (QZ pixel print with scaleContent → driver paper size), so it printed enlarged and clipped. Roll IS continuous with auto-cutter (cut after each job/page) — not die-cut, my first guess was wrong.",
-    "fix": "Default print method now raw ESC/POS: QZ raw image (language ESCPOS, dotDensity double) printed dot-for-dot at 576 dots + GS V 66 feed&cut after each label. 'driver' method kept as fallback with scaleContent:false, density 8 dpmm.",
+    "fix": "Default print method now raw ESC/POS: QZ raw image (language ESCPOS, dotDensity double) printed dot-for-dot at 576 dots + GS V 66 feed&cut after each label. 'driver' method kept as fallback with scaleContent:false, density 8 dpmm. CONFIRMED by user: prints come out great.",
     "tags": [
       "labels",
       "qz-tray",
@@ -1856,5 +1856,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-17T11:15:00Z"
+  },
+  {
+    "id": "bug-101",
+    "timestamp": "2026-11-17T12:00:00Z",
+    "error_message": "QZ Tray asks for approval twice on every print",
+    "file": "lib/print/qz.ts",
+    "root_cause": "Requests were unsigned (anonymous) — QZ Tray can't remember an allow decision for unsigned sites",
+    "fix": "Per-tenant RSA key + self-signed cert (table qz_keys, migration 116, service-role only), /api/qz/cert and /api/qz/sign (SHA512); client sets certificate/signature promises; user copies override.crt into QZ Tray folder and ticks Remember once",
+    "tags": [
+      "qz-tray",
+      "signing",
+      "labels"
+    ],
+    "related_bugs": [
+      "bug-100"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-17T12:00:00Z"
   }
 ]

@@ -1,7 +1,7 @@
 // QZ Tray bridge: prints straight to a printer chosen BY NAME (the label printer), without
 // touching the Windows default printer and without a print dialog. QZ Tray is a small free
 // program installed on the office PC; the page talks to it over a local websocket.
-// Not signed yet: QZ Tray shows an "allow this site" prompt (signing can be added later).
+// Requests are signed with the business key (app/api/qz/*); trust needs override.crt on the PC.
 // The chosen printer is remembered per computer (localStorage).
 
 type Qz = {
@@ -9,10 +9,30 @@ type Qz = {
   printers: { find: (q?: string) => Promise<string[] | string> }
   configs: { create: (printer: string, opts?: Record<string, unknown>) => unknown }
   print: (cfg: unknown, data: unknown[]) => Promise<void>
+  security: {
+    setCertificatePromise: (fn: (resolve: (v: string | null) => void, reject: (e: unknown) => void) => void) => void
+    setSignatureAlgorithm: (alg: string) => void
+    setSignaturePromise: (fn: (toSign: string) => (resolve: (v: string) => void, reject: (e: unknown) => void) => void) => void
+  }
 }
 
 let qzPromise: Promise<Qz> | null = null
-const loadQz = () => (qzPromise ??= import('qz-tray').then(m => ((m as { default?: Qz }).default ?? m) as Qz))
+const loadQz = () => (qzPromise ??= import('qz-tray').then(m => {
+  const qz = ((m as { default?: Qz }).default ?? m) as Qz
+  // Signed requests: once the business certificate is trusted on this PC (override.crt in the
+  // QZ Tray folder), QZ Tray stops asking to allow the site on every print.
+  // If the key isn't available (e.g. migration 116 not run yet) fall back to unsigned requests —
+  // printing still works, QZ Tray just keeps asking to allow the site.
+  qz.security.setCertificatePromise(resolve => {
+    fetch('/api/qz/cert', { cache: 'no-store' }).then(r => r.ok ? r.text() : null).catch(() => null).then(c => resolve(c || null))
+  })
+  qz.security.setSignatureAlgorithm('SHA512')
+  qz.security.setSignaturePromise(toSign => resolve => {
+    fetch('/api/qz/sign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ request: toSign }) })
+      .then(r => r.ok ? r.text() : '').catch(() => '').then(resolve)
+  })
+  return qz
+}))
 
 const PRINTER_KEY = 'labels.printer'
 export const getLabelPrinter = () => { try { return localStorage.getItem(PRINTER_KEY) || '' } catch { return '' } }

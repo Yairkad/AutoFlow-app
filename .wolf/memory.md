@@ -3220,3 +3220,12 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 11:50 | Labels printed enlarged/clipped → switched to raw ESC/POS + cut per label (method setting) | lib/print/qz.ts, LabelsPanel.tsx | tsc+eslint clean; awaiting real print test | ~6000 |
+| 12:00 | ESC/POS fix confirmed by user. Added QZ signing (migration 116 qz_keys, lib/print/qzKeys.ts, app/api/qz/cert|sign, override.crt download) | see bug-101 | tsc+eslint clean; cert/sign roundtrip verified in node; migration must be run by user | ~10000 |
+
+## Session: 2026-11-17 11:33
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 12:40 | Labels v2: own sidebar tab /labels (module documents), removed from Documents gallery; NumField (no per-keystroke clamp); product sizes l/m/s/half(2 per row); custom free-text label (lines size/bold, align, logo, frame, saved designs = documents type label_template). Preview artifact VD1SzB2UQEiDvL2scdxquV built from real component (esbuild + stubs) | LabelsPanel.tsx, labels.ts, app/(app)/labels/page.tsx, Sidebar.tsx, proxy.ts, DocumentsClient.tsx | tsc clean; no PR yet (user wants to review first) | ~30000 |
+| 12:50 | User: meant sub-tab in טפסים, but keep sidebar tab for now | - | noted | ~200 |
+| 12:55 | QZ signing falls back to unsigned (cert null / empty signature) when /api/qz/* fails — safe to merge before migration 116 | lib/print/qz.ts | tsc clean | ~2000 |
