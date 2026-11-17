@@ -15,7 +15,6 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import CarContractsPanel from '@/components/cars/CarContractsPanel'
 import PowerOfAttorneyPanel from '@/components/documents/PowerOfAttorneyPanel'
-import LabelsPanel from '@/components/documents/LabelsPanel'
 import { printHtml } from '@/lib/print/printHtml'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -64,7 +63,7 @@ const emptyForm = {
 }
 
 // One gallery of every form; contracts / power of attorney / the editor open as their own view
-type DocView = 'gallery' | 'editor' | 'contracts' | 'poa' | 'labels'
+type DocView = 'gallery' | 'editor' | 'contracts' | 'poa'
 type GalleryFilter = 'all' | 'builtin' | 'mine' | 'templates'
 
 const emptyCol: FormColumn = { label: '', width: 'medium' }
@@ -801,7 +800,7 @@ export default function DocumentsClient() {
   }
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('tab')
-    if (t === 'poa' || t === 'contracts' || t === 'labels') { const id = setTimeout(() => setView(t), 0); return () => clearTimeout(id) }
+    if (t === 'poa' || t === 'contracts') { const id = setTimeout(() => setView(t), 0); return () => clearTimeout(id) }
   }, [])
 
   async function setHidden(key: string, hide: boolean) {
@@ -974,7 +973,6 @@ export default function DocumentsClient() {
   const B = () => [biz.name, biz.logo, biz.sub, biz.phone, biz.address, biz.license ?? ''] as const
   const builtins: Tile[] = [
     { key: 'b:contracts', group: 'builtin', kind: 'חוזים', icon: '📝', title: 'חוזה מכירת רכב', sub: 'חוזים לפי רכב — טיוטות וחתומים', open: () => openView('contracts') },
-    { key: 'b:labels', group: 'builtin', kind: 'מדפסת מדבקות', icon: '🏷️', title: 'מדבקות', sub: 'מחזיק מפתחות לרכב · מחיר מוצר', open: () => openView('labels') },
     { key: 'b:poa', group: 'builtin', kind: 'משרד התחבורה', icon: '✍️', title: 'ייפוי כוח', sub: 'טופס משרד התחבורה למילוי והדפסה', open: () => openView('poa') },
     { key: 'b:checklist', group: 'builtin', kind: 'טופס', icon: '🔍', title: 'בדיקת רכב כללית', sub: 'צמיגים · נוזלים · פנסים · מגבים · אביזרים', open: () => ask('בדיקת רכב כללית', n => printChecklist(n, '', '', '', biz.logo)) },
     { key: 'b:warranty', group: 'builtin', kind: 'טופס', icon: '📋', title: 'הצהרת לקוח – בדיקת רכב', sub: 'הצהרה · פרטי לקוח ורכב · חתימות', open: () => ask('הצהרת לקוח – בדיקת רכב', n => printWarranty(n, ...B())) },
@@ -1054,7 +1052,6 @@ export default function DocumentsClient() {
 
       {view === 'contracts' && <>{backBar('חוזה מכירת רכב')}<CarContractsPanel /></>}
       {view === 'poa' && <>{backBar('ייפוי כוח')}<PowerOfAttorneyPanel /></>}
-      {view === 'labels' && <>{backBar('מדבקות')}<LabelsPanel /></>}
 
       {/* ── Free document editor: blank page + text boxes ── */}
       {view === 'editor' && freeEdit && (

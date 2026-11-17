@@ -27,6 +27,7 @@ const NAV_ITEMS = [
   { href: '/test-transfer', label: 'שינוע לטסטים', color: '#d97706,#f59e0b', module: 'test_transfer' },
   { href: '/reminders',   label: 'משימות',                  color: '#f59e0b,#fde68a', module: 'reminders' },
   { href: '/documents',   label: 'טפסים',                   color: '#3b82f6,#93c5fd', module: 'documents' },
+  { href: '/labels',      label: 'מדבקות',                  color: '#0f766e,#5eead4', module: 'documents' },
   { href: '/settings',    label: 'הגדרות',                  color: '#6b7280,#d1d5db', module: 'settings' },
   { href: '/my-profile',  label: 'הפרופיל שלי',             color: '#a855f7,#c084fc', module: 'my_profile' },
 ]
@@ -38,7 +39,7 @@ const SECTIONS: { label: string | null; hrefs: string[] }[] = [
   { label: 'אנשים',   hrefs: ['/employees'] },
   { label: 'מלאי',    hrefs: ['/products', '/tires', '/stock-count', '/yard-tracking', '/cars'] },
   { label: 'עסקאות',  hrefs: ['/inspections', '/test-transfer'] },
-  { label: 'כללי',    hrefs: ['/reminders', '/documents'] },
+  { label: 'כללי',    hrefs: ['/reminders', '/documents', '/labels'] },
   { label: 'מערכת',   hrefs: ['/settings', '/my-profile'] },
 ]
 
@@ -62,6 +63,7 @@ const ICONS: Record<string, React.ReactNode> = {
   '/test-transfer': <><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>,
   '/reminders':   <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></>,
   '/documents':   <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></>,
+  '/labels':      <><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></>,
   '/settings':    <><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>,
   '/my-profile':  <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
 }

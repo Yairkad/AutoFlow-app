@@ -855,3 +855,7 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
+
+## app/(app)/labels/
+
+- `page.tsx` — /labels page: PageHeader + LabelsPanel (sidebar tab 'מדבקות', module documents) (~300 tok)

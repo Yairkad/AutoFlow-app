@@ -56,6 +56,7 @@ const ROUTE_MODULES: [string, string[] | null][] = [
   ['/test-transfer', ['test_transfer']],
   ['/reminders',   ['reminders']],
   ['/documents',   ['documents']],
+  ['/labels',      ['documents']],
   ['/yard-tracking', [YARD_TRACKING_KEY]],
 ]
 
