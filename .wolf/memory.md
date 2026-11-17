@@ -3186,3 +3186,12 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 10:05 | Mockup v2: logo (B/W) + key-tag mode 30×40mm, 2 per row | artifact VEK5vMn6wfz8ELP196nKej | published | ~12000 |
+
+## Session: 2026-11-17 10:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 10:16 | Created lib/print/labels.ts | — | ~3090 |
+| 10:16 | Created lib/print/qz.ts | — | ~694 |
+| 10:18 | Created components/documents/LabelsPanel.tsx | — | ~6404 |
+| 10:25 | Built labels feature: Documents → מדבקות (LabelsPanel), lib/print/labels.ts, lib/print/qz.ts, deps jsbarcode + qz-tray, types/qz-tray.d.ts. Default key-tag window 45×25mm (common clear vehicle key fob insert ~25×45). | components/documents/LabelsPanel.tsx, DocumentsClient.tsx, lib/print/* | tsc+eslint clean; label rendering verified in headless Chromium; NOT tested with real printer/QZ | ~40000 |
