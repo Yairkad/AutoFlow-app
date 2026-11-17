@@ -3213,3 +3213,10 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 11:10 | Vercel test: owner-authored commit WITHOUT Co-Authored-By trailer | - | pushed | ~500 |
 | 11:30 | Vercel still blocked (PR #85 too). User decided to make repo public; scanned history for secrets — none found | - | done | ~3000 |
+| 11:40 | Repo public → PR #86 merged, Vercel production deploy succeeded | - | done | ~500 |
+
+## Session: 2026-11-17 11:13
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:50 | Labels printed enlarged/clipped → switched to raw ESC/POS + cut per label (method setting) | lib/print/qz.ts, LabelsPanel.tsx | tsc+eslint clean; awaiting real print test | ~6000 |
