@@ -1844,8 +1844,8 @@
     "timestamp": "2026-11-17T11:15:00Z",
     "error_message": "Labels printed on XPRINTER are cut off and not the right size (photo: content overflows each die-cut sticker, right/left edge clipped)",
     "file": "lib/print/labels.ts, lib/print/qz.ts",
-    "root_cause": "Roll is die-cut stickers with gaps, not a continuous roll as assumed; pages were sized to content (72mm × content height) and scaled by the driver, so content spills over the sticker and is clipped at the printable edge",
-    "fix": "PENDING: fixed sticker size setting (W×H mm), draw every label exactly at that size, print 1:1 (density 8 dpmm, no scaling) + offset calibration",
+    "root_cause": "Driver scaled the label image (QZ pixel print with scaleContent → driver paper size), so it printed enlarged and clipped. Roll IS continuous with auto-cutter (cut after each job/page) — not die-cut, my first guess was wrong.",
+    "fix": "Default print method now raw ESC/POS: QZ raw image (language ESCPOS, dotDensity double) printed dot-for-dot at 576 dots + GS V 66 feed&cut after each label. 'driver' method kept as fallback with scaleContent:false, density 8 dpmm.",
     "tags": [
       "labels",
       "qz-tray",

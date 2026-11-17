@@ -17,7 +17,7 @@ import {
   DEFAULT_TAG, DPM, ROLL_MM, drawCarLabel, drawProductLabel, drawTagRow, labelsPrintHtml, loadBwLogo,
   loadLabelFonts, wideCarHeight, type CarLabel, type PriceSize, type ProductLabel, type TagSize,
 } from '@/lib/print/labels'
-import { getLabelPrinter, qzConnect, qzPrintLabels, qzPrinters, setLabelPrinter } from '@/lib/print/qz'
+import { getLabelPrinter, getPrintMethod, qzConnect, qzPrintLabels, qzPrinters, setLabelPrinter, setPrintMethod, type PrintMethod } from '@/lib/print/qz'
 
 type Mode = 'car' | 'product'
 type CarKind = 'tag' | 'wide'
@@ -57,12 +57,13 @@ export default function LabelsPanel() {
 
   const [qzOk, setQzOk] = useState<boolean | null>(null)
   const [printer, setPrinter] = useState('')
+  const [method, setMethod] = useState<PrintMethod>('escpos')
   const [printers, setPrinters] = useState<string[]>([])
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    const id = setTimeout(() => { setPrefsState(loadPrefs()); setPrinter(getLabelPrinter()) }, 0)
+    const id = setTimeout(() => { setPrefsState(loadPrefs()); setPrinter(getLabelPrinter()); setMethod(getPrintMethod()) }, 0)
     loadLabelFonts().then(() => setFontsReady(true))
     return () => clearTimeout(id)
   }, [])
@@ -144,7 +145,7 @@ export default function LabelsPanel() {
     try {
       const ok = await connect()
       if (ok && printer) {
-        await qzPrintLabels(printer, pages, ROLL_MM)
+        await qzPrintLabels(printer, pages, ROLL_MM, method)
         showToast(`נשלח ל-${printer}`, 'success')
       } else {
         if (ok && !printer) showToast('לא נבחרה מדפסת מדבקות — נפתח חלון הדפסה. אפשר לבחור ב"הגדרת מדפסת"', 'info')
@@ -318,6 +319,9 @@ export default function LabelsPanel() {
                   ))}
                   {!printers.length && <div className="lbl-hint">לא נמצאו מדפסות.</div>}
                 </div>
+                <label className="form-label" style={{ marginTop: 14 }}>שיטת הדפסה</label>
+                {seg(method, [['escpos', 'ישירה (ESC/POS) — מומלץ'], ['driver', 'דרך הדרייבר']], v => { setMethod(v); setPrintMethod(v) })}
+                <div className="lbl-hint">ישירה: מודפס בגודל מדויק (72 מ״מ) וחותך אחרי כל מדבקה. ״דרך הדרייבר״ — רק אם הישירה לא מדפיסה כלום.</div>
               </>}
               <div className="lbl-steps"><b>התקנה חד-פעמית במחשב</b>
                 <ol>

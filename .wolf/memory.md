@@ -3219,3 +3219,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 11:50 | Labels printed enlarged/clipped → switched to raw ESC/POS + cut per label (method setting) | lib/print/qz.ts, LabelsPanel.tsx | tsc+eslint clean; awaiting real print test | ~6000 |
