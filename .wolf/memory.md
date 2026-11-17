@@ -3200,3 +3200,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-17 10:36
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:00 | Vercel blocked deploy (Claude author on Hobby plan). Owner-authored merge commit 9d8579e on branch + PR #84 | - | pushed | ~3000 |
