@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-18T08:25:38.442Z
-> Files: 207 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-18T08:56:59.372Z
+> Files: 210 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -546,7 +546,7 @@
 
 ## components/expenses/
 
-- `ReceiptPicker.tsx` — scan (DocumentScannerModal) or pick a file (image/PDF) → onFile (~400 tok)
+- `ReceiptPicker.tsx` — ReceiptPicker (~1529 tok)
 - `ReceiptScanModal.tsx` — 'סריקת קבלה': date/desc/amount + picker → upload to Drive קבלות/YYYY/MM without an expense (~900 tok)
 
 ## components/guide/
