@@ -3250,3 +3250,5 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 10:10 | Labels: preview max 2 labels; clear fields (car/product/custom/copies) after print | LabelsPanel.tsx | tsc+eslint clean | ~1500 |
 | 10:40 | Expense receipts: migration 117 (expenses.receipt_file_id/name/url), lib/expenses/receipts.ts (Drive קבלות/YYYY/MM, name 'date – desc – amount₪'), ReceiptPicker (scan/file), ReceiptScanModal (Drive only), expense form section, row 📎 + 'צרף קבלה' menu, header 'סריקת קבלה'. Receipt link saved in a separate update so missing migration never blocks expense save | components/expenses/*, lib/expenses/receipts.ts | tsc clean; preview artifact built from real ExpensesClient; no PR yet | ~20000 |
+| 08:56 | Created components/expenses/ReceiptPicker.tsx | — | ~1529 |
+| 11:00 | User: 'למה אין סריקה מסורק???' — ReceiptPicker now also scans from the office scanner via lib/scannerAgent (same as supplier invoices), + choose/replace scanner, install link | components/expenses/ReceiptPicker.tsx | tsc+eslint clean | ~4000 |

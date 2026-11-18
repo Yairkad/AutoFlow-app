@@ -1379,7 +1379,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               ) : fReceipt ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, flexWrap: 'wrap' }}>
                   {fReceipt.url ? <a href={fReceipt.url} target="_blank" rel="noreferrer">📎 {fReceipt.name}</a> : <span>📎 {fReceipt.name}</span>}
-                  <ReceiptPicker onFile={setFReceiptFile} label="מחדש" />
+                  <ReceiptPicker onFile={setFReceiptFile} label="קבלה חדשה" />
                   <Button size="sm" variant="danger" onClick={() => setFReceipt(null)}>הסר קישור</Button>
                 </div>
               ) : (

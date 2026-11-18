@@ -1874,5 +1874,21 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-17T12:00:00Z"
+  },
+  {
+    "id": "bug-102",
+    "timestamp": "2026-11-18T09:00:00Z",
+    "error_message": "למה אין סריקה מסורק??? (expense receipts only offered camera/file)",
+    "file": "components/expenses/ReceiptPicker.tsx",
+    "root_cause": "Built the picker from DocumentScannerModal only and missed the existing scanner-agent flow used for supplier invoices",
+    "fix": "ReceiptPicker: 🖨 scan via lib/scannerAgent (saved device / picker / install link) + 📷 camera + 📎 file",
+    "tags": [
+      "scanner",
+      "expenses",
+      "receipts"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-18T09:00:00Z"
   }
 ]
