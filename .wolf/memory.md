@@ -3235,3 +3235,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:00 | User confirmed signing + labels v2 work. Asked to remove margins before/after: proposed trimming canvas pads + extra feed; head-to-cutter gap only removable for multi-copy batching (needs calibration). Awaiting answer | - | proposed | ~1500 |
+| 09:15 | Trimmed blank rows to 1mm (trimVertical on every rendered label) + GS V 66 0 (no extra feed before cut) | lib/print/labels.ts, qz.ts, LabelsPanel.tsx | tsc+eslint clean; preview verified | ~4000 |

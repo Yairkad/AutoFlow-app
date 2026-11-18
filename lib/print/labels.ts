@@ -260,3 +260,24 @@ html,body { margin:0; padding:0 }
 img { display:block; width:${ROLL_MM}mm; margin-bottom:3mm; image-rendering:pixelated }
 </style></head><body>${images.map(i => `<img src="${i.dataUrl}" style="height:${i.hmm}mm">`).join('')}</body></html>`
 }
+
+/**
+ * Cut the blank rows above and below the content, leaving `marginMm` of paper on each side, so the
+ * roll doesn't feed empty paper before / after a label. Width is kept (the roll width).
+ */
+export function trimVertical(src: HTMLCanvasElement, marginMm = 1): HTMLCanvasElement {
+  const ctx = src.getContext('2d')!
+  const { width: w, height: h } = src
+  const d = ctx.getImageData(0, 0, w, h).data
+  const dark = (y: number) => { for (let x = 0, i = y * w * 4; x < w; x++, i += 4) if (d[i] < 128) return true; return false }
+  let top = 0, bottom = h - 1
+  while (top < h && !dark(top)) top++
+  if (top >= h) return src                                   // blank label — leave as is
+  while (bottom > top && !dark(bottom)) bottom--
+  const m = Math.round(marginMm * DPM)
+  const y0 = Math.max(0, top - m), y1 = Math.min(h, bottom + 1 + m)
+  if (y0 === 0 && y1 === h) return src
+  const { c, ctx: out } = blank(w, y1 - y0)
+  out.drawImage(src, 0, y0, w, y1 - y0, 0, 0, w, y1 - y0)
+  return c
+}
