@@ -3259,3 +3259,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 09:16 | Created components/ui/ScanPreview.tsx | — | ~1242 |
 | 11:40 | Receipts v2: ScanPreview (image/PDF first page thumb + zoom) in expense form, row modal (pick→preview→save), scan modal, supplier invoice lines; clear 'קבלה מצורפת' card with פתח + small החלפה/הסר; camera only on touch, scanner only on computers (pointer:coarse); free-text supplier w/ datalist before description, unknown name → confirm add to suppliers else expenses.supplier_name (migration 118); supplier in receipt file name | components/ui/ScanPreview.tsx, components/expenses/*, SupplierTrackingTab.tsx, migration 118 | tsc clean; preview republished | ~25000 |
+
+## Session: 2026-11-18 09:31
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
