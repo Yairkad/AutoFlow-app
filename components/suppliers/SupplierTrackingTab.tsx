@@ -14,7 +14,7 @@ import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
 import { reverseSupplierPayment } from '@/lib/debts/reverseSupplierPayment'
-import { recordSupplierPayment, deleteDirectAllocations, paymentMethodLabel, type DirectMethodHe } from '@/lib/debts/supplierDirectPayments'
+import { recordSupplierPayment, deleteDirectAllocations, paymentMethodLabel, payOneOffInvoice, undoOneOffPayment, type DirectMethodHe } from '@/lib/debts/supplierDirectPayments'
 import { supplierEvents, balanceAfter, monthSummaries, monthOf, paymentLedgerDate } from '@/lib/debts/supplierLedger'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
@@ -187,6 +187,8 @@ export default function SupplierTrackingTab({
   const [payDate, setPayDate]     = useState(todayISO())
   const [payRefNumber, setPayRefNumber]     = useState('')
   const [paySaving, setPaySaving] = useState(false)
+  // One-off invoice (no supplier): the payment goes on that invoice itself
+  const [payDebt, setPayDebt] = useState<SupplierDebt | null>(null)
 
   // Quick-add-supplier modal
   const [showQuickAddSupplier, setShowQuickAddSupplier] = useState(false)
@@ -719,6 +721,8 @@ export default function SupplierTrackingTab({
   const payBalance = supplierBalance(paySupplierId)
 
   const openPaySupplier = (supplierId: string | null) => {
+    if (!supplierId) { showToast('לחשבונית בלי ספק משלמים מתוך השורה שלה: ⋮ ← תשלום חשבונית', 'info'); return }
+    setPayDebt(null)
     setPaySupplierId(supplierId)
     setPayMethod('מזומן'); setPayDate(todayISO()); setPayRefNumber('')
     const b = supplierBalance(supplierId)
@@ -726,10 +730,39 @@ export default function SupplierTrackingTab({
     setShowPayModal(true)
   }
 
+  const debtRemaining = (d: SupplierDebt) => Math.max(0, Number(d.amount) - Number(d.paid))
+  const openPayInvoice = (d: SupplierDebt) => {
+    setPayDebt(d); setPaySupplierId(null)
+    setPayMethod('מזומן'); setPayDate(todayISO()); setPayRefNumber('')
+    setPayAmount(debtRemaining(d).toFixed(2))
+    setShowPayModal(true)
+  }
+  // Payments recorded on one invoice (one-off purchases) with their method / date for display
+  const invoicePayments = (debtId: string) => debtPayments.filter(a => a.supplier_debt_id === debtId).map(a => {
+    const sp = a.scheduled_payment_id ? scheduledPayments.find(p => p.id === a.scheduled_payment_id) : undefined
+    return { id: a.id, amount: Number(a.amount), date: sp?.paid_date ?? sp?.due_date ?? a.created_at.slice(0, 10), method: sp ? paymentMethodLabel(sp.payment_method) : '', open: sp ? !sp.is_paid : false }
+  })
+  const undoInvoicePayment = async (allocId: string) => {
+    const { error } = await undoOneOffPayment(supabase, allocId)
+    if (error) { showToast('שגיאה בביטול התשלום: ' + error, 'error'); return }
+    showToast('התשלום בוטל', 'success'); reload()
+  }
+
   const submitPayment = async () => {
     const amount = parseFloat(payAmount) || 0
     if (amount <= 0) { showToast('סכום לא תקין', 'error'); return }
     const tid = tenantId
+    if (tid && payDebt) {
+      setPaySaving(true)
+      const { error } = await payOneOffInvoice(supabase, {
+        tenantId: tid, debt: payDebt, amount, date: payDate, method: payMethod as DirectMethodHe | "צ'ק", ref: payRefNumber,
+      })
+      setPaySaving(false)
+      if (error) { showToast('שגיאה בתשלום: ' + error, 'error'); return }
+      showToast(payMethod === "צ'ק" ? 'הצ׳ק נרשם ✓ (מופיע ביומן הצ׳קים)' : 'התשלום נרשם על החשבונית ✓', 'success')
+      setShowPayModal(false); setPayDebt(null); reload()
+      return
+    }
     if (!tid || !paySupplierId) return
 
     if (payMethod === "צ'ק") {
@@ -1079,7 +1112,7 @@ export default function SupplierTrackingTab({
                             + הוסף
                           </button>
                         )}
-                        {group.totalBal > 0 && (
+                        {group.totalBal > 0 && group.sid && (
                           <button onClick={() => openPaySupplier(group.sid)}
                             style={{ padding: '4px 12px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
                             תשלום
@@ -1232,6 +1265,16 @@ export default function SupplierTrackingTab({
                                     <td style={tdSt}><TypeChip debt={d} /></td>
                                     <td style={{ ...tdSt, textAlign: 'left', fontWeight: 700, color: d.direction === 'credit' ? 'var(--success)' : 'var(--danger)' }}>
                                       {d.direction === 'credit' ? '−' : ''}{fmt(item.amount)}
+                                      {!d.supplier_id && d.direction === 'charge' && (() => {
+                                        const pays = invoicePayments(d.id), rest = debtRemaining(d)
+                                        const tag = (t: string, c: string, bg: string) => <div style={{ fontSize: 11, fontWeight: 700, color: c, background: bg, borderRadius: 6, padding: '1px 6px', marginTop: 3, display: 'inline-block' }}>{t}</div>
+                                        if (!pays.length) return <div>{tag('לא שולם', 'var(--danger)', 'var(--danger-soft)')}</div>
+                                        const last = pays[pays.length - 1]
+                                        return <div>
+                                          {rest <= 0.005 ? tag(`שולם ✓ ${last.method}${last.open ? ' (צ׳ק פתוח)' : ''}`, 'var(--success)', 'var(--success-soft)') : tag(`שולם ${fmt(Number(d.paid))} · נותר ${fmt(rest)}`, 'var(--warning)', 'var(--warning-soft)')}
+                                          <div style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 400 }}>{pays.map(p => `${p.method} ${p.date.split('-').reverse().join('/')}`).join(' · ')}</div>
+                                        </div>
+                                      })()}
                                     </td>
                                     <td style={{ ...tdSt, textAlign: 'center', whiteSpace: 'nowrap' }}>
                                       <RowActionsMenu actions={[
@@ -1241,9 +1284,16 @@ export default function SupplierTrackingTab({
                                             setWaModal({ phone: supp.phone!, text: `שלום ${supp.name}, ברצוני לבדוק חוב בסך ${fmt(bal(d))}.\nתודה!\n${tenantName}` })
                                           },
                                         }] : []),
-                                        ...(group.totalBal > 0 && d.direction === 'charge' ? [
+                                        ...(d.supplier_id && group.totalBal > 0 && d.direction === 'charge' ? [
                                           { key: 'pay', label: 'תשלום לספק', icon: '₪', onClick: () => openPaySupplier(d.supplier_id) },
                                         ] : []),
+                                        // One-off purchase (no supplier): pay this invoice itself
+                                        ...(!d.supplier_id && d.direction === 'charge' && debtRemaining(d) > 0.005 ? [
+                                          { key: 'payinv', label: 'תשלום חשבונית', icon: '₪', onClick: () => openPayInvoice(d) },
+                                        ] : []),
+                                        ...(!d.supplier_id ? invoicePayments(d.id).map(p => ({
+                                          key: 'undo' + p.id, label: `ביטול תשלום ${fmt(p.amount)} (${p.date})`, icon: '↩', danger: true, onClick: () => undoInvoicePayment(p.id),
+                                        })) : []),
                                         // Manual close is gone (payments aren't tied to invoices); only undo an old one
                                         ...(d.is_closed && d.direction === 'charge' && Number(d.amount) - Number(d.paid) > 0.005 ? [
                                           { key: 'close', label: 'בטל סגירה ידנית', icon: '↩', onClick: () => toggleClose(d.id, true) },
@@ -1520,11 +1570,14 @@ export default function SupplierTrackingTab({
       {showPayModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} {...guardedBackdrop(() => setShowPayModal(false))}>
           <div style={{ background: '#fff', borderRadius: 'var(--radius)', padding: '28px', maxWidth: '480px', width: '100%', margin: '16px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>₪ תשלום ל{suppliers.find(s => s.id === paySupplierId)?.name ?? 'ספק'}</h3>
+            <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 700 }}>
+              {payDebt ? `₪ תשלום חשבונית${payDebt.doc_number ? ' ' + payDebt.doc_number : ''}` : `₪ תשלום ל${suppliers.find(s => s.id === paySupplierId)?.name ?? 'ספק'}`}
+            </h3>
+            {payDebt && <div style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>רכישה חד-פעמית (בלי ספק) · {payDebt.description || '—'} · {payDebt.date}</div>}
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '14px 0 10px', padding: '10px 12px', background: '#f8fafc', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}>
-                  <span>יתרה נוכחית (אחרי זיכויים ותשלומים):</span>
-                  <b style={{ color: payBalance > 0 ? 'var(--danger)' : 'var(--success)' }}>{fmt(payBalance)}</b>
+                  <span>{payDebt ? 'נותר לתשלום בחשבונית:' : 'יתרה נוכחית (אחרי זיכויים ותשלומים):'}</span>
+                  <b style={{ color: (payDebt ? debtRemaining(payDebt) : payBalance) > 0 ? 'var(--danger)' : 'var(--success)' }}>{fmt(payDebt ? debtRemaining(payDebt) : payBalance)}</b>
                 </div>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 5, fontSize: 13, fontWeight: 600 }}>
                   סכום לתשלום
@@ -1532,7 +1585,7 @@ export default function SupplierTrackingTab({
                 </label>
                 {(parseFloat(payAmount) || 0) > 0 && (
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
-                    יתרה אחרי התשלום: <b>{fmt(payBalance - (parseFloat(payAmount) || 0))}</b>
+                    יתרה אחרי התשלום: <b>{fmt((payDebt ? debtRemaining(payDebt) : payBalance) - (parseFloat(payAmount) || 0))}</b>
                   </div>
                 )}
 
@@ -1550,8 +1603,14 @@ export default function SupplierTrackingTab({
                       </button>
                     ))}
                   </div>
-                  {payMethod === "צ'ק" && (
+                  {payMethod === "צ'ק" && !payDebt && (
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>ייפתח טופס צ׳ק/סדרה לספק זה עם הסכום שהוזן.</div>
+                  )}
+                  {payMethod === "צ'ק" && payDebt && (
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
+                      מספר צ׳ק
+                      <input value={payRefNumber} onChange={e => setPayRefNumber(e.target.value)} placeholder="אופציונלי" className="form-input" style={{ margin: 0 }} />
+                    </label>
                   )}
                   {payMethod === 'העברה' && (
                     <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontWeight: 600, marginTop: '8px' }}>
@@ -1561,9 +1620,9 @@ export default function SupplierTrackingTab({
                   )}
                 </div>
 
-                {payMethod !== "צ'ק" && (
+                {(payMethod !== "צ'ק" || payDebt) && (
                   <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600, marginTop: '12px' }}>
-                    תאריך תשלום
+                    {payMethod === "צ'ק" ? 'תאריך פירעון הצ׳ק' : 'תאריך תשלום'}
                     <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="form-input" />
                   </label>
                 )}
@@ -1572,7 +1631,7 @@ export default function SupplierTrackingTab({
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => setShowPayModal(false)}>ביטול</Button>
               <Button loading={paySaving} onClick={submitPayment} style={{ background: 'var(--success)', borderColor: 'var(--success)' }}>
-                {payMethod === "צ'ק" ? 'המשך לצ׳ק ←' : '✓ אשר תשלום'}
+                {payMethod === "צ'ק" && !payDebt ? 'המשך לצ׳ק ←' : '✓ אשר תשלום'}
               </Button>
             </div>
           </div>

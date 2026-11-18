@@ -116,3 +116,69 @@ export async function fetchSupplierOpenTotals(supabase: SupabaseClient): Promise
   }
   return { total, count }
 }
+
+/**
+ * One-off purchase (an invoice with NO supplier): the payment is tied to that invoice itself,
+ * since there's no supplier balance to lower. Cash / card / transfer → an expense + a paid
+ * scheduled_payments row; a check → an open check row (checks journal) for its due date.
+ * Either way a supplier_debt_payments allocation dated on the payment links it to the invoice
+ * (the "ללא ספק" ledger counts allocations) and the invoice's `paid` / is_closed are updated.
+ */
+export async function payOneOffInvoice(
+  supabase: SupabaseClient,
+  p: {
+    tenantId: string; debt: { id: string; amount: number; paid: number; doc_number: string | null; description: string | null }
+    amount: number; date: string; method: DirectMethodHe | "צ'ק"; ref?: string | null
+  },
+): Promise<{ error: string | null }> {
+  const description = ['תשלום חשבונית', p.debt.doc_number, p.debt.description].filter(Boolean).join(' ')
+  let expenseId: string | null = null
+  if (p.method !== "צ'ק") {
+    const exp = await supabase.from('expenses').insert({
+      tenant_id: p.tenantId, date: p.date, category: 'ספקים', description, amount: p.amount,
+      supplier_id: null, payment_method: p.method, payment_ref: p.method === 'העברה' ? (p.ref || null) : null,
+    }).select('id').single()
+    if (exp.error) return { error: exp.error.message }
+    expenseId = exp.data.id
+  }
+  const isCheck = p.method === "צ'ק"
+  const sp = await supabase.from('scheduled_payments').insert({
+    tenant_id: p.tenantId, supplier_id: null, description, amount: p.amount, due_date: p.date,
+    paid_date: isCheck ? null : p.date, is_paid: !isCheck, expense_id: expenseId,
+    payment_method: isCheck ? 'check' : DIRECT_METHODS[p.method as DirectMethodHe], category: 'ספקים',
+    ...(isCheck ? { check_number: p.ref || null } : { notes: p.ref || null }),
+  }).select('id').single()
+  const undoExpense = async () => { if (expenseId) await supabase.from('expenses').delete().eq('id', expenseId) }
+  if (sp.error) { await undoExpense(); return { error: sp.error.message } }
+  const al = await supabase.from('supplier_debt_payments').insert({
+    tenant_id: p.tenantId, supplier_debt_id: p.debt.id, scheduled_payment_id: sp.data.id, amount: p.amount,
+    created_at: `${p.date}T12:00:00Z`,
+  })
+  if (al.error) { await supabase.from('scheduled_payments').delete().eq('id', sp.data.id); await undoExpense(); return { error: al.error.message } }
+  const paid = Number(p.debt.paid) + p.amount
+  const { error } = await supabase.from('supplier_debts')
+    .update({ paid, is_closed: paid >= Number(p.debt.amount) - 0.005 }).eq('id', p.debt.id)
+  return { error: error?.message ?? null }
+}
+
+/** Undo a one-off invoice payment: the allocation, its payment row and expense, and the invoice's paid. */
+export async function undoOneOffPayment(supabase: SupabaseClient, allocId: string): Promise<{ error: string | null }> {
+  const { data: a, error } = await supabase.from('supplier_debt_payments').select('id, supplier_debt_id, scheduled_payment_id, amount').eq('id', allocId).maybeSingle()
+  if (error || !a) return { error: error?.message ?? 'התשלום לא נמצא' }
+  const { data: debt } = await supabase.from('supplier_debts').select('id, amount, paid').eq('id', a.supplier_debt_id).maybeSingle()
+  if (debt) {
+    const paid = Math.max(0, Number(debt.paid) - Number(a.amount))
+    const { error: e } = await supabase.from('supplier_debts').update({ paid, is_closed: paid >= Number(debt.amount) - 0.005 && paid > 0 }).eq('id', debt.id)
+    if (e) return { error: e.message }
+  }
+  const { error: e2 } = await supabase.from('supplier_debt_payments').delete().eq('id', a.id)
+  if (e2) return { error: e2.message }
+  if (a.scheduled_payment_id) {
+    const { data: sp } = await supabase.from('scheduled_payments').select('id, expense_id').eq('id', a.scheduled_payment_id).maybeSingle()
+    if (sp) {
+      await supabase.from('scheduled_payments').delete().eq('id', sp.id)
+      if (sp.expense_id) await supabase.from('expenses').delete().eq('id', sp.expense_id)
+    }
+  }
+  return { error: null }
+}

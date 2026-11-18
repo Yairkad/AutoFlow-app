@@ -1897,7 +1897,7 @@
     "error_message": "'אשר תשלום' does nothing in supplier payment modal (title 'תשלום לספק' with no name)",
     "file": "components/suppliers/SupplierTrackingTab.tsx",
     "root_cause": "The 'ללא ספק' group = supplier_debts with supplier_id null; submitPayment does `if (!tid || !paySupplierId) return` silently — payments must belong to a supplier",
-    "fix": "PENDING user approval: hide pay for null group, bulk assign-to-supplier, explicit toast, warn when saving invoice without supplier",
+    "fix": "User chose 'one-off': invoices with no supplier get row action 'תשלום חשבונית' → payOneOffInvoice (expense + paid scheduled_payments row, or open check row; allocation dated on payment; debt.paid/is_closed). Status chip under amount (לא שולם / שולם ✓ method / partial) + undo via row menu. Group 'תשלום' hidden for null group; openPaySupplier(null) explains instead of silent return.",
     "tags": [
       "suppliers",
       "payments",
