@@ -1890,5 +1890,21 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-18T09:00:00Z"
+  },
+  {
+    "id": "bug-103",
+    "timestamp": "2026-11-18T12:10:00Z",
+    "error_message": "'אשר תשלום' does nothing in supplier payment modal (title 'תשלום לספק' with no name)",
+    "file": "components/suppliers/SupplierTrackingTab.tsx",
+    "root_cause": "The 'ללא ספק' group = supplier_debts with supplier_id null; submitPayment does `if (!tid || !paySupplierId) return` silently — payments must belong to a supplier",
+    "fix": "PENDING user approval: hide pay for null group, bulk assign-to-supplier, explicit toast, warn when saving invoice without supplier",
+    "tags": [
+      "suppliers",
+      "payments",
+      "silent-failure"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-18T12:10:00Z"
   }
 ]
