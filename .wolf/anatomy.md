@@ -546,6 +546,8 @@
 
 ## components/expenses/
 
+- `ReceiptPicker.tsx` — scan (DocumentScannerModal) or pick a file (image/PDF) → onFile (~400 tok)
+- `ReceiptScanModal.tsx` — 'סריקת קבלה': date/desc/amount + picker → upload to Drive קבלות/YYYY/MM without an expense (~900 tok)
 
 ## components/guide/
 
@@ -712,6 +714,7 @@
 
 ## lib/expenses/
 
+- `receipts.ts` — receiptFileName ('date – desc – amount₪'), uploadReceipt(file, meta, tenantId) → Drive קבלות/<year>/<month> via /api/drive/upload (~500 tok)
 
 ## lib/forms/
 
