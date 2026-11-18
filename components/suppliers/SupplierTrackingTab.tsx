@@ -19,6 +19,7 @@ import { supplierEvents, balanceAfter, monthSummaries, monthOf, paymentLedgerDat
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
+import ScanPreview, { LinkBtn } from '@/components/ui/ScanPreview'
 import VatToggle from '@/components/ui/VatToggle'
 import UnitToggle from '@/components/ui/UnitToggle'
 import { withVat, withoutVat } from '@/lib/utils/vat'
@@ -166,6 +167,10 @@ export default function SupplierTrackingTab({
   const [agentMissing, setAgentMissing] = useState(false)
   // Several scanners connected → let the user pick one (remembered on this computer)
   const [scannerPicker, setScannerPicker] = useState<{ line: number | null; devices: ScannerDevice[] } | null>(null)
+  // The scanned file per invoice line, kept only to show a preview of how the scan came out
+  const [scanPreviews, setScanPreviews] = useState<Record<number, File>>({})
+  // Touch devices get the camera; computers get the office scanner
+  const [touch] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches)
   const [hasSavedScanner, setHasSavedScanner] = useState(false)
   useEffect(() => { setHasSavedScanner(!!getSavedScanner()) }, [])
 
@@ -279,6 +284,7 @@ export default function SupplierTrackingTab({
   // ── Supplier debt CRUD ────────────────────────────────────────────────────
 
   const openSuppModal = (d?: SupplierDebt) => {
+    setScanPreviews({})
     if (d) {
       setEditSupp(d); setSSupplier(d.supplier_id ?? ''); setSNotes('')
       const existing = Array.isArray(d.invoices) && d.invoices.length > 0
@@ -322,7 +328,12 @@ export default function SupplierTrackingTab({
   }
 
   const addInvoiceLine = () => setSInvoices(prev => [...prev, EMPTY_INV()])
-  const removeInvoiceLine = (i: number) => setSInvoices(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev)
+  const removeInvoiceLine = (i: number) => {
+    if (sInvoices.length < 2) return
+    setSInvoices(prev => prev.length > 1 ? prev.filter((_, idx) => idx !== i) : prev)
+    // keep each preview with its line after the indexes shift
+    setScanPreviews(prev => Object.fromEntries(Object.entries(prev).filter(([k]) => +k !== i).map(([k, f]) => [+k > i ? +k - 1 : +k, f])))
+  }
   const updateInvoiceLine = (i: number, field: keyof InvoiceEntry, val: string) =>
     setSInvoices(prev => prev.map((inv, idx) => idx === i ? { ...inv, [field]: val } : inv))
 
@@ -373,8 +384,10 @@ export default function SupplierTrackingTab({
     else showToast(`נבחר הסורק: ${d.name}`, 'success')
   }
 
-  const clearInvoiceLineFile = (i: number) =>
+  const clearInvoiceLineFile = (i: number) => {
     setSInvoices(prev => prev.map((inv, idx) => idx === i ? { ...inv, driveFileId: undefined, driveFileName: undefined, driveFileUrl: undefined } : inv))
+    setScanPreviews(prev => { const n = { ...prev }; delete n[i]; return n })
+  }
 
   // Attach a scanned invoice file (from a file picker fed by the user's scanner software, or from
   // the in-app camera scanner) to one invoice line — uploaded straight to the tenant's Drive folder.
@@ -413,6 +426,7 @@ export default function SupplierTrackingTab({
         setSInvoices(prev => prev.map((inv, idx) => idx === i
           ? { ...inv, driveFileId: data.id, driveFileName: data.name, driveFileUrl: data.webViewLink }
           : inv))
+        setScanPreviews(prev => ({ ...prev, [i]: shrunk }))
         showToast('הקובץ צורף ✓', 'success')
       } else {
         showToast(data.error || 'שגיאה בהעלאה', 'error')
@@ -1404,6 +1418,10 @@ export default function SupplierTrackingTab({
                       {/* ── Scan / attach the invoice document itself ── */}
                       {!driveConnected ? (
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>יש לחבר Google Drive בהגדרות כדי לצרף קובץ חשבונית סרוק</div>
+                      ) : inv.driveFileUrl && scanPreviews[i] ? (
+                        <ScanPreview file={scanPreviews[i]} size={56}
+                          caption={<a href={inv.driveFileUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, fontSize: 12 }}>📎 {inv.driveFileName || 'קובץ מצורף'} — פתח ✓</a>}
+                          actions={<LinkBtn onClick={() => clearInvoiceLineFile(i)} danger>הסר / סריקה מחדש</LinkBtn>} />
                       ) : inv.driveFileUrl ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
                           <a href={inv.driveFileUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontWeight: 600 }}>📎 {inv.driveFileName || 'קובץ מצורף'} — פתח ✓</a>
@@ -1421,10 +1439,10 @@ export default function SupplierTrackingTab({
                           }}>
                             {uploadingLineIdx === i ? 'מעלה...' : '📎 צרף קובץ סרוק'}
                           </label>
-                          <button type="button" onClick={() => setScannerForLine(i)} disabled={uploadingLineIdx === i} style={{
+                          {touch && <button type="button" onClick={() => setScannerForLine(i)} disabled={uploadingLineIdx === i} style={{
                             padding: '5px 10px', background: '#f8fafc', border: '1px solid var(--border)', borderRadius: '6px',
                             fontSize: '11px', fontWeight: 600, cursor: uploadingLineIdx === i ? 'default' : 'pointer', color: 'var(--text)',
-                          }}>צלם</button>
+                          }}>צלם</button>}
                           <span className="hide-mobile" style={{ display: 'contents' }}>
                             <button type="button" onClick={() => scanLineWithAgent(i)} disabled={agentScanningIdx !== null || uploadingLineIdx === i} style={{
                               padding: '5px 10px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '6px',

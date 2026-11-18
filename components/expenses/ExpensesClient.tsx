@@ -10,6 +10,7 @@ import Input from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
 import ReceiptPicker from '@/components/expenses/ReceiptPicker'
 import ReceiptScanModal from '@/components/expenses/ReceiptScanModal'
+import ScanPreview, { LinkBtn } from '@/components/ui/ScanPreview'
 import { uploadReceipt, type DriveReceipt } from '@/lib/expenses/receipts'
 import MoreMenu from '@/components/ui/MoreMenu'
 import FilterBar from '@/components/ui/FilterBar'
@@ -41,6 +42,7 @@ interface Expense {
   receipt_file_id?: string | null
   receipt_name?: string | null
   receipt_url?: string | null
+  supplier_name?: string | null   // free-text supplier (migration 118)
 }
 
 interface Income {
@@ -276,7 +278,8 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   const [fCat,         setFCat]         = useState('')
   const [fDesc,        setFDesc]        = useState('')
   const [fAmount,      setFAmount]      = useState('')
-  const [fSupplier,    setFSupplier]    = useState('')
+  // Supplier: typed freely or picked from the list (datalist); resolved to supplier_id on save
+  const [fSupplierName, setFSupplierName] = useState('')
   const [fPayMethod,   setFPayMethod]   = useState<PaymentMethod>('מזומן')
   const [fPayRef,      setFPayRef]      = useState('')
   const [fVatMode,     setFVatMode]     = useState<VatMode>('without')
@@ -292,9 +295,11 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   // Receipt: the one already linked (edit), a new file waiting for save, or removal of the link
   const [fReceipt,        setFReceipt]        = useState<DriveReceipt | null>(null)
   const [fReceiptFile,    setFReceiptFile]    = useState<File | null>(null)
+  const [fReceiptReplace, setFReceiptReplace] = useState(false)
   const [receiptScanOpen, setReceiptScanOpen] = useState(false)
   const [rowReceiptFor,   setRowReceiptFor]   = useState<Expense | null>(null)
   const [rowReceiptBusy,  setRowReceiptBusy]  = useState(false)
+  const [rowReceiptFile,  setRowReceiptFile]  = useState<File | null>(null)
 
   // Recurring management modals
   const [recListModal, setRecListModal] = useState(false)
@@ -567,13 +572,13 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     setEditItem(null)
     setFDate(new Date().toISOString().slice(0, 10))
     setFCat(tab === 'income' ? (incCats[0] ?? '') : (expCats[0] ?? ''))
-    setFDesc(''); setFAmount(''); setFSupplier('')
+    setFDesc(''); setFAmount(''); setFSupplierName('')
     setFPayMethod('מזומן'); setFPayRef('')
     setFVatMode('without')
     setFIsRecurring(false); setFRecurFreq('monthly'); setFRecurVar(false)
     setFIsScheduled(false); setFSchedDue(''); setFSchedMethod('check'); setFSchedRef('')
     setFAmortize(false); setFAmortizeMonths('12')
-    setFReceipt(null); setFReceiptFile(null)
+    setFReceipt(null); setFReceiptFile(null); setFReceiptReplace(false)
     setModal(true)
   }
 
@@ -583,7 +588,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     setFCat(item.category)
     setFDesc(item.description || '')
     setFAmount(String(item.amount))
-    setFSupplier((item as Expense).supplier_id ?? '')
+    setFSupplierName(suppliers.find(s => s.id === (item as Expense).supplier_id)?.name ?? (item as Expense).supplier_name ?? '')
     setFPayMethod((item as Expense).payment_method ?? 'מזומן')
     setFPayRef((item as Expense).payment_ref ?? '')
     setFVatMode('without')
@@ -593,7 +598,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     setFAmortize(!!amortizeMonths); setFAmortizeMonths(amortizeMonths ? String(amortizeMonths) : '12')
     const ex = item as Expense
     setFReceipt(ex.receipt_file_id ? { id: ex.receipt_file_id, name: ex.receipt_name ?? 'קבלה', url: ex.receipt_url ?? '' } : null)
-    setFReceiptFile(null)
+    setFReceiptFile(null); setFReceiptReplace(false)
     setModal(true)
   }
 
@@ -607,6 +612,22 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     let error: { message: string } | null = null
 
     if (tab === 'expenses') {
+      // Supplier: a listed name → its id; a new name → ask whether to add it to the suppliers list,
+      // otherwise keep it as free text on this expense only.
+      const supName = fSupplierName.trim()
+      let fSupplier = suppliers.find(s => s.name.trim() === supName)?.id ?? ''
+      let freeSupplier: string | null = null
+      if (supName && !fSupplier) {
+        setSaving(false)
+        const add = await confirm({ msg: `"${supName}" לא ברשימת הספקים. להוסיף אותו לרשימה?\n(ביטול = יישמר רק על ההוצאה הזו)`, icon: '🏭', confirmLabel: 'הוסף לרשימה' })
+        setSaving(true)
+        if (add) {
+          const { data: sup, error: supErr } = await supabase.from('suppliers').insert({ tenant_id: tenantIdRef.current, name: supName }).select('id, name').single()
+          if (supErr || !sup) { setSaving(false); showToast('שגיאה בהוספת ספק: ' + (supErr?.message ?? ''), 'error'); return }
+          fSupplier = sup.id
+          setSuppliers(prev => [...prev, sup as Supplier])
+        } else freeSupplier = supName
+      }
       // If scheduled (future payment) → save to scheduled_payments only
       if (!editItem && fIsScheduled) {
         const res = await supabase.from('scheduled_payments').insert({
@@ -632,7 +653,14 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           ? await supabase.from('expenses').update(payload).eq('id', editItem.id).select('id').single()
           : await supabase.from('expenses').insert({ ...payload, tenant_id: tenantIdRef.current }).select('id').single()
         error = res.error
-        if (!error && res.data) await saveReceiptLink(res.data.id, { date: fDate, description: fDesc || fCat, amount })
+        if (!error && res.data) {
+          const prevFree = (editItem as Expense | null)?.supplier_name ?? null
+          if (freeSupplier !== prevFree) {
+            const { error: e2 } = await supabase.from('expenses').update({ supplier_name: freeSupplier }).eq('id', res.data.id)
+            if (e2 && freeSupplier) showToast('ההוצאה נשמרה, אבל שם הספק החופשי לא נשמר (צריך להריץ את עדכון מסד הנתונים 118)', 'error')
+          }
+          await saveReceiptLink(res.data.id, { date: fDate, description: [supName, fDesc || fCat].filter(Boolean).join(' – '), amount })
+        }
       }
 
       if (!error && !editItem && fIsRecurring && !fIsScheduled) {
@@ -684,12 +712,13 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   async function attachReceiptToRow(row: Expense, file: File) {
     setRowReceiptBusy(true)
     try {
-      const link = await uploadReceipt(file, { date: row.date, description: row.description || row.category, amount: row.amount }, tenantIdRef.current!)
+      const sup = suppliers.find(s => s.id === row.supplier_id)?.name || row.supplier_name || ''
+      const link = await uploadReceipt(file, { date: row.date, description: [sup, row.description || row.category].filter(Boolean).join(' – '), amount: row.amount }, tenantIdRef.current!)
       const { error } = await supabase.from('expenses')
         .update({ receipt_file_id: link.id, receipt_name: link.name, receipt_url: link.url }).eq('id', row.id)
       if (error) showToast('הקבלה נשמרה בדרייב, אבל הקישור להוצאה לא נשמר (צריך להריץ את עדכון מסד הנתונים 117)', 'error')
       else showToast('הקבלה צורפה ✓', 'success')
-      setRowReceiptFor(null)
+      setRowReceiptFor(null); setRowReceiptFile(null)
       fetchData()
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'שגיאה בהעלאה', 'error')
@@ -819,7 +848,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         )}
       </td>
       {tab === 'expenses' && (
-        <td style={{ ...TD, color: 'var(--text-muted)' }}>{suppliers.find(s => s.id === (row as Expense).supplier_id)?.name || '—'}</td>
+        <td style={{ ...TD, color: 'var(--text-muted)' }}>{suppliers.find(s => s.id === (row as Expense).supplier_id)?.name || (row as Expense).supplier_name || '—'}</td>
       )}
       {tab === 'expenses' && (() => {
         const exp = row as Expense
@@ -953,12 +982,18 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
       />
 
       <ReceiptScanModal open={receiptScanOpen} onClose={() => setReceiptScanOpen(false)} tenantId={profile?.tenantId ?? ''} />
-      <Modal open={!!rowReceiptFor} onClose={() => !rowReceiptBusy && setRowReceiptFor(null)} title="🧾 צירוף קבלה להוצאה" maxWidth={420}>
+      <Modal open={!!rowReceiptFor} onClose={() => { if (!rowReceiptBusy) { setRowReceiptFor(null); setRowReceiptFile(null) } }} title="🧾 צירוף קבלה להוצאה" maxWidth={440}
+        footer={<>
+          <Button variant="secondary" onClick={() => { setRowReceiptFor(null); setRowReceiptFile(null) }} disabled={rowReceiptBusy}>ביטול</Button>
+          <Button onClick={() => rowReceiptFor && rowReceiptFile && attachReceiptToRow(rowReceiptFor, rowReceiptFile)} loading={rowReceiptBusy} disabled={!rowReceiptFile}>💾 שמירה</Button>
+        </>}>
         {rowReceiptFor && (
           <div style={{ display: 'grid', gap: 10 }}>
             <div style={{ fontSize: 14 }}>{rowReceiptFor.date} · {rowReceiptFor.description || rowReceiptFor.category} · {fmt(rowReceiptFor.amount)}</div>
-            <ReceiptPicker onFile={f => attachReceiptToRow(rowReceiptFor, f)} disabled={rowReceiptBusy} />
-            {rowReceiptBusy && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>מעלה לדרייב…</div>}
+            {rowReceiptFile
+              ? <ScanPreview file={rowReceiptFile} caption={<b>הסריקה מוכנה — לחיצה על התמונה מגדילה</b>}
+                  actions={<LinkBtn onClick={() => setRowReceiptFile(null)} danger>סריקה מחדש</LinkBtn>} />
+              : <ReceiptPicker onFile={setRowReceiptFile} disabled={rowReceiptBusy} />}
             <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>נשמר בדרייב: קבלות › {rowReceiptFor.date.slice(0, 4)} › {rowReceiptFor.date.slice(5, 7)}</div>
           </div>
         )}
@@ -1284,6 +1319,14 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
             onDelete={name => deleteCategory(tab === 'income' ? 'income' : 'expense', name)}
           />
 
+          {tab === 'expenses' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>ספק / בית עסק <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(אופציונלי — הקלדה חופשית או בחירה מהרשימה)</span></label>
+              <input className="form-input" list="exp-supplier-list" value={fSupplierName} placeholder="למשל: כנעני חשמל" onChange={e => setFSupplierName(e.target.value)} />
+              <datalist id="exp-supplier-list">{suppliers.map(s => <option key={s.id} value={s.name} />)}</datalist>
+            </div>
+          )}
+
           <Input label="תיאור" placeholder="תיאור אופציונלי" value={fDesc} onChange={e => setFDesc(e.target.value)} />
 
           {/* Amount + VAT */}
@@ -1309,16 +1352,6 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               {vatComplement && <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>→ {vatComplement}</span>}
             </div>
           </div>
-
-          {tab === 'expenses' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)' }}>ספק (אופציונלי)</label>
-              <select value={fSupplier} onChange={e => setFSupplier(e.target.value)} className="form-input">
-                <option value="">— ללא ספק —</option>
-                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-          )}
 
           {/* Payment method – expenses only, hidden when scheduled (scheduled has its own) */}
           {tab === 'expenses' && !fIsScheduled && (
@@ -1372,18 +1405,27 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label className="form-label" style={{ margin: 0 }}>🧾 קבלה / חשבונית</label>
               {fReceiptFile ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                  <span>📄 {fReceiptFile.name} — תועלה לדרייב בשמירה</span>
-                  <Button size="sm" variant="ghost" onClick={() => setFReceiptFile(null)}>✕</Button>
-                </div>
-              ) : fReceipt ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, flexWrap: 'wrap' }}>
-                  {fReceipt.url ? <a href={fReceipt.url} target="_blank" rel="noreferrer">📎 {fReceipt.name}</a> : <span>📎 {fReceipt.name}</span>}
-                  <ReceiptPicker onFile={setFReceiptFile} label="קבלה חדשה" />
-                  <Button size="sm" variant="danger" onClick={() => setFReceipt(null)}>הסר קישור</Button>
+                <ScanPreview file={fReceiptFile}
+                  caption={<><b>הסריקה מוכנה</b><div style={{ color: 'var(--text-muted)', fontSize: 12 }}>תועלה לדרייב בלחיצה על שמור · לחיצה על התמונה מגדילה</div></>}
+                  actions={<><LinkBtn onClick={() => setFReceiptFile(null)} danger>ביטול הסריקה</LinkBtn></>} />
+              ) : fReceipt && !fReceiptReplace ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--success-soft)', border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)', borderRadius: 10, padding: '10px 12px' }}>
+                  <span style={{ fontSize: 22 }}>🧾</span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>קבלה מצורפת</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dir="auto">{fReceipt.name}</div>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                      <LinkBtn onClick={() => setFReceiptReplace(true)}>החלפה</LinkBtn>
+                      <LinkBtn onClick={() => setFReceipt(null)} danger>הסר קישור</LinkBtn>
+                    </div>
+                  </div>
+                  {fReceipt.url && <a href={fReceipt.url} target="_blank" rel="noreferrer" style={{ flex: 'none', fontWeight: 700, fontSize: 13, color: '#fff', background: 'var(--primary)', borderRadius: 8, padding: '7px 12px', textDecoration: 'none' }}>פתח ↗</a>}
                 </div>
               ) : (
-                <ReceiptPicker onFile={setFReceiptFile} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <ReceiptPicker onFile={f => { setFReceiptFile(f); setFReceiptReplace(false) }} />
+                  {fReceiptReplace && <LinkBtn onClick={() => setFReceiptReplace(false)}>ביטול</LinkBtn>}
+                </div>
               )}
               <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>נשמר בדרייב: קבלות › {(fDate || '').slice(0, 4)} › {(fDate || '').slice(5, 7)}</span>
             </div>

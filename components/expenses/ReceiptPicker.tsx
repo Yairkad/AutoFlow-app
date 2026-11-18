@@ -18,6 +18,8 @@ export default function ReceiptPicker({ onFile, disabled, label = 'קבלה' }: 
   const [agentMissing, setAgentMissing] = useState(false)
   const [picker, setPicker] = useState<{ devices: ScannerDevice[]; scanAfter: boolean } | null>(null)
   const inputId = useId()
+  // Touch devices (phone / tablet): camera, no office scanner. Computers: scanner, no camera.
+  const [touch] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches)
 
   const agentError = (e: unknown) => {
     if (e instanceof ScannerAgentMissingError || e instanceof ScannerAgentOutdatedError) setAgentMissing(true)
@@ -54,17 +56,17 @@ export default function ReceiptPicker({ onFile, disabled, label = 'קבלה' }: 
   return (
     <>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Button size="sm" variant="secondary" disabled={disabled || scanning} loading={scanning} onClick={scan}>🖨 סריקת {label}</Button>
-        <Button size="sm" variant="secondary" disabled={disabled || scanning} onClick={() => setCamera(true)}>📷 צילום</Button>
+        {!touch && <Button size="sm" variant="secondary" disabled={disabled || scanning} loading={scanning} onClick={scan}>🖨 סריקת {label}</Button>}
+        {touch && <Button size="sm" variant="secondary" disabled={disabled} onClick={() => setCamera(true)}>📷 צילום {label}</Button>}
         <Button size="sm" variant="secondary" disabled={disabled || scanning} onClick={() => document.getElementById(inputId)?.click()}>📎 קובץ</Button>
         <input id={inputId} type="file" accept="image/*,application/pdf" style={{ display: 'none' }}
           onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); e.currentTarget.value = '' }} />
-        {!agentMissing && getSavedScanner() && (
+        {!touch && !agentMissing && getSavedScanner() && (
           <button type="button" onClick={() => choose(false)} style={{ background: 'none', border: 0, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit' }}>
             החלף סורק
           </button>
         )}
-        {agentMissing && (
+        {!touch && agentMissing && (
           <a href={SCANNER_DOWNLOAD_URL} download style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600 }}>⬇ התקנת סורק למחשב</a>
         )}
       </div>
