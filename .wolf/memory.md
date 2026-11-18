@@ -3248,3 +3248,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 10:10 | Labels: preview max 2 labels; clear fields (car/product/custom/copies) after print | LabelsPanel.tsx | tsc+eslint clean | ~1500 |

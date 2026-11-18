@@ -205,6 +205,11 @@ export default function LabelsPanel() {
     return out
   }, [fontsReady, mode, product, car, custom, prefs, logo, bizName, n])
 
+  // After printing, start fresh for the next label (saved custom designs stay in the list).
+  function clearFields() {
+    setCar(EMPTY_CAR); setProduct(EMPTY_PRODUCT); setCustom(EMPTY_CUSTOM); setTplName(''); setCopies(1)
+  }
+
   async function print() {
     if (!pages.length) return
     setBusy(true)
@@ -213,9 +218,11 @@ export default function LabelsPanel() {
       if (ok && printer) {
         await qzPrintLabels(printer, pages, ROLL_MM, method)
         showToast(`נשלח ל-${printer}`, 'success')
+        clearFields()
       } else {
         if (ok && !printer) showToast('לא נבחרה מדפסת מדבקות — נפתח חלון הדפסה. אפשר לבחור ב"הגדרת מדפסת"', 'info')
         printHtml(labelsPrintHtml(pages))
+        clearFields()
       }
     } catch (e) {
       showToast('שגיאה בהדפסה: ' + (e instanceof Error ? e.message : String(e)), 'error')
@@ -385,14 +392,14 @@ export default function LabelsPanel() {
         <div className="lbl-card">
           <div className="lbl-prevhead"><b>תצוגה מקדימה — גודל אמיתי</b><span className="lbl-hint" style={{ margin: 0 }}>רוחב {ROLL_MM} מ״מ · גליל רציף</span></div>
           <div className="lbl-stage">
-            {pages.slice(0, 3).map((p, i) => (
+            {pages.slice(0, 2).map((p, i) => (
               <div key={i} style={{ display: 'contents' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={p.dataUrl} alt="" className="lbl-paper" style={{ height: `${p.hmm}mm` }} />
                 <div className="lbl-cut" />
               </div>
             ))}
-            {pages.length > 3 && <div className="lbl-hint">+ עוד {pages.length - 3}</div>}
+            {pages.length > 2 && <div className="lbl-hint">+ עוד {pages.length - 2}</div>}
           </div>
           <div className="lbl-meta">
             <span>{tagInfo ? `מחזיק ${prefs.tag.w}×${prefs.tag.h} מ״מ` : mode === 'product' && prefs.productSize === 'half' ? `34 × ${Math.round((pages[0]?.hmm ?? 2) - 2)} מ״מ · 2 בשורה` : `${ROLL_MM} × ${Math.round(pages[0]?.hmm ?? 0)} מ״מ`}</span>
