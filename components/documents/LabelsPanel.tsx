@@ -15,7 +15,7 @@ import Button from '@/components/ui/Button'
 import { likePatterns } from '@/lib/search/fuzzy'
 import { printHtml } from '@/lib/print/printHtml'
 import {
-  DEFAULT_TAG, DPM, ROLL_MM, drawCarLabel, drawCustomLabel, drawProductLabel, drawTagRow, labelsPrintHtml, loadBwLogo,
+  DEFAULT_TAG, DPM, ROLL_MM, drawCarLabel, drawCustomLabel, drawProductLabel, drawTagRow, labelsPrintHtml, loadBwLogo, trimVertical,
   loadLabelFonts, wideCarHeight, type CarLabel, type CustomLabel, type CustomLine, type PriceSize, type ProductLabel,
   type ProductSize, type TagSize, type TextSize,
 } from '@/lib/print/labels'
@@ -181,7 +181,8 @@ export default function LabelsPanel() {
   const pages: Rendered[] = useMemo(() => {
     if (!fontsReady) return []
     const out: Rendered[] = []
-    const push = (c: HTMLCanvasElement) => out.push({ dataUrl: c.toDataURL('image/png'), hmm: c.height / DPM })
+    // Blank paper above / below the content is trimmed to 1mm so the roll doesn't waste paper.
+    const push = (raw: HTMLCanvasElement) => { const c = trimVertical(raw); out.push({ dataUrl: c.toDataURL('image/png'), hmm: c.height / DPM }) }
     if (mode === 'custom') {
       const c = drawCustomLabel(custom, logo, bizName)
       for (let i = 0; i < n; i++) push(c)

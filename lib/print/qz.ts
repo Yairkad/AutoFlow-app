@@ -59,7 +59,7 @@ export const getPrintMethod = (): PrintMethod => { try { return localStorage.get
 export const setPrintMethod = (m: PrintMethod) => { try { localStorage.setItem(METHOD_KEY, m) } catch { /* private mode */ } }
 
 const ESC_INIT = '\x1B\x40'                 // ESC @  reset
-const FEED_CUT = '\x1D\x56\x42\x10'         // GS V 66 n — feed n dots, then partial cut
+const FEED_CUT = '\x1D\x56\x42\x00'         // GS V 66 0 — feed just to the cutter, then partial cut (no extra blank)
 
 /**
  * Print label images (PNG data URLs, 72mm = 576 dots wide), one cut per label.
