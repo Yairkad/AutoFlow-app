@@ -19,7 +19,8 @@ import {
   loadLabelFonts, wideCarHeight, type CarLabel, type CustomLabel, type CustomLine, type PriceSize, type ProductLabel,
   type ProductSize, type TagSize, type TextSize,
 } from '@/lib/print/labels'
-import { getLabelPrinter, getPrintMethod, qzConnect, qzPrintLabels, qzPrinters, setLabelPrinter, setPrintMethod, type PrintMethod } from '@/lib/print/qz'
+import { getCutGap, getLabelPrinter, getPrintMethod, qzConnect, qzPrintLabels, qzPrintRaw, qzPrinters, setCutGap, setLabelPrinter, setPrintMethod, type PrintMethod } from '@/lib/print/qz'
+import { calibrationJob, continuousJob, testLabels } from '@/lib/print/escpos'
 
 type Mode = 'car' | 'product' | 'custom'
 type CarKind = 'tag' | 'wide'
@@ -57,7 +58,7 @@ const EMPTY_PRODUCT: ProductLabel = { name: '', price: '', barcode: '', showBarc
 
 interface CarRow { id: string; plate: string | null; make: string | null; model: string | null; year: number | null; car_code: string | null }
 interface ProductRow { id: string; name: string; barcode: string | null; sku: string | null; sell_price: number | null }
-interface Rendered { dataUrl: string; hmm: number }
+interface Rendered { dataUrl: string; hmm: number; canvas: HTMLCanvasElement }
 
 function loadPrefs(): Prefs {
   try { return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') } } catch { return DEFAULT_PREFS }
@@ -89,12 +90,13 @@ export default function LabelsPanel() {
   const [qzOk, setQzOk] = useState<boolean | null>(null)
   const [printer, setPrinter] = useState('')
   const [method, setMethod] = useState<PrintMethod>('escpos')
+  const [cutGap, setCutGapState] = useState(0)
   const [printers, setPrinters] = useState<string[]>([])
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    const id = setTimeout(() => { setPrefsState(loadPrefs()); setPrinter(getLabelPrinter()); setMethod(getPrintMethod()) }, 0)
+    const id = setTimeout(() => { setPrefsState(loadPrefs()); setPrinter(getLabelPrinter()); setMethod(getPrintMethod()); setCutGapState(getCutGap()) }, 0)
     loadLabelFonts().then(() => setFontsReady(true))
     return () => clearTimeout(id)
   }, [])
@@ -182,7 +184,7 @@ export default function LabelsPanel() {
     if (!fontsReady) return []
     const out: Rendered[] = []
     // Blank paper above / below the content is trimmed to 1mm so the roll doesn't waste paper.
-    const push = (raw: HTMLCanvasElement) => { const c = trimVertical(raw); out.push({ dataUrl: c.toDataURL('image/png'), hmm: c.height / DPM }) }
+    const push = (raw: HTMLCanvasElement) => { const c = trimVertical(raw); out.push({ dataUrl: c.toDataURL('image/png'), hmm: c.height / DPM, canvas: c }) }
     if (mode === 'custom') {
       const c = drawCustomLabel(custom, logo, bizName)
       for (let i = 0; i < n; i++) push(c)
@@ -218,6 +220,14 @@ export default function LabelsPanel() {
     } catch (e) {
       showToast('שגיאה בהדפסה: ' + (e instanceof Error ? e.message : String(e)), 'error')
     } finally { setBusy(false) }
+  }
+
+  async function sendRaw(job: () => string, done: string) {
+    if (!printer) { showToast('בחר קודם מדפסת', 'error'); return }
+    setBusy(true)
+    try { if (await connect()) { await qzPrintRaw(printer, job()); showToast(done, 'success') } else showToast('QZ Tray לא פועל', 'error') }
+    catch (e) { showToast('שגיאה בהדפסה: ' + (e instanceof Error ? e.message : String(e)), 'error') }
+    finally { setBusy(false) }
   }
 
   async function openSettings() {
@@ -427,6 +437,26 @@ export default function LabelsPanel() {
                 <label className="form-label" style={{ marginTop: 14 }}>שיטת הדפסה</label>
                 {seg(method, [['escpos', 'ישירה (ESC/POS) — מומלץ'], ['driver', 'דרך הדרייבר']], v => { setMethod(v); setPrintMethod(v) })}
                 <div className="lbl-hint">ישירה: מודפס בגודל מדויק (72 מ״מ) וחותך אחרי כל מדבקה. ״דרך הדרייבר״ — רק אם הישירה לא מדפיסה כלום.</div>
+                {method === 'escpos' && printer && <>
+                  <div className="lbl-sec">חיסכון בנייר — הדפסה רציפה</div>
+                  <div className="lbl-hint" style={{ marginTop: 6 }}>
+                    כשמדפיסים כמה מדבקות יחד הן יוצאות צמודות, וכל חיתוך נופל בדיוק ביניהן. צריך פעם אחת למדוד את המרחק בין ראש ההדפסה לסכין:
+                    <ol style={{ margin: '4px 0 0', paddingInlineStart: 18 }}>
+                      <li>להדפיס ״מדבקת כיול״ (סרגל)</li>
+                      <li>לקרוא את המספר שבדיוק בקו החיתוך ולהקליד אותו כאן</li>
+                      <li>״הדפסת בדיקה״ — 3 מדבקות; החיתוכים צריכים ליפול על הקווים שבין המסגרות. אם לא — לתקן ב-1 מ״מ ולבדוק שוב</li>
+                    </ol>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginTop: 10, flexWrap: 'wrap' }}>
+                    <Button size="sm" variant="secondary" loading={busy} onClick={() => sendRaw(calibrationJob, 'נשלחה מדבקת כיול')}>📏 מדבקת כיול</Button>
+                    <div style={{ width: 150 }}>
+                      <NumField label="מרחק ראש-סכין (מ״מ)" value={cutGap} min={0} max={60} onCommit={v => { setCutGapState(v); setCutGap(v) }} />
+                    </div>
+                    <Button size="sm" variant="secondary" loading={busy} disabled={!cutGap}
+                      onClick={() => sendRaw(() => continuousJob(testLabels(), cutGap), 'נשלחה הדפסת בדיקה')}>🧪 הדפסת בדיקה</Button>
+                  </div>
+                  <div className="lbl-hint">{cutGap ? `פעיל: ${cutGap} מ״מ. 0 = כבוי (כל מדבקה נחתכת בנפרד, כמו קודם).` : 'כבוי — כל מדבקה נחתכת בנפרד.'}</div>
+                </>}
               </>}
               <div className="lbl-steps"><b>התקנה חד-פעמית במחשב</b>
                 <ol>
