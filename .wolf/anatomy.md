@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-18T08:56:59.372Z
-> Files: 210 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-18T09:16:11.092Z
+> Files: 211 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -646,6 +646,7 @@
 - `AutocompleteInput.tsx` — free-text input with suggestions (fuzzy, any part of word, matches hint e.g. Hebrew brand name); list portaled to body, arrows/Enter/Tab (~1300 tok)
 - `FilterBar.tsx` — Remembers whether the filters panel was open (per screen) (~1229 tok)
 - `MoreMenu.tsx` — Excel export / import as menu items (replaces a separate ExcelMenu button) (~1002 tok)
+- `ScanPreview.tsx` — Preview image URL for a file: object URL for images, rendered first page for PDFs. (~1242 tok)
 - `SearchSelect.tsx` — Label of the empty choice (value ''), e.g. "— ללא ספק ספציפי —" (~1099 tok)
 
 ## components/ui/ (2026-10-29 additions)
