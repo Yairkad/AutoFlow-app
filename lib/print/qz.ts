@@ -58,18 +58,38 @@ const METHOD_KEY = 'labels.method'
 export const getPrintMethod = (): PrintMethod => { try { return localStorage.getItem(METHOD_KEY) === 'driver' ? 'driver' : 'escpos' } catch { return 'escpos' } }
 export const setPrintMethod = (m: PrintMethod) => { try { localStorage.setItem(METHOD_KEY, m) } catch { /* private mode */ } }
 
+// Head-to-cutter distance in mm, measured with the calibration label (0 = not calibrated → each
+// label is fed to the cutter separately, as before). Per computer, like the printer choice.
+const GAP_KEY = 'labels.cutGap'
+export const getCutGap = () => { try { return Math.max(0, Number(localStorage.getItem(GAP_KEY)) || 0) } catch { return 0 } }
+export const setCutGap = (mm: number) => { try { localStorage.setItem(GAP_KEY, String(mm)) } catch { /* private mode */ } }
+
+/** Send a ready ESC/POS job (base64) as-is. */
+export async function qzPrintRaw(printer: string, base64: string) {
+  const qz = await loadQz()
+  await qz.print(qz.configs.create(printer), [{ type: 'raw', format: 'command', flavor: 'base64', data: base64 }])
+}
+
 const ESC_INIT = '\x1B\x40'                 // ESC @  reset
 const FEED_CUT = '\x1D\x56\x42\x00'         // GS V 66 0 — feed just to the cutter, then partial cut (no extra blank)
 
 /**
  * Print label images (PNG data URLs, 72mm = 576 dots wide), one cut per label.
  * 'escpos' (default): raw ESC/POS raster sent through the spooler — printed dot-for-dot, the driver
- *   can't rescale it, and each label ends with a cut command.
+ *   can't rescale it, and each label ends with a cut command. Once the cutter gap is calibrated,
+ *   several labels go out as one continuous job with no blank paper between them (lib/print/escpos).
  * 'driver': pixel print through the Windows driver (page sized to the label) — for printers that
  *   don't speak ESC/POS; the driver's paper size / scaling settings then matter.
  */
-export async function qzPrintLabels(printer: string, labels: { dataUrl: string; hmm: number }[], widthMm: number, method: PrintMethod = 'escpos') {
+export async function qzPrintLabels(printer: string, labels: { dataUrl: string; hmm: number; canvas?: HTMLCanvasElement }[], widthMm: number, method: PrintMethod = 'escpos') {
   const qz = await loadQz()
+  const gap = getCutGap()
+  // Calibrated + several labels: one continuous job, each cut placed exactly between two labels.
+  if (method === 'escpos' && gap > 0 && labels.length > 1 && labels.every(l => l.canvas)) {
+    const { continuousJob } = await import('@/lib/print/escpos')
+    await qzPrintRaw(printer, continuousJob(labels.map(l => l.canvas!), gap))
+    return
+  }
   const b64 = (u: string) => u.replace(/^data:image\/png;base64,/, '')
   if (method === 'escpos') {
     const cfg = qz.configs.create(printer)

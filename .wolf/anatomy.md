@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-17T10:18:16.607Z
-> Files: 205 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-18T08:25:38.442Z
+> Files: 207 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -167,6 +167,10 @@
 
 ## app/(app)/inspections/
 
+
+## app/(app)/labels/
+
+- `page.tsx` — /labels page: PageHeader + LabelsPanel (sidebar tab 'מדבקות', module documents) (~300 tok)
 
 ## app/(app)/my-profile/
 
@@ -542,6 +546,8 @@
 
 ## components/expenses/
 
+- `ReceiptPicker.tsx` — scan (DocumentScannerModal) or pick a file (image/PDF) → onFile (~400 tok)
+- `ReceiptScanModal.tsx` — 'סריקת קבלה': date/desc/amount + picker → upload to Drive קבלות/YYYY/MM without an expense (~900 tok)
 
 ## components/guide/
 
@@ -708,6 +714,7 @@
 
 ## lib/expenses/
 
+- `receipts.ts` — receiptFileName ('date – desc – amount₪'), uploadReceipt(file, meta, tenantId) → Drive קבלות/<year>/<month> via /api/drive/upload (~500 tok)
 
 ## lib/forms/
 
@@ -744,6 +751,7 @@
 
 ## lib/print/
 
+- `escpos.ts` — 1-bit rows (black = luminance < 128) of a canvas `W_DOTS` wide. (~1618 tok)
 - `labels.ts` — Default key-tag window: the common clear vehicle key fob takes a ~45×25mm paper insert. (~3090 tok)
 - `qz.ts` — Connect to the local QZ Tray. Resolves false when it isn't installed / running. (~694 tok)
 
@@ -855,7 +863,3 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-
-## app/(app)/labels/
-
-- `page.tsx` — /labels page: PageHeader + LabelsPanel (sidebar tab 'מדבקות', module documents) (~300 tok)
