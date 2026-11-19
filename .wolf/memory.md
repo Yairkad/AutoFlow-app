@@ -3282,3 +3282,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:30 | User asked why Supabase Disk IO email again; Supabase MCP has no permission on project ucvphucjkixhdnvzhvgf (different account) — asked user to run pg_stat_statements query or connect account | — | info only | ~3000 |
+
+## Session: 2026-11-19 09:34
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:45 | Disk IO recheck: pg_stat_statements shows ~72% realtime list_changes but cumulative (pre-11-02); realtime.subscription = 0, no channels in code → advised stats reset + recheck tomorrow | — | info only | ~4000 |
