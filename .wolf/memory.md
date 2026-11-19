@@ -3294,3 +3294,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:55 | User sent Supabase infra graph: Disk IO balance 66% remaining, dip ~Nov 14-15 likely triggered email; DB 36MB. Awaiting tomorrow pg_stat_statements | — | info only | ~2000 |
+| 10:55 | Created lib/signatures/stamps.ts | — | ~850 |
+| 10:55 | Created lib/print/htmlToPdf.ts | — | ~739 |
+| 10:56 | Created components/inspections/SignedPdfModal.tsx | — | ~1237 |
+| 10:56 | Created components/settings/SignatureStampsPanel.tsx | — | ~1622 |
+| 11:10 | Signed findings PDF: Settings tab חתימות וחותמות + 'PDF חתום' button on inspections (buildChecklistHtml + signing imgs, htmlToPdf). Tested via Playwright harness (PDF renders, Hebrew OK) | InspectionChecklistModal, InspectionsClient, SignedPdfModal, SignatureStampsPanel, stamps.ts, htmlToPdf.ts, 119 migration | tsc+eslint clean; migration NOT applied (no DB access) | ~40k |

@@ -9,7 +9,7 @@ export const BACKUP_VERSION = 2
 export const BACKUP_TABLES = [
   // lookups / catalogs
   'supplier_categories', 'customer_categories', 'expense_categories', 'income_categories',
-  'services', 'yard_services', 'price_list', 'promotions', 'faq', 'bank_statement_sources',
+  'services', 'yard_services', 'price_list', 'promotions', 'faq', 'bank_statement_sources', 'signature_stamps',
   // main entities
   'suppliers', 'customers', 'employees', 'tires', 'products', 'cars',
   // everything that hangs off them

@@ -281,6 +281,13 @@ export function parseFindings(raw: string | null): { items: ChecklistItem[], not
 // ── Print ──────────────────────────────────────────────────────────────────────
 
 export function printChecklist(inspection: InspectionBasic, business: BusinessBasic, items: ChecklistItem[], inspectorNotes = '', inspectorName = '', skeletonOnly = false) {
+  printHtml(buildChecklistHtml(inspection, business, items, inspectorNotes, inspectorName, skeletonOnly))
+}
+
+/** Images placed on the inspector's signature line of the signed PDF (transparent PNG data URLs). */
+export interface ChecklistSigning { signature?: string | null; stamp?: string | null }
+
+export function buildChecklistHtml(inspection: InspectionBasic, business: BusinessBasic, items: ChecklistItem[], inspectorNotes = '', inspectorName = '', skeletonOnly = false, signing?: ChecklistSigning) {
   const date = inspection.date || new Date().toLocaleDateString('he-IL')
   const time = inspection.time || ''
   const dateTime = time ? `${date} ${time}` : date
@@ -374,6 +381,9 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 .legal-box { border:2px solid #000; padding:5px 8px; font-size:9.5px; font-weight:700; line-height:1.5; margin-bottom:5mm; }
 .sigs { position:absolute; bottom:18mm; left:15mm; right:15mm; display:flex; justify-content:space-around; padding-top:4mm; border-top:1.5px solid #000; font-weight:700; font-size:11px; }
 .sig-line { border-bottom:1.5px solid #000; width:130px; display:inline-block; min-height:1.3em; margin-right:4px; }
+.sig-line.signed { width:190px; }
+.sig-img { position:absolute; bottom:1mm; left:44%; transform:translateX(-50%); max-height:15mm; max-width:34mm; }
+.sig-stamp { position:absolute; bottom:-7mm; left:-6mm; max-height:24mm; max-width:36mm; opacity:.92; }
 .pagenum { position:absolute; bottom:3mm; left:0; right:0; text-align:center; font-size:10px; color:#999; }
 @media screen { body{background:#e5e5e5} .page{background:#fff;margin:10mm auto;padding:10mm 15mm;max-width:210mm;width:210mm;box-shadow:0 2px 10px rgba(0,0,0,.15)} }
 </style>
@@ -434,17 +444,16 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
   </div>
   <div class="legal-box">להסרת ספק מובהר כי בדיקת הרכב המבוצעת על ידי מכון הבדיקה הינה בדיקה מכנית בדבר מצבו המכני של הרכב ומערכותיו בלבד, בכפוף להצהרה חתומה על ידי מזמין הבדיקה.</div>
   <div class="sigs">
-    <div>חתימת הבוחן: <span class="sig-line">${inspectorName}</span></div>
+    <div>חתימת הבוחן: <span class="sig-line${signing?.signature || signing?.stamp ? ' signed' : ''}" style="position:relative">${inspectorName}${signing?.stamp ? `<img class="sig-stamp" src="${signing.stamp}" alt="">` : ''}${signing?.signature ? `<img class="sig-img" src="${signing.signature}" alt="">` : ''}</span></div>
     <div>תאריך: <span class="sig-line">${date}</span></div>
     <div>חתימת המזמין: <span class="sig-line"></span></div>
   </div>
   <div class="pagenum">עמוד 2 מתוך 2 &nbsp;|&nbsp; מס׳ רכב: ${inspection.plate}${[inspection.make, inspection.model].filter(Boolean).length ? ` (${[inspection.make, inspection.model].filter(Boolean).join(' ')})` : ''}${inspection.inspection_number ? ` &nbsp;|&nbsp; מס׳ בדיקה: ${inspection.inspection_number}` : ''}</div>
 </div>
 
-<script>window.onload=function(){window.print()}<\/script>
 </body></html>`
 
-  printHtml(html)
+  return html
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
