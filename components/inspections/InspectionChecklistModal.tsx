@@ -384,7 +384,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 .sigs.signed { padding-top:14mm; }
 .sig-line.signed { width:230px; }
 .sig-stamp { position:absolute; bottom:-3mm; left:2mm; max-height:13mm; max-width:25mm; opacity:.9; }
-.sig-img { position:absolute; bottom:2mm; right:4mm; max-height:19mm; max-width:32mm; }
+.sig-img { position:absolute; bottom:-2mm; right:8mm; max-height:16mm; max-width:30mm; }
 .pagenum { position:absolute; bottom:3mm; left:0; right:0; text-align:center; font-size:10px; color:#999; }
 @media screen { body{background:#e5e5e5} .page{background:#fff;margin:10mm auto;padding:10mm 15mm;max-width:210mm;width:210mm;box-shadow:0 2px 10px rgba(0,0,0,.15)} }
 </style>
