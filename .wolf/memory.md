@@ -3305,3 +3305,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:10 | User: signature middle on the line, stamp above it (stacked, same x) | InspectionChecklistModal.tsx | rendered ok | ~6k |
 | 12:15 | User: stamp right on top of the signature (overlap), not above | InspectionChecklistModal.tsx | rendered ok | ~3k |
 | 12:20 | User: shift one sideways → stamp 9mm left of signature centre (partial overlap) | InspectionChecklistModal.tsx | rendered ok | ~3k |
+| 12:30 | User asked to load stamps "in code": built one-off SQL (migration 119 + inserts of 4 quantized PNGs) in scratchpad, NOT committed (signature+ID in git = risk) | scratchpad/stamps/signatures_setup.sql | sent to user | ~5k |
