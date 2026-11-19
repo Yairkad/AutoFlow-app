@@ -383,7 +383,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 .sig-line { border-bottom:1.5px solid #000; width:130px; display:inline-block; min-height:1.3em; margin-right:4px; }
 .sigs.signed { padding-top:12mm; }
 .sig-line.signed { width:230px; }
-.sig-stamp { position:absolute; bottom:-5mm; left:22mm; transform:translateX(-50%); max-height:13mm; max-width:25mm; opacity:.9; z-index:1; }
+.sig-stamp { position:absolute; bottom:-5mm; left:13mm; transform:translateX(-50%); max-height:13mm; max-width:25mm; opacity:.9; z-index:1; }
 .sig-img { position:absolute; bottom:-7mm; left:22mm; transform:translateX(-50%); max-height:15mm; max-width:27mm; z-index:2; }
 .pagenum { position:absolute; bottom:3mm; left:0; right:0; text-align:center; font-size:10px; color:#999; }
 @media screen { body{background:#e5e5e5} .page{background:#fff;margin:10mm auto;padding:10mm 15mm;max-width:210mm;width:210mm;box-shadow:0 2px 10px rgba(0,0,0,.15)} }

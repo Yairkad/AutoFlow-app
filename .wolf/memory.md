@@ -3304,3 +3304,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:58 | User: signature right on the line → .sig-img bottom:-2mm, max 30x16mm | InspectionChecklistModal.tsx | rendered ok | ~3k |
 | 12:10 | User: signature middle on the line, stamp above it (stacked, same x) | InspectionChecklistModal.tsx | rendered ok | ~6k |
 | 12:15 | User: stamp right on top of the signature (overlap), not above | InspectionChecklistModal.tsx | rendered ok | ~3k |
+| 12:20 | User: shift one sideways → stamp 9mm left of signature centre (partial overlap) | InspectionChecklistModal.tsx | rendered ok | ~3k |
