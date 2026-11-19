@@ -381,9 +381,10 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
 .legal-box { border:2px solid #000; padding:5px 8px; font-size:9.5px; font-weight:700; line-height:1.5; margin-bottom:5mm; }
 .sigs { position:absolute; bottom:18mm; left:15mm; right:15mm; display:flex; justify-content:space-around; padding-top:4mm; border-top:1.5px solid #000; font-weight:700; font-size:11px; }
 .sig-line { border-bottom:1.5px solid #000; width:130px; display:inline-block; min-height:1.3em; margin-right:4px; }
-.sig-line.signed { width:190px; }
-.sig-img { position:absolute; bottom:1mm; left:44%; transform:translateX(-50%); max-height:15mm; max-width:34mm; }
-.sig-stamp { position:absolute; bottom:-7mm; left:-6mm; max-height:24mm; max-width:36mm; opacity:.92; }
+.sigs.signed { padding-top:14mm; }
+.sig-line.signed { width:230px; }
+.sig-stamp { position:absolute; bottom:-6mm; left:0; max-height:21mm; max-width:34mm; opacity:.9; }
+.sig-img { position:absolute; bottom:2mm; right:4mm; max-height:19mm; max-width:32mm; }
 .pagenum { position:absolute; bottom:3mm; left:0; right:0; text-align:center; font-size:10px; color:#999; }
 @media screen { body{background:#e5e5e5} .page{background:#fff;margin:10mm auto;padding:10mm 15mm;max-width:210mm;width:210mm;box-shadow:0 2px 10px rgba(0,0,0,.15)} }
 </style>
@@ -443,7 +444,7 @@ td { border:1px solid #000; padding:2px 4px; vertical-align:middle; }
     <p>7. ע"מ למנוע הונאה באמצעות כפל רישיונות, רצוי לבצע בדיקה והתאמה של מספרי מנוע ושלדה עם רישיון הרכב.</p>
   </div>
   <div class="legal-box">להסרת ספק מובהר כי בדיקת הרכב המבוצעת על ידי מכון הבדיקה הינה בדיקה מכנית בדבר מצבו המכני של הרכב ומערכותיו בלבד, בכפוף להצהרה חתומה על ידי מזמין הבדיקה.</div>
-  <div class="sigs">
+  <div class="sigs${signing?.signature || signing?.stamp ? ' signed' : ''}">
     <div>חתימת הבוחן: <span class="sig-line${signing?.signature || signing?.stamp ? ' signed' : ''}" style="position:relative">${inspectorName}${signing?.stamp ? `<img class="sig-stamp" src="${signing.stamp}" alt="">` : ''}${signing?.signature ? `<img class="sig-img" src="${signing.signature}" alt="">` : ''}</span></div>
     <div>תאריך: <span class="sig-line">${date}</span></div>
     <div>חתימת המזמין: <span class="sig-line"></span></div>
