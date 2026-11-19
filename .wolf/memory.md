@@ -3300,3 +3300,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:56 | Created components/settings/SignatureStampsPanel.tsx | — | ~1622 |
 | 11:10 | Signed findings PDF: Settings tab חתימות וחותמות + 'PDF חתום' button on inspections (buildChecklistHtml + signing imgs, htmlToPdf). Tested via Playwright harness (PDF renders, Hebrew OK) | InspectionChecklistModal, InspectionsClient, SignedPdfModal, SignatureStampsPanel, stamps.ts, htmlToPdf.ts, 119 migration | tsc+eslint clean; migration NOT applied (no DB access) | ~40k |
 | 11:40 | Cut 3 stamps + signature from user scan (rotated 90°) into transparent PNGs (scratchpad, not committed — contain ID/phone); tuned sig block layout (stamp left, signature right, sigs.signed padding) | InspectionChecklistModal.tsx | verified via rendered PDF | ~15k |
+| 11:50 | User: stamp too big → .sig-stamp max 25x13mm | InspectionChecklistModal.tsx | rendered ok | ~3k |
