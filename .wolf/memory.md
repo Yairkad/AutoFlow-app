@@ -3302,3 +3302,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:40 | Cut 3 stamps + signature from user scan (rotated 90°) into transparent PNGs (scratchpad, not committed — contain ID/phone); tuned sig block layout (stamp left, signature right, sigs.signed padding) | InspectionChecklistModal.tsx | verified via rendered PDF | ~15k |
 | 11:50 | User: stamp too big → .sig-stamp max 25x13mm | InspectionChecklistModal.tsx | rendered ok | ~3k |
 | 11:58 | User: signature right on the line → .sig-img bottom:-2mm, max 30x16mm | InspectionChecklistModal.tsx | rendered ok | ~3k |
+| 12:10 | User: signature middle on the line, stamp above it (stacked, same x) | InspectionChecklistModal.tsx | rendered ok | ~6k |
