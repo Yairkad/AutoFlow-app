@@ -3271,3 +3271,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 12:10 | User video: 'תשלום לספק' for 'ללא ספק' group (supplier_id null) → submitPayment returns silently (!paySupplierId). Proposed: hide pay in null group + bulk 'שיוך לספק' + toast + warning on create. Awaiting approval | SupplierTrackingTab.tsx | diagnosed | ~4000 |
 | 12:40 | One-off invoice payments for 'ללא ספק' (payOneOffInvoice/undoOneOffPayment in lib/debts/supplierDirectPayments.ts; row action, status chip, pay modal adapted incl. check number+due date) | SupplierTrackingTab.tsx, supplierDirectPayments.ts | tsc+eslint clean; not tested on live DB | ~12000 |
+
+## Session: 2026-11-20 09:33
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
