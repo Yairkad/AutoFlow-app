@@ -1906,5 +1906,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-18T12:10:00Z"
+  },
+  {
+    "id": "bug-104",
+    "timestamp": "2026-11-22T10:10:00Z",
+    "error_message": "Tires table loading row still showed a 🔘 emoji above the new skeleton lines",
+    "file": "components/tires/TiresClient.tsx",
+    "root_cause": "Bulk regex replaced only the 'טוען...' div; the sibling emoji div in the same <td> stayed",
+    "fix": "Loading state now renders 8 skeleton <tr> rows × 11 cells (Skel) instead of one centred cell",
+    "tags": [
+      "skeleton",
+      "loading",
+      "tires",
+      "bulk-replace"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-22T10:10:00Z"
   }
 ]

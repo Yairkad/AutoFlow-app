@@ -3321,3 +3321,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:55 | PR #94 already merged → merged main into branch, opened PR #95 (skeletons + drawer cache) | — | PR opened | ~2k |
+| 10:10 | Verified skeleton change: next build passes (dummy env), no new lint errors, checked every insertion context; fixed tires loading row (leftover 🔘) | TiresClient.tsx | build ok | ~15k |

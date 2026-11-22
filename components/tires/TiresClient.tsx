@@ -24,7 +24,7 @@ import { findTireDuplicates, pickKeeper } from '@/lib/stock/duplicates'
 import { printHtml } from '@/lib/print/printHtml'
 import AutocompleteInput from '@/components/ui/AutocompleteInput'
 import { brandSuggestions } from '@/lib/tires/brandSuggestions'
-import { SkeletonLines } from '@/components/ui/Skeleton'
+import { Skel } from '@/components/ui/Skeleton'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -758,10 +758,11 @@ export default function TiresClient() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={11} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
-                      <div style={{ fontSize: '36px', marginBottom: '8px' }}>🔘</div>
-                      <SkeletonLines n={2} />
-                    </td></tr>
+                    <>{Array.from({ length: 8 }, (_, i) => (
+                      <tr key={i}>{Array.from({ length: 11 }, (_, c) => (
+                        <td key={c} style={{ padding: '12px' }}><Skel w={`${50 + ((i + c) % 4) * 12}%`} h={12} /></td>
+                      ))}</tr>
+                    ))}</>
                   ) : filtered.length === 0 ? (
                     <tr><td colSpan={11} style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
                       <div style={{ fontSize: '36px', marginBottom: '8px' }}>🔘</div>
