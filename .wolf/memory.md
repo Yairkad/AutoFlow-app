@@ -3306,3 +3306,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:15 | User: stamp right on top of the signature (overlap), not above | InspectionChecklistModal.tsx | rendered ok | ~3k |
 | 12:20 | User: shift one sideways → stamp 9mm left of signature centre (partial overlap) | InspectionChecklistModal.tsx | rendered ok | ~3k |
 | 12:30 | User asked to load stamps "in code": built one-off SQL (migration 119 + inserts of 4 quantized PNGs) in scratchpad, NOT committed (signature+ID in git = risk) | scratchpad/stamps/signatures_setup.sql | sent to user | ~5k |
+
+## Session: 2026-11-22 10:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:00 | Gave test checklist for signed PDF; migration 118 (expenses.supplier_name) was missing in prod — gave SQL | — | info only | ~2k |
