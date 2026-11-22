@@ -15,6 +15,7 @@ import { insertCustomerDebtPayment } from '@/lib/debts/customerDebtPayments'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
 import ContractPaymentsPanel from '@/components/cars/ContractPaymentsPanel'
+import { PageSkeleton } from '@/components/ui/Skeleton'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -340,9 +341,7 @@ export default function DebtsClient() {
   }
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-muted)', fontSize: '14px' }}>
-      טוען...
-    </div>
+    <PageSkeleton kind="table" />
   )
 
   // A plain render function, NOT a component: defined inside this component, <Toolbar/>

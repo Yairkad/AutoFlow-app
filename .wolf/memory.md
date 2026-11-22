@@ -3306,3 +3306,18 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:15 | User: stamp right on top of the signature (overlap), not above | InspectionChecklistModal.tsx | rendered ok | ~3k |
 | 12:20 | User: shift one sideways → stamp 9mm left of signature centre (partial overlap) | InspectionChecklistModal.tsx | rendered ok | ~3k |
 | 12:30 | User asked to load stamps "in code": built one-off SQL (migration 119 + inserts of 4 quantized PNGs) in scratchpad, NOT committed (signature+ID in git = risk) | scratchpad/stamps/signatures_setup.sql | sent to user | ~5k |
+
+## Session: 2026-11-22 10:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:00 | Gave test checklist for signed PDF; migration 118 (expenses.supplier_name) was missing in prod — gave SQL | — | info only | ~2k |
+| 09:10 | Disk IO recheck (3 days after stats reset): realtime gone; top = suppliers page loadAll (supplier_debts/payments/scheduled… ~400 calls each in 3 days) — healthy, no action | — | info only | ~2k |
+| 10:50 | Created lib/hooks/localCache.ts | — | ~164 |
+| 09:45 | Skeletons instead of "טוען..." in ~45 components + route loading; sidebar nav spinner removed; yard drawer cards/counts/requests/loans cached locally + ⟳ button, panels reload only on ⟳ or open-count change | Skeleton.tsx, localCache.ts, YardDrawer, RequestsPanel, LoansPanel, many *Client.tsx | tsc clean, no new lint issues, preview screenshot ok | ~60k |
+
+## Session: 2026-11-22 11:04
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:55 | PR #94 already merged → merged main into branch, opened PR #95 (skeletons + drawer cache) | — | PR opened | ~2k |

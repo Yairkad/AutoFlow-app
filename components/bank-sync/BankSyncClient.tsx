@@ -8,6 +8,7 @@ import ImportWizard from './ImportWizard'
 import ReconciliationReview from './ReconciliationReview'
 import SourcesTab from './SourcesTab'
 import { BankSource } from './types'
+import { PageSkeleton } from '@/components/ui/Skeleton'
 
 const DEFAULT_EXPENSE_CATS = ['דלק', 'שכר', 'חשמל', 'מים', 'שכירות', 'ביטוח', 'ציוד', 'ניקיון', 'אחזקה', 'קניות מלאי', 'אחר']
 const DEFAULT_INCOME_CATS  = ['שירות', 'צמיגים', 'מוצרים', 'מכירת רכב', 'אחר']
@@ -41,7 +42,7 @@ export default function BankSyncClient() {
       .then(({ data }) => { if (data && data.length) setIncomeCats(data.map(r => r.name)) })
   }, [tenantId, supabase, loadSources])
 
-  if (!tenantId) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
+  if (!tenantId) return <PageSkeleton kind="table" />
 
   return (
     <div>

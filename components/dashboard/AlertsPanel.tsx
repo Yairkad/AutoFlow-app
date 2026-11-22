@@ -6,6 +6,7 @@ import { useProfile } from '@/lib/contexts/ProfileContext'
 import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
 import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 import { KIND_LABEL, daysFromToday, isSettled, loadExpectedPayments, type ExpectedPayment } from '@/lib/cars/contractPayments'
+import { SkeletonLines, Skel } from '@/components/ui/Skeleton'
 
 interface AlertPayment {
   id: string
@@ -244,7 +245,7 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
                 <button onClick={() => setPopupOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--text-muted)' }}>✕</button>
               </div>
               {loading ? (
-                <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>טוען...</div>
+                <SkeletonLines n={2} />
               ) : totalCount === 0 ? (
                 <div style={{ color: 'var(--primary)', fontSize: '13px' }}>✓ אין התראות פעילות</div>
               ) : (
@@ -340,7 +341,7 @@ export default function AlertsPanel({ compact }: { compact?: boolean } = {}) {
 
       {/* Content */}
       {loading ? (
-        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>טוען...</span>
+        <Skel w={60} h={12} style={{ display: 'inline-block' }} />
       ) : totalCount === 0 ? (
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           ✓ אין התראות פעילות

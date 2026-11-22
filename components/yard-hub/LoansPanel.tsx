@@ -10,7 +10,9 @@ import {
 import { AddButton, Chips, Empty, Field, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle, todayISO, type HubVariant } from './ui'
 import type { SearchResult } from '@/lib/yard/types'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
+import { readCache, writeCache } from '@/lib/hooks/localCache'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 type View = 'open' | 'closed'
 
@@ -51,13 +53,16 @@ const emptyForm = {
   item_desc: '', qty: 1, customer_name: '', plate: '', notes: '',
 }
 
-export default function LoansPanel({ variant }: { variant: HubVariant }) {
+/** refreshKey (drawer): reload when it changes — the drawer bumps it on its ⟳ button or when the open count changes. */
+export default function LoansPanel({ variant, refreshKey }: { variant: HubVariant; refreshKey?: number }) {
+  // Drawer: show the last-known list at once (localStorage), refresh behind the scenes
+  const cached = variant === 'drawer' ? readCache<TireLoan[]>('yd-loans') : null
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [view, setView]       = useState<View>('open')
-  const [open, setOpen]       = useState<TireLoan[]>([])
+  const [open, setOpen]       = useState<TireLoan[]>(cached ?? [])
   const [closed, setClosed]   = useState<TireLoan[] | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!cached)
   const [form, setForm]       = useState<typeof emptyForm | null>(null)
   const [editId, setEditId]   = useState<string | null>(null)
   const [saving, setSaving]   = useState(false)
@@ -84,14 +89,18 @@ export default function LoansPanel({ variant }: { variant: HubVariant }) {
   }
 
   const loadOpen = useCallback(async () => {
-    try { setOpen(await api<TireLoan[]>('/api/yard/loans?status=open')) }
+    try {
+      const rows = await api<TireLoan[]>('/api/yard/loans?status=open')
+      setOpen(rows)
+      if (variant === 'drawer') writeCache('yd-loans', rows)
+    }
     catch (e) { showToast(`שגיאה בטעינה: ${(e as Error).message}`, 'error') }
     finally { setLoading(false) }
-  }, [showToast])
+  }, [showToast, variant])
 
-  useEffect(() => { loadOpen() }, [loadOpen])
+  useEffect(() => { loadOpen() }, [loadOpen, refreshKey])
   // Other devices' changes show up without a page refresh
-  useLiveRefresh(loadOpen)
+  useLiveRefresh(loadOpen, 60_000, { disabled: variant === 'drawer' })
 
   useEffect(() => {
     if (view !== 'closed' || closed) return
@@ -207,7 +216,7 @@ export default function LoansPanel({ variant }: { variant: HubVariant }) {
         )}
       </div>
 
-      {loading || (view === 'closed' && !closed) ? <Empty icon="⏳" text="טוען..." /> : groups.length === 0 ? (
+      {loading || (view === 'closed' && !closed) ? <SkeletonList rows={4} /> : groups.length === 0 ? (
         view === 'closed' ? <Empty icon="🗂" text="אין רישומים סגורים" /> : (
           <Empty icon="✅" text="אין השאלות פתוחות"
             hint="צמיג שלקחנו מפנצ׳ריה אחרת או נתנו לה — רושמים כאן עד שמחזירים או משלמים"

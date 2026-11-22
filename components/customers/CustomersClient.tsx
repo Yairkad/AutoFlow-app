@@ -10,6 +10,7 @@ import CustomerTrackingTab from './CustomerTrackingTab'
 import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, RecurringItem, CustomerAction } from './shared'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
+import { PageSkeleton } from '@/components/ui/Skeleton'
 
 type Tab = 'details' | 'tracking'
 
@@ -100,9 +101,7 @@ export default function CustomersClient({ embedded = false }: { embedded?: boole
   }
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-muted)', fontSize: '14px' }}>
-      טוען...
-    </div>
+    <PageSkeleton kind="cards" />
   )
 
   const tracking = (

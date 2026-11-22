@@ -14,6 +14,7 @@ import { tireSizeText } from '@/lib/tires/size'
 import {
   cabinetCodes, countFreshness, formatLocation, isKnownShelf, parseLocation, type StorageLayout,
 } from '@/lib/stock/storage'
+import { SkeletonList, Skel } from '@/components/ui/Skeleton'
 
 // Office page /tires/storage: the cabinets map (coloured by how long since each cabinet was counted),
 // count by zone, fixing tire locations the map doesn't recognise, and (admin) editing the map.
@@ -119,7 +120,7 @@ export default function StorageClient() {
         {tabBtn('fix', `🛠 מיקומים לתיקון${fix ? ` (${badLocations.length})` : ''}`)}
       </div>
 
-      {tab === 'map' && !map && <div className="text-slate-400">טוען...</div>}
+      {tab === 'map' && !map && <Skel h={320} r={12} />}
 
       {tab === 'map' && map && !editing && (
         <div className="flex flex-col gap-3">
@@ -176,7 +177,7 @@ export default function StorageClient() {
               תקן אוטומטית {autoFixable} מיקומים (a3 → A3)
             </button>
           )}
-          {!fix && <div className="text-slate-400">טוען...</div>}
+          {!fix && <SkeletonList rows={3} />}
           {fix && badLocations.length === 0 && <div className="text-green-700 font-bold">✓ כל המיקומים תקינים</div>}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             {badLocations.slice(0, 300).map(t => (

@@ -12,6 +12,7 @@ import FilterBar from '@/components/ui/FilterBar'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 import { fuzzyIncludes } from '@/lib/search/fuzzy'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 // One list of tasks (the old "reminders" and "tasks" merged, 2026-10). Every task has a status —
 // פתוח / בטיפול / בוצע — and stays in the list with that tag; progress is logged as updates.
@@ -205,7 +206,7 @@ export default function RemindersClient() {
       </FilterBar>
 
       {loading ? (
-        <div style={{ color: 'var(--text-muted)', padding: 40, textAlign: 'center' }}>טוען...</div>
+        <SkeletonList rows={4} style={{ padding: 16 }} />
       ) : shown.length === 0 ? (
         <div style={{ color: 'var(--text-muted)', padding: 40, textAlign: 'center', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
           {view === 'closed' ? 'אין משימות שבוצעו' : 'אין משימות פתוחות'} — לחץ &quot;+ משימה חדשה&quot; כדי להוסיף.

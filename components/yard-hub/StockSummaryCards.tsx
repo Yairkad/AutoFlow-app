@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { daysAgoLabel, type StockSummary } from '@/lib/yard/reports'
 import { api } from './ui'
+import { SkeletonCards } from '@/components/ui/Skeleton'
 
 const ils = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`
 
@@ -33,7 +34,7 @@ export default function StockSummaryCards() {
   }, [])
 
   if (err) return <div className="text-sm text-red-600">שגיאה בטעינת שווי מלאי: {err}</div>
-  if (!s) return <div className="text-sm text-slate-400">טוען שווי מלאי...</div>
+  if (!s) return <SkeletonCards n={2} h={84} min={180} />
 
   const recv  = daysAgoLabel(s.lastReceiveDate)
   const count = daysAgoLabel(s.lastCountDate)

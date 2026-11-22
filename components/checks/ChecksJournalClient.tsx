@@ -16,6 +16,7 @@ import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
 import { markScheduledPaymentPaid } from '@/lib/utils/markCheckPaid'
 import { reverseSupplierPayment } from '@/lib/debts/reverseSupplierPayment'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
+import { PageSkeleton } from '@/components/ui/Skeleton'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -356,9 +357,7 @@ export default function ChecksJournalClient() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-muted)', fontSize: '14px' }}>
-      טוען...
-    </div>
+    <PageSkeleton kind="table" />
   )
 
   return (

@@ -12,6 +12,7 @@ import {
   KIND_LABEL, RECEIPT_LABEL, daysFromToday, isSettled, loadExpectedPayments, setReceipt,
   type ExpectedPayment, type Receipt, type ReceiptStatus,
 } from '@/lib/cars/contractPayments'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 // Debts page, "car sales" tab: money buyers still owe on signed car sale contracts (cash / transfer lines + checks).
 // Each one is confirmed by hand — "at signing" lines too; a check only once it cleared, or swapped for cash.
@@ -74,7 +75,7 @@ export default function ContractPaymentsPanel({ focusContractId }: { focusContra
     load()
   }
 
-  if (!loaded) return <div style={{ padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>טוען...</div>
+  if (!loaded) return <SkeletonList rows={2} h={48} style={{ padding: 20 }} />
   if (!missing && items.length === 0) return <div style={{ padding: 20, color: 'var(--text-muted)', fontSize: 13 }}>אין תשלומים צפויים מחוזי רכב</div>
   if (missing) return (
     <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 10, padding: 12, fontSize: 13, marginBottom: 20 }}>

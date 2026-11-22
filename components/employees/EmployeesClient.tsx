@@ -14,6 +14,7 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { DEFAULT_YARD_MODULES, YARD_MONEY_KEY, YARD_SECTIONS } from '@/lib/yard/access'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
 import { printHtml } from '@/lib/print/printHtml'
+import { PageSkeleton } from '@/components/ui/Skeleton'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -837,7 +838,7 @@ tfoot td { font-weight: 900; background: #f8fafc !important; -webkit-print-color
 
   // ── Directory view (non-admin) ───────────────────────────────────────────────
 
-  if (!roleReady) return <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
+  if (!roleReady) return <PageSkeleton kind="table" />
 
   if (myRole && myRole !== 'admin' && myRole !== 'super_admin') {
     const active = employees.filter(e => e.is_active)

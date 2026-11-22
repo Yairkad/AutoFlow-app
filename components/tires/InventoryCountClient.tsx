@@ -12,6 +12,7 @@ import { guardedBackdrop } from '@/lib/ui/backdrop'
 import { itemCodes } from '@/lib/stock/barcodes'
 import AutocompleteInput from '@/components/ui/AutocompleteInput'
 import { useTireBrandSuggestions } from '@/lib/hooks/useTireBrandSuggestions'
+import { PageSkeleton } from '@/components/ui/Skeleton'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -339,7 +340,7 @@ export default function InventoryCountClient() {
   )
 
   if (loading) return (
-    <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
+    <PageSkeleton kind="table" />
   )
 
   // ── Render ────────────────────────────────────────────────────────────────────

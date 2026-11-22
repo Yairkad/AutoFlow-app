@@ -18,6 +18,7 @@ import { formatPlate } from '@/lib/yard/types'
 import IntakeTab from './IntakeTab'
 import IntakeFilesModal from './IntakeFilesModal'
 import { intakeMissing, type IntakeFile, type IntakeStatus } from '@/lib/inspections/intake'
+import { PageSkeleton } from '@/components/ui/Skeleton'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -712,7 +713,7 @@ export default function InspectionsClient() {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64" style={{ color: 'var(--text-muted)' }}>טוען...</div>
+    return <PageSkeleton kind="cards" />
   }
 
   return (

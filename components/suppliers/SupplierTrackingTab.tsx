@@ -27,6 +27,7 @@ import { Supplier, SupplierDebt, ScheduledPayment, SupplierDebtPayment, Recurrin
 import { MAX_UPLOAD_BYTES, compressImageIfNeeded, compressPdfIfNeeded } from '@/lib/utils/uploadCompress'
 import { scanWithAgent, listScanners, getSavedScanner, saveScanner, ScannerAgentMissingError, ScannerAgentOutdatedError, ScannerDeviceNotFoundError, SCANNER_DOWNLOAD_URL, type ScannerDevice } from '@/lib/scannerAgent'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1690,7 +1691,7 @@ export default function SupplierTrackingTab({
           const paidTotal = historyExpenses.reduce((s, e) => s + Number(e.amount), 0)
 
           if (historyLoading) return (
-            <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)', fontSize: '14px' }}>טוען...</div>
+            <SkeletonList rows={5} />
           )
 
           if (pending.length === 0 && historyExpenses.length === 0) return (

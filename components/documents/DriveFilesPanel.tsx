@@ -7,6 +7,7 @@ import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Button from '@/components/ui/Button'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 type DriveItem = { id: string; name: string; mimeType: string; size?: string; createdTime?: string; thumbnailLink?: string; webViewLink?: string }
 
@@ -116,7 +117,7 @@ export default function DriveFilesPanel() {
     setCreating(false)
   }
 
-  if (connected === null) return <div style={{ padding: 30, color: 'var(--text-muted)' }}>טוען...</div>
+  if (connected === null) return <SkeletonList rows={4} style={{ padding: 16 }} />
   if (!connected) return (
     <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
       <div style={{ fontWeight: 700, marginBottom: 6 }}>Google Drive לא מחובר</div>
@@ -162,7 +163,7 @@ export default function DriveFilesPanel() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>טוען...</div>
+        <SkeletonList rows={5} style={{ padding: 16 }} />
       ) : items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
           <div style={{ fontWeight: 700 }}>תיקיה ריקה</div>

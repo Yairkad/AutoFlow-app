@@ -8,6 +8,7 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import { suggestMatchesForLines, MatchCandidate } from '@/lib/bank-sync/matchSuggestions'
 import { confirmMatch, ignoreLine, undoLine, createFromLine } from '@/lib/bank-sync/reconcileLine'
 import { BankLine, BankSource, BankImport, LineStatus } from './types'
+import { SkeletonTable } from '@/components/ui/Skeleton'
 
 const SEL: React.CSSProperties = {
   padding: '7px 10px', fontSize: '13px',
@@ -225,7 +226,7 @@ export default function ReconciliationReview({ tenantId, userId, expenseCats, in
     load()
   }
 
-  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
+  if (loading) return <SkeletonTable rows={8} cols={5} />
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>

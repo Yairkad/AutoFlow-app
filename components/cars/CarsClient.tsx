@@ -19,6 +19,7 @@ import { VehicleData } from '@/lib/utils/plateApi'
 import { MAX_UPLOAD_BYTES, shrinkForUpload } from '@/lib/utils/uploadCompress'
 import CarContractsPanel from './CarContractsPanel'
 import CarContractEditor, { type ContractPrefill } from './CarContractEditor'
+import { PageSkeleton, SkeletonLines } from '@/components/ui/Skeleton'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -838,7 +839,7 @@ export default function CarsClient() {
   const DOC_SUGGESTIONS = ['רישיון רכב', 'ביטוח חובה', 'ביטוח מקיף', 'טסט', 'אישור הפקדה', 'חשבונית קנייה', 'הסכם מכירה', 'ייפוי כוח']
 
   function renderCarDocs() {
-    if (carDriveLoading) return <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '6px 0' }}>טוען...</div>
+    if (carDriveLoading) return <SkeletonLines n={2} />
     if (!carDrivePlate) return <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>יש להזין מספר רכב כדי לשמור מסמכים</div>
     const btn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, padding: '6px 12px', border: '1.5px solid var(--border)', borderRadius: 8, background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }
     return (
@@ -991,9 +992,7 @@ export default function CarsClient() {
   // ── Loading ───────────────────────────────────────────────────────
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--text-muted)' }}>
-      טוען...
-    </div>
+    <PageSkeleton kind="cards" />
   )
 
   // ── Excel / JSON ──────────────────────────────────────────────────

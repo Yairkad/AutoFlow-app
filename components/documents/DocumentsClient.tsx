@@ -16,6 +16,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import CarContractsPanel from '@/components/cars/CarContractsPanel'
 import PowerOfAttorneyPanel from '@/components/documents/PowerOfAttorneyPanel'
 import { printHtml } from '@/lib/print/printHtml'
+import { PageSkeleton } from '@/components/ui/Skeleton'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -959,9 +960,7 @@ export default function DocumentsClient() {
   // ── Render ────────────────────────────────────────────────────────────────────
 
   if (loading) return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200, color: 'var(--text-muted)' }}>
-      טוען...
-    </div>
+    <PageSkeleton kind="cards" />
   )
 
   // ── Gallery items: built-in forms + the business's own templates and documents ──

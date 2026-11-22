@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import Button from '@/components/ui/Button'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
+import { PageSkeleton } from '@/components/ui/Skeleton'
 
 // ── Types ───────────────────────────────────────────────────────────────────────
 
@@ -562,7 +563,7 @@ export default function TestTransferClient() {
   // ── Render ────────────────────────────────────────────────────────────────────
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64" style={{ color: 'var(--text-muted)' }}>טוען...</div>
+    return <PageSkeleton kind="form" />
   }
 
   return (

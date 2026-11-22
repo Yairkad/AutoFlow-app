@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { rangeParams, type QuickReport, type RangeKey } from '@/lib/yard/reports'
 import { Chips, Empty, HubFrame, api, inputCls, inputStyle, todayISO } from './ui'
+import { SkeletonCards } from '@/components/ui/Skeleton'
 
 const ils = (n: number) => `₪${Math.round(n).toLocaleString('he-IL')}`
 
@@ -79,7 +80,7 @@ export default function QuickReportsPanel({ variant }: { variant: 'yard' | 'offi
         </div>
       )}
 
-      {error ? <Empty icon="⚠️" text={`שגיאה: ${error}`} /> : !data || !s ? <Empty icon="⏳" text="טוען..." /> : (<>
+      {error ? <Empty icon="⚠️" text={`שגיאה: ${error}`} /> : !data || !s ? <SkeletonCards n={4} h={90} min={160} /> : (<>
         <p className="font-black text-slate-700" style={{ fontSize: '17px' }}>מכרנו (כרטיסי עבודה שנסגרו)</p>
         <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' }}>
           <Stat label="רכבים" value={String(s.cars)} color="#141A2E" sub={money ? `סה״כ ${ils(s.total)}` : undefined} />

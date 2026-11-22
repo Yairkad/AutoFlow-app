@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-19T10:56:56.452Z
-> Files: 215 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-22T10:50:11.203Z
+> Files: 221 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -120,6 +120,14 @@
 
 ## Redesign additions (2026-10-29)
 
+
+## Signed inspection PDF (2026-11-19)
+
+- `components/inspections/SignedPdfModal.tsx` — "PDF חתום": pick signature+stamp (defaults preselected) → download findings report PDF via htmlToPdf (~900 tok)
+- `components/settings/SignatureStampsPanel.tsx` — Settings tab 'חתימות וחותמות': upload (bg removed), rename, default, delete (~1300 tok)
+- `lib/print/htmlToPdf.ts` — print HTML → hidden iframe → html-to-image JPEG per page → pdf-lib A4 → download (~600 tok)
+- `lib/signatures/stamps.ts` — SignatureStamp type, loadSignatureStamps, cleanStampImage (paper→transparent, crop, max 700px) (~700 tok)
+- `supabase/migrations/119_signature_stamps.sql` — signature_stamps table (tenant RLS); separate table so ProfileContext tenants.* stays light (~200 tok)
 
 ## app/
 
@@ -730,6 +738,7 @@
 
 ## lib/hooks/
 
+- `localCache.ts` — Last-known data kept in localStorage so a panel shows instantly on open and refreshes behind (~164 tok)
 - `useSearchLink.ts` — reads global-search deep link ?open/&q/&month once after mount, then strips q/month from the URL (~300 tok)
 - `useTireBrandSuggestions.ts` — existing tire brands as AutocompleteInput options, fetched once from /api/yard/tire-brands (~250 tok)
 
@@ -871,11 +880,5 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-
-## Signed inspection PDF (2026-11-19)
-
-- `components/inspections/SignedPdfModal.tsx` — "PDF חתום": pick signature+stamp (defaults preselected) → download findings report PDF via htmlToPdf (~900 tok)
-- `components/settings/SignatureStampsPanel.tsx` — Settings tab 'חתימות וחותמות': upload (bg removed), rename, default, delete (~1300 tok)
-- `lib/signatures/stamps.ts` — SignatureStamp type, loadSignatureStamps, cleanStampImage (paper→transparent, crop, max 700px) (~700 tok)
-- `lib/print/htmlToPdf.ts` — print HTML → hidden iframe → html-to-image JPEG per page → pdf-lib A4 → download (~600 tok)
-- `supabase/migrations/119_signature_stamps.sql` — signature_stamps table (tenant RLS); separate table so ProfileContext tenants.* stays light (~200 tok)
+- `components/ui/Skeleton.tsx` — loading placeholders shaped like content: Skel, SkeletonLines/List/Table/Cards/Form, PageSkeleton(kind) — currentColor pulse (.skel in globals.css), works light+dark (~1200 tok)
+- `lib/hooks/localCache.ts` — readCache/writeCache (localStorage 'af-cache:' prefix) for stale-while-revalidate lists (yard drawer) (~150 tok)

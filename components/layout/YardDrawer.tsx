@@ -9,6 +9,7 @@ import SessionItemsEditor from '@/components/yard/SessionItemsEditor'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import RequestsPanel from '@/components/yard-hub/RequestsPanel'
 import LoansPanel from '@/components/yard-hub/LoansPanel'
+import { readCache, writeCache } from '@/lib/hooks/localCache'
 
 const OPEN_KEY = 'yard-drawer-open'
 const TAB_KEY  = 'yard-drawer-tab'
@@ -23,7 +24,8 @@ const POLL_CLOSED_MS = 180_000   // closed: only the badge counts on the rail
 export default function YardDrawer() {
   // Rendered only on the client (after the profile loads), so reading storage here is safe
   const [open, setOpen]         = useState(() => { try { return localStorage.getItem(OPEN_KEY) === '1' } catch { return false } })
-  const [cards, setCards]       = useState<YardSession[]>([])
+  // Last-known lists from localStorage → the drawer shows at once; fresh data replaces them quietly
+  const [cards, setCards]       = useState<YardSession[]>(() => readCache<YardSession[]>('yd-cards') ?? [])
   const [editingId, setEditing] = useState<string | null>(null)
   const [busy, setBusy]         = useState<string | null>(null)
   const [copied, setCopied]     = useState<string | null>(null)
@@ -32,7 +34,10 @@ export default function YardDrawer() {
   const [closedDays, setClosedDays] = useState(3)
   // Yard tracking (waiting customers, loans) lives here too — tabs; counts feed the tabs and the closed rail
   const [tab, setTab] = useState<DrawerTab>(() => { try { const t = localStorage.getItem(TAB_KEY); return t === 'requests' || t === 'loans' ? t : 'yard' } catch { return 'yard' } })
-  const [counts, setCounts] = useState<Record<string, number>>({})
+  const [counts, setCounts] = useState<Record<string, number>>(() => readCache<Record<string, number>>('yd-counts') ?? {})
+  // Requests/loans tabs reload only on ⟳ or when their open count changes (they rarely change)
+  const [manualRefresh, setManualRefresh] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
   const { confirm } = useConfirm()
 
   const load = useCallback(async () => {
@@ -43,9 +48,10 @@ export default function YardDrawer() {
       ])
       const pending: YardSession[] = a.ok ? await a.json() : []
       const active: YardSession[]  = p.ok ? await p.json() : []
-      setCards([...pending, ...active])
+      const all = [...pending, ...active]
+      setCards(all); writeCache('yd-cards', all)
       const c = await fetch('/api/yard/counts')
-      if (c.ok) setCounts(await c.json())
+      if (c.ok) { const j = await c.json(); setCounts(j); writeCache('yd-counts', j) }
     } catch { /* network hiccup — keep the last list */ }
   }, [])
 
@@ -80,7 +86,7 @@ export default function YardDrawer() {
   // Mounted on every admin page in every tab — so: no polling in hidden/unfocused windows
   // (startLiveRefresh), and while closed only the counts (one call instead of three).
   const loadCounts = useCallback(async () => {
-    try { const c = await fetch('/api/yard/counts'); if (c.ok) setCounts(await c.json()) } catch { /* keep last */ }
+    try { const c = await fetch('/api/yard/counts'); if (c.ok) { const j = await c.json(); setCounts(j); writeCache('yd-counts', j) } } catch { /* keep last */ }
   }, [])
   useEffect(() => {
     const tick = open ? load : loadCounts
@@ -94,6 +100,13 @@ export default function YardDrawer() {
     document.documentElement.style.setProperty('--drawer-w', open ? 'clamp(340px, 33vw, 480px)' : '52px')
     return () => { document.documentElement.style.removeProperty('--drawer-w') }
   }, [open])
+
+  async function refreshAll() {
+    setRefreshing(true)
+    setManualRefresh(n => n + 1)
+    await load()
+    setRefreshing(false)
+  }
 
   function pickTab(t: DrawerTab) {
     setTab(t)
@@ -157,7 +170,9 @@ export default function YardDrawer() {
       <div className="yd-head">
         <CarIcon size={18} />
         <h2>בקרת רחבה</h2>
-        <button type="button" onClick={() => toggle(false)} aria-label="סגור את בקרת הרחבה" className="yd-x">✕</button>
+        <button type="button" onClick={refreshAll} disabled={refreshing} aria-label="טען מחדש" title="טען מחדש" className="yd-x"
+          style={{ marginInlineStart: 'auto', opacity: refreshing ? .5 : 1 }}>⟳</button>
+        <button type="button" onClick={() => toggle(false)} aria-label="סגור את בקרת הרחבה" className="yd-x" style={{ marginInlineStart: 0 }}>✕</button>
       </div>
 
       <div className="yd-tabs" role="tablist">
@@ -172,8 +187,8 @@ export default function YardDrawer() {
         ))}
       </div>
 
-      {tab === 'requests' && <RequestsPanel variant="drawer" />}
-      {tab === 'loans' && <LoansPanel variant="drawer" />}
+      {tab === 'requests' && <RequestsPanel variant="drawer" refreshKey={manualRefresh * 10_000 + (counts.yard_requests ?? 0) * 100 + (counts.yard_requests_arrived ?? 0)} />}
+      {tab === 'loans' && <LoansPanel variant="drawer" refreshKey={manualRefresh * 10_000 + (counts.yard_loans ?? 0) * 100 + (counts.yard_loans_stale ?? 0)} />}
 
       {tab === 'yard' && <div className="yd-body">
         {cards.length === 0 && (

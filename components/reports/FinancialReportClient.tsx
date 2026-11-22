@@ -5,6 +5,7 @@ import { useProfile } from '@/lib/contexts/ProfileContext'
 import PageHeader from '@/components/ui/PageHeader'
 import UnifiedReportTab from './UnifiedReportTab'
 import CashFlowForecastTab from './CashFlowForecastTab'
+import { PageSkeleton } from '@/components/ui/Skeleton'
 
 type Tab = 'unified' | 'forecast'
 
@@ -13,7 +14,7 @@ export default function FinancialReportClient() {
   const tenantId = profile?.tenantId ?? ''
   const [tab, setTab] = useState<Tab>('unified')
 
-  if (!tenantId) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
+  if (!tenantId) return <PageSkeleton kind="cards" />
 
   return (
     <div>

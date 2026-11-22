@@ -14,6 +14,7 @@ import QuickReportsPanel from '@/components/yard-hub/QuickReportsPanel'
 import ScanClient from '@/components/scan/ScanClient'
 import { fuzzyIncludes } from '@/lib/search/fuzzy'
 import type { SearchResult } from '@/app/api/yard/search/route'
+import { Skel } from '@/components/ui/Skeleton'
 
 type Tab = 'scan' | 'moves' | 'nostock' | 'reports' | 'count'
 
@@ -218,7 +219,7 @@ export default function StockClient() {
                 {['תאריך', 'פריט', 'מקור', 'כמות', ''].map(h => <th key={h} style={th}>{h}</th>)}
               </tr></thead>
               <tbody>
-                {moves === null && <tr><td colSpan={5} style={{ ...td, textAlign: 'center', color: 'var(--text-muted)', padding: 30 }}>טוען...</td></tr>}
+                {moves === null && [0, 1, 2, 3].map(i => <tr key={i}>{[0, 1, 2, 3, 4].map(c => <td key={c} style={td}><Skel w={`${55 + ((i + c) % 4) * 10}%`} h={12} /></td>)}</tr>)}
                 {moves !== null && shown.length === 0 && <tr><td colSpan={5} style={{ ...td, textAlign: 'center', color: 'var(--text-muted)', padding: 30 }}>אין תנועות בטווח הזה</td></tr>}
                 {shown.map(m => (
                   <tr key={`${m.kind}-${m.id}`}>

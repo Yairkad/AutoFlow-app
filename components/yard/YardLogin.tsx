@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { SkeletonCards } from '@/components/ui/Skeleton'
 
 interface Emp { id: string; name: string }
 
@@ -81,7 +82,7 @@ export default function YardLogin({ onCancel, currentName }: Props) {
         {!picked ? (
           <div className="overflow-y-auto" style={{ minHeight: 0 }}>
             {loadErr && <div className="text-red-600 font-bold">{loadErr}</div>}
-            {!emps && !loadErr && <div className="text-slate-400">טוען...</div>}
+            {!emps && !loadErr && <SkeletonCards n={6} h={70} min={140} />}
             {emps?.length === 0 && (
               <div className="text-slate-500" style={{ fontSize: 14 }}>
                 אין עובדים עם קוד כניסה. המנהל מגדיר קוד לכל עובד במסך <b>עובדים</b> במשרד.

@@ -6,6 +6,7 @@ import {
 } from 'recharts'
 import { createClient } from '@/lib/supabase/client'
 import { buildForecast, ForecastResult } from '@/lib/reports/buildForecast'
+import { SkeletonTable, SkeletonCards } from '@/components/ui/Skeleton'
 
 const fmt = (n: number) => `₪${Number(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const fmtDMY = (iso: string) => { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y.slice(2)}` }
@@ -46,7 +47,7 @@ export default function CashFlowForecastTab({ tenantId }: Props) {
     buildForecast(supabase, tenantId, horizon).then(res => { setResult(res); setLoading(false) })
   }, [supabase, tenantId, horizon])
 
-  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
+  if (loading) return <><SkeletonCards n={3} h={90} /><SkeletonTable rows={6} style={{ marginTop: 16 }} /></>
 
   if (!result || result.anchorBalance == null) {
     return (

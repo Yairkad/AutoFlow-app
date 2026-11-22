@@ -17,6 +17,7 @@ import SupplierDetailsTab from '@/components/suppliers/SupplierDetailsTab'
 import CustomerDetailsTab from '@/components/customers/CustomerDetailsTab'
 import { waUrl, type Supplier } from '@/components/suppliers/shared'
 import type { Customer } from '@/components/customers/shared'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 type Kind = 'supplier' | 'customer'
 interface Contact {
@@ -206,7 +207,7 @@ export default function ContactsClient() {
             <span><input type="checkbox" checked={allShownPicked} onChange={toggleAllShown} aria-label="סמן את כל המוצגים" /></span>
             <span>חברה</span><span>קטגוריה</span><span>איש קשר</span><span>טלפון</span><span />
           </div>
-          {!loaded && <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>}
+          {!loaded && <SkeletonList rows={5} style={{ padding: 16 }} />}
           {loaded && shown.length === 0 && <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)' }}>אין אנשי קשר להצגה</div>}
           {shown.map(c => (
             <div key={c.key} className={`ct-row${openKey === c.key ? ' on' : ''}`} role="button" tabIndex={0}

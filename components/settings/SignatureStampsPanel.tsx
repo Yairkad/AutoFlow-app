@@ -7,6 +7,7 @@ import type { createClient } from '@/lib/supabase/client'
 import Button from '@/components/ui/Button'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { cleanStampImage, loadSignatureStamps, STAMP_KIND_LABEL, type SignatureStamp, type StampKind } from '@/lib/signatures/stamps'
+import { SkeletonCards } from '@/components/ui/Skeleton'
 
 type ToastFn = (msg: string, type?: 'success' | 'error' | 'info') => void
 
@@ -102,7 +103,7 @@ export default function SignatureStampsPanel({ supabase, tenantId, showToast }: 
     )
   }
 
-  if (!list) return <div style={{ color: 'var(--text-muted)' }}>טוען...</div>
+  if (!list) return <SkeletonCards n={3} h={170} min={200} />
   return (
     <div>
       <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 16 }}>

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { tireSizeText } from '@/lib/tires/size'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useIsMobile } from '@/lib/hooks/useIsMobile'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 const LOAD_INDICES  = ['60','62','65','67','69','71','73','75','77','80','82','84','85','86','87','88','89','90','91','92','93','94','95','96','98','99','100','101','102','103','104','105','106','107','108','109','110','112','114','116','118','120','121','122','124','126']
 const SPEED_INDICES = ['B','C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','Y','ZR','Z']
@@ -441,7 +442,7 @@ export default function ScanClient({ embedded = false }: { embedded?: boolean } 
               style={{ padding: '6px 12px', fontSize: '13px', width: isMobile ? '100%' : '220px' }} />
           </div>
           {loading ? (
-            <div className="text-center text-slate-400 py-10">טוען...</div>
+            <SkeletonList rows={4} />
           ) : (
             <div style={{ overflowY: 'auto', maxHeight: '55vh' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
