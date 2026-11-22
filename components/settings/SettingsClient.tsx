@@ -8,6 +8,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import GuideEditor from '@/components/settings/GuideEditor'
+import SignatureStampsPanel from '@/components/settings/SignatureStampsPanel'
 import DriveFilesPanel from '@/components/documents/DriveFilesPanel'
 import { BACKUP_TABLES, CHILD_TABLES } from '@/lib/backup/backup'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
@@ -69,7 +70,7 @@ interface InviteToken {
   expires_at: string | null
 }
 
-type Tab = 'users' | 'vault' | 'landing' | 'backup' | 'drive'
+type Tab = 'users' | 'vault' | 'landing' | 'backup' | 'drive' | 'signatures'
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -1772,7 +1773,7 @@ export default function SettingsClient() {
   // Deep link, e.g. the "no recent backup" reminder → /settings?tab=backup
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get('tab')
-    if (t === 'backup' || t === 'drive' || t === 'users' || t === 'landing' || t === 'vault') setTab(t)
+    if (t === 'backup' || t === 'drive' || t === 'users' || t === 'landing' || t === 'vault' || t === 'signatures') setTab(t)
   }, [])
 
   const tenantId  = profile?.tenantId ?? null
@@ -1800,6 +1801,7 @@ export default function SettingsClient() {
     { key: 'users',    label: 'משתמשים',          icon: '👥' },
     { key: 'landing',  label: 'תוכן אתר ציבורי',  icon: '🌐' },
     { key: 'drive',    label: 'קבצים ב-Drive',    icon: '📂' },
+    { key: 'signatures', label: 'חתימות וחותמות', icon: '✍️' },
     ...(canVault ? [{ key: 'vault' as Tab, label: 'כספת סיסמאות', icon: '🔒' }] : []),
     ...(isAdmin ? [{ key: 'backup' as Tab, label: 'גיבוי', icon: '🗄️' }] : []),
   ]
@@ -1813,6 +1815,7 @@ export default function SettingsClient() {
 
   const tabContent: Record<Tab, React.ReactNode> = {
     drive:    <DriveFilesPanel />,
+    signatures: <SignatureStampsPanel supabase={supabase} tenantId={tenantId} showToast={showToast} />,
     users:    <UsersTab    supabase={supabase} tenantId={tenantId} myId={myId} showToast={showToast} />,
     landing:  <LandingTab  supabase={supabase} tenantId={tenantId} showToast={showToast} />,
     vault:    canVault ? <VaultTab supabase={supabase} tenantId={tenantId} showToast={showToast} /> : null,

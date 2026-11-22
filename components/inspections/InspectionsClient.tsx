@@ -12,7 +12,8 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import PageHeader from '@/components/ui/PageHeader'
 import { fetchVehicleByPlate } from '@/lib/utils/plateApi'
 import DocumentScannerModal from '@/components/ui/DocumentScannerModal'
-import InspectionChecklistModal, { parseFindings, printChecklist } from './InspectionChecklistModal'
+import InspectionChecklistModal, { buildChecklistHtml, parseFindings, printChecklist } from './InspectionChecklistModal'
+import SignedPdfModal from './SignedPdfModal'
 import { formatPlate } from '@/lib/yard/types'
 import IntakeTab from './IntakeTab'
 import IntakeFilesModal from './IntakeFilesModal'
@@ -640,6 +641,10 @@ export default function InspectionsClient() {
     printChecklist(ins, bizInfo.current, items, notes, ins.inspector ?? '', so)
   }
 
+  // ── Signed findings PDF (sent to the customer by the office) ────────────────
+
+  const [signedIns, setSignedIns] = useState<Inspection | null>(null)
+
   // ── Clear findings ───────────────────────────────────────────────────────────
 
   const clearFindings = async (id: string) => {
@@ -983,6 +988,7 @@ export default function InspectionsClient() {
                   <div className="ih-foot">
                     <button type="button" className="ih-btn primary" onClick={() => setChecklistIns(ins)}>ממצאי בדיקה</button>
                     {st.kind !== 'none' && <button type="button" className="ih-btn" onClick={() => printChecklistFromList(ins)}>הדפסת ממצאים</button>}
+                    {st.kind !== 'none' && <button type="button" className="ih-btn" onClick={() => setSignedIns(ins)}>PDF חתום</button>}
                     <button type="button" className="ih-btn" onClick={() => setFilesIns(ins)}>מסמכי לקוח{docs ? ` · ${docs}` : ''}</button>
                     {ins.drive_file_id && (
                       <a className="ih-btn" href={`https://drive.google.com/file/d/${ins.drive_file_id}/view`} target="_blank" rel="noreferrer">קובץ בדרייב</a>
@@ -1018,6 +1024,14 @@ export default function InspectionsClient() {
           onSave={saveChecklist}
           onClearFindings={() => clearFindings(checklistIns.id)}
         />
+      )}
+
+      {signedIns && tenantId.current && (
+        <SignedPdfModal tenantId={tenantId.current} plate={signedIns.plate} onClose={() => setSignedIns(null)}
+          buildHtml={signing => {
+            const { items, notes, skeletonOnly: so } = parseFindings(signedIns.findings)
+            return buildChecklistHtml(signedIns, bizInfo.current, items, notes, signedIns.inspector ?? '', so, signing)
+          }} />
       )}
 
       {filesIns && (

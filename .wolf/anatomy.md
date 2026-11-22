@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-18T09:16:11.092Z
-> Files: 211 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-19T10:56:56.452Z
+> Files: 215 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -558,6 +558,7 @@
 
 ## components/inspections/
 
+- `SignedPdfModal.tsx` — builds the findings HTML with the chosen images (~1237 tok)
 
 ## components/landing/
 
@@ -601,6 +602,7 @@
 
 - `GuideEditor.tsx` — Always recompress to a ~100–200KB JPEG data URL (stored inside guide_content). (~4931 tok)
 - `SettingsClient.tsx` — ALL_MODULES (~30392 tok)
+- `SignatureStampsPanel.tsx` — SignatureStampsPanel (~1622 tok)
 
 ## components/settings/ (guide)
 
@@ -753,6 +755,7 @@
 ## lib/print/
 
 - `escpos.ts` — 1-bit rows (black = luminance < 128) of a canvas `W_DOTS` wide. (~1618 tok)
+- `htmlToPdf.ts` — Render a ready-made print HTML document (one element per A4 page) into a PDF file and download it. (~739 tok)
 - `labels.ts` — Default key-tag window: the common clear vehicle key fob takes a ~45×25mm paper insert. (~3090 tok)
 - `qz.ts` — Connect to the local QZ Tray. Resolves false when it isn't installed / running. (~694 tok)
 
@@ -769,6 +772,10 @@
 - `fuzzy.ts` — Lowercase, drop quote/geresh marks, final letters → regular, doubled י/ו → single. (~434 tok)
 - `fuzzy.ts` — Hebrew spelling-tolerant search: normalizeSearch, fuzzyIncludes (client), likePatterns (DB ilike per word) (~500 tok)
 - `globalSearch.ts` — Header global search engine: runGlobalSearch(sb, term, field, kind) across all modules; field = all/name/phone (digits-only pattern)/invoice/amount (exact)/plate; each result has a deep link (?open/&q/&month) (~3500 tok)
+
+## lib/signatures/
+
+- `stamps.ts` — Scanned/photographed stamp or signature → transparent PNG: paper (light pixels) becomes (~850 tok)
 
 ## lib/stock/
 
@@ -864,3 +871,11 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
+
+## Signed inspection PDF (2026-11-19)
+
+- `components/inspections/SignedPdfModal.tsx` — "PDF חתום": pick signature+stamp (defaults preselected) → download findings report PDF via htmlToPdf (~900 tok)
+- `components/settings/SignatureStampsPanel.tsx` — Settings tab 'חתימות וחותמות': upload (bg removed), rename, default, delete (~1300 tok)
+- `lib/signatures/stamps.ts` — SignatureStamp type, loadSignatureStamps, cleanStampImage (paper→transparent, crop, max 700px) (~700 tok)
+- `lib/print/htmlToPdf.ts` — print HTML → hidden iframe → html-to-image JPEG per page → pdf-lib A4 → download (~600 tok)
+- `supabase/migrations/119_signature_stamps.sql` — signature_stamps table (tenant RLS); separate table so ProfileContext tenants.* stays light (~200 tok)

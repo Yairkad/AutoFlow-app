@@ -3271,3 +3271,38 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 12:10 | User video: 'תשלום לספק' for 'ללא ספק' group (supplier_id null) → submitPayment returns silently (!paySupplierId). Proposed: hide pay in null group + bulk 'שיוך לספק' + toast + warning on create. Awaiting approval | SupplierTrackingTab.tsx | diagnosed | ~4000 |
 | 12:40 | One-off invoice payments for 'ללא ספק' (payOneOffInvoice/undoOneOffPayment in lib/debts/supplierDirectPayments.ts; row action, status chip, pay modal adapted incl. check number+due date) | SupplierTrackingTab.tsx, supplierDirectPayments.ts | tsc+eslint clean; not tested on live DB | ~12000 |
+
+## Session: 2026-11-19 08:51
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-19 09:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:30 | User asked why Supabase Disk IO email again; Supabase MCP has no permission on project ucvphucjkixhdnvzhvgf (different account) — asked user to run pg_stat_statements query or connect account | — | info only | ~3000 |
+
+## Session: 2026-11-19 09:34
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:45 | Disk IO recheck: pg_stat_statements shows ~72% realtime list_changes but cumulative (pre-11-02); realtime.subscription = 0, no channels in code → advised stats reset + recheck tomorrow | — | info only | ~4000 |
+
+## Session: 2026-11-19 10:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 09:55 | User sent Supabase infra graph: Disk IO balance 66% remaining, dip ~Nov 14-15 likely triggered email; DB 36MB. Awaiting tomorrow pg_stat_statements | — | info only | ~2000 |
+| 10:55 | Created lib/signatures/stamps.ts | — | ~850 |
+| 10:55 | Created lib/print/htmlToPdf.ts | — | ~739 |
+| 10:56 | Created components/inspections/SignedPdfModal.tsx | — | ~1237 |
+| 10:56 | Created components/settings/SignatureStampsPanel.tsx | — | ~1622 |
+| 11:10 | Signed findings PDF: Settings tab חתימות וחותמות + 'PDF חתום' button on inspections (buildChecklistHtml + signing imgs, htmlToPdf). Tested via Playwright harness (PDF renders, Hebrew OK) | InspectionChecklistModal, InspectionsClient, SignedPdfModal, SignatureStampsPanel, stamps.ts, htmlToPdf.ts, 119 migration | tsc+eslint clean; migration NOT applied (no DB access) | ~40k |
+| 11:40 | Cut 3 stamps + signature from user scan (rotated 90°) into transparent PNGs (scratchpad, not committed — contain ID/phone); tuned sig block layout (stamp left, signature right, sigs.signed padding) | InspectionChecklistModal.tsx | verified via rendered PDF | ~15k |
+| 11:50 | User: stamp too big → .sig-stamp max 25x13mm | InspectionChecklistModal.tsx | rendered ok | ~3k |
+| 11:58 | User: signature right on the line → .sig-img bottom:-2mm, max 30x16mm | InspectionChecklistModal.tsx | rendered ok | ~3k |
+| 12:10 | User: signature middle on the line, stamp above it (stacked, same x) | InspectionChecklistModal.tsx | rendered ok | ~6k |
+| 12:15 | User: stamp right on top of the signature (overlap), not above | InspectionChecklistModal.tsx | rendered ok | ~3k |
+| 12:20 | User: shift one sideways → stamp 9mm left of signature centre (partial overlap) | InspectionChecklistModal.tsx | rendered ok | ~3k |
+| 12:30 | User asked to load stamps "in code": built one-off SQL (migration 119 + inserts of 4 quantized PNGs) in scratchpad, NOT committed (signature+ID in git = risk) | scratchpad/stamps/signatures_setup.sql | sent to user | ~5k |
