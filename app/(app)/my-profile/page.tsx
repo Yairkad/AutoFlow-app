@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
+import { PageSkeleton } from '@/components/ui/Skeleton'
 
 interface MyEmployee {
   id: string
@@ -109,7 +110,7 @@ export default function MyProfilePage() {
   }
 
   if (loading) return (
-    <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>טוען...</div>
+    <PageSkeleton kind="form" />
   )
 
   if (notFound) return (

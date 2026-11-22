@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/ui/Toast'
 import { htmlToPdf } from '@/lib/print/htmlToPdf'
 import { loadSignatureStamps, type SignatureStamp, type StampKind } from '@/lib/signatures/stamps'
+import { SkeletonCards } from '@/components/ui/Skeleton'
 
 interface Props {
   tenantId: string
@@ -77,7 +78,7 @@ export default function SignedPdfModal({ tenantId, plate, buildHtml, onClose }: 
         <Button variant="secondary" onClick={onClose}>ביטול</Button>
         <Button onClick={download} loading={busy} disabled={!list}>⬇️ הורד PDF</Button>
       </>}>
-      {!list ? <div style={{ color: 'var(--text-muted)' }}>טוען...</div> : (
+      {!list ? <SkeletonCards n={2} h={150} min={200} /> : (
         <>
           {list.length === 0 && (
             <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', fontSize: 13, marginBottom: 12 }}>

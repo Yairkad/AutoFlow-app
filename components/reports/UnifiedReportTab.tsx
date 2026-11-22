@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { buildUnifiedReport, MonthlyReportRow } from '@/lib/reports/buildUnifiedReport'
 import Button from '@/components/ui/Button'
+import { SkeletonTable, SkeletonCards } from '@/components/ui/Skeleton'
 
 const fmt = (n: number) => `₪${Number(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const HEB_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר']
@@ -50,7 +51,7 @@ export default function UnifiedReportTab({ tenantId }: Props) {
     }
   }
 
-  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
+  if (loading) return <><SkeletonCards n={4} h={90} /><SkeletonTable rows={6} style={{ marginTop: 16 }} /></>
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

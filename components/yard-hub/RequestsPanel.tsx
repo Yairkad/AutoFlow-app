@@ -11,6 +11,7 @@ import {
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 import { readCache, writeCache } from '@/lib/hooks/localCache'
 import { AddButton, Chips, Empty, Field, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle, type HubVariant } from './ui'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 type View = 'order' | 'inquiry' | 'closed'
 
@@ -283,7 +284,7 @@ export default function RequestsPanel({ variant, refreshKey }: { variant: HubVar
         </div>
       )}
 
-      {loading ? <Empty icon="⏳" text="טוען..." /> : list.length === 0 ? (
+      {loading ? <SkeletonList rows={4} /> : list.length === 0 ? (
         view === 'closed' ? <Empty icon="🗂" text="אין בקשות סגורות" /> : (
           <Empty icon="✅" text={view === 'order' ? 'אין לקוחות שמחכים לצמיג' : 'אין בירורים פתוחים'}
             hint={view === 'order' ? 'כשלקוח מזמין צמיג שאין במלאי — רושמים אותו כאן, ומעדכנים אותו כשהצמיג מגיע' : 'שאלה של לקוח שצריך לבדוק ולחזור אליו'}

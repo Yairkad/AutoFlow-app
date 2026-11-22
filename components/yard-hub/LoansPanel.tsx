@@ -12,6 +12,7 @@ import type { SearchResult } from '@/lib/yard/types'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 import { readCache, writeCache } from '@/lib/hooks/localCache'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 type View = 'open' | 'closed'
 
@@ -215,7 +216,7 @@ export default function LoansPanel({ variant, refreshKey }: { variant: HubVarian
         )}
       </div>
 
-      {loading || (view === 'closed' && !closed) ? <Empty icon="⏳" text="טוען..." /> : groups.length === 0 ? (
+      {loading || (view === 'closed' && !closed) ? <SkeletonList rows={4} /> : groups.length === 0 ? (
         view === 'closed' ? <Empty icon="🗂" text="אין רישומים סגורים" /> : (
           <Empty icon="✅" text="אין השאלות פתוחות"
             hint="צמיג שלקחנו מפנצ׳ריה אחרת או נתנו לה — רושמים כאן עד שמחזירים או משלמים"

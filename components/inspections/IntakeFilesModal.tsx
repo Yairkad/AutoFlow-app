@@ -8,6 +8,7 @@ import {
   scanWithAgent, listScanners, getSavedScanner, saveScanner, SCANNER_DOWNLOAD_URL,
   ScannerAgentMissingError, ScannerAgentOutdatedError, ScannerDeviceNotFoundError, type ScannerDevice,
 } from '@/lib/scannerAgent'
+import { SkeletonCards } from '@/components/ui/Skeleton'
 
 // Shows the documents a customer uploaded through the pre-fill link, with one-click print per
 // document. Print uses a standalone window (same technique as printChecklist) — no app layout.
@@ -153,7 +154,7 @@ export default function IntakeFilesModal({ inspectionId, title, onClose, onChang
           )}
           {msg && <div role="alert" style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 10 }}>{msg}</div>}
           {error && <div style={{ color: 'var(--danger)' }}>{error}</div>}
-          {!files && !error && <div style={{ color: 'var(--text-muted)' }}>טוען...</div>}
+          {!files && !error && <SkeletonCards n={3} h={140} min={180} />}
           {files && files.length === 0 && <div style={{ color: 'var(--text-muted)' }}>אין עדיין מסמכים — סרקו או העלו את מסמכי הלקוח</div>}
           {files && files.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>

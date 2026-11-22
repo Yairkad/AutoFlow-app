@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import CarContractEditor, { type ContractPrefill } from './CarContractEditor'
 import { type ContractRow, fmtDate, todayIso, signedFileUrl } from '@/lib/cars/saleContract'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 interface Props {
   // limit to one car (compact mode inside the car view) + prefill for a new contract
@@ -109,7 +110,7 @@ export default function CarContractsPanel({ carId, prefill, onOpen }: Props) {
       </div>
 
       {loading ? (
-        <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>טוען...</div>
+        <SkeletonList rows={2} h={48} />
       ) : shown.length === 0 ? (
         <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: compact ? 0 : '24px 0', textAlign: compact ? undefined : 'center' }}>
           {rows.length ? 'לא נמצאו חוזים' : 'עדיין אין חוזים שמורים'}

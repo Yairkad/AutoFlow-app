@@ -6,6 +6,7 @@ import QRCode from 'qrcode'
 import Button from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { Skel } from '@/components/ui/Skeleton'
 
 // The business's fixed pre-fill link as a QR: show, copy, print as a poster, or replace it.
 
@@ -81,7 +82,7 @@ export default function IntakeQrModal({ businessName, onClose }: { businessName:
             כל מילוי מופיע כאן ברשימה כטופס חדש.
           </div>
           {error && <div style={{ color: 'var(--danger)' }}>{error}</div>}
-          {!qr && !error && <div style={{ color: 'var(--text-muted)', padding: 40 }}>טוען...</div>}
+          {!qr && !error && <Skel w={220} h={220} r={12} style={{ margin: '20px auto' }} />}
           {qr && (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}

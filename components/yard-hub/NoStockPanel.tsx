@@ -7,6 +7,7 @@ import { parseTireSize, tireSizeSearchParams } from '@/lib/tires/size'
 import SearchSheet, { ResultRow } from '@/components/yard/SearchSheet'
 import type { SearchResult } from '@/app/api/yard/search/route'
 import { Chips, Empty, Field, HubFrame, Sheet, api, fmtDate, inputCls, inputStyle } from './ui'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 interface NoStockRow {
   id: string
@@ -160,7 +161,7 @@ export default function NoStockPanel({ variant }: { variant: 'yard' | 'office' }
         </Sheet>
       )}
 
-      {rows === null ? <Empty icon="⏳" text="טוען..." /> : groups.length === 0 ? (
+      {rows === null ? <SkeletonList rows={4} /> : groups.length === 0 ? (
         <Empty icon="✅" text={view === 'open' ? 'הכול מסודר — אין מכירות ללא מלאי' : 'אין רשומות'} />
       ) : (
         <div className="flex flex-col gap-3">

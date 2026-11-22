@@ -12,6 +12,7 @@ import {
   ROUND_DAYS, buildReview, expandScope, expectedTires, shelfSizeChanges, tireLabel, toSave,
   type CountRound, type OutsideChoice, type ReviewRow, type ZoneEntry, type ZoneTire,
 } from '@/lib/stock/zoneCount'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 // Count part of the stock: pick cabinets / shelves on the map, scan shelf by shelf, review, save.
 // Same screen on the yard terminal (variant 'yard') and in the office (variant 'office').
@@ -267,7 +268,7 @@ export default function ZoneCountPanel({ variant }: { variant: 'yard' | 'office'
   )
 
   if (loadErr) return frame('🔢 ספירת מלאי', <div className="text-red-600 font-bold">שגיאה בטעינה: {loadErr}</div>)
-  if (!data) return frame('🔢 ספירת מלאי', <div className="text-slate-400">טוען...</div>)
+  if (!data) return frame('🔢 ספירת מלאי', <SkeletonList rows={4} />)
 
   if (step === 'pick') {
     const pickedCabs = sortShelves([...picked])

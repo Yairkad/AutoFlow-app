@@ -138,16 +138,7 @@ function NavItem({
 
       <span style={{ flex: 1 }}>{item.label}</span>
 
-      {isPending && (
-        <span style={{
-          width: 8, height: 8, borderRadius: '50%',
-          border: '2px solid currentColor',
-          borderTopColor: 'transparent',
-          display: 'inline-block',
-          animation: 'spin .6s linear infinite',
-          flexShrink: 0,
-        }} />
-      )}
+      {/* no spinner while the page loads — the page itself shows a skeleton (app/(app)/loading.tsx) */}
     </Link>
   )
 }

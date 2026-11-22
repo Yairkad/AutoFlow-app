@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button'
 import { LANDING_TENANT_ID } from '@/lib/landingTenant'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { DEFAULT_GUIDE, resolveGuide, sectionImages, type GuideContent, type GuideImage, type GuideSection, type GuideTopic, type L } from '@/lib/guide/content'
+import { SkeletonForm, Skel } from '@/components/ui/Skeleton'
 
 // Settings → דף נחיתה → מדריך צמיגים: edit the public tire guide (/guide/<token>), images, and its QR.
 // Content is saved as one JSON on tenants.guide_content; "reset" sets it back to null (= built-in default).
@@ -145,7 +146,7 @@ function QrBox({ businessName, shortLink, showToast }: { businessName: string; s
   }
 
   if (error) return <div style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</div>
-  if (!qr) return <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>טוען ברקוד...</div>
+  if (!qr) return <Skel w={180} h={180} r={12} />
   return (
     <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap', padding: 14, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--bg-card)', marginBottom: 16 }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -185,7 +186,7 @@ export default function GuideEditor({ supabase, tenantId, showToast }: { supabas
     })
   }, [supabase, tenantId])
 
-  if (!content) return <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
+  if (!content) return <SkeletonForm fields={4} style={{ padding: 20 }} />
   const topic = content.topics.find(t => t.id === topicId) ?? content.topics[0]
 
   function update(next: GuideContent) { setContent(next); setDirty(true) }

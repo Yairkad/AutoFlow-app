@@ -880,3 +880,5 @@
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
+- `components/ui/Skeleton.tsx` — loading placeholders shaped like content: Skel, SkeletonLines/List/Table/Cards/Form, PageSkeleton(kind) — currentColor pulse (.skel in globals.css), works light+dark (~1200 tok)
+- `lib/hooks/localCache.ts` — readCache/writeCache (localStorage 'af-cache:' prefix) for stale-while-revalidate lists (yard drawer) (~150 tok)

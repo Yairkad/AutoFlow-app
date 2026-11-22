@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { parseLocation, type StorageLayout } from '@/lib/stock/storage'
 import StorageMap from './StorageMap'
+import { Skel } from '@/components/ui/Skeleton'
 
 // "📍 B3 ⓘ" — the ⓘ opens the cabinets map with the shelf marked, for whoever can't find it.
 
@@ -36,7 +37,7 @@ export function LocationMapModal({ location, onClose }: { location: string; onCl
             ? <>האות = הארון, המספר = המדף מלמעלה (1 = המדף העליון). המדף מסומן בכתום.</>
             : <>המיקום לא בפורמט של ארון ומדף (למשל B3).</>}
         </div>
-        {layout === undefined && <div style={{ color: '#94a3b8' }}>טוען תרשים...</div>}
+        {layout === undefined && <Skel h={160} r={10} />}
         {layout === null && <div style={{ color: '#b91c1c' }}>לא ניתן לטעון את התרשים</div>}
         {layout && <StorageMap layout={layout} highlight={new Set(shelves)} />}
       </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { startLiveRefresh } from '@/lib/hooks/useLiveRefresh'
+import { SkeletonList, SkeletonLines } from '@/components/ui/Skeleton'
 
 function useIsMobile() {
   const [mobile, setMobile] = useState(false)
@@ -129,7 +130,7 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
                 <button onClick={() => setPopupOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--text-muted)' }}>✕</button>
               </div>
               {loading ? (
-                <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>טוען...</div>
+                <SkeletonLines n={2} />
               ) : total === 0 ? (
                 <div style={{ color: 'var(--primary)', fontSize: '13px' }}>✓ אין משימות פתוחות</div>
               ) : (
@@ -187,7 +188,7 @@ export default function RemindersPanel({ compact }: { compact?: boolean } = {}) 
       </div>
 
       {loading ? (
-        <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>טוען...</div>
+        <SkeletonList rows={3} h={48} />
       ) : total === 0 ? (
         <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>
           הכל מטופל 🎉

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import TireDiagram from '@/components/yard/TireDiagram'
 import type { TirePosition } from '@/lib/yard/types'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 interface HistoryItem {
   name: string
@@ -89,7 +90,7 @@ export default function VehicleHistoryModal({ plate, onClose }: Props) {
         {/* Content */}
         <div className="overflow-y-auto flex-1 scroll-col" style={{ padding: '12px 16px', gap: '12px', display: 'flex', flexDirection: 'column' }}>
           {!sessions && !error && (
-            <p className="text-center text-slate-400 py-8">טוען...</p>
+            <SkeletonList rows={3} style={{ padding: 16 }} />
           )}
           {error && (
             <p className="text-center text-red-400 py-8">שגיאה בטעינת היסטוריה</p>

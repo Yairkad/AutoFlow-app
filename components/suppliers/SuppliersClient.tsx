@@ -9,6 +9,7 @@ import SupplierDetailsTab from './SupplierDetailsTab'
 import SupplierTrackingTab from './SupplierTrackingTab'
 import { Supplier, SupplierDebt, ScheduledPayment, SupplierDebtPayment, RecurringItem } from './shared'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
+import { PageSkeleton } from '@/components/ui/Skeleton'
 
 type Tab = 'details' | 'tracking'
 
@@ -130,9 +131,7 @@ export default function SuppliersClient({ embedded = false }: { embedded?: boole
   }
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-muted)', fontSize: '14px' }}>
-      טוען...
-    </div>
+    <PageSkeleton kind="cards" />
   )
 
   const tracking = (

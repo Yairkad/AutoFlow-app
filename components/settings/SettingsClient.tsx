@@ -12,6 +12,7 @@ import SignatureStampsPanel from '@/components/settings/SignatureStampsPanel'
 import DriveFilesPanel from '@/components/documents/DriveFilesPanel'
 import { BACKUP_TABLES, CHILD_TABLES } from '@/lib/backup/backup'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
+import { PageSkeleton, SkeletonForm, SkeletonLines } from '@/components/ui/Skeleton'
 
 type ToastFn = (msg: string, type?: 'success' | 'error' | 'info') => void
 
@@ -173,7 +174,7 @@ function BusinessTab({ supabase, tenantId, showToast, initial }: { supabase: Ret
     else { setOrigTenant(tenant); setEditing(false); showToast('נשמר בהצלחה', 'success') }
   }
 
-  if (!tenant) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
+  if (!tenant) return <SkeletonForm fields={6} style={{ padding: 20 }} />
 
   const infoRow = (icon: string, label: string, value: string | null | undefined) =>
     value ? (
@@ -818,7 +819,7 @@ function VaultTab({ supabase, tenantId, showToast }: { supabase: ReturnType<type
   }
 
   // ── Lock screen ──
-  if (hasPinSet === null) return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
+  if (hasPinSet === null) return <SkeletonLines n={3} style={{ padding: 20 }} />
 
   if (!unlocked) {
     return (
@@ -1806,7 +1807,7 @@ export default function SettingsClient() {
     ...(isAdmin ? [{ key: 'backup' as Tab, label: 'גיבוי', icon: '🗄️' }] : []),
   ]
 
-  if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>טוען...</div>
+  if (loading) return <PageSkeleton kind="cards" />
   if (!tenantId || !myId) return null
 
   function toggleTab(key: Tab) {

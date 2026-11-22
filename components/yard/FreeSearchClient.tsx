@@ -10,6 +10,7 @@ import TirePositionPicker from '@/components/yard/TirePositionPicker'
 import NoStockChargeDialog, { type NoStockCharge } from '@/components/yard/NoStockChargeDialog'
 import { handOffToCard, occupiedPositions, tireIdsAt } from '@/lib/yard/handoff'
 import type { TirePosition } from '@/lib/yard/types'
+import { SkeletonList } from '@/components/ui/Skeleton'
 
 interface Props {
   session:    YardSession
@@ -216,7 +217,7 @@ export default function FreeSearchClient({ session, filterType }: Props) {
       {/* Browse list — tap adds to the card */}
       <div className="flex-1 overflow-y-auto bg-white rounded-xl border border-slate-200" style={{ margin: '10px 14px 14px', minHeight: 0 }}>
         {results.length === 0 ? (
-          <div className="p-6 text-center text-slate-400">טוען...</div>
+          <SkeletonList rows={4} style={{ padding: 16 }} />
         ) : results.map((r, i) => (
           <button key={r.id} onClick={() => !saving && pickItem(r)} disabled={saving}
             className="w-full text-right flex items-center active:bg-blue-100"

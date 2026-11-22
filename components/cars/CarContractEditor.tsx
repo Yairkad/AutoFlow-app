@@ -22,6 +22,7 @@ import {
   DEFAULT_CLAUSES, newContract, normalizeContract, cloneClauses, visibleClauses, itemLetter, priceToWords,
   parseAmount, fmtAmount, contractHtml, newId, payLinesTotal, checksTotal,
 } from '@/lib/cars/saleContract'
+import { SkeletonForm } from '@/components/ui/Skeleton'
 
 export interface ContractPrefill {
   car?: Partial<ContractData['car']>
@@ -571,7 +572,7 @@ export default function CarContractEditor({ open, contractId, carId, prefill, on
 
       <div className="csc-scroll">
         {!d ? (
-          <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>טוען...</div>
+          <SkeletonForm fields={8} style={{ padding: 24 }} />
         ) : (
           <div className="csc-paper">
             <div className="csc-title">
