@@ -3313,3 +3313,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 09:00 | Gave test checklist for signed PDF; migration 118 (expenses.supplier_name) was missing in prod — gave SQL | — | info only | ~2k |
 | 09:10 | Disk IO recheck (3 days after stats reset): realtime gone; top = suppliers page loadAll (supplier_debts/payments/scheduled… ~400 calls each in 3 days) — healthy, no action | — | info only | ~2k |
+| 10:50 | Created lib/hooks/localCache.ts | — | ~164 |

@@ -9,6 +9,7 @@ import {
   type CustomerRequest, type PaymentStatus, type RequestKind, type RequestStatus,
 } from '@/lib/yard/hub'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
+import { readCache, writeCache } from '@/lib/hooks/localCache'
 import { AddButton, Chips, Empty, Field, HubFrame, QtyStepper, Sheet, Toggle, api, fmtDate, inputCls, inputStyle, type HubVariant } from './ui'
 
 type View = 'order' | 'inquiry' | 'closed'
@@ -84,13 +85,16 @@ const NEXT_LABEL: Partial<Record<RequestStatus, string>> = {
   notified: '✔ סגור',
 }
 
-export default function RequestsPanel({ variant }: { variant: HubVariant }) {
+/** refreshKey (drawer): reload when it changes — the drawer bumps it on its ⟳ button or when the open count changes. */
+export default function RequestsPanel({ variant, refreshKey }: { variant: HubVariant; refreshKey?: number }) {
+  // Drawer: show the last-known list at once (localStorage), refresh behind the scenes
+  const cached = variant === 'drawer' ? readCache<CustomerRequest[]>('yd-requests') : null
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [view, setView]       = useState<View>('order')
-  const [open, setOpen]       = useState<CustomerRequest[]>([])
+  const [open, setOpen]       = useState<CustomerRequest[]>(cached ?? [])
   const [closed, setClosed]   = useState<CustomerRequest[] | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!cached)
   const [form, setForm]       = useState<typeof emptyForm | null>(null)
   const [editId, setEditId]   = useState<string | null>(null)
   const [saving, setSaving]   = useState(false)
@@ -107,14 +111,18 @@ export default function RequestsPanel({ variant }: { variant: HubVariant }) {
   const [callNote, setCallNote] = useState('')
 
   const loadOpen = useCallback(async () => {
-    try { setOpen(await api<CustomerRequest[]>('/api/yard/requests?status=open')) }
+    try {
+      const rows = await api<CustomerRequest[]>('/api/yard/requests?status=open')
+      setOpen(rows)
+      if (variant === 'drawer') writeCache('yd-requests', rows)
+    }
     catch (e) { showToast(`שגיאה בטעינה: ${(e as Error).message}`, 'error') }
     finally { setLoading(false) }
-  }, [showToast])
+  }, [showToast, variant])
 
-  useEffect(() => { loadOpen() }, [loadOpen])
+  useEffect(() => { loadOpen() }, [loadOpen, refreshKey])
   // Changes made on other devices show up without refreshing the page
-  useLiveRefresh(loadOpen)
+  useLiveRefresh(loadOpen, 60_000, { disabled: variant === 'drawer' })
 
   useEffect(() => {
     api<string[]>('/api/yard/suppliers').then(setSuppliers).catch(() => {})

@@ -6,6 +6,8 @@ export interface LiveRefreshOptions {
   /** Keep polling while the browser window is visible but not focused (another app on top, a
    *  second monitor). Only for wall/terminal screens nobody clicks — elsewhere it's needless load. */
   whenBlurred?: boolean
+  /** Hook only: don't refresh at all (the caller refreshes it another way). */
+  disabled?: boolean
 }
 
 /**
@@ -39,7 +41,7 @@ export function startLiveRefresh(reload: () => unknown, intervalMs = 60_000, opt
 /** Hook form of startLiveRefresh; always calls the latest `reload`. */
 export function useLiveRefresh(reload: () => unknown, intervalMs = 60_000, opts: LiveRefreshOptions = {}) {
   const ref = useRef(reload)
-  const whenBlurred = !!opts.whenBlurred
+  const whenBlurred = !!opts.whenBlurred, disabled = !!opts.disabled
   useEffect(() => { ref.current = reload }, [reload])
-  useEffect(() => startLiveRefresh(() => ref.current(), intervalMs, { whenBlurred }), [intervalMs, whenBlurred])
+  useEffect(() => disabled ? undefined : startLiveRefresh(() => ref.current(), intervalMs, { whenBlurred }), [intervalMs, whenBlurred, disabled])
 }
