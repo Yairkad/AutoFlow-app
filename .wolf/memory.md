@@ -3321,3 +3321,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:55 | PR #94 already merged → merged main into branch, opened PR #95 (skeletons + drawer cache) | — | PR opened | ~2k |
+
+## Session: 2026-11-24 13:19
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:20 | Research only: n8n supplier-invoice intake plan (schema review of suppliers/supplier_debts/expenses, Drive storage) — no code changes | supabase/migrations | answered | ~15k |
