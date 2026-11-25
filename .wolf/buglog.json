@@ -1960,5 +1960,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-25"
+  },
+  {
+    "id": "bug-107",
+    "timestamp": "2026-11-25",
+    "error_message": "עדיין כמעט 10 שניות מלחיצה על כניסה עד שנכנסים (אחרי התיקון הראשון)",
+    "file": "app/login/LoginClient.tsx, app/layout.tsx",
+    "root_cause": "Login was a server action that redirected → woke a cold Vercel function and server-rendered /dashboard; root layout generateMetadata queried tenants on every dynamic render (5s timeout) while the DB was slow",
+    "fix": "Sign in from the browser Supabase client + router.replace('/dashboard'); deleted app/login/actions.ts; root metadata tenant query wrapped in unstable_cache (1h). Removed /dashboard prefetch (pre-login prefetch is redirected to /login and could be cached)",
+    "tags": [
+      "login",
+      "performance",
+      "server-action",
+      "metadata",
+      "cold-start"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-25"
   }
 ]

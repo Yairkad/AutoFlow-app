@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { unstable_cache } from 'next/cache'
 import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import { createServiceClient } from '@/lib/supabase/service'
@@ -19,17 +20,23 @@ import './globals.css'
 // Fonts are self-hosted (@fontsource) — next/font/google fetches them from Google on every build,
 // and Turbopack (Next 16.1) breaks when Google answers with /l/font?kit=…&skey=… URLs (random build failures).
 // The CSS variables --font-heebo / --font-ui / --font-num are defined in globals.css.
+// Cached for an hour: without this the root layout queried the DB on EVERY dynamic render
+// (incl. the post-login redirect), adding up to the 5s timeout when the DB is slow.
+const getMetaTenant = unstable_cache(async () => {
+  // Service-role client: no session needed — works for social bots & crawlers too
+  const { data } = await createServiceClient()
+    .from('tenants')
+    .select('name, public_info')
+    .limit(1)
+    // Never let a slow/unreachable DB hang the build or a page
+    .abortSignal(AbortSignal.timeout(5000))
+    .single()
+  return data
+}, ['root-meta-tenant'], { revalidate: 3600 })
+
 export async function generateMetadata(): Promise<Metadata> {
   try {
-    // Service-role client: no session needed — works for social bots & crawlers too
-    const supabase = createServiceClient()
-    const { data: tenant } = await supabase
-      .from('tenants')
-      .select('name, public_info')
-      .limit(1)
-      // Runs at build time for every static page — never let a slow/unreachable DB hang the build
-      .abortSignal(AbortSignal.timeout(5000))
-      .single()
+    const tenant = await getMetaTenant()
 
     if (tenant) {
       const info        = tenant.public_info as { meta_title?: string; meta_description?: string } | null
