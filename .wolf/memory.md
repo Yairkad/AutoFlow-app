@@ -3327,3 +3327,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 13:20 | Research only: n8n supplier-invoice intake plan (schema review of suppliers/supplier_debts/expenses, Drive storage) — no code changes | supabase/migrations | answered | ~15k |
+
+## Session: 2026-11-25 11:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:15 | Fix auto Drive backup: per-tenant fan-out in cron + Google error reason in getAccessToken | app/api/cron/backup/route.ts, lib/drive.ts | tsc+eslint clean, not runtime-tested | ~20k |
