@@ -26,6 +26,8 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?:   Variant
   size?:      Size
   loading?:   boolean
+  /** Text shown next to the spinner while loading (default: "שומר...") */
+  loadingText?: string
   fullWidth?: boolean
 }
 
@@ -33,6 +35,7 @@ export default function Button({
   variant   = 'primary',
   size      = 'md',
   loading   = false,
+  loadingText = 'שומר...',
   fullWidth = false,
   children,
   disabled,
@@ -83,7 +86,7 @@ export default function Button({
     >
       {(loading || busy)
         ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <Spinner /> שומר...
+            <Spinner /> {loadingText}
           </span>
         : children
       }

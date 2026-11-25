@@ -3336,11 +3336,19 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 11:27 | Checks journal: search by amount + check number, auto-expand months while searching, hidden-by-status hint | components/checks/ChecksJournalClient.tsx | tsc clean, logic sanity-tested | ~8k |
 
 ## Session: 2026-11-25 11:41
+## Session: 2026-11-25 09:03
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:00 | Login speed: ProfileContext getUser→getClaims, dashboard charts lazy (next/dynamic), prefetch /dashboard on login, Button loadingText ("מתחבר...") | ProfileContext.tsx, dashboard/page.tsx, LoginClient.tsx, Button.tsx | tsc ok | ~3k |
+
+## Session: 2026-11-25 09:17
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 
 ## Session: 2026-11-25 20:42
+## Session: 2026-11-25 09:25
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
@@ -3350,3 +3358,37 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 20:55 | Checks journal also lists expenses paid by check (payment_method "צ'ק", not created from a scheduled check) as read-only 'מהוצאות' rows | components/checks/ChecksJournalClient.tsx | tsc clean | ~10k |
+## Session: 2026-11-25 10:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 10:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 10:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 11:03
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 20:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 20:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:55 | Created lib/reports/amirExport.ts | — | ~2544 |
+| 20:55 | Created lib/utils/saveToFolder.ts | — | ~747 |
+| 20:55 | Created components/reports/AmirExportPanel.tsx | — | ~1272 |
+| 00:00 | Built Amir Tazrim export (4 xlsx, folder save, payment terms field + migration 120 not yet applied) | lib/reports/amirExport.ts, AmirExportPanel.tsx, saveToFolder.ts, Supplier/CustomerDetailsTab | tsc ok, logic test ok | ~15k |
+| 00:00 | Migration 120 (payment_terms_days) applied by user in Supabase SQL editor | supabase/migrations/120_payment_terms.sql | done | ~0 |

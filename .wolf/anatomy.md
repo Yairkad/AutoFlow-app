@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-11-22T10:50:11.203Z
-> Files: 221 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-11-25T20:55:46.444Z
+> Files: 226 tracked | Anatomy hits: 0 | Misses: 0
 
 ## (added 2026-10-29)
 
@@ -600,6 +600,7 @@
 
 ## components/reports/
 
+- `AmirExportPanel.tsx` — One click → the four Excel files Amir Tazrim asked for, saved into a chosen folder. (~1272 tok)
 - `CashFlowForecastTab.tsx` — fmt — renders table (~2035 tok)
 - `UnifiedReportTab.tsx` — fmt — renders table (~1707 tok)
 
@@ -770,6 +771,7 @@
 
 ## lib/reports/
 
+- `amirExport.ts` — "שוטף + N": end of the invoice's month, plus N days. (~2544 tok)
 - `buildForecast.ts` — Exports ForecastEvent, ForecastResult, buildForecast (~1802 tok)
 - `buildUnifiedReport.ts` — Exports MonthlyReportRow, UnifiedReportResult, buildUnifiedReport (~1993 tok)
 
@@ -815,6 +817,7 @@
 
 ## lib/utils/
 
+- `saveToFolder.ts` — Returns where the files went: the folder's name, or null for plain downloads. (~747 tok)
 
 ## lib/utils/ (addition)
 
@@ -871,14 +874,20 @@
 ## tools/scanner-agent/
 
 - `113_check_handed_date.sql` — scheduled_payments.handed_date (check handed to supplier; supplier balance drops then); backfill least(created_at, due_date) (~120 tok)
+- `components/ui/Skeleton.tsx` — loading placeholders shaped like content: Skel, SkeletonLines/List/Table/Cards/Form, PageSkeleton(kind) — currentColor pulse (.skel in globals.css), works light+dark (~1200 tok)
 - `intakeImage.tsx` — renderIntakeOgImage(name, logoBase64): branded 1200x630 link preview (logo card + inspection badge, colours from logo) via next/og ImageResponse (~1100 tok)
 - `intakeTenant.ts` — getIntakeTenant(token): tenant name+logo for personal/fixed intake link (~250 tok)
 - `lib/cars/contractPayments.ts` — expectedPayments() from contract data + receipts, loadExpectedPayments / setReceipt (~1300 tok)
+- `lib/hooks/localCache.ts` — readCache/writeCache (localStorage 'af-cache:' prefix) for stale-while-revalidate lists (yard drawer) (~150 tok)
 - `logoColors.ts` — logoPalette(buf): dominant dark colour → bg, bright saturated → accent (sharp) (~700 tok)
 - `main.go` — Windows agent: self-install (HKCU Run), HTTP 127.0.0.1:47321 /status /scan, origin approval MessageBox, runs scan.ps1 (~2800 tok)
 - `main.go` — go:build windows (~3100 tok)
 - `pdf.go` — JPEG pages → PDF (portable, tested in pdf_test.go) (~700 tok)
 - `rtl.ts` — rtl(text): logical→visual order for single-line Hebrew in satori (~300 tok)
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
-- `components/ui/Skeleton.tsx` — loading placeholders shaped like content: Skel, SkeletonLines/List/Table/Cards/Form, PageSkeleton(kind) — currentColor pulse (.skel in globals.css), works light+dark (~1200 tok)
-- `lib/hooks/localCache.ts` — readCache/writeCache (localStorage 'af-cache:' prefix) for stale-while-revalidate lists (yard drawer) (~150 tok)
+
+## Amir Tazrim export (2026-11-25)
+- `lib/reports/amirExport.ts` — buildAmirFiles: 4 xlsx (open supplier invoices, checks+transfers, cash+card, open customer invoices). Open amount = oldest-first coverage; due = end of invoice month + payment_terms_days (default 30). Payments filtered by created_at day (~1800 tok)
+- `lib/utils/saveToFolder.ts` — saveFiles/pickFolder: File System Access folder handle kept in IndexedDB; fallback downloads (~600 tok)
+- `components/reports/AmirExportPanel.tsx` — "ייצוא לאמיר תזרים" panel (date range, last export from tenants.settings.amir_last_export), shown in CashFlowForecastTab (~1100 tok)
+- `supabase/migrations/120_payment_terms.sql` — suppliers/customers.payment_terms_days int default 30

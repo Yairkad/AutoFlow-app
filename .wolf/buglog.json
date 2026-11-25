@@ -1943,5 +1943,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-25T00:00:00Z"
+  },
+  {
+    "id": "bug-106",
+    "timestamp": "2026-11-25",
+    "error_message": "כניסה איטית מרגע הלחיצה, והכפתור מציג 'שומר...' במסך הכניסה",
+    "file": "components/ui/Button.tsx, lib/contexts/ProfileContext.tsx, app/(app)/dashboard/page.tsx, app/login/LoginClient.tsx",
+    "root_cause": "Button loading text hardcoded 'שומר...'; ProfileContext did a getUser() network round-trip; dashboard statically imported recharts; no prefetch of /dashboard",
+    "fix": "Button loadingText prop; login 'מתחבר...'; getClaims(); DashboardCharts via next/dynamic; router.prefetch('/dashboard')",
+    "tags": [
+      "login",
+      "performance",
+      "button",
+      "ux"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-25"
   }
 ]

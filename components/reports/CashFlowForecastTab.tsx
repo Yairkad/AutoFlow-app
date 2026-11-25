@@ -7,6 +7,7 @@ import {
 import { createClient } from '@/lib/supabase/client'
 import { buildForecast, ForecastResult } from '@/lib/reports/buildForecast'
 import { SkeletonTable, SkeletonCards } from '@/components/ui/Skeleton'
+import AmirExportPanel from './AmirExportPanel'
 
 const fmt = (n: number) => `₪${Number(n).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const fmtDMY = (iso: string) => { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y.slice(2)}` }
@@ -51,8 +52,11 @@ export default function CashFlowForecastTab({ tenantId }: Props) {
 
   if (!result || result.anchorBalance == null) {
     return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <AmirExportPanel tenantId={tenantId} />
       <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted)', fontSize: '14px' }}>
         אין עדיין יתרת בנק ידועה להתחיל ממנה. ייבאו דף בנק/אשראי עם עמודת "יתרה" ב-<b>התאמת בנק ← ייבוא</b> כדי להפעיל את התחזית.
+      </div>
       </div>
     )
   }
@@ -65,6 +69,7 @@ export default function CashFlowForecastTab({ tenantId }: Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <AmirExportPanel tenantId={tenantId} />
       <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 16px' }}>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>יתרת פתיחה (מ-{result.anchorSourceName ?? 'דף בנק'}, {fmtDMY(result.anchorDate!)})</span>
