@@ -3409,3 +3409,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 21:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:00 | Session summary: login 10s→<0.5s (PR 97), page cache for checks/accounts/inspections/stock (PR 98, user confirmed fast), Amir Tazrim export (PR 96) pending review with Amir's rep tomorrow | — | done | ~0 |
