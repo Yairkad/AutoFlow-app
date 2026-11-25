@@ -1926,5 +1926,22 @@
     ],
     "occurrences": 1,
     "last_seen": "2026-11-25T00:00:00Z"
+  },
+  {
+    "id": "bug-105",
+    "timestamp": "2026-11-25T00:00:00Z",
+    "error_message": "User: a check that was issued can't be found in the checks journal by its check number",
+    "file": "components/checks/ChecksJournalClient.tsx",
+    "root_cause": "Likely one of: (a) default status filter 'open' hides checks already auto-marked paid (due date passed); (b) months are collapsed by default so hits are hidden; (c) number filter uses parseInt range — non-numeric/odd formats don't match; free-text search didn't include check_number or amount.",
+    "fix": "Free-text search now matches check_number (digits-only substring) and amount (1500 / 1,500 / ₪1,500 / 1500.50). Months auto-expand while searching. Banner shows how many matches the status filter hides, with 'הצג הכל'.",
+    "tags": [
+      "checks",
+      "search",
+      "filter",
+      "ux"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-25T00:00:00Z"
   }
 ]

@@ -163,11 +163,17 @@ export default function ChecksJournalClient() {
 
   // ── Filtering & grouping ────────────────────────────────────────────────────
 
-  const filtered = useMemo(() => {
+  // Free-text search also matches the check number (any format — "0012345", "12-345") and the
+  // amount ("1500", "1,500", "1500.50", "₪1,500"), so a check can be found even when its number
+  // was typed differently or isn't known.
+  const { filtered, hiddenByStatus } = useMemo(() => {
     const numFrom = fNumFrom ? parseInt(fNumFrom, 10) : null
     const numTo = fNumTo ? parseInt(fNumTo, 10) : null
     const q = fSearch.trim().toLowerCase()
-    return rows.filter(p => {
+    const qDigits = q.replace(/[\s,₪]/g, '')
+    const qAmount = /^\d+(\.\d{1,2})?$/.test(qDigits) ? Number(qDigits) : null
+    const qNum = qDigits.replace(/\D/g, '')
+    const matches = (p: ScheduledPayment) => {
       if (fSupplier === '__none__' && p.supplier_id) return false
       if (fSupplier && fSupplier !== '__none__' && p.supplier_id !== fSupplier) return false
       if (numFrom != null || numTo != null) {
@@ -178,16 +184,24 @@ export default function ChecksJournalClient() {
       }
       if (fDateFrom && p.due_date < fDateFrom) return false
       if (fDateTo && p.due_date > fDateTo) return false
-      if (fStatus === 'open' && p.is_paid) return false
-      if (fStatus === 'paid' && !p.is_paid) return false
       if (q) {
         const supName = suppliers.find(s => s.id === p.supplier_id)?.name ?? ''
-        const hay = `${p.description} ${p.notes ?? ''} ${supName}`.toLowerCase()
-        if (!hay.includes(q)) return false
+        const hay = `${p.description} ${p.notes ?? ''} ${supName} ${p.check_number ?? ''}`.toLowerCase()
+        const amountHit = qAmount != null && Math.abs(Number(p.amount) - qAmount) < 0.005
+        const checkNoHit = !!qNum && (p.check_number ?? '').replace(/\D/g, '').includes(qNum)
+        if (!hay.includes(q) && !amountHit && !checkNoHit) return false
       }
       return true
-    }).sort((a, b) => a.due_date.localeCompare(b.due_date) || (a.check_number ?? '').localeCompare(b.check_number ?? ''))
+    }
+    const statusOk = (p: ScheduledPayment) => fStatus === 'all' || (fStatus === 'open' ? !p.is_paid : p.is_paid)
+    const all = rows.filter(matches)
+    const list = all.filter(statusOk)
+      .sort((a, b) => a.due_date.localeCompare(b.due_date) || (a.check_number ?? '').localeCompare(b.check_number ?? ''))
+    return { filtered: list, hiddenByStatus: all.length - list.length }
   }, [rows, suppliers, fSupplier, fNumFrom, fNumTo, fDateFrom, fDateTo, fStatus, fSearch])
+
+  // While searching, open every month — otherwise the hits sit inside collapsed months
+  const searching = !!(fSearch.trim() || fNumFrom || fNumTo)
 
   const monthGroups = useMemo(() => {
     const map: Record<string, ScheduledPayment[]> = {}
@@ -426,7 +440,7 @@ export default function ChecksJournalClient() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 160 }}>
           <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>חיפוש</label>
-          <input placeholder="תיאור, הערות, ספק..." value={fSearch} onChange={e => setFSearch(e.target.value)} style={SEL} />
+          <input placeholder="תיאור, ספק, מס' צ'ק, סכום..." value={fSearch} onChange={e => setFSearch(e.target.value)} style={SEL} />
         </div>
 
         <button onClick={clearFilters} style={{ padding: '8px 12px', border: 'none', background: 'transparent', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline' }}>
@@ -435,6 +449,12 @@ export default function ChecksJournalClient() {
       </div>
 
       {/* Results */}
+      {hiddenByStatus > 0 && (
+        <div style={{ marginBottom: 12, padding: '8px 14px', borderRadius: 8, background: 'var(--warning-soft, #fef9c3)', color: '#92400e', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          עוד {hiddenByStatus} צ׳קים תואמים מוסתרים בגלל סינון הסטטוס.
+          <button onClick={() => setFStatus('all')} style={{ border: 'none', background: 'transparent', color: 'var(--primary)', fontWeight: 600, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>הצג הכל</button>
+        </div>
+      )}
       {filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)', fontSize: '14px' }}>
           לא נמצאו צ׳קים התואמים את הסינון.
@@ -454,7 +474,7 @@ export default function ChecksJournalClient() {
 
           {monthGroups.map(([mk, items]) => {
             const monthTotal = items.filter(p => !p.is_paid).reduce((s, p) => s + Number(p.amount), 0)
-            const collapsed = !expandedMonths.has(mk)
+            const collapsed = !searching && !expandedMonths.has(mk)
             return (
               <div key={mk} style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
                 <div
