@@ -3321,3 +3321,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:55 | PR #94 already merged → merged main into branch, opened PR #95 (skeletons + drawer cache) | — | PR opened | ~2k |
+
+## Session: 2026-11-25 09:03
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
