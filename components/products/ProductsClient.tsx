@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchLink } from '@/lib/hooks/useSearchLink'
 import { createClient } from '@/lib/supabase/client'
+import { getPageCache, setPageCache } from '@/lib/utils/pageCache'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
@@ -86,9 +87,11 @@ export default function ProductsClient() {
   const [viewOnly, setViewOnly]       = useState(false)
   const [isAdmin,  setIsAdmin]        = useState(false)
   const [showPricelist, setShowPricelist] = useState(false)
-  const [products, setProducts] = useState<Product[]>([])
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [movements, setMovements] = useState<Movement[]>([])
+  // Last loaded data (lib/utils/pageCache) — shown at once when coming back, refreshed in the background
+  const cached = profile ? getPageCache<{ products: Product[]; suppliers: Supplier[]; movements: Movement[] }>(`products:${profile.tenantId}`) : undefined
+  const [products, setProducts] = useState<Product[]>(cached?.products ?? [])
+  const [suppliers, setSuppliers] = useState<Supplier[]>(cached?.suppliers ?? [])
+  const [movements, setMovements] = useState<Movement[]>(cached?.movements ?? [])
 
   // Tabs
   // Stock movements live on the stock screen (/stock-count) now
@@ -109,7 +112,7 @@ export default function ProductsClient() {
   const [editingProductId,  setEditingProductId]  = useState<string | null>(null)
   const [editMap, setEditMap] = useState<Record<string, Partial<Product>>>({})
 
-  const [isLoading,    setIsLoading]    = useState(true)
+  const [isLoading,    setIsLoading]    = useState(!cached)
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
@@ -127,6 +130,7 @@ export default function ProductsClient() {
     setProducts(prods || [])
     setSuppliers(sups || [])
     setMovements(mvs || [])
+    setPageCache(`products:${tenantId.current}`, { products: prods || [], suppliers: sups || [], movements: mvs || [] })
     progressDone()
   }, [sb])
 

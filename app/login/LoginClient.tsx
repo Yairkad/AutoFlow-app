@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { clearPageCache } from '@/lib/utils/pageCache'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 
@@ -61,6 +62,7 @@ export default function LoginClient({ brand }: { brand: { name: string; logo: st
       setLoading(false)
       return
     }
+    clearPageCache() // start the new session without another user's cached pages
     router.replace('/dashboard')
   }
 
