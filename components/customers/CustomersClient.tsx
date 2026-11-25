@@ -11,8 +11,13 @@ import { Customer, CustomerLedgerDebt, CustomerLedgerPayment, RecurringItem, Cus
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 import { guardedBackdrop } from '@/lib/ui/backdrop'
 import { PageSkeleton } from '@/components/ui/Skeleton'
+import { getPageCache, setPageCache } from '@/lib/utils/pageCache'
 
 type Tab = 'details' | 'tracking'
+interface CustomersCache {
+  customers: Customer[]; customerDebts: CustomerLedgerDebt[]; categories: string[]
+  customerPayments: CustomerLedgerPayment[]; recurringItems: RecurringItem[]; customerActions: CustomerAction[]
+}
 
 // embedded: inside the accounts screen (its tab bar + header) — the account tracking only
 export default function CustomersClient({ embedded = false }: { embedded?: boolean } = {}) {
@@ -21,20 +26,22 @@ export default function CustomersClient({ embedded = false }: { embedded?: boole
   const tenantIdRef = useRef<string | null>(null)
   const { showToast } = useToast()
   const didParseParams = useRef(false)
-  const hasLoadedRef = useRef(false)
+  // Last loaded data (lib/utils/pageCache) — shown at once when coming back, refreshed in the background
+  const cached = profile ? getPageCache<CustomersCache>(`customers:${profile.tenantId}`) : undefined
+  const hasLoadedRef = useRef(!!cached)
 
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!cached)
   const [tab, setTab] = useState<Tab>('tracking')
   const [openId, setOpenId] = useState<string | null>(null)
   const [openQuery, setOpenQuery] = useState<string | null>(null) // ?q= — e.g. an invoice number from the global search
   const [cardId, setCardId] = useState<string | null>(null)   // customer card over the accounts screen
 
-  const [customers, setCustomers] = useState<Customer[]>([])
-  const [customerDebts, setCustomerDebts] = useState<CustomerLedgerDebt[]>([])
-  const [categories, setCategories] = useState<string[]>([])
-  const [customerPayments, setCustomerPayments] = useState<CustomerLedgerPayment[]>([])
-  const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([])
-  const [customerActions, setCustomerActions] = useState<CustomerAction[]>([])
+  const [customers, setCustomers] = useState<Customer[]>(cached?.customers ?? [])
+  const [customerDebts, setCustomerDebts] = useState<CustomerLedgerDebt[]>(cached?.customerDebts ?? [])
+  const [categories, setCategories] = useState<string[]>(cached?.categories ?? [])
+  const [customerPayments, setCustomerPayments] = useState<CustomerLedgerPayment[]>(cached?.customerPayments ?? [])
+  const [recurringItems, setRecurringItems] = useState<RecurringItem[]>(cached?.recurringItems ?? [])
+  const [customerActions, setCustomerActions] = useState<CustomerAction[]>(cached?.customerActions ?? [])
   const [tenantName, setTenantName] = useState('AutoFlow')
 
   const resolveTenant = useCallback(async () => {
@@ -74,6 +81,13 @@ export default function CustomersClient({ embedded = false }: { embedded?: boole
     if (recItemsRes.data) setRecurringItems(recItemsRes.data)
     if (actionsRes.data) setCustomerActions(actionsRes.data)
     if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
+    const prev = getPageCache<CustomersCache>(`customers:${tid}`)
+    setPageCache<CustomersCache>(`customers:${tid}`, {
+      customers: custRes.data ?? prev?.customers ?? [], customerDebts: debtRes.data ?? prev?.customerDebts ?? [],
+      categories: catRes.data ? catRes.data.map(r => r.name) : prev?.categories ?? [],
+      customerPayments: payRes.data ?? prev?.customerPayments ?? [], recurringItems: recItemsRes.data ?? prev?.recurringItems ?? [],
+      customerActions: actionsRes.data ?? prev?.customerActions ?? [],
+    })
     setLoading(false)
     hasLoadedRef.current = true
   }, [supabase, resolveTenant, showToast, profile, profileLoading])

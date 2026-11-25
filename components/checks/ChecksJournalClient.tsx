@@ -13,6 +13,7 @@ import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
+import { getPageCache, setPageCache } from '@/lib/utils/pageCache'
 import { markScheduledPaymentPaid } from '@/lib/utils/markCheckPaid'
 import { reverseSupplierPayment } from '@/lib/debts/reverseSupplierPayment'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
@@ -74,6 +75,8 @@ const SEL: React.CSSProperties = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+interface ChecksCache { rows: ScheduledPayment[]; suppliers: Supplier[]; linkedIds: string[]; expenseCats?: string[] }
+
 export default function ChecksJournalClient() {
   const supabase = useRef(createClient()).current
   const { profile } = useProfile()
@@ -83,11 +86,14 @@ export default function ChecksJournalClient() {
   const tenantId = profile?.tenantId ?? null
   const tenantName = (profile?.tenant?.name as string | undefined) ?? 'AutoFlow'
 
-  const [loading, setLoading] = useState(true)
-  const [rows, setRows] = useState<ScheduledPayment[]>([])
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [linkedIds, setLinkedIds] = useState<Set<string>>(new Set())
-  const [expenseCats, setExpenseCats] = useState<string[]>(['ספקים', 'אחר'])
+  // Last loaded data of this page (lib/utils/pageCache) — shown at once when coming back
+  const cacheKey = `checks:${tenantId}`
+  const cached = tenantId ? getPageCache<ChecksCache>(cacheKey) : undefined
+  const [loading, setLoading] = useState(!cached)
+  const [rows, setRows] = useState<ScheduledPayment[]>(cached?.rows ?? [])
+  const [suppliers, setSuppliers] = useState<Supplier[]>(cached?.suppliers ?? [])
+  const [linkedIds, setLinkedIds] = useState<Set<string>>(new Set(cached?.linkedIds ?? []))
+  const [expenseCats, setExpenseCats] = useState<string[]>(cached?.expenseCats ?? ['ספקים', 'אחר'])
 
   // Filters
   const [fSupplier, setFSupplier] = useState('') // '' = all, '__none__' = no supplier
@@ -127,12 +133,18 @@ export default function ChecksJournalClient() {
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
-  const loadedRef = useRef(false)
+  const loadedRef = useRef(!!cached)
+  const autoMarkedRef = useRef(false)
   const load = useCallback(async () => {
     if (!tenantId) return
     // Only the first load shows the spinner — background refreshes update in place
     if (!loadedRef.current) setLoading(true)
-    await autoMarkOverdueChecksPaid(supabase, tenantId).catch(() => {})
+    // Settling overdue checks used to run BEFORE loading (several round-trips on every visit).
+    // Now it runs alongside, once per visit, and reloads only if it actually changed something.
+    if (!autoMarkedRef.current) {
+      autoMarkedRef.current = true
+      autoMarkOverdueChecksPaid(supabase, tenantId).then(n => { if (n > 0) loadRef.current() }).catch(() => {})
+    }
     const [payRes, suppRes, catRes, linkRes, expRes] = await Promise.all([
       supabase.from('scheduled_payments').select('*').eq('tenant_id', tenantId).eq('payment_method', 'check').order('due_date', { ascending: true }),
       supabase.from('suppliers').select('id,name').eq('tenant_id', tenantId).order('name'),
@@ -146,13 +158,19 @@ export default function ChecksJournalClient() {
     // A paid scheduled check already created its own expense — skip that one so it isn't listed twice
     const fromScheduled = new Set(scheduled.map(p => p.expense_id).filter(Boolean))
     const direct = (expRes.data ?? []).filter(e => !fromScheduled.has(e.id)).map(expenseAsCheck)
-    setRows([...scheduled, ...direct])
+    const allRows = [...scheduled, ...direct]
+    const cats = catRes.data && catRes.data.length > 0 ? catRes.data.map(r => r.name) : null
+    const links = (linkRes.data ?? []).map(r => r.scheduled_payment_id).filter((id): id is string => !!id)
+    setRows(allRows)
     setSuppliers(suppRes.data ?? [])
-    if (catRes.data && catRes.data.length > 0) setExpenseCats(catRes.data.map(r => r.name))
-    setLinkedIds(new Set((linkRes.data ?? []).map(r => r.scheduled_payment_id).filter((id): id is string => !!id)))
+    if (cats) setExpenseCats(cats)
+    setLinkedIds(new Set(links))
+    setPageCache<ChecksCache>(`checks:${tenantId}`, { rows: allRows, suppliers: suppRes.data ?? [], linkedIds: links, expenseCats: cats ?? undefined })
     loadedRef.current = true
     setLoading(false)
   }, [supabase, tenantId])
+  const loadRef = useRef(load)
+  useEffect(() => { loadRef.current = load }, [load])
 
   useEffect(() => { load() }, [load])
   // Other devices' changes show up without a page refresh

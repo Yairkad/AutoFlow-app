@@ -4,6 +4,7 @@ import { printHtml } from '@/lib/print/printHtml'
 import { useSearchLink } from '@/lib/hooks/useSearchLink'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { getPageCache, setPageCache } from '@/lib/utils/pageCache'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
@@ -347,8 +348,10 @@ export default function InspectionsClient() {
   const { showToast } = useToast()
   const { confirm }   = useConfirm()
 
-  const [inspections, setInspections] = useState<Inspection[]>([])
-  const [loading, setLoading]         = useState(true)
+  // Last loaded list (lib/utils/pageCache) — shown at once when coming back, refreshed in the background
+  const cached = profile ? getPageCache<Inspection[]>(`inspections:${profile.tenantId}`) : undefined
+  const [inspections, setInspections] = useState<Inspection[]>(cached ?? [])
+  const [loading, setLoading]         = useState(!cached)
   const [tab, setTab]                 = useState<'entry' | 'history' | 'intake'>('entry')
   const [editingId, setEditingId]     = useState<string | null>(null)
   const [form, setForm]               = useState({ ...emptyForm })
@@ -380,6 +383,7 @@ export default function InspectionsClient() {
     // A failed refetch (e.g. right after a save) must not wipe the list to empty — keep what we had.
     if (error) { console.error('loadInspections failed:', error); return }
     setInspections(data ?? [])
+    setPageCache(`inspections:${tenantId.current}`, data ?? [])
   }, [supabase])
 
 

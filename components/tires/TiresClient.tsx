@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { getPageCache, setPageCache } from '@/lib/utils/pageCache'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
@@ -123,10 +124,12 @@ export default function TiresClient() {
 
   const [viewOnly, setViewOnly]   = useState(false)
   const [isAdmin,  setIsAdmin]    = useState(false)
-  const [tires, setTires]         = useState<Tire[]>([])
-  const [movements, setMovements] = useState<TireMovement[]>([])
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [loading, setLoading]     = useState(true)
+  // Last loaded data (lib/utils/pageCache) — shown at once when coming back, refreshed in the background
+  const cached = profile ? getPageCache<{ tires: Tire[]; movements: TireMovement[]; suppliers: Supplier[]; brands: BrandName[] }>(`tires:${profile.tenantId}`) : undefined
+  const [tires, setTires]         = useState<Tire[]>(cached?.tires ?? [])
+  const [movements, setMovements] = useState<TireMovement[]>(cached?.movements ?? [])
+  const [suppliers, setSuppliers] = useState<Supplier[]>(cached?.suppliers ?? [])
+  const [loading, setLoading]     = useState(!cached)
 
   // Stock movements live on the stock screen (/stock-count) now
   const tab = 'tires' as const
@@ -170,7 +173,7 @@ export default function TiresClient() {
   // Duplicates view: same brand+size or same barcode, merged group by group
   const [dupsOpen, setDupsOpen] = useState(false)
   // Hebrew brand names (one per brand) — searched and shown above the English name
-  const [brandRows, setBrandRows] = useState<BrandName[]>([])
+  const [brandRows, setBrandRows] = useState<BrandName[]>(cached?.brands ?? [])
   const [brandsOpen, setBrandsOpen] = useState(false)
 
   // Quick SKU inline edit (click directly on SKU cell)
@@ -192,6 +195,7 @@ export default function TiresClient() {
     setBrandRows(brs || [])
     setMovements(mvs || [])
     setSuppliers(sups || [])
+    setPageCache(`tires:${tenantId.current}`, { tires: ts || [], movements: mvs || [], suppliers: sups || [], brands: brs || [] })
     setLoading(false)
   }, [sb])
 

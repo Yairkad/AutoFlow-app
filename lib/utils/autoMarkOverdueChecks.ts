@@ -5,7 +5,8 @@ function todayIso() { return new Date().toISOString().slice(0, 10) }
 // Once a check's due_date arrives, it's considered paid automatically (the money
 // has left the bank) — no manual "שולם" click needed. Mirrors the expense-creation
 // side effect of ScheduledPaymentsModal's manual markPaid() flow.
-export async function autoMarkOverdueChecksPaid(supabase: SupabaseClient, tenantId: string) {
+/** Returns how many checks it marked paid. */
+export async function autoMarkOverdueChecksPaid(supabase: SupabaseClient, tenantId: string): Promise<number> {
   const { data: due } = await supabase
     .from('scheduled_payments')
     .select('id, description, amount, due_date, supplier_id, category, notes')
@@ -13,7 +14,8 @@ export async function autoMarkOverdueChecksPaid(supabase: SupabaseClient, tenant
     .eq('is_paid', false)
     .lte('due_date', todayIso())
 
-  if (!due || due.length === 0) return
+  if (!due || due.length === 0) return 0
+  let marked = 0
 
   for (const p of due) {
     // Conditional update guards against two sessions racing on the same row.
@@ -26,6 +28,7 @@ export async function autoMarkOverdueChecksPaid(supabase: SupabaseClient, tenant
       .single()
 
     if (upd.error || !upd.data) continue
+    marked++
 
     const expRes = await supabase.from('expenses').insert({
       tenant_id:      tenantId,
@@ -42,4 +45,5 @@ export async function autoMarkOverdueChecksPaid(supabase: SupabaseClient, tenant
       await supabase.from('scheduled_payments').update({ expense_id: expRes.data.id }).eq('id', p.id)
     }
   }
+  return marked
 }

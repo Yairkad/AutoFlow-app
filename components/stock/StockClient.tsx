@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { getPageCache, setPageCache } from '@/lib/utils/pageCache'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
 import PageHeader from '@/components/ui/PageHeader'
@@ -62,8 +63,9 @@ export default function StockClient() {
     const t = new URLSearchParams(window.location.search).get('tab')
     if (t === 'scan' || t === 'moves' || t === 'nostock' || t === 'reports' || t === 'count') { const id = setTimeout(() => setTab(t), 0); return () => clearTimeout(id) }
   }, [])
-  const [moves, setMoves]   = useState<Move[] | null>(null)
   const [from, setFrom]     = useState(monthStart)
+  // Last loaded movements (lib/utils/pageCache), for the default range — shown at once when coming back
+  const [moves, setMoves]   = useState<Move[] | null>(() => (tenantId ? getPageCache<Move[]>(`stock:${tenantId}:${monthStart()}:`) : undefined) ?? null)
   const [to, setTo]         = useState('')
   const [search, setSearch] = useState('')
   const [fType, setFType]   = useState<'' | 'sale' | 'order'>('')
@@ -93,6 +95,7 @@ export default function StockClient() {
       })),
     ].sort((a, b) => b.date.localeCompare(a.date))
     setMoves(list)
+    setPageCache(`stock:${tenantId}:${from}:${to}`, list)
   }, [sb, tenantId, from, to, showToast])
 
   useEffect(() => { const t = setTimeout(load, 0); return () => clearTimeout(t) }, [load])

@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { clearPageCache } from '@/lib/utils/pageCache'
 import { runGlobalSearch, FIELD_LABELS, KIND_LABELS, type SearchField, type SearchKind, type SearchResult } from '@/lib/search/globalSearch'
 import { useProfile } from '@/lib/contexts/ProfileContext'
 
@@ -124,6 +125,7 @@ function UserDropdown({ name, email, onClose }: { name: string; email: string; o
     try { await supabase.auth.signOut({ scope: 'local' }) } catch { /* ignore */ }
     localStorage.clear()
     sessionStorage.clear()
+    clearPageCache() // cached page data must not survive into the next user's session
     router.push('/login')
   }
 

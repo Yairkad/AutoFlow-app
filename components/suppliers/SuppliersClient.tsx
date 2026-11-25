@@ -10,8 +10,13 @@ import SupplierTrackingTab from './SupplierTrackingTab'
 import { Supplier, SupplierDebt, ScheduledPayment, SupplierDebtPayment, RecurringItem } from './shared'
 import { useLiveRefresh } from '@/lib/hooks/useLiveRefresh'
 import { PageSkeleton } from '@/components/ui/Skeleton'
+import { getPageCache, setPageCache } from '@/lib/utils/pageCache'
 
 type Tab = 'details' | 'tracking'
+interface SuppliersCache {
+  suppliers: Supplier[]; supplierDebts: SupplierDebt[]; categories: string[]; scheduledPayments: ScheduledPayment[]
+  debtPayments: SupplierDebtPayment[]; recurringItems: RecurringItem[]; expenseCats: string[]
+}
 
 // embedded: inside the accounts screen (its tab bar + header) — the account tracking only
 export default function SuppliersClient({ embedded = false }: { embedded?: boolean } = {}) {
@@ -21,20 +26,22 @@ export default function SuppliersClient({ embedded = false }: { embedded?: boole
   const { showToast } = useToast()
   const autoExpenseDoneRef = useRef(false)
   const didParseParams = useRef(false)
-  const hasLoadedRef = useRef(false)
+  // Last loaded data (lib/utils/pageCache) — shown at once when coming back, refreshed in the background
+  const cached = profile ? getPageCache<SuppliersCache>(`suppliers:${profile.tenantId}`) : undefined
+  const hasLoadedRef = useRef(!!cached)
 
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!cached)
   const [tab, setTab] = useState<Tab>('tracking')
   const [openId, setOpenId] = useState<string | null>(null)
   const [openQuery, setOpenQuery] = useState<string | null>(null) // ?q= — e.g. an invoice number from the global search
 
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [supplierDebts, setSupplierDebts] = useState<SupplierDebt[]>([])
-  const [categories, setCategories] = useState<string[]>([])
-  const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([])
-  const [debtPayments, setDebtPayments] = useState<SupplierDebtPayment[]>([])
-  const [recurringItems, setRecurringItems] = useState<RecurringItem[]>([])
-  const [expenseCats, setExpenseCats] = useState<string[]>(['ספקים', 'אחר'])
+  const [suppliers, setSuppliers] = useState<Supplier[]>(cached?.suppliers ?? [])
+  const [supplierDebts, setSupplierDebts] = useState<SupplierDebt[]>(cached?.supplierDebts ?? [])
+  const [categories, setCategories] = useState<string[]>(cached?.categories ?? [])
+  const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>(cached?.scheduledPayments ?? [])
+  const [debtPayments, setDebtPayments] = useState<SupplierDebtPayment[]>(cached?.debtPayments ?? [])
+  const [recurringItems, setRecurringItems] = useState<RecurringItem[]>(cached?.recurringItems ?? [])
+  const [expenseCats, setExpenseCats] = useState<string[]>(cached?.expenseCats ?? ['ספקים', 'אחר'])
   const [tenantName, setTenantName] = useState('AutoFlow')
 
   const resolveTenant = useCallback(async () => {
@@ -77,6 +84,13 @@ export default function SuppliersClient({ embedded = false }: { embedded?: boole
     if (expCatRes.data && expCatRes.data.length > 0) setExpenseCats(expCatRes.data.map(r => r.name))
     if (recItemsRes.data) setRecurringItems(recItemsRes.data)
     if (profile?.tenant?.name) setTenantName(profile.tenant.name as string)
+    const prev = getPageCache<SuppliersCache>(`suppliers:${tid}`)
+    setPageCache<SuppliersCache>(`suppliers:${tid}`, {
+      suppliers: suppRes.data ?? prev?.suppliers ?? [], supplierDebts: debtRes.data ?? prev?.supplierDebts ?? [],
+      categories: catRes.data ? catRes.data.map(r => r.name) : prev?.categories ?? [], scheduledPayments: payments,
+      debtPayments: debtPaymentsRes.data ?? [], recurringItems: recItemsRes.data ?? prev?.recurringItems ?? [],
+      expenseCats: expCatRes.data && expCatRes.data.length > 0 ? expCatRes.data.map(r => r.name) : prev?.expenseCats ?? ['ספקים', 'אחר'],
+    })
     setLoading(false)
     hasLoadedRef.current = true
 
