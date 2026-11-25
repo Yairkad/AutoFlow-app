@@ -3404,3 +3404,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 00:00 | PR 97 deployed: login now <0.5s (was ~10s). Root cause: server-action login + uncached root generateMetadata DB query | app/login/LoginClient.tsx, app/layout.tsx | verified by user | ~0 |
 | 00:00 | Page cache (stale-while-revalidate) for checks, accounts (suppliers/customers), inspections, products, tires, stock; checks no longer awaits autoMark before load | lib/utils/pageCache.ts + 7 clients | tsc ok, no new lint errors | ~12k |
+
+## Session: 2026-11-25 21:44
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
