@@ -26,6 +26,23 @@ interface ScheduledPayment {
   supplier_id: string | null; category: string | null
   is_paid: boolean; paid_date: string | null; expense_id: string | null; notes: string | null
   check_number: string | null; series_id: string | null; allocation_ignored: boolean
+  // Set on rows that are really an `expenses` row paid by check (entered directly in Expenses, not
+  // as a scheduled check). Read-only here — edited in the Expenses screen.
+  fromExpense?: { id: string; supplier_name: string | null }
+}
+
+/** An expense paid by check → a paid row of the journal (id prefixed so it never collides). */
+function expenseAsCheck(e: {
+  id: string; tenant_id: string; date: string; description: string | null; category: string | null
+  amount: number; supplier_id: string | null; supplier_name: string | null; payment_ref: string | null
+}): ScheduledPayment {
+  return {
+    id: `exp:${e.id}`, tenant_id: e.tenant_id, description: e.description || e.category || 'הוצאה',
+    amount: e.amount, due_date: e.date, payment_method: 'check', supplier_id: e.supplier_id,
+    category: e.category, is_paid: true, paid_date: e.date, expense_id: e.id, notes: null,
+    check_number: e.payment_ref, series_id: null, allocation_ignored: true,
+    fromExpense: { id: e.id, supplier_name: e.supplier_name },
+  }
 }
 
 interface Supplier { id: string; name: string }
@@ -116,13 +133,20 @@ export default function ChecksJournalClient() {
     // Only the first load shows the spinner — background refreshes update in place
     if (!loadedRef.current) setLoading(true)
     await autoMarkOverdueChecksPaid(supabase, tenantId).catch(() => {})
-    const [payRes, suppRes, catRes, linkRes] = await Promise.all([
+    const [payRes, suppRes, catRes, linkRes, expRes] = await Promise.all([
       supabase.from('scheduled_payments').select('*').eq('tenant_id', tenantId).eq('payment_method', 'check').order('due_date', { ascending: true }),
       supabase.from('suppliers').select('id,name').eq('tenant_id', tenantId).order('name'),
       supabase.from('expense_categories').select('name').eq('tenant_id', tenantId).order('created_at'),
       supabase.from('supplier_debt_payments').select('scheduled_payment_id').eq('tenant_id', tenantId).not('scheduled_payment_id', 'is', null),
+      // Expenses paid by check that were entered directly (not via a scheduled check)
+      supabase.from('expenses').select('id, tenant_id, date, description, category, amount, supplier_id, supplier_name, payment_ref')
+        .eq('tenant_id', tenantId).eq('payment_method', "צ'ק"),
     ])
-    setRows(payRes.data ?? [])
+    const scheduled = (payRes.data ?? []) as ScheduledPayment[]
+    // A paid scheduled check already created its own expense — skip that one so it isn't listed twice
+    const fromScheduled = new Set(scheduled.map(p => p.expense_id).filter(Boolean))
+    const direct = (expRes.data ?? []).filter(e => !fromScheduled.has(e.id)).map(expenseAsCheck)
+    setRows([...scheduled, ...direct])
     setSuppliers(suppRes.data ?? [])
     if (catRes.data && catRes.data.length > 0) setExpenseCats(catRes.data.map(r => r.name))
     setLinkedIds(new Set((linkRes.data ?? []).map(r => r.scheduled_payment_id).filter((id): id is string => !!id)))
@@ -163,11 +187,17 @@ export default function ChecksJournalClient() {
 
   // ── Filtering & grouping ────────────────────────────────────────────────────
 
-  const filtered = useMemo(() => {
+  // Free-text search also matches the check number (any format — "0012345", "12-345") and the
+  // amount ("1500", "1,500", "1500.50", "₪1,500"), so a check can be found even when its number
+  // was typed differently or isn't known.
+  const { filtered, hiddenByStatus } = useMemo(() => {
     const numFrom = fNumFrom ? parseInt(fNumFrom, 10) : null
     const numTo = fNumTo ? parseInt(fNumTo, 10) : null
     const q = fSearch.trim().toLowerCase()
-    return rows.filter(p => {
+    const qDigits = q.replace(/[\s,₪]/g, '')
+    const qAmount = /^\d+(\.\d{1,2})?$/.test(qDigits) ? Number(qDigits) : null
+    const qNum = qDigits.replace(/\D/g, '')
+    const matches = (p: ScheduledPayment) => {
       if (fSupplier === '__none__' && p.supplier_id) return false
       if (fSupplier && fSupplier !== '__none__' && p.supplier_id !== fSupplier) return false
       if (numFrom != null || numTo != null) {
@@ -178,16 +208,24 @@ export default function ChecksJournalClient() {
       }
       if (fDateFrom && p.due_date < fDateFrom) return false
       if (fDateTo && p.due_date > fDateTo) return false
-      if (fStatus === 'open' && p.is_paid) return false
-      if (fStatus === 'paid' && !p.is_paid) return false
       if (q) {
-        const supName = suppliers.find(s => s.id === p.supplier_id)?.name ?? ''
-        const hay = `${p.description} ${p.notes ?? ''} ${supName}`.toLowerCase()
-        if (!hay.includes(q)) return false
+        const supName = suppliers.find(s => s.id === p.supplier_id)?.name ?? p.fromExpense?.supplier_name ?? ''
+        const hay = `${p.description} ${p.notes ?? ''} ${supName} ${p.check_number ?? ''}`.toLowerCase()
+        const amountHit = qAmount != null && Math.abs(Number(p.amount) - qAmount) < 0.005
+        const checkNoHit = !!qNum && (p.check_number ?? '').replace(/\D/g, '').includes(qNum)
+        if (!hay.includes(q) && !amountHit && !checkNoHit) return false
       }
       return true
-    }).sort((a, b) => a.due_date.localeCompare(b.due_date) || (a.check_number ?? '').localeCompare(b.check_number ?? ''))
+    }
+    const statusOk = (p: ScheduledPayment) => fStatus === 'all' || (fStatus === 'open' ? !p.is_paid : p.is_paid)
+    const all = rows.filter(matches)
+    const list = all.filter(statusOk)
+      .sort((a, b) => a.due_date.localeCompare(b.due_date) || (a.check_number ?? '').localeCompare(b.check_number ?? ''))
+    return { filtered: list, hiddenByStatus: all.length - list.length }
   }, [rows, suppliers, fSupplier, fNumFrom, fNumTo, fDateFrom, fDateTo, fStatus, fSearch])
+
+  // While searching, open every month — otherwise the hits sit inside collapsed months
+  const searching = !!(fSearch.trim() || fNumFrom || fNumTo)
 
   const monthGroups = useMemo(() => {
     const map: Record<string, ScheduledPayment[]> = {}
@@ -426,7 +464,7 @@ export default function ChecksJournalClient() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 160 }}>
           <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>חיפוש</label>
-          <input placeholder="תיאור, הערות, ספק..." value={fSearch} onChange={e => setFSearch(e.target.value)} style={SEL} />
+          <input placeholder="תיאור, ספק, מס' צ'ק, סכום..." value={fSearch} onChange={e => setFSearch(e.target.value)} style={SEL} />
         </div>
 
         <button onClick={clearFilters} style={{ padding: '8px 12px', border: 'none', background: 'transparent', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline' }}>
@@ -435,6 +473,12 @@ export default function ChecksJournalClient() {
       </div>
 
       {/* Results */}
+      {hiddenByStatus > 0 && (
+        <div style={{ marginBottom: 12, padding: '8px 14px', borderRadius: 8, background: 'var(--warning-soft, #fef9c3)', color: '#92400e', fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          עוד {hiddenByStatus} צ׳קים תואמים מוסתרים בגלל סינון הסטטוס.
+          <button onClick={() => setFStatus('all')} style={{ border: 'none', background: 'transparent', color: 'var(--primary)', fontWeight: 600, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>הצג הכל</button>
+        </div>
+      )}
       {filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)', fontSize: '14px' }}>
           לא נמצאו צ׳קים התואמים את הסינון.
@@ -454,7 +498,7 @@ export default function ChecksJournalClient() {
 
           {monthGroups.map(([mk, items]) => {
             const monthTotal = items.filter(p => !p.is_paid).reduce((s, p) => s + Number(p.amount), 0)
-            const collapsed = !expandedMonths.has(mk)
+            const collapsed = !searching && !expandedMonths.has(mk)
             return (
               <div key={mk} style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
                 <div
@@ -472,7 +516,7 @@ export default function ChecksJournalClient() {
                   <div>
                     {items.map((p, i) => {
                       const days = daysUntil(p.due_date)
-                      const supName = suppliers.find(s => s.id === p.supplier_id)?.name
+                      const supName = suppliers.find(s => s.id === p.supplier_id)?.name ?? p.fromExpense?.supplier_name
                       const unlinked = !p.is_paid && !!p.supplier_id && !p.allocation_ignored && !linkedIds.has(p.id)
                       return (
                         <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderBottom: i < items.length - 1 ? '1px solid #f1f5f9' : 'none', flexWrap: 'wrap', opacity: p.is_paid ? 0.6 : 1 }}>
@@ -480,6 +524,9 @@ export default function ChecksJournalClient() {
                             צ'ק{p.check_number ? ` #${p.check_number}` : ''}
                           </span>
                           {p.series_id && <span title="חלק מסדרת צ׳קים" style={{ fontSize: 12 }}>📚</span>}
+                          {p.fromExpense && (
+                            <span title="נרשם כהוצאה ששולמה בצ׳ק (לא כצ׳ק מתוכנן) — עריכה במסך הוצאות" style={{ fontSize: 11, background: '#eef2ff', color: '#4338ca', padding: '1px 6px', borderRadius: 4, fontWeight: 600, flexShrink: 0 }}>מהוצאות</span>
+                          )}
                           {unlinked && (
                             <Link href={`/accounts?tab=suppliers&open=${p.supplier_id}`} title="לא משויך לחוב — לשיוך היכנסו למעקב ספקים" style={{ fontSize: 12, textDecoration: 'none' }}>⚠️</Link>
                           )}
@@ -491,6 +538,9 @@ export default function ChecksJournalClient() {
                             {p.is_paid ? `שולם ${p.paid_date ? fmtDMY(p.paid_date) : ''}` : days < 0 ? `באיחור ${Math.abs(days)} ימים` : days === 0 ? 'היום!' : `עוד ${days} ימים`}
                           </span>
                           <div style={{ display: 'flex', gap: 4 }}>
+                            {p.fromExpense ? (
+                              <Link href={`/expenses?q=${encodeURIComponent(p.description)}&month=${p.due_date.slice(0, 7)}`} title="פתח במסך הוצאות" style={{ fontSize: 12, padding: '3px 8px', border: '1px solid var(--border)', borderRadius: 6, textDecoration: 'none', color: 'var(--text-muted)' }}>להוצאה ←</Link>
+                            ) : <>
                             {!p.is_paid && (
                               <button onClick={() => openPay(p)} title="סמן כנפרע" style={{ background: 'var(--success-soft)', border: '1px solid #bbf7d0', color: 'var(--success)', borderRadius: '6px', padding: '3px 8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✓</button>
                             )}
@@ -498,6 +548,7 @@ export default function ChecksJournalClient() {
                               { key: 'edit', label: 'עריכה', icon: '✏️', onClick: () => setEditItem(p) },
                               { key: 'del', label: 'מחיקה', icon: '🗑️', danger: true, onClick: () => deleteRow(p.id) },
                             ]} />
+                            </>}
                           </div>
                         </div>
                       )

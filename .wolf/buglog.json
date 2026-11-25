@@ -1906,5 +1906,59 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-18T12:10:00Z"
+  },
+  {
+    "id": "bug-104",
+    "timestamp": "2026-11-25T00:00:00Z",
+    "error_message": "User: automatic daily Drive backup doesn't work",
+    "file": "app/api/cron/backup/route.ts",
+    "root_cause": "Cron backed up every Drive-connected tenant serially inside one 60s (Hobby) invocation; with several tenants the function is killed mid-loop, later tenants get no backup and no last_backup_error is written. Also getAccessToken hid Google's reason ('Failed to refresh token' only), and a missing CRON_SECRET returned a bare 401. Not verified against logs/DB (no Vercel/Supabase access from session).",
+    "fix": "Cron fans out: one self-invocation per tenant (?tenant=<id>, same Bearer) in parallel, each with its own 60s and its own error recording. getAccessToken appends Google's error/error_description. Missing CRON_SECRET now logs + 500.",
+    "tags": [
+      "backup",
+      "cron",
+      "vercel",
+      "drive",
+      "timeout"
+    ],
+    "related_bugs": [
+      "bug-043"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-11-25T00:00:00Z"
+  },
+  {
+    "id": "bug-105",
+    "timestamp": "2026-11-25T00:00:00Z",
+    "error_message": "User: a check that was issued can't be found in the checks journal by its check number",
+    "file": "components/checks/ChecksJournalClient.tsx",
+    "root_cause": "Likely one of: (a) default status filter 'open' hides checks already auto-marked paid (due date passed); (b) months are collapsed by default so hits are hidden; (c) number filter uses parseInt range — non-numeric/odd formats don't match; free-text search didn't include check_number or amount.",
+    "fix": "Free-text search now matches check_number (digits-only substring) and amount (1500 / 1,500 / ₪1,500 / 1500.50). Months auto-expand while searching. Banner shows how many matches the status filter hides, with 'הצג הכל'.",
+    "tags": [
+      "checks",
+      "search",
+      "filter",
+      "ux"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-25T00:00:00Z"
+  },
+  {
+    "id": "bug-106",
+    "timestamp": "2026-11-25",
+    "error_message": "כניסה איטית מרגע הלחיצה, והכפתור מציג 'שומר...' במסך הכניסה",
+    "file": "components/ui/Button.tsx, lib/contexts/ProfileContext.tsx, app/(app)/dashboard/page.tsx, app/login/LoginClient.tsx",
+    "root_cause": "Button loading text hardcoded 'שומר...'; ProfileContext did a getUser() network round-trip; dashboard statically imported recharts; no prefetch of /dashboard",
+    "fix": "Button loadingText prop; login 'מתחבר...'; getClaims(); DashboardCharts via next/dynamic; router.prefetch('/dashboard')",
+    "tags": [
+      "login",
+      "performance",
+      "button",
+      "ux"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-25"
   }
 ]

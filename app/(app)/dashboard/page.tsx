@@ -1,12 +1,18 @@
 'use client'
 
 import DashboardStats from '@/components/dashboard/DashboardStats'
-import DashboardCharts from '@/components/dashboard/DashboardCharts'
 import RemindersPanel from '@/components/dashboard/RemindersPanel'
 import AlertsPanel from '@/components/dashboard/AlertsPanel'
 import Footer from '@/components/layout/Footer'
 import { useState } from 'react'
 import { useProfile } from '@/lib/contexts/ProfileContext'
+import dynamic from 'next/dynamic'
+
+// Charts pull in recharts (heavy) — load only when the "גרפים" tab is opened, not on login
+const DashboardCharts = dynamic(() => import('@/components/dashboard/DashboardCharts'), {
+  ssr: false,
+  loading: () => <p style={{ color: 'var(--text-muted)' }}>טוען גרפים...</p>,
+})
 
 type DashTab = 'stats' | 'charts'
 

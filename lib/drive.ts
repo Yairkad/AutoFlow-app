@@ -58,7 +58,9 @@ export async function getAccessToken(refreshToken: string): Promise<string> {
     }),
   })
   const data = await res.json()
-  if (!data.access_token) throw new Error('Failed to refresh token')
+  // Keep "Failed to refresh token" — callers match /token/i. Google's reason (e.g. invalid_grant =
+  // the user revoked access or the refresh token expired) is appended so it shows in last_backup_error.
+  if (!data.access_token) throw new Error(`Failed to refresh token${data.error ? `: ${data.error}${data.error_description ? ` (${data.error_description})` : ''}` : ''}`)
   return data.access_token
 }
 

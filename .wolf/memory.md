@@ -3321,3 +3321,74 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 09:55 | PR #94 already merged → merged main into branch, opened PR #95 (skeletons + drawer cache) | — | PR opened | ~2k |
+
+## Session: 2026-11-24 13:19
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:20 | Research only: n8n supplier-invoice intake plan (schema review of suppliers/supplier_debts/expenses, Drive storage) — no code changes | supabase/migrations | answered | ~15k |
+
+## Session: 2026-11-25 11:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:15 | Fix auto Drive backup: per-tenant fan-out in cron + Google error reason in getAccessToken | app/api/cron/backup/route.ts, lib/drive.ts | tsc+eslint clean, not runtime-tested | ~20k |
+| 11:27 | Checks journal: search by amount + check number, auto-expand months while searching, hidden-by-status hint | components/checks/ChecksJournalClient.tsx | tsc clean, logic sanity-tested | ~8k |
+
+## Session: 2026-11-25 11:41
+## Session: 2026-11-25 09:03
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:00 | Login speed: ProfileContext getUser→getClaims, dashboard charts lazy (next/dynamic), prefetch /dashboard on login, Button loadingText ("מתחבר...") | ProfileContext.tsx, dashboard/page.tsx, LoginClient.tsx, Button.tsx | tsc ok | ~3k |
+
+## Session: 2026-11-25 09:17
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 20:42
+## Session: 2026-11-25 09:25
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 20:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:55 | Checks journal also lists expenses paid by check (payment_method "צ'ק", not created from a scheduled check) as read-only 'מהוצאות' rows | components/checks/ChecksJournalClient.tsx | tsc clean | ~10k |
+## Session: 2026-11-25 10:05
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 10:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 10:52
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 11:03
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 20:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 20:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:55 | Created lib/reports/amirExport.ts | — | ~2544 |
+| 20:55 | Created lib/utils/saveToFolder.ts | — | ~747 |
+| 20:55 | Created components/reports/AmirExportPanel.tsx | — | ~1272 |
+| 00:00 | Built Amir Tazrim export (4 xlsx, folder save, payment terms field + migration 120 not yet applied) | lib/reports/amirExport.ts, AmirExportPanel.tsx, saveToFolder.ts, Supplier/CustomerDetailsTab | tsc ok, logic test ok | ~15k |
+| 00:00 | Migration 120 (payment_terms_days) applied by user in Supabase SQL editor | supabase/migrations/120_payment_terms.sql | done | ~0 |

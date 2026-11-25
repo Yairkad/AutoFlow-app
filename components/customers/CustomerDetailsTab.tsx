@@ -77,6 +77,9 @@ export default function CustomerDetailsTab({
   const [fNotes, setFNotes]       = useState('')
   const [fCategory, setFCategory]             = useState('')
   const [fOpeningBalance, setFOpeningBalance] = useState('')
+  const [fTerms, setFTerms] = useState('30')
+  // payment_terms_days exists only after migration 120 — don't send it before that
+  const hasTerms = customers.some(x => 'payment_terms_days' in x)
   const [saving, setSaving]       = useState(false)
 
   // Edit-only mode (from the contacts page): open the form at once — for openId, or empty for a new one
@@ -105,11 +108,13 @@ export default function CustomerDetailsTab({
       setFName(c.name); setFCategory(c.category ?? ''); setFPhone(c.phone ?? ''); setFContact(c.contact_name ?? '')
       setFEmail(c.email ?? ''); setFAddress(c.address ?? ''); setFNotes(c.notes ?? '')
       setFOpeningBalance(c.opening_balance ? String(c.opening_balance) : '')
+      setFTerms(String(c.payment_terms_days ?? 30))
     } else {
       setEditItem(null)
       setFName(''); setFCategory(''); setFPhone(''); setFContact('')
       setFEmail(''); setFAddress(''); setFNotes('')
       setFOpeningBalance('')
+      setFTerms('30')
     }
     setShowModal(true)
   }
@@ -128,6 +133,7 @@ export default function CustomerDetailsTab({
       address: fAddress.trim() || null,
       notes: fNotes.trim() || null,
       opening_balance: parseFloat(fOpeningBalance) || 0,
+      ...(hasTerms ? { payment_terms_days: Math.max(0, parseInt(fTerms, 10) || 0) } : {}),
     }
     if (editItem) {
       const { error } = await supabase.from('customers').update(row).eq('id', editItem.id)
@@ -612,6 +618,13 @@ export default function CustomerDetailsTab({
                 <input type="number" step="0.01" value={fOpeningBalance} onChange={e => setFOpeningBalance(e.target.value)} placeholder="0" className="form-input" />
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>חוב שהיה קיים לפני תחילת המעקב במערכת — משמש כנקודת פתיחה בכרטסת המודפסת</span>
               </label>
+              {hasTerms && (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                  תנאי תשלום (שוטף + ימים)
+                  <input type="number" min={0} step={1} inputMode="numeric" value={fTerms} onChange={e => setFTerms(e.target.value)} placeholder="30" className="form-input" />
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>תאריך התשלום הצפוי של חשבונית = סוף חודש החשבונית + מספר הימים (לייצוא לאמיר תזרים)</span>
+                </label>
+              )}
             </div>
             <div className="sticky-actions">
               <Button variant="secondary" onClick={() => closeModal()}>ביטול</Button>

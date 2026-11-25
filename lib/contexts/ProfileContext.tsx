@@ -49,11 +49,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   const load = useCallback(async () => {
     try {
-      const { data: { user }, error: userErr } = await sb.auth.getUser()
+      // getClaims verifies the JWT locally — getUser() was an extra round-trip to Supabase Auth
+      // on every page load (slow login). RLS still enforces access on every query below.
+      const { data: claimsData, error: userErr } = await sb.auth.getClaims()
       // A transient fetch failure (network hiccup, dev-server proxy/CORS race) surfaces here
       // the same way a genuine "no session" does — log it so it's distinguishable in the
       // console instead of silently looking like the user has no permissions (see bug-023).
-      if (userErr) console.error('ProfileContext: auth.getUser() failed', userErr)
+      if (userErr) console.error('ProfileContext: auth.getClaims() failed', userErr)
+      const claims = claimsData?.claims
+      const user = claims?.sub ? { id: claims.sub, email: (claims.email as string | undefined) } : null
       if (!user) { setProfile(null); setLoading(false); return }
 
       const { data: p, error: profErr } = await sb.from('profiles')

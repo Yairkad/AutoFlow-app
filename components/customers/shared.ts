@@ -14,6 +14,8 @@ export interface Customer {
   address: string | null
   notes: string | null
   opening_balance: number
+  /** "שוטף + N" days (migration 120) */
+  payment_terms_days?: number
   created_at: string
 }
 
