@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
-import { loginAction } from './actions'
 
 /** brand: the business's name and logo (from the server page); AutoFlow when not set */
 export default function LoginClient({ brand }: { brand: { name: string; logo: string | null } }) {
@@ -48,20 +47,21 @@ export default function LoginClient({ brand }: { brand: { name: string; logo: st
       })
   }, [router])
 
-  // Download the dashboard's code while the user is still typing, so entering is instant
-  useEffect(() => { router.prefetch('/dashboard') }, [router])
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    const err = await loginAction(email, password)
-    if (err) {
-      setError(err)
+    // Sign in straight from the browser (session cookies are set by the SSR browser client) and
+    // navigate client-side to the prefetched dashboard — the old server action had to wake a
+    // serverless function and render /dashboard on the server before anything moved.
+    const { error: signErr } = await createClient().auth.signInWithPassword({ email: email.trim(), password })
+    if (signErr) {
+      setError('אימייל או סיסמה שגויים')
       setLoading(false)
+      return
     }
-    // on success: loginAction calls redirect('/dashboard') server-side
+    router.replace('/dashboard')
   }
 
   const handleForgot = async (e: React.FormEvent) => {
