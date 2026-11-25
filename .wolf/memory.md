@@ -3362,3 +3362,12 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 20:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:55 | Created lib/reports/amirExport.ts | — | ~2544 |
+| 20:55 | Created lib/utils/saveToFolder.ts | — | ~747 |
+| 20:55 | Created components/reports/AmirExportPanel.tsx | — | ~1272 |
+| 00:00 | Built Amir Tazrim export (4 xlsx, folder save, payment terms field + migration 120 not yet applied) | lib/reports/amirExport.ts, AmirExportPanel.tsx, saveToFolder.ts, Supplier/CustomerDetailsTab | tsc ok, logic test ok | ~15k |

@@ -81,6 +81,9 @@ export default function SupplierDetailsTab({
   const [fBankAccount, setFBankAccount]       = useState('')
   const [fBankHolder, setFBankHolder]         = useState('')
   const [fOpeningBalance, setFOpeningBalance] = useState('')
+  const [fTerms, setFTerms] = useState('30')
+  // payment_terms_days exists only after migration 120 — don't send it before that
+  const hasTerms = suppliers.some(x => 'payment_terms_days' in x)
   // Tire brands the supplier brings (learned from "מה הגיע?", editable here) — once migration 111 ran
   const [fBrands, setFBrands] = useState<string[]>([])
   const [brandInput, setBrandInput] = useState('')
@@ -121,6 +124,7 @@ export default function SupplierDetailsTab({
       setFBankName(s.bank_name ?? ''); setFBankBranch(s.bank_branch ?? '')
       setFBankAccount(s.bank_account ?? ''); setFBankHolder(s.bank_account_holder ?? '')
       setFOpeningBalance(s.opening_balance ? String(s.opening_balance) : '')
+      setFTerms(String(s.payment_terms_days ?? 30))
       setFBrands(s.brands ?? [])
     } else {
       setEditItem(null)
@@ -128,6 +132,7 @@ export default function SupplierDetailsTab({
       setFEmail(''); setFAddress(''); setFNotes('')
       setFBankName(''); setFBankBranch(''); setFBankAccount(''); setFBankHolder('')
       setFOpeningBalance('')
+      setFTerms('30')
       setFBrands([])
     }
     setBrandInput('')
@@ -153,6 +158,7 @@ export default function SupplierDetailsTab({
       bank_account: fBankAccount.trim() || null,
       bank_account_holder: fBankHolder.trim() || null,
       opening_balance: parseFloat(fOpeningBalance) || 0,
+      ...(hasTerms ? { payment_terms_days: Math.max(0, parseInt(fTerms, 10) || 0) } : {}),
       ...(hasBrands ? { brands: fBrands } : {}),
     }
     if (editItem) {
@@ -598,6 +604,13 @@ export default function SupplierDetailsTab({
                 <input type="number" step="0.01" value={fOpeningBalance} onChange={e => setFOpeningBalance(e.target.value)} placeholder="0" className="form-input" />
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>חוב שהיה קיים לפני תחילת המעקב במערכת — משמש כנקודת פתיחה בכרטסת המודפסת</span>
               </label>
+              {hasTerms && (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600 }}>
+                  תנאי תשלום (שוטף + ימים)
+                  <input type="number" min={0} step={1} inputMode="numeric" value={fTerms} onChange={e => setFTerms(e.target.value)} placeholder="30" className="form-input" />
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>תאריך התשלום הצפוי של חשבונית = סוף חודש החשבונית + מספר הימים (לייצוא לאמיר תזרים)</span>
+                </label>
+              )}
               {hasBrands && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', fontWeight: 600 }}>
                   חברות צמיגים שהספק מביא
