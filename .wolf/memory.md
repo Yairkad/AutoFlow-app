@@ -3326,3 +3326,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 00:00 | Login speed: ProfileContext getUser→getClaims, dashboard charts lazy (next/dynamic), prefetch /dashboard on login, Button loadingText ("מתחבר...") | ProfileContext.tsx, dashboard/page.tsx, LoginClient.tsx, Button.tsx | tsc ok | ~3k |

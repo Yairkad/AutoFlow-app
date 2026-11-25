@@ -48,6 +48,9 @@ export default function LoginClient({ brand }: { brand: { name: string; logo: st
       })
   }, [router])
 
+  // Download the dashboard's code while the user is still typing, so entering is instant
+  useEffect(() => { router.prefetch('/dashboard') }, [router])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -207,7 +210,7 @@ export default function LoginClient({ brand }: { brand: { name: string; logo: st
               </p>
             )}
 
-            <Button type="submit" fullWidth loading={loading} style={{ marginTop: '4px' }}>
+            <Button type="submit" fullWidth loading={loading} loadingText="מתחבר..." style={{ marginTop: '4px' }}>
               התחבר
             </Button>
           </form>
@@ -243,7 +246,7 @@ export default function LoginClient({ brand }: { brand: { name: string; logo: st
               </p>
             )}
 
-            <Button type="submit" fullWidth loading={resetLoading}>
+            <Button type="submit" fullWidth loading={resetLoading} loadingText="שולח...">
               שלח מייל איפוס
             </Button>
 
