@@ -3397,3 +3397,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 21:28
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 00:00 | PR 97 deployed: login now <0.5s (was ~10s). Root cause: server-action login + uncached root generateMetadata DB query | app/login/LoginClient.tsx, app/layout.tsx | verified by user | ~0 |
