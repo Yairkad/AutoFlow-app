@@ -3344,3 +3344,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-25 20:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 20:55 | Checks journal also lists expenses paid by check (payment_method "צ'ק", not created from a scheduled check) as read-only 'מהוצאות' rows | components/checks/ChecksJournalClient.tsx | tsc clean | ~10k |
