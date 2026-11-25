@@ -3334,3 +3334,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 |------|--------|---------|---------|--------|
 | 11:15 | Fix auto Drive backup: per-tenant fan-out in cron + Google error reason in getAccessToken | app/api/cron/backup/route.ts, lib/drive.ts | tsc+eslint clean, not runtime-tested | ~20k |
 | 11:27 | Checks journal: search by amount + check number, auto-expand months while searching, hidden-by-status hint | components/checks/ChecksJournalClient.tsx | tsc clean, logic sanity-tested | ~8k |
+
+## Session: 2026-11-25 11:41
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
