@@ -38,7 +38,7 @@ interface Party { id: string; name: string; payment_terms_days?: number | null }
 interface DebtRow {
   id: string; supplier_id?: string | null; customer_id?: string | null; amount: number; paid: number
   date: string; direction?: string | null; is_closed?: boolean; doc_number: string | null
-  invoices: { number?: string }[] | null; description: string | null
+  invoices: { number?: string }[] | null; description: string | null; recurring_item_id?: string | null
 }
 interface SchedRow {
   id: string; supplier_id: string | null; amount: number; due_date: string; payment_method: string
@@ -46,22 +46,30 @@ interface SchedRow {
   description: string; created_at: string
 }
 
+/** Invoice number; a charge generated from a recurring item (rent, meter…) has none, so it falls
+ *  back to "<item name or description> MM/YY" — still flagged in the missing-reference warning. */
 const invNumber = (d: DebtRow) =>
   d.doc_number || (d.invoices ?? []).map(i => i.number).filter(Boolean).join(', ')
+const fallbackRef = (d: DebtRow, itemName?: string) => {
+  const label = itemName || d.description
+  return label ? `${label} ${d.date.slice(5, 7)}/${d.date.slice(2, 4)}` : ''
+}
 
 const termsOf = (p?: Party) => (p?.payment_terms_days ?? 30)
 
-interface InvoiceLine { due: Date; date: Date; ref: string; name: string; amount: number }
+interface InvoiceLine { due: Date; date: Date; ref: string; hasNumber: boolean; name: string; amount: number }
 
-function openLines(debts: DebtRow[], coverage: Map<string, number>, party: (d: DebtRow) => Party | undefined): InvoiceLine[] {
+function openLines(debts: DebtRow[], coverage: Map<string, number>, party: (d: DebtRow) => Party | undefined, itemNames: Map<string, string>): InvoiceLine[] {
   const lines: InvoiceLine[] = []
   for (const d of debts) {
     if (d.direction === 'credit') continue
     const open = Number(d.amount) - (coverage.get(d.id) ?? 0)
     if (open < 0.005) continue
     const p = party(d)
+    const num = invNumber(d)
     lines.push({
-      due: expectedPayDate(d.date, termsOf(p)), date: toDate(d.date), ref: invNumber(d),
+      due: expectedPayDate(d.date, termsOf(p)), date: toDate(d.date), hasNumber: !!num.trim(),
+      ref: num || fallbackRef(d, d.recurring_item_id ? itemNames.get(d.recurring_item_id) : undefined),
       name: p?.name ?? d.description ?? '', amount: Math.round(open * 100) / 100,
     })
   }
@@ -101,7 +109,7 @@ const missing = <T,>(rows: T[], hasRef: (r: T) => boolean, label: (r: T) => stri
 const dmy = (d: Date) => d.toLocaleDateString('he-IL', { timeZone: 'UTC' })
 
 export async function buildAmirFiles(sb: SupabaseClient, tenantId: string): Promise<AmirFile[]> {
-  const [suppliers, customers, sDebts, allocs, sched, cDebts, cPays] = await Promise.all([
+  const [suppliers, customers, sDebts, allocs, sched, cDebts, cPays, items] = await Promise.all([
     fetchAll<Party>(sb, 'suppliers', tenantId),
     fetchAll<Party>(sb, 'customers', tenantId),
     fetchAll<DebtRow>(sb, 'supplier_debts', tenantId),
@@ -109,7 +117,9 @@ export async function buildAmirFiles(sb: SupabaseClient, tenantId: string): Prom
     fetchAll<SchedRow>(sb, 'scheduled_payments', tenantId),
     fetchAll<DebtRow>(sb, 'customer_ledger_debts', tenantId),
     fetchAll<{ customer_id: string | null; amount: number }>(sb, 'customer_ledger_payments', tenantId),
+    fetchAll<{ id: string; name: string }>(sb, 'recurring_items', tenantId, 'id, name'),
   ])
+  const itemNames = new Map(items.map(i => [i.id, i.name]))
   const today = todayISO()
   const supById = new Map(suppliers.map(s => [s.id, s]))
   const custById = new Map(customers.map(c => [c.id, c]))
@@ -123,7 +133,7 @@ export async function buildAmirFiles(sb: SupabaseClient, tenantId: string): Prom
     const ev = supplierEvents(ledgerDebts, allocs, sid ? sched.filter(p => p.supplier_id === sid) : [], today)
     invoiceCoverage(ledgerDebts, ev).forEach((v, k) => supCoverage.set(k, v))
   }
-  const supLines = openLines(sDebts, supCoverage, d => (d.supplier_id ? supById.get(d.supplier_id) : undefined))
+  const supLines = openLines(sDebts, supCoverage, d => (d.supplier_id ? supById.get(d.supplier_id) : undefined), itemNames)
 
   // 4. Open customer invoices
   const custCoverage = new Map<string, number>()
@@ -132,7 +142,7 @@ export async function buildAmirFiles(sb: SupabaseClient, tenantId: string): Prom
     const paid = cPays.filter(p => (p.customer_id ?? null) === cid).reduce((s, p) => s + Number(p.amount), 0)
     customerCoverage(cDebts.filter(d => (d.customer_id ?? null) === cid), paid).forEach((v, k) => custCoverage.set(k, v))
   }
-  const custLines = openLines(cDebts, custCoverage, d => (d.customer_id ? custById.get(d.customer_id) : undefined))
+  const custLines = openLines(cDebts, custCoverage, d => (d.customer_id ? custById.get(d.customer_id) : undefined), itemNames)
 
   // 2. Outstanding checks (not yet cleared) + bank transfers from the last 3 months on (Amir cross-checks them against the bank)
   const supName = (p: SchedRow) => (p.supplier_id ? supById.get(p.supplier_id)?.name : null) ?? p.description
@@ -147,7 +157,7 @@ export async function buildAmirFiles(sb: SupabaseClient, tenantId: string): Prom
   const invHeaders = ['תאריך ערך צפוי לתשלום', 'תאריך אסמכתא', 'אסמכתא', 'פרטים', 'סכום']
   const invRows = (l: InvoiceLine[]) => l.map(x => [x.due, x.date, x.ref, x.name, x.amount])
 
-  const invMissing = (l: InvoiceLine[]) => missing(l, x => !!x.ref.trim(), x => `${x.name} (${dmy(x.date)})`)
+  const invMissing = (l: InvoiceLine[]) => missing(l, x => x.hasNumber, x => `${x.name} (${dmy(x.date)}${x.ref ? `, נרשם: ${x.ref}` : ''})`)
 
   return [
     { name: 'חשבוניות ספקים פתוחות.xlsx', rows: supLines.length, missingRef: invMissing(supLines),
