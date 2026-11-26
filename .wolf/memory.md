@@ -3444,3 +3444,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:35 | PR #99 merged; forecast drops supplier recurring_items (user option B); opening PR #100 | buildForecast.ts | tsc+lint ok | ~2k |
 | 12:55 | Fixed duplicate check expenses (SuppliersClient unguarded auto-expense race) + journal month header shows paid sum | SuppliersClient.tsx, ChecksJournalClient.tsx | tsc ok, lint errors pre-existing | ~6k |
 | 13:15 | Check-paid recurring with no check this month → open supplier charge (not expense) | ExpensesClient.tsx | tsc+lint ok | ~3k |
+
+## Session: 2026-11-26 09:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:30 | Duplicate check-expense preview: 21 א.י.ג + 1 Victor (15000, 2026-08-10) — approved cleanup after PR 101 deploy | — | info only | ~1k |
