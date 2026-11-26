@@ -3444,3 +3444,12 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:35 | PR #99 merged; forecast drops supplier recurring_items (user option B); opening PR #100 | buildForecast.ts | tsc+lint ok | ~2k |
 | 12:55 | Fixed duplicate check expenses (SuppliersClient unguarded auto-expense race) + journal month header shows paid sum | SuppliersClient.tsx, ChecksJournalClient.tsx | tsc ok, lint errors pre-existing | ~6k |
 | 13:15 | Check-paid recurring with no check this month → open supplier charge (not expense) | ExpensesClient.tsx | tsc+lint ok | ~3k |
+
+## Session: 2026-11-26 09:43
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:30 | Duplicate check-expense preview: 21 א.י.ג + 1 Victor (15000, 2026-08-10) — approved cleanup after PR 101 deploy | — | info only | ~1k |
+| 13:45 | Session summary: Disk IO (app queries trivial, platform-side); recurring payment method + paid-by-checks (PR 99/100/101); invoice scan on supplier payments; א.י.ג rent data rebuilt via SQL; fixed duplicate check-expense race; Victor dupe confirmed (paid_date=created day signature) | — | done | ~0 |
+| 14:00 | Built SQL to rebuild א.א אוחיון supplier ledger (template from 2026-12, 42 charges 06/23–11/26, 40 paid payments ledger-only incl. 11 checks, link today's 15k expense, 8 offset credits) → balance 9,724.25 (+Dec = 20,580.25) | — | SQL given to user | ~6k |
+| 14:20 | Auto-create supplier recurring charges monthly (ProfileContext) + migration 122 unique index | autoSupplierRecurringCharges.ts, ProfileContext.tsx, 122 | tsc+lint ok | ~5k |
