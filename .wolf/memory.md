@@ -3450,3 +3450,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 13:30 | Duplicate check-expense preview: 21 א.י.ג + 1 Victor (15000, 2026-08-10) — approved cleanup after PR 101 deploy | — | info only | ~1k |
+| 13:45 | Session summary: Disk IO (app queries trivial, platform-side); recurring payment method + paid-by-checks (PR 99/100/101); invoice scan on supplier payments; א.י.ג rent data rebuilt via SQL; fixed duplicate check-expense race; Victor dupe confirmed (paid_date=created day signature) | — | done | ~0 |
