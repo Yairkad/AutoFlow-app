@@ -1995,5 +1995,23 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-26"
+  },
+  {
+    "id": "bug-109",
+    "timestamp": "2026-11-26T12:00:00Z",
+    "error_message": "Checks journal: each paid check shows 2 extra 'מהוצאות' rows; check shows 'שולם' with today's date instead of due date",
+    "file": "components/suppliers/SuppliersClient.tsx",
+    "root_cause": "SuppliersClient.loadAll had its own unguarded 'auto-expense overdue scheduled payments' loop (also transfers) running in parallel with autoMarkOverdueChecksPaid (ProfileContext/journal). Each created an expense; the second overwrote expense_id and paid_date=today, orphaning the first expense → journal lists orphan check expenses as direct ones.",
+    "fix": "Replaced inline loop with shared race-guarded autoMarkOverdueChecksPaid (checks only). Data cleanup SQL: delete unreferenced check expenses matching a scheduled check (supplier+amount+date), set paid_date=due_date where later.",
+    "tags": [
+      "checks",
+      "race",
+      "duplicate",
+      "expenses",
+      "auto-mark"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-26"
   }
 ]

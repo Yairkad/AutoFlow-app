@@ -516,6 +516,7 @@ export default function ChecksJournalClient() {
 
           {monthGroups.map(([mk, items]) => {
             const monthTotal = items.filter(p => !p.is_paid).reduce((s, p) => s + Number(p.amount), 0)
+            const monthPaid  = items.filter(p => p.is_paid).reduce((s, p) => s + Number(p.amount), 0)
             const collapsed = !searching && !expandedMonths.has(mk)
             return (
               <div key={mk} style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
@@ -528,7 +529,10 @@ export default function ChecksJournalClient() {
                     {fmtMonth(mk)}
                     <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>({items.length})</span>
                   </span>
-                  <span style={{ fontWeight: 700, fontSize: '14px' }}>{fmt(monthTotal)}</span>
+                  <span style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                    {monthPaid > 0 && <span style={{ fontWeight: 600, fontSize: '12.5px', color: 'var(--success)' }}>שולם {fmt(monthPaid)}</span>}
+                    {(monthTotal > 0 || monthPaid === 0) && <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--danger)' }} title="פתוח לתשלום">{fmt(monthTotal)}</span>}
+                  </span>
                 </div>
                 {!collapsed && (
                   <div>
