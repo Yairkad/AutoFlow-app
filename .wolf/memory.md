@@ -3427,3 +3427,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 10:05 | Recurring expenses showed cash (DB default): migration 121 + payment-method pills in recurring form, explicit payment_method on auto-insert. Landlord checks not yet entered — warned about double count when series added | ExpensesClient.tsx, RecurringTab.tsx, 121 | tsc+lint ok | ~8k |
 | 10:40 | Invoice scan shown on expense: pay modal scan picker + auto for one-off invoices | SupplierTrackingTab.tsx, supplierDirectPayments.ts | tsc+lint ok | ~6k |
 | 11:10 | Recurring paid-by-checks (no monthly auto-insert, excluded from forecast, badge) + backfill past expenses' method on save | ExpensesClient.tsx, buildForecast.ts | tsc+lint ok | ~5k |
+
+## Session: 2026-11-26 08:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:25 | Explained supplier recurring_items: editing amount doesn't touch already-generated supplier_debts; proposed 'update N existing charges from date' — awaiting user answers | — | info only | ~2k |
