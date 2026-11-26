@@ -3409,3 +3409,9 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-26 08:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:30 | Disk IO email again (11-26 00:40); MCP still no permission; suspect 11-25 uncached generateMetadata (fixed same day); asked user for graph/pg_stat_statements | — | info only | ~3k |
