@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
+import { autoCreateSupplierRecurringCharges } from '@/lib/debts/autoSupplierRecurringCharges'
 
 export interface TenantRow {
   id: string
@@ -89,6 +90,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       // Checks past their due_date are settled automatically — no manual "שולם" click needed.
       if (p.role === 'admin' || p.role === 'super_admin') {
         autoMarkOverdueChecksPaid(sb, p.tenant_id).catch(() => {})
+        // This month's supplier recurring charges (rent etc.) — no "צור חיובים לחודש" click needed.
+        autoCreateSupplierRecurringCharges(sb, p.tenant_id).catch(() => {})
       }
     } catch (err) {
       // Unlike the checks above (an expected {error} result), this catches an actual thrown

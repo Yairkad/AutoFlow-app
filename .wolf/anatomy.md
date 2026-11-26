@@ -721,6 +721,7 @@
 
 - `supplierDirectPayments.ts` — scheduled_payments.payment_method values of direct (non-check) payments. They are kept (~1578 tok)
 - `supplierDirectPayments.ts` — recordSupplierPayment (expense + paid scheduled_payments row), deleteDirectAllocations, removeSupplierPaymentOfExpense (on expense delete), fetchSupplierOpenTotals (dashboards), paymentMethodLabel (~1400 tok)
+- `autoSupplierRecurringCharges.ts` — autoCreateSupplierRecurringCharges: this month's supplier charges from active fixed recurring_items, run from ProfileContext
 - `supplierLedger.ts` — supplier running account: events (charge/credit/payment/writeoff), balanceAfter, monthSummaries (~800 tok)
 - `supplierLedger.ts` — Events of one supplier. A payment counts when it was allocated to an invoice, marked paid, (~1136 tok)
 
@@ -892,4 +893,5 @@
 - `components/reports/AmirExportPanel.tsx` — "ייצוא לאמיר תזרים" panel (date range, last export from tenants.settings.amir_last_export), shown in CashFlowForecastTab (~1100 tok)
 - `supabase/migrations/120_payment_terms.sql` — suppliers/customers.payment_terms_days int default 30
 - `supabase/migrations/121_recurring_payment_method.sql` — recurring_expenses.payment_method (null=unset); clears default cash on generated expenses
+- `supabase/migrations/122_supplier_recurring_charge_unique.sql` — unique (recurring_item_id, month) for fixed recurring supplier charges (skipped if dups exist)
 - `lib/utils/pageCache.ts` — in-memory per-tab page data cache (get/set/clearPageCache); used by checks journal, suppliers, customers, inspections, products, tires, stock to show last data instantly on return (stale-while-revalidate). Cleared on logout/login.
