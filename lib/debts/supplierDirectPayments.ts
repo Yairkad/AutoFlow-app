@@ -16,9 +16,30 @@ export type DirectMethodHe = keyof typeof DIRECT_METHODS
 export const paymentMethodLabel = (m: string | null | undefined) =>
   m === 'check' ? "צ'ק" : m === 'cash' ? 'מזומן' : m === 'card' ? 'אשראי' : 'העברה'
 
+/** A scanned invoice/receipt in Drive (supplier_debts.drive_file_* → expenses.receipt_*). */
+export type ScanLink = { id: string; name: string | null; url: string | null }
+
+/** The scan attached to an invoice: its own file, else the first line (multi-invoice entry) that has one. */
+export function debtScan(d: {
+  drive_file_id: string | null; drive_file_name: string | null; drive_file_url: string | null
+  invoices?: { drive_file_id?: string; drive_file_name?: string; drive_file_url?: string }[] | null
+}): ScanLink | null {
+  if (d.drive_file_id) return { id: d.drive_file_id, name: d.drive_file_name, url: d.drive_file_url }
+  const i = d.invoices?.find(x => x.drive_file_id)
+  return i?.drive_file_id ? { id: i.drive_file_id, name: i.drive_file_name ?? null, url: i.drive_file_url ?? null } : null
+}
+
+/** Show the invoice scan on the payment's expense. A separate update (best effort) so a missing
+ *  migration 117 never fails the payment itself. */
+async function linkScanToExpense(supabase: SupabaseClient, expenseId: string, scan: ScanLink | null | undefined) {
+  if (!scan) return
+  await supabase.from('expenses')
+    .update({ receipt_file_id: scan.id, receipt_name: scan.name ?? 'חשבונית', receipt_url: scan.url }).eq('id', expenseId)
+}
+
 export async function recordSupplierPayment(
   supabase: SupabaseClient,
-  p: { tenantId: string; supplierId: string; supplierName: string; amount: number; date: string; method: DirectMethodHe; ref?: string | null },
+  p: { tenantId: string; supplierId: string; supplierName: string; amount: number; date: string; method: DirectMethodHe; ref?: string | null; scan?: ScanLink | null },
 ): Promise<{ error: string | null }> {
   const description = `תשלום לספק ${p.supplierName}`
   const exp = await supabase.from('expenses').insert({
@@ -36,6 +57,7 @@ export async function recordSupplierPayment(
     await supabase.from('expenses').delete().eq('id', exp.data.id)
     return { error: sp.error.message }
   }
+  await linkScanToExpense(supabase, exp.data.id, p.scan)
   return { error: null }
 }
 
@@ -127,7 +149,7 @@ export async function fetchSupplierOpenTotals(supabase: SupabaseClient): Promise
 export async function payOneOffInvoice(
   supabase: SupabaseClient,
   p: {
-    tenantId: string; debt: { id: string; amount: number; paid: number; doc_number: string | null; description: string | null }
+    tenantId: string; debt: { id: string; amount: number; paid: number; doc_number: string | null; description: string | null } & Parameters<typeof debtScan>[0]
     amount: number; date: string; method: DirectMethodHe | "צ'ק"; ref?: string | null
   },
 ): Promise<{ error: string | null }> {
@@ -158,6 +180,7 @@ export async function payOneOffInvoice(
   const paid = Number(p.debt.paid) + p.amount
   const { error } = await supabase.from('supplier_debts')
     .update({ paid, is_closed: paid >= Number(p.debt.amount) - 0.005 }).eq('id', p.debt.id)
+  if (!error && expenseId) await linkScanToExpense(supabase, expenseId, debtScan(p.debt))
   return { error: error?.message ?? null }
 }
 
