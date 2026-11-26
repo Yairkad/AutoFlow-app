@@ -5,6 +5,7 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+- [2026-11-26] Always reply to the user in Hebrew (user asked "עברית?" after an English reply). Short answers.
 
 - [2026-11-09] Supplier invoice rows: NO paid/partial/closed status tags — only type (חיוב / זיכוי). Status was removed at user request; invoiceCoverage stays only for the unified report.
 
