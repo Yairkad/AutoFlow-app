@@ -3454,3 +3454,8 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 14:00 | Built SQL to rebuild א.א אוחיון supplier ledger (template from 2026-12, 42 charges 06/23–11/26, 40 paid payments ledger-only incl. 11 checks, link today's 15k expense, 8 offset credits) → balance 9,724.25 (+Dec = 20,580.25) | — | SQL given to user | ~6k |
 | 14:20 | Auto-create supplier recurring charges monthly (ProfileContext) + migration 122 unique index | autoSupplierRecurringCharges.ts, ProfileContext.tsx, 122 | tsc+lint ok | ~5k |
 | 14:45 | Supplier payment history modal now from paid scheduled_payments + unlinked expenses | SupplierTrackingTab.tsx | tsc ok | ~3k |
+
+## Session: 2026-11-26 10:53
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
