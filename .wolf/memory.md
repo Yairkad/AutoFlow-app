@@ -3421,3 +3421,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 08:45 | pg_stat_statements (11-26): stats freshly reset (tiny call counts), shared_blks_read ~0 → all from cache, no IO hog now; email likely from 11-25 uncached metadata query (already fixed) | — | info only | ~1k |
+| 08:55 | Infra graph 11-26: red line ~100% Nov 20-25 then ~48%; green (likely Disk IO balance) 10-25% → ~58% on 26th. Improvement coincides with 11-25 fixes (cached metadata query, browser login). Asked user to hover to confirm which line is CPU | — | info only | ~2k |
