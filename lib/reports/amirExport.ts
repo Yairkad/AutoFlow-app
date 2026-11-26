@@ -3,7 +3,7 @@ import ExcelJS from 'exceljs'
 import { supplierEvents, invoiceCoverage } from '@/lib/debts/supplierLedger'
 
 // "ייצוא לאמיר תזרים" — three workbooks in the columns Amir Tazrim asked for:
-//   1. open supplier invoices  2. outstanding checks + all bank transfers
+//   1. open supplier invoices  2. outstanding checks + bank transfers (last 3 months + future)
 //   3. open customer invoices (תקבולים)
 // Every export is the full current state and overwrites the previous files (fixed names, no
 // date) — so there is no date range. Cash / card are not exported (Amir doesn't need them).
@@ -134,10 +134,13 @@ export async function buildAmirFiles(sb: SupabaseClient, tenantId: string): Prom
   }
   const custLines = openLines(cDebts, custCoverage, d => (d.customer_id ? custById.get(d.customer_id) : undefined))
 
-  // 2. Outstanding checks (not yet cleared) + all bank transfers, past ones too (Amir cross-checks them against the bank)
+  // 2. Outstanding checks (not yet cleared) + bank transfers from the last 3 months on (Amir cross-checks them against the bank)
   const supName = (p: SchedRow) => (p.supplier_id ? supById.get(p.supplier_id)?.name : null) ?? p.description
+  const since = new Date(); since.setMonth(since.getMonth() - 3)
+  const transfersFrom = since.toLocaleDateString('en-CA') // transfers: last 3 months + future
   const bankPays = sched
-    .filter(p => ['check', 'transfer', 'bank_transfer'].includes(p.payment_method) && (p.payment_method !== 'check' || !p.is_paid))
+    .filter(p => ['check', 'transfer', 'bank_transfer'].includes(p.payment_method)
+      && (p.payment_method === 'check' ? !p.is_paid : p.due_date >= transfersFrom))
     .sort((a, b) => a.due_date.localeCompare(b.due_date))
   const isCheck = (p: SchedRow) => p.payment_method === 'check'
 

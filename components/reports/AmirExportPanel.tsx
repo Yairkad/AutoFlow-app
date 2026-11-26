@@ -58,7 +58,7 @@ export default function AmirExportPanel({ tenantId }: { tenantId: string }) {
         </span>
       </div>
       <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', margin: 0 }}>
-        כל ייצוא הוא המצב הנוכחי המלא ודורס את הקבצים הקודמים: חשבוניות פתוחות (התשלומים סוגרים קודם את הישנות; חשבונית מתויגת &quot;מכוסה&quot; נחשבת סגורה), שיקים שטרם נפרעו וכל ההעברות (כולל קודמות, להצלבה).
+        כל ייצוא הוא המצב הנוכחי המלא ודורס את הקבצים הקודמים: חשבוניות פתוחות (התשלומים סוגרים קודם את הישנות; חשבונית מתויגת &quot;מכוסה&quot; נחשבת סגורה), שיקים שטרם נפרעו והעברות מ-3 החודשים האחרונים והלאה (להצלבה).
       </p>
       {msg && <p role="status" style={{ fontSize: '13px', margin: 0, color: msg.ok ? 'var(--success)' : 'var(--danger)' }}>{msg.text}</p>}
       {warnings.length > 0 && (
