@@ -3460,3 +3460,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 11:10 | Amir export: undated overwrite names, no date range, no cash/card file, שיק, missing-ref warning, customer is_closed=paid | amirExport.ts, AmirExportPanel.tsx | tsc+lint ok | ~8k |
+| 11:25 | Expenses search also matches free-text supplier_name | ExpensesClient.tsx | tsc+lint ok | ~2k |

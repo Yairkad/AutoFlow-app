@@ -877,7 +877,8 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   const filteredRows = baseRows.filter(row => {
     if (search) {
       const q       = search.toLowerCase()
-      const supName = tab === 'expenses' ? (suppliers.find(s => s.id === (row as Expense).supplier_id)?.name ?? '') : ''
+      // same name the table shows: the listed supplier, or the free-text supplier_name
+      const supName = tab === 'expenses' ? (suppliers.find(s => s.id === (row as Expense).supplier_id)?.name || (row as Expense).supplier_name || '') : ''
       if (!(row.description?.toLowerCase().includes(q) || row.category?.toLowerCase().includes(q) || supName.toLowerCase().includes(q))) return false
     }
     if (filterCat && row.category !== filterCat) return false
