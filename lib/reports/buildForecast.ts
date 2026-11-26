@@ -111,6 +111,9 @@ export async function buildForecast(
 
   for (const it of recurringItemsRes.data ?? []) {
     if (it.amount == null) continue
+    // Supplier recurring charges only raise the supplier balance — the cash goes out via checks /
+    // recurring expenses, already counted above/below (user choice). Customer ones = income, kept.
+    if (it.supplier_id) continue
     const validFrom = it.valid_from as string
     const day = Number(validFrom.slice(8, 10)) || 1
     const dates = projectMonthly(validFrom, 1, day, anchorDate, until)
