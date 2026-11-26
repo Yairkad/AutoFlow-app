@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { autoMarkOverdueChecksPaid } from '@/lib/utils/autoMarkOverdueChecks'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile, TenantRow } from '@/lib/contexts/ProfileContext'
 import { useToast } from '@/components/ui/Toast'
@@ -94,28 +95,15 @@ export default function SuppliersClient({ embedded = false }: { embedded?: boole
     setLoading(false)
     hasLoadedRef.current = true
 
-    // Auto-expense overdue scheduled payments — runs once per session, regardless of active tab
+    // Overdue checks → paid + expense. Uses the shared race-guarded helper (also run by
+    // ProfileContext / checks journal). The old inline copy here was unguarded: running alongside
+    // the others it created a second expense per check and overwrote expense_id/paid_date (today).
+    // Transfers stay manual (user-initiated).
     if (!autoExpenseDoneRef.current) {
       autoExpenseDoneRef.current = true
-      const today = new Date().toISOString().slice(0, 10)
-      const overdue = payments.filter(p => !p.is_paid && p.due_date <= today)
-      if (overdue.length > 0) {
-        for (const p of overdue) {
-          const expRes = await supabase.from('expenses').insert({
-            tenant_id: tid, date: p.due_date,
-            category: p.category || 'ספקים',
-            description: p.description, amount: p.amount,
-            supplier_id: p.supplier_id,
-            payment_method: p.payment_method === 'check' ? "צ'ק" : 'העברה',
-            payment_ref: p.notes || null,
-          }).select('id').single()
-          if (!expRes.error) {
-            await supabase.from('scheduled_payments').update({
-              is_paid: true, paid_date: today, expense_id: expRes.data.id,
-            }).eq('id', p.id)
-          }
-        }
-        showToast(`${overdue.length} תשלומים נרשמו אוטומטית כהוצאות ✓`, 'info')
+      const n = await autoMarkOverdueChecksPaid(supabase, tid).catch(() => 0)
+      if (n > 0) {
+        showToast(`${n} צ׳קים שהגיע מועדם נרשמו כהוצאות ✓`, 'info')
         const refreshed = await supabase.from('scheduled_payments').select('*').eq('tenant_id', tid).order('due_date')
         setScheduledPayments(refreshed.data ?? [])
       }

@@ -3442,3 +3442,5 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | 12:10 | Recurring paid-by-checks: create expense (no method, warning) when no check of that supplier is due this month | ExpensesClient.tsx | tsc+lint ok | ~3k |
 | 12:20 | Forecast: check-paid recurring expense projected only in months without a check of its supplier. Noted pre-existing overlap: supplier recurring_items also projected alongside checks | buildForecast.ts | tsc+lint ok | ~2k |
 | 12:35 | PR #99 merged; forecast drops supplier recurring_items (user option B); opening PR #100 | buildForecast.ts | tsc+lint ok | ~2k |
+| 12:55 | Fixed duplicate check expenses (SuppliersClient unguarded auto-expense race) + journal month header shows paid sum | SuppliersClient.tsx, ChecksJournalClient.tsx | tsc ok, lint errors pre-existing | ~6k |
+| 13:15 | Check-paid recurring with no check this month → open supplier charge (not expense) | ExpensesClient.tsx | tsc+lint ok | ~3k |

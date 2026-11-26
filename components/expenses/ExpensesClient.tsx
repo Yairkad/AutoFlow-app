@@ -509,7 +509,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     // without a payment method, and warn. Without a supplier we can't tell → skip (as before).
     const dueAll = rows.filter(r => isDue(r, currentMonth))
     const byCheck = dueAll.filter(r => r.payment_method === "צ'ק")
-    const noCheck: RecurringExpense[] = []
+    const noCheck: RecurringExpense[] = []  // paid by check, but no check of its supplier due this month
     const checkSups = [...new Set(byCheck.map(r => r.supplier_id).filter((x): x is string => !!x))]
     if (checkSups.length) {
       const [y, m] = currentMonth.split('-').map(Number)
@@ -519,15 +519,48 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
         .gte('due_date', `${currentMonth}-01`).lt('due_date', next)
       if (!chkErr) {
         const covered = new Set((chks ?? []).map(c => c.supplier_id))
-        for (const r of byCheck) if (r.supplier_id && !covered.has(r.supplier_id)) noCheck.push({ ...r, payment_method: null })
+        for (const r of byCheck) if (r.supplier_id && !covered.has(r.supplier_id)) noCheck.push(r)
       }
     }
-    const due      = [...dueAll.filter(r => r.payment_method !== "צ'ק"), ...noCheck]
+    // No check this month → nothing was paid yet: it's an open charge at the supplier (invoices),
+    // not an expense. Skip if the supplier already has a charge this month (e.g. generated from its
+    // recurring template); link the template so "צור חיובים לחודש" won't add it again.
+    const charged: string[] = []
+    if (noCheck.length) {
+      const [y, m] = currentMonth.split('-').map(Number)
+      const monthStart = `${currentMonth}-01`
+      const next = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+      const sups = [...new Set(noCheck.map(r => r.supplier_id!))]
+      const [debtsRes, itemsRes] = await Promise.all([
+        supabase.from('supplier_debts').select('supplier_id').in('supplier_id', sups).eq('direction', 'charge').gte('date', monthStart).lt('date', next),
+        supabase.from('recurring_items').select('id, supplier_id, valid_from').in('supplier_id', sups).eq('type', 'fixed').eq('active', true).lte('valid_from', currentMonth),
+      ])
+      if (!debtsRes.error) {
+        const hasCharge = new Set((debtsRes.data ?? []).map(d => d.supplier_id))
+        for (const r of noCheck) {
+          if (r.is_variable || r.amount == null) continue
+          if (!hasCharge.has(r.supplier_id)) {
+            const tpl = (itemsRes.data ?? []).filter(i => i.supplier_id === r.supplier_id)
+              .sort((a, b) => b.valid_from.localeCompare(a.valid_from))[0]
+            const { error } = await supabase.from('supplier_debts').insert({
+              tenant_id: tenantId, supplier_id: r.supplier_id, amount: r.amount, paid: 0, description: r.description,
+              date: monthStart, is_closed: false, doc_type: 'invoice', direction: 'charge', invoices: [],
+              recurring_item_id: tpl?.id ?? null,
+            })
+            if (error) continue
+            hasCharge.add(r.supplier_id)
+          }
+          charged.push(r.description)
+          await supabase.from('recurring_expenses').update({ last_applied: currentMonth }).eq('id', r.id)
+        }
+      }
+    }
+    const due      = dueAll.filter(r => r.payment_method !== "צ'ק")
     const fixed    = due.filter(r => !r.is_variable)
     const variable = due.filter(r => r.is_variable)
     let count = 0
-    if (noCheck.length) {
-      showToast(`⚠️ אין צ׳ק רשום החודש ל: ${noCheck.map(r => r.description).join(', ')} — נוספה הוצאה בלי אמצעי תשלום`, 'error')
+    if (charged.length) {
+      showToast(`⚠️ אין צ׳ק רשום החודש ל: ${charged.join(', ')} — נרשם חיוב פתוח אצל הספק (בחשבוניות)`, 'error')
     }
 
     if (fixed.length > 0) {
@@ -1561,7 +1594,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                   <tr key={r.id} style={{ borderBottom: '1px solid var(--border)', opacity: r.is_active ? 1 : 0.5 }}>
                     <td style={TD}>
                       {r.description}
-                      {r.payment_method === "צ'ק" && <span title="בחודש עם צ׳ק רשום ההוצאה נוצרת מהצ׳ק; בחודש בלי צ׳ק נוספת הוצאה רגילה עם התראה" style={{ marginRight: 6, fontSize: '11px', fontWeight: 600, color: '#92400e', background: '#fef9c3', borderRadius: '6px', padding: '1px 6px', whiteSpace: 'nowrap' }}>📝 משולם בצ׳קים</span>}
+                      {r.payment_method === "צ'ק" && <span title="בחודש עם צ׳ק רשום ההוצאה נוצרת מהצ׳ק; בחודש בלי צ׳ק נרשם חיוב פתוח אצל הספק" style={{ marginRight: 6, fontSize: '11px', fontWeight: 600, color: '#92400e', background: '#fef9c3', borderRadius: '6px', padding: '1px 6px', whiteSpace: 'nowrap' }}>📝 משולם בצ׳קים</span>}
                     </td>
                     <td style={TD}><span style={{ background: '#f1f5f9', borderRadius: '6px', padding: '2px 8px', fontSize: '11px' }}>{r.category}</span></td>
                     <td style={{ ...TD, fontWeight: 700, color: r.is_variable ? 'var(--warning)' : 'var(--danger)' }}>{r.is_variable ? 'משתנה' : fmt(Number(r.amount))}</td>
@@ -1638,7 +1671,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
             </div>
             {rfPayMethod === "צ'ק" && (
               <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                בחודש שיש בו צ׳ק רשום לספק — ההוצאה נוצרת מהצ׳ק בתאריך הפירעון (לא תתווסף כפולה). בחודש בלי צ׳ק — תתווסף הוצאה רגילה עם התראה.
+                בחודש שיש בו צ׳ק רשום לספק — ההוצאה נוצרת מהצ׳ק בתאריך הפירעון. בחודש בלי צ׳ק — נרשם חיוב פתוח אצל הספק (בחשבוניות) עם התראה, וההוצאה תיווצר כשתשלם.
                 {!rfSupplier && <b style={{ color: 'var(--danger)', display: 'block' }}>יש לבחור ספק — בלעדיו אי אפשר לבדוק אם יש צ׳ק.</b>}
               </div>
             )}
