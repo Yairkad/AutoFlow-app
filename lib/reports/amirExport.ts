@@ -2,15 +2,15 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import ExcelJS from 'exceljs'
 import { supplierEvents, invoiceCoverage } from '@/lib/debts/supplierLedger'
 
-// "ייצוא לאמיר תזרים" — four separate workbooks in the columns Amir Tazrim asked for:
-//   1. open supplier invoices  2. checks + bank transfers paid  3. cash / card paid
-//   4. open customer invoices (תקבולים)
+// "ייצוא לאמיר תזרים" — three workbooks in the columns Amir Tazrim asked for:
+//   1. open supplier invoices  2. outstanding checks + future bank transfers
+//   3. open customer invoices (תקבולים)
+// Every export is the full current state and overwrites the previous files (fixed names, no
+// date) — so there is no date range. Cash / card are not exported (Amir doesn't need them).
 // Invoices are a running account (lib/debts/ledger.ts) — no per-invoice paid status — so an
 // invoice's open amount is derived: payments + credits cover the oldest invoices first.
-// Payments are filtered by the day they were entered (created_at), so "from the last export"
-// gives exactly what's new since then.
 
-export interface AmirFile { name: string; buffer: ArrayBuffer; rows: number }
+export interface AmirFile { name: string; buffer: ArrayBuffer; rows: number; missingRef: string[] }
 
 const PAGE = 1000
 async function fetchAll<T>(sb: SupabaseClient, table: string, tenantId: string, cols = '*'): Promise<T[]> {
@@ -68,11 +68,14 @@ function openLines(debts: DebtRow[], coverage: Map<string, number>, party: (d: D
   return lines.sort((a, b) => a.due.getTime() - b.due.getTime())
 }
 
-/** Customer side: same oldest-first coverage, from Σcredits + Σpayments (lib/debts/ledger.ts). */
+/** Customer side: same oldest-first coverage, from Σcredits + Σpayments (lib/debts/ledger.ts).
+ *  An invoice tagged "🏷 מכוסה" (is_closed — e.g. imported as paid with no payment row) counts as
+ *  fully covered without consuming the payment pool, like the supplier side's write-off. */
 function customerCoverage(debts: DebtRow[], paid: number): Map<string, number> {
   let pool = paid + debts.filter(d => d.direction === 'credit').reduce((s, d) => s + Number(d.amount), 0)
   const out = new Map<string, number>()
   for (const d of [...debts].filter(d => d.direction !== 'credit').sort((a, b) => a.date.localeCompare(b.date))) {
+    if (d.is_closed) { out.set(d.id, Number(d.amount)); continue }
     const take = Math.max(0, Math.min(Number(d.amount), pool))
     out.set(d.id, take); pool -= take
   }
@@ -91,10 +94,13 @@ async function workbook(title: string, headers: string[], rows: (string | number
   return await wb.xlsx.writeBuffer() as ArrayBuffer
 }
 
-const METHOD_HE: Record<string, string> = { check: "צ'ק", transfer: 'העברה בנקאית', bank_transfer: 'העברה בנקאית', cash: 'מזומן', card: 'אשראי' }
+const METHOD_HE: Record<string, string> = { check: 'שיק', transfer: 'העברה בנקאית', bank_transfer: 'העברה בנקאית' }
 
-/** `fromIso` / `toIso` (inclusive, optional) filter payments by the day they were entered. */
-export async function buildAmirFiles(sb: SupabaseClient, tenantId: string, fromIso: string | null, toIso: string | null): Promise<AmirFile[]> {
+/** Rows with no reference, as "name (date)" — shown to the user as a warning after export. */
+const missing = <T,>(rows: T[], hasRef: (r: T) => boolean, label: (r: T) => string) => rows.filter(r => !hasRef(r)).map(label)
+const dmy = (d: Date) => d.toLocaleDateString('he-IL', { timeZone: 'UTC' })
+
+export async function buildAmirFiles(sb: SupabaseClient, tenantId: string): Promise<AmirFile[]> {
   const [suppliers, customers, sDebts, allocs, sched, cDebts, cPays] = await Promise.all([
     fetchAll<Party>(sb, 'suppliers', tenantId),
     fetchAll<Party>(sb, 'customers', tenantId),
@@ -105,7 +111,6 @@ export async function buildAmirFiles(sb: SupabaseClient, tenantId: string, fromI
     fetchAll<{ customer_id: string | null; amount: number }>(sb, 'customer_ledger_payments', tenantId),
   ])
   const today = todayISO()
-  const stamp = today.split('-').reverse().join('-')
   const supById = new Map(suppliers.map(s => [s.id, s]))
   const custById = new Map(customers.map(c => [c.id, c]))
 
@@ -129,31 +134,28 @@ export async function buildAmirFiles(sb: SupabaseClient, tenantId: string, fromI
   }
   const custLines = openLines(cDebts, custCoverage, d => (d.customer_id ? custById.get(d.customer_id) : undefined))
 
-  // 2 + 3. Payments entered in the chosen range
-  const inRange = (p: SchedRow) => {
-    const day = new Date(p.created_at).toLocaleDateString('en-CA')
-    return (!fromIso || day >= fromIso) && (!toIso || day <= toIso)
-  }
-  const pays = sched.filter(inRange).sort((a, b) => a.due_date.localeCompare(b.due_date))
+  // 2. Outstanding checks (not yet cleared) + bank transfers not yet executed
   const supName = (p: SchedRow) => (p.supplier_id ? supById.get(p.supplier_id)?.name : null) ?? p.description
-  const bankPays = pays.filter(p => ['check', 'transfer', 'bank_transfer'].includes(p.payment_method))
-  const cashPays = pays.filter(p => ['cash', 'card'].includes(p.payment_method))
+  const bankPays = sched
+    .filter(p => ['check', 'transfer', 'bank_transfer'].includes(p.payment_method) && (!p.is_paid || p.due_date >= today))
+    .sort((a, b) => a.due_date.localeCompare(b.due_date))
+  const isCheck = (p: SchedRow) => p.payment_method === 'check'
 
   const invHeaders = ['תאריך ערך צפוי לתשלום', 'תאריך אסמכתא', 'אסמכתא', 'פרטים', 'סכום']
   const invRows = (l: InvoiceLine[]) => l.map(x => [x.due, x.date, x.ref, x.name, x.amount])
 
+  const invMissing = (l: InvoiceLine[]) => missing(l, x => !!x.ref.trim(), x => `${x.name} (${dmy(x.date)})`)
+
   return [
-    { name: `חשבוניות ספקים פתוחות ${stamp}.xlsx`, rows: supLines.length,
+    { name: 'חשבוניות ספקים פתוחות.xlsx', rows: supLines.length, missingRef: invMissing(supLines),
       buffer: await workbook('חשבוניות ספקים', invHeaders, invRows(supLines), [22, 16, 16, 30, 14], [1, 2], 5) },
-    { name: `צקים והעברות ${stamp}.xlsx`, rows: bankPays.length,
-      buffer: await workbook("צ'קים והעברות", ['סוג תנועה', "מספר צ'ק", 'תאריך פירעון', 'סכום', 'ספק'],
-        bankPays.map(p => [METHOD_HE[p.payment_method] ?? p.payment_method, p.payment_method === 'check' ? (p.check_number ?? '') : '', toDate(p.due_date), Number(p.amount), supName(p)]),
+    { name: 'שיקים והעברות.xlsx', rows: bankPays.length,
+      // transfers carry no reference by design (it comes from the bank) — only checks need a number
+      missingRef: missing(bankPays.filter(isCheck), p => !!p.check_number?.trim(), p => `${supName(p)} (${dmy(toDate(p.due_date))})`),
+      buffer: await workbook('שיקים והעברות', ['סוג תנועה', 'מספר שיק', 'תאריך פירעון', 'סכום', 'ספק'],
+        bankPays.map(p => [METHOD_HE[p.payment_method] ?? p.payment_method, isCheck(p) ? (p.check_number ?? '') : '', toDate(p.due_date), Number(p.amount), supName(p)]),
         [16, 12, 14, 14, 30], [3], 4) },
-    { name: `מזומן ואשראי ${stamp}.xlsx`, rows: cashPays.length,
-      buffer: await workbook('מזומן ואשראי', ['סוג תנועה', 'תאריך', 'סכום', 'ספק'],
-        cashPays.map(p => [METHOD_HE[p.payment_method] ?? p.payment_method, toDate(p.due_date), Number(p.amount), supName(p)]),
-        [14, 14, 14, 30], [2], 3) },
-    { name: `תקבולים - חשבוניות לקוחות פתוחות ${stamp}.xlsx`, rows: custLines.length,
+    { name: 'תקבולים - חשבוניות לקוחות פתוחות.xlsx', rows: custLines.length, missingRef: invMissing(custLines),
       buffer: await workbook('תקבולים', invHeaders, invRows(custLines), [22, 16, 16, 30, 14], [1, 2], 5) },
   ]
 }

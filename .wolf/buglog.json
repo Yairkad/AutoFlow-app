@@ -2029,5 +2029,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-26"
+  },
+  {
+    "id": "bug-111",
+    "timestamp": "2026-11-26",
+    "error_message": "Amir export: customer open-invoices file included old invoices that were already paid",
+    "file": "lib/reports/amirExport.ts",
+    "root_cause": "customerCoverage ignored is_closed; invoices tagged מכוסה (often Excel-imported without payment rows) were treated as unpaid",
+    "fix": "is_closed charges count as fully covered without consuming the payment pool (mirrors supplier write-off)",
+    "tags": [
+      "amir",
+      "export",
+      "customers",
+      "is_closed"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-26"
   }
 ]

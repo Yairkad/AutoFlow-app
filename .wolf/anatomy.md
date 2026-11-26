@@ -888,9 +888,9 @@
 - `scan.ps1` — WIA scan: feeder if paper else flatbed, multi-page JPEGs (~700 tok)
 
 ## Amir Tazrim export (2026-11-25)
-- `lib/reports/amirExport.ts` — buildAmirFiles: 4 xlsx (open supplier invoices, checks+transfers, cash+card, open customer invoices). Open amount = oldest-first coverage; due = end of invoice month + payment_terms_days (default 30). Payments filtered by created_at day (~1800 tok)
+- `lib/reports/amirExport.ts` — buildAmirFiles(sb, tenantId): 3 xlsx, fixed undated names (overwrite): open supplier invoices, שיקים והעברות (uncleared checks + future transfers), open customer invoices. Open amount = oldest-first coverage (customer is_closed = covered); due = end of invoice month + payment_terms_days (default 30). Each file returns missingRef[] for the warning (~1900 tok)
 - `lib/utils/saveToFolder.ts` — saveFiles/pickFolder: File System Access folder handle kept in IndexedDB; fallback downloads (~600 tok)
-- `components/reports/AmirExportPanel.tsx` — "ייצוא לאמיר תזרים" panel (date range, last export from tenants.settings.amir_last_export), shown in CashFlowForecastTab (~1100 tok)
+- `components/reports/AmirExportPanel.tsx` — "ייצוא לאמיר תזרים" panel (no date range; last export from tenants.settings.amir_last_export; ⚠ list of rows missing אסמכתא), shown in CashFlowForecastTab (~1200 tok)
 - `supabase/migrations/120_payment_terms.sql` — suppliers/customers.payment_terms_days int default 30
 - `supabase/migrations/121_recurring_payment_method.sql` — recurring_expenses.payment_method (null=unset); clears default cash on generated expenses
 - `supabase/migrations/122_supplier_recurring_charge_unique.sql` — unique (recurring_item_id, month) for fixed recurring supplier charges (skipped if dups exist)
