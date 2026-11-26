@@ -3420,3 +3420,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 08:45 | pg_stat_statements (11-26): stats freshly reset (tiny call counts), shared_blks_read ~0 → all from cache, no IO hog now; email likely from 11-25 uncached metadata query (already fixed) | — | info only | ~1k |
