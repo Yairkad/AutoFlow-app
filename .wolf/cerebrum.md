@@ -5,6 +5,7 @@
 > Last updated: 2026-09-15
 
 ## User Preferences
+- [2026-11-26] Always reply to the user in Hebrew (user asked "עברית?" after an English reply). Short answers.
 
 - [2026-11-09] Supplier invoice rows: NO paid/partial/closed status tags — only type (חיוב / זיכוי). Status was removed at user request; invoiceCoverage stays only for the unified report.
 
@@ -414,6 +415,10 @@
 - [2026-11-19] HTML→PDF client-side: html-to-image (browser renders text → Hebrew/RTL correct) + pdf-lib. Use skipFonts:true (cross-origin Google Fonts @import can't be embedded). Print layouts using @page margins need their absolute-positioned footers shifted by the margin in the PDF (extraCss).
 - [2026-11-19] Signed PDF look (user-tuned): stamp small (~25mm wide) partially overlapping the signature, shifted ~9mm to its left, signature main body on the line; both clear of the "חתימת הבוחן" label.
 - [2026-11-22] Disk IO verified fixed: 3 days after pg_stat_statements reset, no realtime queries at all; heaviest = /suppliers loadAll (6 full-table selects, ~130 calls/day). If Disk IO ever recurs, first suspect that loadAll (select * on supplier_debts etc.).
+- [2026-11-26] Disk IO email #3: pg_stat_statements (since 11-19) showed app queries trivial (~5 min DB time/week, no writes), yet Disk IO balance dropped 98%→35% and CPU 20%→58% on 11-26. Cause outside app SQL (platform: storage migrations, backups, swap on small compute). Check stats_reset + order by total_exec_time (not shared_blks_read — mostly 0) before blaming code.
+- [2026-11-26] expenses.payment_method has DB DEFAULT 'מזומן' — any insert into expenses that omits payment_method becomes cash. Always pass it explicitly (null if unknown). recurring_expenses.payment_method (migration 121) feeds the monthly auto-insert. Live recurring editor is in ExpensesClient (openRecForm/saveRec), RecurringTab.tsx only exports the type.
+- [2026-11-26] Recurring expense with payment_method "צ'ק" = "paid by checks": stays in the recurring list (badge 📝 משולם בצ׳קים) but applyRecurring skips it and buildForecast excludes it — each check in scheduled_payments creates the monthly expense at its due date (avoids double count). Saving a recurring expense with a method backfills its past generated expenses where payment_method is null.
+- [2026-11-26] Invoice scan → expense: supplier pay modal has an optional "סריקת החשבונית" select (supplier's scanned invoices); recordSupplierPayment({scan}) / payOneOffInvoice (auto, from the debt) copy supplier_debts.drive_file_* (or invoices[] line) into expenses.receipt_* via a separate best-effort update (debtScan/linkScanToExpense in lib/debts/supplierDirectPayments.ts). Checks (series/journal) not covered — expense is created later at due date.
 - [2026-11-22] User wants NO "טוען..." text / spinners while loading — use components/ui/Skeleton.tsx (PageSkeleton for whole pages, SkeletonList/Table/Cards/Form/Lines for sections). Any new screen must use these.
 - [2026-11-22] Yard drawer (office side drawer): lists cached in localStorage (lib/hooks/localCache) and shown instantly; requests/loans tabs reload only on the ⟳ button or when /api/yard/counts open counts change (user: "they hardly change, update only on new data"). RequestsPanel/LoansPanel take refreshKey and skip useLiveRefresh when variant==='drawer'.
 - [2026-11-24] n8n supplier-invoice intake (planned, not built): supplier_debts is the invoice table; `amount` = total INCLUDING VAT (user confirmed) — new amount_before_vat/vat_amount columns are additive only. Ingest via dedicated Next.js API route + per-tenant integration key (not service_role, not direct table writes); PDF → tenant Google Drive (drive_file_* cols), not Supabase Storage. Unknown supplier → ask in WhatsApp, never auto-create.

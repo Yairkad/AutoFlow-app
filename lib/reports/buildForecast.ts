@@ -95,7 +95,7 @@ export async function buildForecast(
   const [scheduledRes, recurringItemsRes, recurringExpensesRes, cardChargesRes] = await Promise.all([
     supabase.from('scheduled_payments').select('description, amount, due_date').eq('tenant_id', tenantId).eq('is_paid', false).gt('due_date', anchorDate).lte('due_date', until),
     supabase.from('recurring_items').select('name, amount, supplier_id, customer_id, type, valid_from, active').eq('tenant_id', tenantId).eq('active', true).eq('type', 'fixed'),
-    supabase.from('recurring_expenses').select('description, amount, frequency, is_active, is_variable, last_applied, created_at').eq('tenant_id', tenantId).eq('is_active', true).eq('is_variable', false),
+    supabase.from('recurring_expenses').select('description, amount, frequency, is_active, is_variable, last_applied, created_at, payment_method').eq('tenant_id', tenantId).eq('is_active', true).eq('is_variable', false),
     supabase.from('bank_statement_lines').select('description, amount, direction, charge_date').eq('tenant_id', tenantId).not('charge_date', 'is', null).neq('status', 'ignored').gt('charge_date', anchorDate).lte('charge_date', until),
   ])
 
@@ -120,6 +120,7 @@ export async function buildForecast(
 
   for (const re of recurringExpensesRes.data ?? []) {
     if (re.amount == null) continue
+    if (re.payment_method === "צ'ק") continue  // paid by checks — already counted via scheduled_payments
     const step = re.frequency === 'bimonthly' ? 2 : 1
     const referenceIso = re.last_applied ? `${re.last_applied}-01` : (re.created_at as string).slice(0, 10)
     const dates = projectMonthly(referenceIso, step, 1, anchorDate, until)

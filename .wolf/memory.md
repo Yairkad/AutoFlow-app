@@ -3409,3 +3409,27 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+
+## Session: 2026-11-26 08:21
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:30 | Disk IO email again (11-26 00:40); MCP still no permission; suspect 11-25 uncached generateMetadata (fixed same day); asked user for graph/pg_stat_statements | — | info only | ~3k |
+
+## Session: 2026-11-26 08:32
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:45 | pg_stat_statements (11-26): stats freshly reset (tiny call counts), shared_blks_read ~0 → all from cache, no IO hog now; email likely from 11-25 uncached metadata query (already fixed) | — | info only | ~1k |
+| 08:55 | Infra graph 11-26: red line ~100% Nov 20-25 then ~48%; green (likely Disk IO balance) 10-25% → ~58% on 26th. Improvement coincides with 11-25 fixes (cached metadata query, browser login). Asked user to hover to confirm which line is CPU | — | info only | ~2k |
+| 09:05 | Corrected graph read: red=Disk IO balance (~98% all week, dropped to ~48%/35% on 11-26), green=CPU (15-25% → ~58%). Something new on 11-25/26 burns CPU+IO; reviewed 11-25 commits (pageCache, backup fan-out, checks, Amir export) — nothing obvious; asked user for exec-time/WAL/activity queries | — | investigating | ~3k |
+| 09:20 | pg_stat_statements since 11-19: total app query time ~5 min/week, zero writes/temp — app queries NOT the IO cause; also storage index migration + pg_backup (platform). Suspect platform/memory-swap on small compute; advised check swap in DB report / restart project at quiet time | — | info only | ~2k |
+| 10:05 | Recurring expenses showed cash (DB default): migration 121 + payment-method pills in recurring form, explicit payment_method on auto-insert. Landlord checks not yet entered — warned about double count when series added | ExpensesClient.tsx, RecurringTab.tsx, 121 | tsc+lint ok | ~8k |
+| 10:40 | Invoice scan shown on expense: pay modal scan picker + auto for one-off invoices | SupplierTrackingTab.tsx, supplierDirectPayments.ts | tsc+lint ok | ~6k |
+| 11:10 | Recurring paid-by-checks (no monthly auto-insert, excluded from forecast, badge) + backfill past expenses' method on save | ExpensesClient.tsx, buildForecast.ts | tsc+lint ok | ~5k |
+
+## Session: 2026-11-26 08:58
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:25 | Explained supplier recurring_items: editing amount doesn't touch already-generated supplier_debts; proposed 'update N existing charges from date' — awaiting user answers | — | info only | ~2k |

@@ -312,6 +312,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   const [rfIsVar,      setRfIsVar]      = useState(false)
   const [rfFreq,       setRfFreq]       = useState<'monthly' | 'bimonthly'>('monthly')
   const [rfSupplier,   setRfSupplier]   = useState('')
+  const [rfPayMethod,  setRfPayMethod]  = useState<PaymentMethod | ''>('')
 
   // Selected row
 
@@ -503,7 +504,8 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   // ── Auto-apply recurring ────────────────────────────────────────────────────
 
   const applyRecurring = async (rows: RecurringExpense[], tenantId: string): Promise<number> => {
-    const due      = rows.filter(r => isDue(r, currentMonth))
+    // Paid by checks: each check makes its own expense at its due date (checks journal) — don't add another
+    const due      = rows.filter(r => r.payment_method !== "צ'ק" && isDue(r, currentMonth))
     const fixed    = due.filter(r => !r.is_variable)
     const variable = due.filter(r => r.is_variable)
     let count = 0
@@ -511,7 +513,9 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     if (fixed.length > 0) {
       const today = new Date().toISOString().slice(0, 10)
       await supabase.from('expenses').insert(
-        fixed.map(r => ({ tenant_id: tenantId, date: today, category: r.category, description: r.description, amount: r.amount, supplier_id: r.supplier_id, recurring_expense_id: r.id }))
+        fixed.map(r => ({ tenant_id: tenantId, date: today, category: r.category, description: r.description, amount: r.amount, supplier_id: r.supplier_id, recurring_expense_id: r.id,
+          // explicit (null when unset) — omitting it lets the DB default mark it as cash
+          payment_method: r.payment_method ?? null }))
       )
       await Promise.all(fixed.map(r => supabase.from('recurring_expenses').update({ last_applied: currentMonth }).eq('id', r.id)))
       showToast(`${fixed.length} הוצאות קבועות נוספו אוטומטית ✓`, 'success')
@@ -536,7 +540,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     if (!tenantIdRef.current) return
     setVarSaving(true)
     const today = new Date().toISOString().slice(0, 10)
-    await supabase.from('expenses').insert({ tenant_id: tenantIdRef.current, date: today, category: currentVar.category, description: currentVar.description, amount: parseFloat(varAmount), supplier_id: currentVar.supplier_id, recurring_expense_id: currentVar.id })
+    await supabase.from('expenses').insert({ tenant_id: tenantIdRef.current, date: today, category: currentVar.category, description: currentVar.description, amount: parseFloat(varAmount), supplier_id: currentVar.supplier_id, recurring_expense_id: currentVar.id, payment_method: currentVar.payment_method ?? null })
     await supabase.from('recurring_expenses').update({ last_applied: currentMonth }).eq('id', currentVar.id)
     setVarSaving(false)
     advanceVar()
@@ -664,7 +668,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
       }
 
       if (!error && !editItem && fIsRecurring && !fIsScheduled) {
-        await supabase.from('recurring_expenses').insert({
+        const recRow = {
           tenant_id:   tenantIdRef.current,
           description: fDesc || fCat,
           category:    fCat,
@@ -672,9 +676,15 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
           is_variable: fRecurVar,
           frequency:   fRecurFreq,
           supplier_id: fSupplier || null,
+          payment_method: fPayMethod,
           last_applied: currentMonth,
           is_active:   true,
-        })
+        }
+        const { error: recErr } = await supabase.from('recurring_expenses').insert(recRow)
+        // Before migration 121 the column doesn't exist — still create the recurring expense.
+        if (recErr?.message.includes('payment_method')) {
+          await supabase.from('recurring_expenses').insert({ ...recRow, payment_method: undefined })
+        }
       }
     } else {
       const payload = { date: fDate, category: fCat, description: fDesc, amount }
@@ -750,6 +760,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     setRfIsVar(r?.is_variable ?? false)
     setRfFreq(r?.frequency ?? 'monthly')
     setRfSupplier(r?.supplier_id ?? '')
+    setRfPayMethod((r?.payment_method as PaymentMethod | null | undefined) ?? '')
     setRecListModal(false)
     setRecFormModal(true)
   }
@@ -765,13 +776,24 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
       amount:      rfIsVar ? null : parseFloat(rfAmount),
       is_variable: rfIsVar, frequency: rfFreq,
       supplier_id: rfSupplier || null,
+      payment_method: rfPayMethod || null,
       is_active:   true,
     }
     const res = editRec
       ? await supabase.from('recurring_expenses').update(payload).eq('id', editRec.id)
       : await supabase.from('recurring_expenses').insert(payload)
+    // Past expenses generated from this recurring expense with no payment method get the chosen one
+    if (!res.error && editRec && rfPayMethod) {
+      await supabase.from('expenses').update({ payment_method: rfPayMethod })
+        .eq('recurring_expense_id', editRec.id).is('payment_method', null)
+    }
     setRecSaving(false)
-    if (res.error) { showToast('שגיאה: ' + res.error.message, 'error'); return }
+    if (res.error) {
+      showToast(res.error.message.includes('payment_method')
+        ? 'צריך להריץ את עדכון מסד הנתונים 121 (אמצעי תשלום להוצאה קבועה)'
+        : 'שגיאה: ' + res.error.message, 'error')
+      return
+    }
     showToast(editRec ? 'עודכן' : 'נוסף', 'success')
     setRecFormModal(false)
     setRecListModal(true)
@@ -1517,7 +1539,10 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               <tbody>
                 {recurring.map(r => (
                   <tr key={r.id} style={{ borderBottom: '1px solid var(--border)', opacity: r.is_active ? 1 : 0.5 }}>
-                    <td style={TD}>{r.description}</td>
+                    <td style={TD}>
+                      {r.description}
+                      {r.payment_method === "צ'ק" && <span title="לא נוספת כל חודש — ההוצאה נוצרת מכל צ׳ק בתאריך הפירעון" style={{ marginRight: 6, fontSize: '11px', fontWeight: 600, color: '#92400e', background: '#fef9c3', borderRadius: '6px', padding: '1px 6px', whiteSpace: 'nowrap' }}>📝 משולם בצ׳קים</span>}
+                    </td>
                     <td style={TD}><span style={{ background: '#f1f5f9', borderRadius: '6px', padding: '2px 8px', fontSize: '11px' }}>{r.category}</span></td>
                     <td style={{ ...TD, fontWeight: 700, color: r.is_variable ? 'var(--warning)' : 'var(--danger)' }}>{r.is_variable ? 'משתנה' : fmt(Number(r.amount))}</td>
                     <td style={TD}>{r.frequency === 'monthly' ? 'חודשי' : 'דו-חודשי'}</td>
@@ -1575,6 +1600,27 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               <option value="">— ללא ספק —</option>
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '13px', fontWeight: 500 }}>אמצעי תשלום</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
+              {(['', 'מזומן', 'אשראי', "צ'ק", 'העברה'] as const).map(m => (
+                <button key={m || 'none'} type="button" onClick={() => setRfPayMethod(m)} style={{
+                  padding: '6px 4px', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
+                  border: `1px solid ${rfPayMethod === m ? 'var(--primary)' : 'var(--border)'}`,
+                  background: rfPayMethod === m ? 'var(--success-soft)' : '#f8fafc',
+                  color: rfPayMethod === m ? 'var(--primary)' : 'var(--text-muted)',
+                  textAlign: 'center',
+                }}>
+                  {m === '' ? '— לא צוין' : `${m === 'מזומן' ? '💵' : m === 'אשראי' ? '💳' : m === "צ'ק" ? '📝' : '🏦'} ${m}`}
+                </button>
+              ))}
+            </div>
+            {rfPayMethod === "צ'ק" && (
+              <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                לא תתווסף הוצאה כל חודש — ההוצאה נוצרת מכל צ׳ק ביומן הצ׳קים בתאריך הפירעון. ודא שהצ׳קים רשומים (תשלום לספק → צ׳ק → סדרת צ׳קים).
+              </div>
+            )}
           </div>
         </div>
       </Modal>

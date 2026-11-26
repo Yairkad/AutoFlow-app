@@ -1978,5 +1978,22 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-25"
+  },
+  {
+    "id": "bug-108",
+    "timestamp": "2026-11-26T10:00:00Z",
+    "error_message": "Recurring expense (landlord rent) shows payment method 'מזומן' although paid by checks",
+    "file": "components/expenses/ExpensesClient.tsx",
+    "root_cause": "applyRecurring/handleVarAdd inserted expenses without payment_method, so the DB DEFAULT 'מזומן' (migration 005) marked every recurring expense as cash; recurring_expenses had no payment_method column",
+    "fix": "Migration 121 adds recurring_expenses.payment_method + clears default 'מזומן' on generated rows; recurring form has payment-method pills (incl. 'לא צוין'); generated expenses get r.payment_method ?? null explicitly",
+    "tags": [
+      "expenses",
+      "recurring",
+      "payment_method",
+      "db-default"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-26"
   }
 ]

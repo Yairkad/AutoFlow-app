@@ -14,7 +14,7 @@ import Button from '@/components/ui/Button'
 import RowActionsMenu from '@/components/ui/RowActionsMenu'
 import Modal from '@/components/ui/Modal'
 import { reverseSupplierPayment } from '@/lib/debts/reverseSupplierPayment'
-import { recordSupplierPayment, deleteDirectAllocations, paymentMethodLabel, payOneOffInvoice, undoOneOffPayment, type DirectMethodHe } from '@/lib/debts/supplierDirectPayments'
+import { recordSupplierPayment, deleteDirectAllocations, paymentMethodLabel, payOneOffInvoice, undoOneOffPayment, debtScan, type DirectMethodHe } from '@/lib/debts/supplierDirectPayments'
 import { supplierEvents, balanceAfter, monthSummaries, monthOf, paymentLedgerDate } from '@/lib/debts/supplierLedger'
 import ScheduledPaymentsModal from '@/components/expenses/ScheduledPaymentsModal'
 import QuickAddSupplierModal, { QuickSupplier } from '@/components/suppliers/QuickAddSupplierModal'
@@ -190,6 +190,8 @@ export default function SupplierTrackingTab({
   const [paySaving, setPaySaving] = useState(false)
   // One-off invoice (no supplier): the payment goes on that invoice itself
   const [payDebt, setPayDebt] = useState<SupplierDebt | null>(null)
+  // Supplier payment: which scanned invoice it pays, so the expense shows that scan ('' = none)
+  const [payScanDebtId, setPayScanDebtId] = useState('')
 
   // Quick-add-supplier modal
   const [showQuickAddSupplier, setShowQuickAddSupplier] = useState(false)
@@ -725,7 +727,7 @@ export default function SupplierTrackingTab({
     if (!supplierId) { showToast('לחשבונית בלי ספק משלמים מתוך השורה שלה: ⋮ ← תשלום חשבונית', 'info'); return }
     setPayDebt(null)
     setPaySupplierId(supplierId)
-    setPayMethod('מזומן'); setPayDate(todayISO()); setPayRefNumber('')
+    setPayMethod('מזומן'); setPayDate(todayISO()); setPayRefNumber(''); setPayScanDebtId('')
     const b = supplierBalance(supplierId)
     setPayAmount(b > 0 ? b.toFixed(2) : '')
     setShowPayModal(true)
@@ -778,6 +780,7 @@ export default function SupplierTrackingTab({
     const { error } = await recordSupplierPayment(supabase, {
       tenantId: tid, supplierId: paySupplierId, supplierName: suppliers.find(s => s.id === paySupplierId)?.name ?? 'ספק',
       amount, date: payDate, method: payMethod as DirectMethodHe, ref: payRefNumber,
+      scan: (() => { const d = supplierDebts.find(x => x.id === payScanDebtId); return d ? debtScan(d) : null })(),
     })
     setPaySaving(false)
     if (error) { showToast('שגיאה בתשלום: ' + error, 'error'); return }
@@ -1620,6 +1623,27 @@ export default function SupplierTrackingTab({
                     </label>
                   )}
                 </div>
+
+                {!payDebt && payMethod !== "צ'ק" && (() => {
+                  // Scanned invoices of this supplier (newest first) — e.g. a tax invoice/receipt paid on the spot
+                  const scanned = supplierDebts
+                    .filter(d => d.supplier_id === paySupplierId && d.direction !== 'credit' && debtScan(d))
+                    .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30)
+                  if (!scanned.length) return null
+                  return (
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600, marginTop: '12px' }}>
+                      🧾 סריקת החשבונית (תופיע בהוצאות)
+                      <select value={payScanDebtId} onChange={e => setPayScanDebtId(e.target.value)} className="form-input">
+                        <option value="">— בלי —</option>
+                        {scanned.map(d => (
+                          <option key={d.id} value={d.id}>
+                            {[d.date, d.doc_number ? `מס׳ ${d.doc_number}` : null, fmt(Number(d.amount)), d.description].filter(Boolean).join(' · ')}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )
+                })()}
 
                 {(payMethod !== "צ'ק" || payDebt) && (
                   <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '13px', fontWeight: 600, marginTop: '12px' }}>
