@@ -93,9 +93,9 @@ export async function buildForecast(
   }
 
   const [scheduledRes, recurringItemsRes, recurringExpensesRes, cardChargesRes] = await Promise.all([
-    supabase.from('scheduled_payments').select('description, amount, due_date').eq('tenant_id', tenantId).eq('is_paid', false).gt('due_date', anchorDate).lte('due_date', until),
+    supabase.from('scheduled_payments').select('description, amount, due_date, supplier_id, payment_method').eq('tenant_id', tenantId).eq('is_paid', false).gt('due_date', anchorDate).lte('due_date', until),
     supabase.from('recurring_items').select('name, amount, supplier_id, customer_id, type, valid_from, active').eq('tenant_id', tenantId).eq('active', true).eq('type', 'fixed'),
-    supabase.from('recurring_expenses').select('description, amount, frequency, is_active, is_variable, last_applied, created_at, payment_method').eq('tenant_id', tenantId).eq('is_active', true).eq('is_variable', false),
+    supabase.from('recurring_expenses').select('description, amount, frequency, is_active, is_variable, last_applied, created_at, payment_method, supplier_id').eq('tenant_id', tenantId).eq('is_active', true).eq('is_variable', false),
     supabase.from('bank_statement_lines').select('description, amount, direction, charge_date').eq('tenant_id', tenantId).not('charge_date', 'is', null).neq('status', 'ignored').gt('charge_date', anchorDate).lte('charge_date', until),
   ])
 
@@ -111,6 +111,9 @@ export async function buildForecast(
 
   for (const it of recurringItemsRes.data ?? []) {
     if (it.amount == null) continue
+    // Supplier recurring charges only raise the supplier balance — the cash goes out via checks /
+    // recurring expenses, already counted above/below (user choice). Customer ones = income, kept.
+    if (it.supplier_id) continue
     const validFrom = it.valid_from as string
     const day = Number(validFrom.slice(8, 10)) || 1
     const dates = projectMonthly(validFrom, 1, day, anchorDate, until)
@@ -118,13 +121,21 @@ export async function buildForecast(
     dates.forEach(date => events.push({ date, label: it.name, amount: signed, source: 'recurring_item' }))
   }
 
+  // Months (supplier__YYYY-MM) that already have a check of that supplier in the forecast
+  const checkMonths = new Set((scheduledRes.data ?? []).filter(p => p.payment_method === 'check' && p.supplier_id)
+    .map(p => `${p.supplier_id}__${(p.due_date as string).slice(0, 7)}`))
+
   for (const re of recurringExpensesRes.data ?? []) {
     if (re.amount == null) continue
-    if (re.payment_method === "צ'ק") continue  // paid by checks — already counted via scheduled_payments
+    const byCheck = re.payment_method === "צ'ק"
+    // Paid by checks: months with a check are counted via scheduled_payments; months without one
+    // (series ran out) still need the expense. Without a supplier we can't tell → skip (as before).
+    if (byCheck && !re.supplier_id) continue
     const step = re.frequency === 'bimonthly' ? 2 : 1
     const referenceIso = re.last_applied ? `${re.last_applied}-01` : (re.created_at as string).slice(0, 10)
     const dates = projectMonthly(referenceIso, step, 1, anchorDate, until)
-    dates.forEach(date => events.push({ date, label: re.description, amount: -Number(re.amount), source: 'recurring_expense' }))
+    dates.filter(date => !byCheck || !checkMonths.has(`${re.supplier_id}__${date.slice(0, 7)}`))
+      .forEach(date => events.push({ date, label: re.description, amount: -Number(re.amount), source: 'recurring_expense' }))
   }
 
   events.sort((a, b) => a.date.localeCompare(b.date))

@@ -504,11 +504,31 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   // ── Auto-apply recurring ────────────────────────────────────────────────────
 
   const applyRecurring = async (rows: RecurringExpense[], tenantId: string): Promise<number> => {
-    // Paid by checks: each check makes its own expense at its due date (checks journal) — don't add another
-    const due      = rows.filter(r => r.payment_method !== "צ'ק" && isDue(r, currentMonth))
+    // Paid by checks: a check of that supplier due this month makes its own expense at its due date
+    // (checks journal), so skip it. No such check (e.g. the series ran out) → add the expense as usual,
+    // without a payment method, and warn. Without a supplier we can't tell → skip (as before).
+    const dueAll = rows.filter(r => isDue(r, currentMonth))
+    const byCheck = dueAll.filter(r => r.payment_method === "צ'ק")
+    const noCheck: RecurringExpense[] = []
+    const checkSups = [...new Set(byCheck.map(r => r.supplier_id).filter((x): x is string => !!x))]
+    if (checkSups.length) {
+      const [y, m] = currentMonth.split('-').map(Number)
+      const next = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+      const { data: chks, error: chkErr } = await supabase.from('scheduled_payments').select('supplier_id')
+        .eq('payment_method', 'check').in('supplier_id', checkSups)
+        .gte('due_date', `${currentMonth}-01`).lt('due_date', next)
+      if (!chkErr) {
+        const covered = new Set((chks ?? []).map(c => c.supplier_id))
+        for (const r of byCheck) if (r.supplier_id && !covered.has(r.supplier_id)) noCheck.push({ ...r, payment_method: null })
+      }
+    }
+    const due      = [...dueAll.filter(r => r.payment_method !== "צ'ק"), ...noCheck]
     const fixed    = due.filter(r => !r.is_variable)
     const variable = due.filter(r => r.is_variable)
     let count = 0
+    if (noCheck.length) {
+      showToast(`⚠️ אין צ׳ק רשום החודש ל: ${noCheck.map(r => r.description).join(', ')} — נוספה הוצאה בלי אמצעי תשלום`, 'error')
+    }
 
     if (fixed.length > 0) {
       const today = new Date().toISOString().slice(0, 10)
@@ -1541,7 +1561,7 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                   <tr key={r.id} style={{ borderBottom: '1px solid var(--border)', opacity: r.is_active ? 1 : 0.5 }}>
                     <td style={TD}>
                       {r.description}
-                      {r.payment_method === "צ'ק" && <span title="לא נוספת כל חודש — ההוצאה נוצרת מכל צ׳ק בתאריך הפירעון" style={{ marginRight: 6, fontSize: '11px', fontWeight: 600, color: '#92400e', background: '#fef9c3', borderRadius: '6px', padding: '1px 6px', whiteSpace: 'nowrap' }}>📝 משולם בצ׳קים</span>}
+                      {r.payment_method === "צ'ק" && <span title="בחודש עם צ׳ק רשום ההוצאה נוצרת מהצ׳ק; בחודש בלי צ׳ק נוספת הוצאה רגילה עם התראה" style={{ marginRight: 6, fontSize: '11px', fontWeight: 600, color: '#92400e', background: '#fef9c3', borderRadius: '6px', padding: '1px 6px', whiteSpace: 'nowrap' }}>📝 משולם בצ׳קים</span>}
                     </td>
                     <td style={TD}><span style={{ background: '#f1f5f9', borderRadius: '6px', padding: '2px 8px', fontSize: '11px' }}>{r.category}</span></td>
                     <td style={{ ...TD, fontWeight: 700, color: r.is_variable ? 'var(--warning)' : 'var(--danger)' }}>{r.is_variable ? 'משתנה' : fmt(Number(r.amount))}</td>
@@ -1618,7 +1638,8 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
             </div>
             {rfPayMethod === "צ'ק" && (
               <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                לא תתווסף הוצאה כל חודש — ההוצאה נוצרת מכל צ׳ק ביומן הצ׳קים בתאריך הפירעון. ודא שהצ׳קים רשומים (תשלום לספק → צ׳ק → סדרת צ׳קים).
+                בחודש שיש בו צ׳ק רשום לספק — ההוצאה נוצרת מהצ׳ק בתאריך הפירעון (לא תתווסף כפולה). בחודש בלי צ׳ק — תתווסף הוצאה רגילה עם התראה.
+                {!rfSupplier && <b style={{ color: 'var(--danger)', display: 'block' }}>יש לבחור ספק — בלעדיו אי אפשר לבדוק אם יש צ׳ק.</b>}
               </div>
             )}
           </div>

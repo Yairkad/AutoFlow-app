@@ -3433,3 +3433,12 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 11:25 | Explained supplier recurring_items: editing amount doesn't touch already-generated supplier_debts; proposed 'update N existing charges from date' — awaiting user answers | — | info only | ~2k |
+
+## Session: 2026-11-26 09:12
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 11:50 | PR #99 opened; gave SQL to wipe א.י.ג charges/payments; explained per-month 'צור חיובים לחודש' for past months (valid_from must be earlier), offered range option | — | info only | ~2k |
+| 12:10 | Recurring paid-by-checks: create expense (no method, warning) when no check of that supplier is due this month | ExpensesClient.tsx | tsc+lint ok | ~3k |
+| 12:20 | Forecast: check-paid recurring expense projected only in months without a check of its supplier. Noted pre-existing overlap: supplier recurring_items also projected alongside checks | buildForecast.ts | tsc+lint ok | ~2k |
+| 12:35 | PR #99 merged; forecast drops supplier recurring_items (user option B); opening PR #100 | buildForecast.ts | tsc+lint ok | ~2k |
