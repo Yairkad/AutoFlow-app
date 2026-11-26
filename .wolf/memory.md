@@ -3439,3 +3439,4 @@ Bug found+fixed during verification (not pre-existing, introduced by the merge's
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
 | 11:50 | PR #99 opened; gave SQL to wipe א.י.ג charges/payments; explained per-month 'צור חיובים לחודש' for past months (valid_from must be earlier), offered range option | — | info only | ~2k |
+| 12:10 | Recurring paid-by-checks: create expense (no method, warning) when no check of that supplier is due this month | ExpensesClient.tsx | tsc+lint ok | ~3k |
