@@ -504,7 +504,8 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
   // ── Auto-apply recurring ────────────────────────────────────────────────────
 
   const applyRecurring = async (rows: RecurringExpense[], tenantId: string): Promise<number> => {
-    const due      = rows.filter(r => isDue(r, currentMonth))
+    // Paid by checks: each check makes its own expense at its due date (checks journal) — don't add another
+    const due      = rows.filter(r => r.payment_method !== "צ'ק" && isDue(r, currentMonth))
     const fixed    = due.filter(r => !r.is_variable)
     const variable = due.filter(r => r.is_variable)
     let count = 0
@@ -781,6 +782,11 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
     const res = editRec
       ? await supabase.from('recurring_expenses').update(payload).eq('id', editRec.id)
       : await supabase.from('recurring_expenses').insert(payload)
+    // Past expenses generated from this recurring expense with no payment method get the chosen one
+    if (!res.error && editRec && rfPayMethod) {
+      await supabase.from('expenses').update({ payment_method: rfPayMethod })
+        .eq('recurring_expense_id', editRec.id).is('payment_method', null)
+    }
     setRecSaving(false)
     if (res.error) {
       showToast(res.error.message.includes('payment_method')
@@ -1533,7 +1539,10 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
               <tbody>
                 {recurring.map(r => (
                   <tr key={r.id} style={{ borderBottom: '1px solid var(--border)', opacity: r.is_active ? 1 : 0.5 }}>
-                    <td style={TD}>{r.description}</td>
+                    <td style={TD}>
+                      {r.description}
+                      {r.payment_method === "צ'ק" && <span title="לא נוספת כל חודש — ההוצאה נוצרת מכל צ׳ק בתאריך הפירעון" style={{ marginRight: 6, fontSize: '11px', fontWeight: 600, color: '#92400e', background: '#fef9c3', borderRadius: '6px', padding: '1px 6px', whiteSpace: 'nowrap' }}>📝 משולם בצ׳קים</span>}
+                    </td>
                     <td style={TD}><span style={{ background: '#f1f5f9', borderRadius: '6px', padding: '2px 8px', fontSize: '11px' }}>{r.category}</span></td>
                     <td style={{ ...TD, fontWeight: 700, color: r.is_variable ? 'var(--warning)' : 'var(--danger)' }}>{r.is_variable ? 'משתנה' : fmt(Number(r.amount))}</td>
                     <td style={TD}>{r.frequency === 'monthly' ? 'חודשי' : 'דו-חודשי'}</td>
@@ -1607,6 +1616,11 @@ export default function ExpensesClient({ defaultTab = 'expenses' }: { defaultTab
                 </button>
               ))}
             </div>
+            {rfPayMethod === "צ'ק" && (
+              <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                לא תתווסף הוצאה כל חודש — ההוצאה נוצרת מכל צ׳ק ביומן הצ׳קים בתאריך הפירעון. ודא שהצ׳קים רשומים (תשלום לספק → צ׳ק → סדרת צ׳קים).
+              </div>
+            )}
           </div>
         </div>
       </Modal>
