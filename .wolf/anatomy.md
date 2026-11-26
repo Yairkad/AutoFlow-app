@@ -891,4 +891,5 @@
 - `lib/utils/saveToFolder.ts` — saveFiles/pickFolder: File System Access folder handle kept in IndexedDB; fallback downloads (~600 tok)
 - `components/reports/AmirExportPanel.tsx` — "ייצוא לאמיר תזרים" panel (date range, last export from tenants.settings.amir_last_export), shown in CashFlowForecastTab (~1100 tok)
 - `supabase/migrations/120_payment_terms.sql` — suppliers/customers.payment_terms_days int default 30
+- `supabase/migrations/121_recurring_payment_method.sql` — recurring_expenses.payment_method (null=unset); clears default cash on generated expenses
 - `lib/utils/pageCache.ts` — in-memory per-tab page data cache (get/set/clearPageCache); used by checks journal, suppliers, customers, inspections, products, tires, stock to show last data instantly on return (stale-while-revalidate). Cleared on logout/login.

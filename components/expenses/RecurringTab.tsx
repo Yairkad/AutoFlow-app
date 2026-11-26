@@ -18,6 +18,7 @@ export interface RecurringExpense {
   is_variable: boolean
   supplier_id: string | null
   frequency: 'monthly' | 'bimonthly'
+  payment_method?: string | null   // migration 121; null = not set
   is_active: boolean
   last_applied: string | null
 }
