@@ -1712,13 +1712,27 @@ export default function SupplierTrackingTab({
             .filter(p => p.supplier_id === quickHistorySupplier && !p.is_paid)
             .sort((a, b) => a.due_date.localeCompare(b.due_date))
           const pendingTotal = pending.reduce((s, p) => s + Number(p.amount), 0)
-          const paidTotal = historyExpenses.reduce((s, e) => s + Number(e.amount), 0)
+          // Paid payments of the ledger (checks, transfers — incl. ones imported without an expense)
+          // + expenses of this supplier that no payment row links to (entered directly in Expenses).
+          const supPaid = scheduledPayments.filter(p => p.supplier_id === quickHistorySupplier && p.is_paid)
+          const linkedExp = new Set(supPaid.map(p => p.expense_id).filter(Boolean))
+          const historyRows = [
+            ...supPaid.map(p => ({
+              id: p.id, date: p.paid_date ?? p.due_date, amount: Number(p.amount),
+              description: [p.description, p.notes].filter(Boolean).join(' · '),
+              method: paymentMethodLabel(p.payment_method) + (p.check_number ? ` #${p.check_number}` : ''),
+            })),
+            ...historyExpenses.filter(e => !linkedExp.has(e.id)).map(e => ({
+              id: e.id, date: e.date, amount: Number(e.amount), description: e.description, method: e.payment_method || '—',
+            })),
+          ].sort((a, b) => b.date.localeCompare(a.date))
+          const paidTotal = historyRows.reduce((s, e) => s + e.amount, 0)
 
           if (historyLoading) return (
             <SkeletonList rows={5} />
           )
 
-          if (pending.length === 0 && historyExpenses.length === 0) return (
+          if (pending.length === 0 && historyRows.length === 0) return (
             <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)', fontSize: '14px' }}>אין היסטוריית תשלומים לספק זה</div>
           )
 
@@ -1756,14 +1770,14 @@ export default function SupplierTrackingTab({
                   <span>היסטוריית תשלומים</span>
                   <span>{fmt(paidTotal)}</span>
                 </div>
-                {historyExpenses.length === 0 ? (
+                {historyRows.length === 0 ? (
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 4px' }}>אין תשלומים שבוצעו עדיין</div>
                 ) : (
                   <div style={{ maxHeight: 260, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
-                    {historyExpenses.map((e, i) => (
-                      <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderBottom: i < historyExpenses.length - 1 ? '1px solid #f1f5f9' : 'none', flexWrap: 'wrap' }}>
+                    {historyRows.map((e, i) => (
+                      <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderBottom: i < historyRows.length - 1 ? '1px solid #f1f5f9' : 'none', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 11, background: 'var(--success-soft)', color: 'var(--success)', padding: '2px 8px', borderRadius: 4, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                          {e.payment_method || '—'}
+                          {e.method}
                         </span>
                         <span style={{ fontSize: 13, flex: 1 }}>{e.description}</span>
                         <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{fmtDMY(e.date)}</span>

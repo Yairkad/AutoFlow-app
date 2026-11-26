@@ -2013,5 +2013,21 @@
     "related_bugs": [],
     "occurrences": 1,
     "last_seen": "2026-11-26"
+  },
+  {
+    "id": "bug-110",
+    "timestamp": "2026-11-26T14:40:00Z",
+    "error_message": "Supplier 'היסטוריית תשלומים' doesn't show the past payments (Ohayon import)",
+    "file": "components/suppliers/SupplierTrackingTab.tsx",
+    "root_cause": "Quick history modal listed only expenses rows of the supplier; ledger payments without an expense (imported history, ledger-only) were invisible",
+    "fix": "History = paid scheduled_payments of the supplier (method label, check #, notes) + expenses not linked to any payment row; sorted by date desc",
+    "tags": [
+      "suppliers",
+      "history",
+      "payments"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-11-26"
   }
 ]
